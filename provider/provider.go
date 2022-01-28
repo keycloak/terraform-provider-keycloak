@@ -49,6 +49,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user_roles":                                        resourceKeycloakUserRoles(),
 			"keycloak_openid_client":                                     resourceKeycloakOpenidClient(),
 			"keycloak_openid_client_scope":                               resourceKeycloakOpenidClientScope(),
+			"keycloak_openid_default_client_scope":                       resourceKeycloakOpenidDefaultClientScope(),
+			"keycloak_openid_optional_client_scope":                      resourceKeycloakOpenidOptionalClientScope(),
 			"keycloak_ldap_user_federation":                              resourceKeycloakLdapUserFederation(),
 			"keycloak_ldap_user_attribute_mapper":                        resourceKeycloakLdapUserAttributeMapper(),
 			"keycloak_ldap_group_mapper":                                 resourceKeycloakLdapGroupMapper(),
