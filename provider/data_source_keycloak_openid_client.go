@@ -128,6 +128,10 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"exclude_issuer_from_auth_response": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"resource_server_id": {
 				Type:     schema.TypeString,
 				Computed: true,
