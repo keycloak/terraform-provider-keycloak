@@ -13,9 +13,10 @@ type OpenIdUserRealmRoleProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	AddToIdToken     bool
-	AddToAccessToken bool
-	AddToUserInfo    bool
+	AddToIdToken            bool
+	AddToAccessToken        bool
+	AddToUserInfo           bool
+	AddToTokenIntrospection bool
 
 	RealmRolePrefix string
 	Multivalued     bool
@@ -33,6 +34,7 @@ func (mapper *OpenIdUserRealmRoleProtocolMapper) convertToGenericProtocolMapper(
 			addToIdTokenField:                   strconv.FormatBool(mapper.AddToIdToken),
 			addToAccessTokenField:               strconv.FormatBool(mapper.AddToAccessToken),
 			addToUserInfoField:                  strconv.FormatBool(mapper.AddToUserInfo),
+			addToTokenIntrospectionField:        strconv.FormatBool(mapper.AddToTokenIntrospection),
 			claimNameField:                      mapper.ClaimName,
 			claimValueTypeField:                 mapper.ClaimValueType,
 			multivaluedField:                    strconv.FormatBool(mapper.Multivalued),
@@ -57,6 +59,11 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserRealmRoleProtocolMapper
 		return nil, err
 	}
 
+	addToTokenIntrospection, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToTokenIntrospectionField])
+	if err != nil {
+		return nil, err
+	}
+
 	multivalued, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[multivaluedField])
 	if err != nil {
 		return nil, err
@@ -69,9 +76,10 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserRealmRoleProtocolMapper
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		AddToIdToken:     addToIdToken,
-		AddToAccessToken: addToAccessToken,
-		AddToUserInfo:    addToUserInfo,
+		AddToIdToken:            addToIdToken,
+		AddToAccessToken:        addToAccessToken,
+		AddToUserInfo:           addToUserInfo,
+		AddToTokenIntrospection: addToTokenIntrospection,
 
 		ClaimName:       protocolMapper.Config[claimNameField],
 		ClaimValueType:  protocolMapper.Config[claimValueTypeField],
