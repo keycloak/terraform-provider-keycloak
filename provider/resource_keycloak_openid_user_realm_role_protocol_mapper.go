@@ -69,7 +69,7 @@ func resourceKeycloakOpenIdUserRealmRoleProtocolMapper() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "Indicates if the attribute should be a claim in the token introspection.",
+				Description: "Indicates if the attribute should be a claim in the token introspection response body.",
 			},
 			"claim_name": {
 				Type:     schema.TypeString,
