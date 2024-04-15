@@ -154,7 +154,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	bind_credential         = "admin"
 }
 
-resource "keycloak_ldap_hardcoded_attribute_mapper" "hardcoded_attribute_mapper" {
+resource "keycloak_hardcoded_attribute_mapper" "hardcoded_attribute_mapper" {
 	name                        = "%s"
 	realm_id                    = data.keycloak_realm.realm.id
 	ldap_user_federation_id     = keycloak_ldap_user_federation.openldap.id
