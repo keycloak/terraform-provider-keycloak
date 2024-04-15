@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type hardcodedAttributeMapper struct {
+type HardcodedAttributeMapper struct {
 	Id                   string
 	Name                 string
 	RealmId              string
@@ -14,7 +14,7 @@ type hardcodedAttributeMapper struct {
 	AttributeValue       string
 }
 
-func convertFromHardcodedAttributeMapperToComponent(hardcodedMapper *hardcodedAttributeMapper) *component {
+func convertFromHardcodedAttributeMapperToComponent(hardcodedMapper *HardcodedAttributeMapper) *component {
 	return &component{
 		Id:           hardcodedMapper.Id,
 		Name:         hardcodedMapper.Name,
@@ -33,8 +33,8 @@ func convertFromHardcodedAttributeMapperToComponent(hardcodedMapper *hardcodedAt
 	}
 }
 
-func convertFromComponentToHardcodedAttributeMapper(component *component, realmId string) *hardcodedAttributeMapper {
-	return &hardcodedAttributeMapper{
+func convertFromComponentToHardcodedAttributeMapper(component *component, realmId string) *HardcodedAttributeMapper {
+	return &HardcodedAttributeMapper{
 		Id:                   component.Id,
 		Name:                 component.Name,
 		RealmId:              realmId,
@@ -45,7 +45,7 @@ func convertFromComponentToHardcodedAttributeMapper(component *component, realmI
 	}
 }
 
-func (keycloakClient *KeycloakClient) NewHardcodedAttributeMapper(ctx context.Context, hardcodedMapper *hardcodedAttributeMapper) error {
+func (keycloakClient *KeycloakClient) NewHardcodedAttributeMapper(ctx context.Context, hardcodedMapper *HardcodedAttributeMapper) error {
 	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/components", hardcodedMapper.RealmId), convertFromHardcodedAttributeMapperToComponent(hardcodedMapper))
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (keycloakClient *KeycloakClient) NewHardcodedAttributeMapper(ctx context.Co
 	return nil
 }
 
-func (keycloakClient *KeycloakClient) GetHardcodedAttributeMapper(ctx context.Context, realmId, id string) (*hardcodedAttributeMapper, error) {
+func (keycloakClient *KeycloakClient) GetHardcodedAttributeMapper(ctx context.Context, realmId, id string) (*HardcodedAttributeMapper, error) {
 	var component *component
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components/%s", realmId, id), &component, nil)
@@ -67,7 +67,7 @@ func (keycloakClient *KeycloakClient) GetHardcodedAttributeMapper(ctx context.Co
 	return convertFromComponentToHardcodedAttributeMapper(component, realmId), nil
 }
 
-func (keycloakClient *KeycloakClient) UpdateHardcodedAttributeMapper(ctx context.Context, hardcodedMapper *hardcodedAttributeMapper) error {
+func (keycloakClient *KeycloakClient) UpdateHardcodedAttributeMapper(ctx context.Context, hardcodedMapper *HardcodedAttributeMapper) error {
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", hardcodedMapper.RealmId, hardcodedMapper.Id), convertFromHardcodedAttributeMapperToComponent(hardcodedMapper))
 }
 
