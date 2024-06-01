@@ -99,6 +99,41 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 	})
 }
 
+func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionPriority(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
+	t.Parallel()
+	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakAuthenticationExecution_basicWithPriority(authParentFlowAlias, 50),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.execution", "priority", "50"),
+				),
+			},
+			{
+				Config: testKeycloakAuthenticationExecution_basicWithPriority(authParentFlowAlias, 60),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.execution", "priority", "60"),
+				),
+			},
+			{
+				Config: testKeycloakAuthenticationExecution_basicWithPriority(authParentFlowAlias, 70),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.execution", "priority", "70"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakAuthenticationExecutionExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getAuthenticationExecutionFromState(s, resourceName)
@@ -199,7 +234,27 @@ resource "keycloak_authentication_execution" "execution" {
 	`, testAccRealm.Realm, parentAlias)
 }
 
-func testKeycloakAuthenticationExecution_basicWithRequirement(parentAlias, requirement string) string {
+func testKeycloakAuthenticationExecution_basicWithPriority(parentAlias string, priority int) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id = data.keycloak_realm.realm.id
+	alias    = "%s"
+}
+
+resource "keycloak_authentication_execution" "execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-cookie"
+	priority          = %d
+}
+	`, testAccRealm.Realm, parentAlias, priority)
+}
+
+func testKeycloakAuthenticationExecution_basicWithRequirement(parentAlias string, requirement string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"

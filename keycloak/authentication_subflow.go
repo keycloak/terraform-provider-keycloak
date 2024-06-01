@@ -71,6 +71,9 @@ func (keycloakClient *KeycloakClient) GetAuthenticationSubFlow(ctx context.Conte
 	}
 	authenticationSubFlow.Authenticator = subFlowExecution.Authenticator
 	authenticationSubFlow.Requirement = subFlowExecution.Requirement
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, Version_25); prioritySupported {
+		authenticationSubFlow.Priority = subFlowExecution.Priority
+	}
 
 	return &authenticationSubFlow, nil
 }
@@ -111,6 +114,9 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationSubFlow(ctx context.Co
 		Id:              executionId,
 		Requirement:     authenticationSubFlow.Requirement,
 	}
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, Version_25); prioritySupported {
+		authenticationExecutionUpdateRequirement.Priority = authenticationSubFlow.Priority
+	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 
 }
@@ -127,32 +133,4 @@ func (keycloakClient *KeycloakClient) DeleteAuthenticationSubFlow(ctx context.Co
 	}
 
 	return keycloakClient.DeleteAuthenticationExecution(ctx, authenticationSubFlow.RealmId, executionId)
-}
-
-func (keycloakClient *KeycloakClient) RaiseAuthenticationSubFlowPriority(ctx context.Context, realmId, parentFlowAlias, id string) error {
-	authenticationSubFlow := AuthenticationSubFlow{
-		Id:              id,
-		ParentFlowAlias: parentFlowAlias,
-		RealmId:         realmId,
-	}
-	executionId, err := keycloakClient.getExecutionId(ctx, &authenticationSubFlow)
-	if err != nil {
-		return err
-	}
-
-	return keycloakClient.RaiseAuthenticationExecutionPriority(ctx, authenticationSubFlow.RealmId, executionId)
-}
-
-func (keycloakClient *KeycloakClient) LowerAuthenticationSubFlowPriority(ctx context.Context, realmId, parentFlowAlias, id string) error {
-	authenticationSubFlow := AuthenticationSubFlow{
-		Id:              id,
-		ParentFlowAlias: parentFlowAlias,
-		RealmId:         realmId,
-	}
-	executionId, err := keycloakClient.getExecutionId(ctx, &authenticationSubFlow)
-	if err != nil {
-		return err
-	}
-
-	return keycloakClient.LowerAuthenticationExecutionPriority(ctx, authenticationSubFlow.RealmId, executionId)
 }

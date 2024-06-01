@@ -59,6 +59,10 @@ func resourceKeycloakAuthenticationSubFlow() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"REQUIRED", "ALTERNATIVE", "OPTIONAL", "CONDITIONAL", "DISABLED"}, false), //OPTIONAL is removed from 8.0.0 onwards
 				Default:      "DISABLED",
 			},
+			"priority": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -73,12 +77,13 @@ func mapFromDataToAuthenticationSubFlow(data *schema.ResourceData) *keycloak.Aut
 		Description:     data.Get("description").(string),
 		Authenticator:   data.Get("authenticator").(string),
 		Requirement:     data.Get("requirement").(string),
+		Priority:        data.Get("priority").(int),
 	}
 
 	return authenticationSubFlow
 }
 
-func mapFromAuthenticationSubFlowToData(data *schema.ResourceData, authenticationSubFlow *keycloak.AuthenticationSubFlow) {
+func mapFromAuthenticationSubFlowToData(keycloakClient *keycloak.KeycloakClient, ctx context.Context, data *schema.ResourceData, authenticationSubFlow *keycloak.AuthenticationSubFlow) {
 	data.SetId(authenticationSubFlow.Id)
 	data.Set("realm_id", authenticationSubFlow.RealmId)
 	data.Set("parent_flow_alias", authenticationSubFlow.ParentFlowAlias)
@@ -87,6 +92,9 @@ func mapFromAuthenticationSubFlowToData(data *schema.ResourceData, authenticatio
 	data.Set("description", authenticationSubFlow.Description)
 	data.Set("authenticator", authenticationSubFlow.Authenticator)
 	data.Set("requirement", authenticationSubFlow.Requirement)
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25); prioritySupported {
+		data.Set("priority", authenticationSubFlow.Priority)
+	}
 }
 
 func resourceKeycloakAuthenticationSubFlowCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -98,7 +106,7 @@ func resourceKeycloakAuthenticationSubFlowCreate(ctx context.Context, data *sche
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	mapFromAuthenticationSubFlowToData(data, authenticationFlow)
+	mapFromAuthenticationSubFlowToData(keycloakClient, ctx, data, authenticationFlow)
 	return resourceKeycloakAuthenticationSubFlowRead(ctx, data, meta)
 }
 
@@ -113,7 +121,7 @@ func resourceKeycloakAuthenticationSubFlowRead(ctx context.Context, data *schema
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
-	mapFromAuthenticationSubFlowToData(data, authenticationFlow)
+	mapFromAuthenticationSubFlowToData(keycloakClient, ctx, data, authenticationFlow)
 	return nil
 }
 
@@ -126,7 +134,7 @@ func resourceKeycloakAuthenticationSubFlowUpdate(ctx context.Context, data *sche
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	mapFromAuthenticationSubFlowToData(data, authenticationFlow)
+	mapFromAuthenticationSubFlowToData(keycloakClient, ctx, data, authenticationFlow)
 	return nil
 }
 
