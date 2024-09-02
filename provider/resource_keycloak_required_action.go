@@ -50,7 +50,6 @@ func resourceKeycloakRequiredAction() *schema.Resource {
 			},
 			"config": {
 				Type:     schema.TypeMap,
-				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
 			},
 		},
@@ -71,7 +70,7 @@ func getRequiredActionFromData(data *schema.ResourceData) (*keycloak.RequiredAct
 		Enabled:       data.Get("enabled").(bool),
 		DefaultAction: data.Get("default_action").(bool),
 		Priority:      data.Get("priority").(int),
-		Config:        config,
+		Config:        data.Get("config").(map[string][]string),
 	}
 
 	return action, nil
