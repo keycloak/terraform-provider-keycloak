@@ -120,7 +120,6 @@ resource "keycloak_required_action" "update-password" {
     max_auth_age = "600"
   }
 }
-
 resource "keycloak_required_action" "custom-configured_totp" {
   realm_id       = keycloak_realm.test.realm
   alias          = "CONFIGURE_TOTP"
