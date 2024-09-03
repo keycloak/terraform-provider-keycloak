@@ -50,6 +50,7 @@ func resourceKeycloakRequiredAction() *schema.Resource {
 			},
 			"config": {
 				Type:     schema.TypeMap,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
 			},
 		},
@@ -58,9 +59,9 @@ func resourceKeycloakRequiredAction() *schema.Resource {
 
 func getRequiredActionFromData(data *schema.ResourceData) (*keycloak.RequiredAction, error) {
 	config := make(map[string]string)
- 	for key, value := range data.Get("config").(map[string]interface{}) {
- 		config[key] = value.(string)
- 	}
+	for key, value := range data.Get("config").(map[string]interface{}) {
+		config[key] = value.(string)
+	}
 
 	action := &keycloak.RequiredAction{
 		Id:            fmt.Sprintf("%s/%s", data.Get("realm_id").(string), data.Get("alias").(string)),
@@ -70,7 +71,7 @@ func getRequiredActionFromData(data *schema.ResourceData) (*keycloak.RequiredAct
 		Enabled:       data.Get("enabled").(bool),
 		DefaultAction: data.Get("default_action").(bool),
 		Priority:      data.Get("priority").(int),
-		Config:        data.Get("config").(map[string][]string),
+		Config:        config,
 	}
 
 	return action, nil
