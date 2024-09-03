@@ -12,16 +12,14 @@ Allows for creating and managing required actions within Keycloak.
 ## Example Usage
 
 ```hcl
-resource "keycloak_realm" "realm" {
-  realm   = "my-realm"
-  enabled = true
-}
-
 resource "keycloak_required_action" "required_action" {
   realm_id = keycloak_realm.realm.realm
-  alias    = "webauthn-register"
+  alias    = "UPDATE_PASSWORD"
   enabled  = true
-  name     = "Webauthn Register"
+  name     = "Update Password"
+  config = {
+    max_auth_age = "600"
+  }
 }
 ```
 
@@ -33,6 +31,7 @@ resource "keycloak_required_action" "required_action" {
 - `enabled` - (Optional) When `false`, the required action is not enabled for new users. Defaults to `false`.
 - `default_action` - (Optional) When `true`, the required action is set as the default action for new users. Defaults to `false`.
 - `priority`- (Optional) The priority of the required action.
+- `config`- (Optional) The configuration. Keys are specific to each configurable required action and not checked when applying.
 
 ## Import
 
