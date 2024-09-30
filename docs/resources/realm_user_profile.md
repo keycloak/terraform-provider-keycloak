@@ -58,6 +58,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
   attribute {
     name = "field2"
+    multivalued = true
 
     validator {
       name   = "options"
@@ -101,6 +102,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
 - `display_name` - (Optional) The display name of the attribute.
 - `multi_valued` - (Optional) If the attribute supports multiple values. Defaults to `false`.
 - `group` - (Optional) The group that the attribute belong to.
+- `multivalued` - (Optional) The attribute can contain multiple values. Defaults to `false`.
 - `enabled_when_scope` - (Optional) A list of scopes. The attribute will only be enabled when these scopes are requested by clients.
 - `required_for_roles` - (Optional) A list of roles for which the attribute will be required.
 - `required_for_scopes` - (Optional) A list of scopes for which the attribute will be required.
