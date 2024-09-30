@@ -130,7 +130,6 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 					"foo":               "\"bar\"",
 					"inputOptionLabels": "{\"a\":\"b\"}",
 				},
-				Multivalued: true,
 			},
 		},
 		Groups: []*keycloak.RealmUserProfileGroup{
