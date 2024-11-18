@@ -22,6 +22,7 @@ jobs:
       status: steps.wait.outputs.status
 
   release:
+    permissions: write-all
     needs:
       - wait
     runs-on: ubuntu-latest
@@ -52,15 +53,14 @@ jobs:
           releaseDate=$(date '+%B-%-d-%Y' | tr '[:upper:]' '[:lower:]')
           releaseVersion=$(echo ${{ steps.get_tag_name.outputs.TAG }} | tr -d '.')
           tmp=$(mktemp -d)
-          echo "[Release Notes](https://github.com/mrparkers/terraform-provider-keycloak/blob/master/CHANGELOG.md#${releaseVersion}-${releaseDate})" > ${tmp}/release-notes.md
+          echo "[Release Notes](https://github.com/keycloak/terraform-provider-keycloak/blob/master/CHANGELOG.md#${releaseVersion}-${releaseDate})" > ${tmp}/release-notes.md
           cat ${tmp}/release-notes.md
           echo ::set-output name=NOTES::${tmp}/release-notes.md
 
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v6
         with:
-          version: v0.179.0
-          args: release --rm-dist --release-notes=${{ steps.build-release-notes.outputs.NOTES }}
+          args: release --clean --release-notes=${{ steps.build-release-notes.outputs.NOTES }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}

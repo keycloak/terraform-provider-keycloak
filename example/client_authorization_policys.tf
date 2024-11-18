@@ -191,4 +191,8 @@ resource "keycloak_openid_client_permissions" "my_permission" {
     description       = "my description"
     decision_strategy = "UNANIMOUS"
   }
+  //needed because otherwise there is a conflict/race condition with the other permission
+  depends_on = [
+    keycloak_users_permissions.my_permission
+  ]
 }
