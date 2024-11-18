@@ -3,21 +3,24 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
 	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"os"
-	"testing"
 )
 
-var testAccProviderFactories map[string]func() (*schema.Provider, error)
-var testAccProvider *schema.Provider
-var keycloakClient *keycloak.KeycloakClient
-var testAccRealm *keycloak.Realm
-var testAccRealmTwo *keycloak.Realm
-var testAccRealmUserFederation *keycloak.Realm
-var testCtx context.Context
+var (
+	testAccProviderFactories   map[string]func() (*schema.Provider, error)
+	testAccProvider            *schema.Provider
+	keycloakClient             *keycloak.KeycloakClient
+	testAccRealm               *keycloak.Realm
+	testAccRealmTwo            *keycloak.Realm
+	testAccRealmUserFederation *keycloak.Realm
+	testCtx                    context.Context
+)
 
 var requiredEnvironmentVariables = []string{
 	"KEYCLOAK_CLIENT_ID",
@@ -31,7 +34,7 @@ func init() {
 	userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", schema.Provider{}.TerraformVersion, meta.SDKVersionString())
 	keycloakClient, _ = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 5, "", false, userAgent, false, map[string]string{
 		"foo": "bar",
-	})
+	}, "", "")
 	testAccProvider = KeycloakProvider(keycloakClient)
 	testAccProviderFactories = map[string]func() (*schema.Provider, error){
 		"keycloak": func() (*schema.Provider, error) {
