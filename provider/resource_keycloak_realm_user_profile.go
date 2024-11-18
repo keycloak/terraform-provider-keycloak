@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 )
 
@@ -124,6 +125,11 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 						},
 					},
 				},
+			},
+			"unmanagedattributepolicy": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"DISABLED", "ENABLED", "ADMIN_VIEW", "ADMIN_EDIT"}, false),
 			},
 		},
 	}
@@ -292,6 +298,13 @@ func getRealmUserProfileFromData(data *schema.ResourceData) *keycloak.RealmUserP
 
 	realmUserProfile.Attributes = getRealmUserProfileAttributesFromData(data.Get("attribute").([]interface{}))
 	realmUserProfile.Groups = getRealmUserProfileGroupsFromData(data.Get("group").(*schema.Set).List())
+	if v, ok := data.Get("unmanagedattributepolicy").(string); ok {
+		if v == "DISABLED" {
+			realmUserProfile.UnmanagedAttributePolicy = ""
+		} else {
+			realmUserProfile.UnmanagedAttributePolicy = v
+		}
+	}
 
 	return realmUserProfile
 }
@@ -388,7 +401,7 @@ func getRealmUserProfileGroupData(group *keycloak.RealmUserProfileGroup) map[str
 	return groupData
 }
 
-func setRealmUserProfileData(data *schema.ResourceData, realmUserProfile *keycloak.RealmUserProfile) {
+func setRealmUserProfileData(ctx context.Context, data *schema.ResourceData, realmUserProfile *keycloak.RealmUserProfile, keycloakClient *keycloak.KeycloakClient) {
 	attributes := make([]interface{}, 0)
 	for _, attr := range realmUserProfile.Attributes {
 		attributes = append(attributes, getRealmUserProfileAttributeData(attr))
@@ -400,6 +413,20 @@ func setRealmUserProfileData(data *schema.ResourceData, realmUserProfile *keyclo
 		groups = append(groups, getRealmUserProfileGroupData(group))
 	}
 	data.Set("group", groups)
+
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_24)
+	if err != nil {
+		panic(err)
+	}
+
+	// api route /admin/realms/{realm}/users/profile expects null object if unmanagedAttributePolicy is disabled
+	if versionOk {
+		if realmUserProfile.UnmanagedAttributePolicy == "DISABLED" {
+			data.Set("unmanaged_attribute_policy", nil)
+		} else {
+			data.Set("unmanaged_attribute_policy", realmUserProfile.UnmanagedAttributePolicy)
+		}
+	}
 }
 
 func resourceKeycloakRealmUserProfileCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -427,7 +454,7 @@ func resourceKeycloakRealmUserProfileRead(ctx context.Context, data *schema.Reso
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	setRealmUserProfileData(data, realmUserProfile)
+	setRealmUserProfileData(ctx, data, realmUserProfile, keycloakClient)
 
 	return nil
 }
@@ -437,8 +464,9 @@ func resourceKeycloakRealmUserProfileDelete(ctx context.Context, data *schema.Re
 	realmId := data.Get("realm_id").(string)
 
 	// The realm user profile cannot be deleted, so instead we set it back to its "zero" values.
+	// email and username attributes are mandatory since Keycloak 24.0.0
 	realmUserProfile := &keycloak.RealmUserProfile{
-		Attributes: []*keycloak.RealmUserProfileAttribute{},
+		Attributes: getRealmUserProfileMandatoryAttributes(),
 		Groups:     []*keycloak.RealmUserProfileGroup{},
 	}
 
@@ -448,6 +476,21 @@ func resourceKeycloakRealmUserProfileDelete(ctx context.Context, data *schema.Re
 	}
 
 	return nil
+}
+
+func getRealmUserProfileMandatoryAttributes() []*keycloak.RealmUserProfileAttribute {
+	usernameAttribute := &keycloak.RealmUserProfileAttribute{
+		Name: "username",
+	}
+
+	emailAttribute := &keycloak.RealmUserProfileAttribute{
+		Name: "email",
+	}
+
+	return []*keycloak.RealmUserProfileAttribute{
+		usernameAttribute,
+		emailAttribute,
+	}
 }
 
 func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -461,7 +504,7 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 		return diag.FromErr(err)
 	}
 
-	setRealmUserProfileData(data, realmUserProfile)
+	setRealmUserProfileData(ctx, data, realmUserProfile, keycloakClient)
 
 	return nil
 }
