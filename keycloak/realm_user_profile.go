@@ -31,6 +31,7 @@ type RealmUserProfileAttribute struct {
 	Required    *RealmUserProfileRequired                   `json:"required,omitempty"`
 	Selector    *RealmUserProfileSelector                   `json:"selector,omitempty"`
 	Validations map[string]RealmUserProfileValidationConfig `json:"validations,omitempty"`
+	Multivalued bool                                        `json:"multivalued,omitempty"`
 }
 
 type RealmUserProfileGroup struct {

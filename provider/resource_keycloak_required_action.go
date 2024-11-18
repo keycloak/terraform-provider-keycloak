@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"strings"
 )
 
 func resourceKeycloakRequiredAction() *schema.Resource {
@@ -47,11 +48,21 @@ func resourceKeycloakRequiredAction() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"config": {
+				Type:     schema.TypeMap,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+			},
 		},
 	}
 }
 
 func getRequiredActionFromData(data *schema.ResourceData) (*keycloak.RequiredAction, error) {
+	config := make(map[string]string)
+	for key, value := range data.Get("config").(map[string]interface{}) {
+		config[key] = value.(string)
+	}
+
 	action := &keycloak.RequiredAction{
 		Id:            fmt.Sprintf("%s/%s", data.Get("realm_id").(string), data.Get("alias").(string)),
 		RealmId:       data.Get("realm_id").(string),
@@ -60,7 +71,7 @@ func getRequiredActionFromData(data *schema.ResourceData) (*keycloak.RequiredAct
 		Enabled:       data.Get("enabled").(bool),
 		DefaultAction: data.Get("default_action").(bool),
 		Priority:      data.Get("priority").(int),
-		Config:        make(map[string][]string),
+		Config:        config,
 	}
 
 	return action, nil
@@ -74,6 +85,7 @@ func setRequiredActionData(data *schema.ResourceData, action *keycloak.RequiredA
 	data.Set("enabled", action.Enabled)
 	data.Set("default_action", action.DefaultAction)
 	data.Set("priority", action.Priority)
+	data.Set("config", action.Config)
 }
 
 func resourceKeycloakRequiredActionsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
