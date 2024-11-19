@@ -140,7 +140,7 @@ func (keycloakClient *KeycloakClient) GetUserByUsername(ctx context.Context, rea
 	var users []*User
 
 	params := map[string]string{
-		"username": escapeBackslashes(username),
+		"username": username,
 	}
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/users", realmId), &users, params)

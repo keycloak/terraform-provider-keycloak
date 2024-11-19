@@ -49,7 +49,3 @@ func atoiAndTreatEmptyStringAsZero(s string) (int, error) {
 
 	return strconv.Atoi(s)
 }
-
-func escapeBackslashes(s string) string {
-	return strings.ReplaceAll(s, "\\", "\\\\")
-}
