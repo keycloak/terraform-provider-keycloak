@@ -1,4 +1,4 @@
-module github.com/mrparkers/terraform-provider-keycloak
+module github.com/keycloak/terraform-provider-keycloak
 
 require (
 	github.com/hashicorp/errwrap v1.0.0

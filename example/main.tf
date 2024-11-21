@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     keycloak = {
-      source  = "terraform.local/mrparkers/keycloak"
+      source  = "terraform.local/keycloak/keycloak"
       version = ">= 4.0.0"
     }
   }
@@ -103,7 +103,7 @@ resource "keycloak_realm" "test" {
 
 resource "keycloak_required_action" "custom-terms-and-conditions" {
   realm_id       = keycloak_realm.test.realm
-  alias          = "terms_and_conditions"
+  alias          = "TERMS_AND_CONDITIONS"
   default_action = true
   enabled        = true
   name           = "Custom Terms and Conditions"
@@ -290,7 +290,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
   connection_url  = "ldap://openldap"
   users_dn        = "dc=example,dc=org"
   bind_dn         = "cn=admin,dc=example,dc=org"
-  bind_credential = "admin"
+  bind_credential = "adminpassword"
 
   connection_timeout = "5s"
   read_timeout       = "10s"
@@ -327,7 +327,7 @@ resource "keycloak_ldap_user_federation" "openldap_no_default_mappers" {
   connection_url  = "ldap://openldap"
   users_dn        = "dc=example,dc=org"
   bind_dn         = "cn=admin,dc=example,dc=org"
-  bind_credential = "admin"
+  bind_credential = "adminpassword"
 
   connection_timeout = "5s"
   read_timeout       = "10s"

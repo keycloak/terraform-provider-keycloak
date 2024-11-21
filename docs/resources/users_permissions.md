@@ -8,7 +8,7 @@ Allows you to manage fine-grained permissions for all users in a realm: https://
 
 This is part of a preview Keycloak feature: `admin_fine_grained_authz` (see https://www.keycloak.org/docs/latest/server_admin/#_fine_grain_permissions).
 This feature can be enabled with the Keycloak option `-Dkeycloak.profile.feature.admin_fine_grained_authz=enabled`. See the
-example [`docker-compose.yml`](https://github.com/mrparkers/terraform-provider-keycloak/blob/898094df6b3e01c3404981ce7ca268142d6ff0e5/docker-compose.yml#L21) file for an example.
+example [`docker-compose.yml`](https://github.com/keycloak/terraform-provider-keycloak/blob/898094df6b3e01c3404981ce7ca268142d6ff0e5/docker-compose.yml#L21) file for an example.
 
 When enabling fine-grained permissions for users, Keycloak does several things automatically:
 1. Enable Authorization on built-in `realm-management` client (if not already enabled).
