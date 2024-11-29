@@ -80,6 +80,7 @@ The following arguments are supported:
 - `client_id` - (Required) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`.
 - `url` - (Required) The URL of the Keycloak instance, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_URL`.
 - `client_secret` - (Optional) The secret for the client used by the provider for authentication via the client credentials grant. This can be found or changed using the "Credentials" tab in the client settings. Defaults to the environment variable `KEYCLOAK_CLIENT_SECRET`. This attribute is required when using the client credentials grant, and cannot be set when using the password grant.
+- `client_assertion` - (Optional) use a jwt signed by a known signer to get a token exchaned for, .
 - `username` - (Optional) The username of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_USER`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `password` - (Optional) The password of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_PASSWORD`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `realm` - (Optional) The realm used by the provider for authentication. Defaults to the environment variable `KEYCLOAK_REALM`, or `master` if the environment variable is not specified.
@@ -89,3 +90,88 @@ The following arguments are supported:
 - `root_ca_certificate` - (Optional) Allows x509 calls using an unknown CA certificate (for development purposes)
 - `base_path` - (Optional) The base path used for accessing the Keycloak REST API.  Defaults to the environment variable `KEYCLOAK_BASE_PATH`, or an empty string if the environment variable is not specified. Note that users of the legacy distribution of Keycloak will need to set this attribute to `/auth`.
 - `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API.
+
+
+
+## Example JWT signer code:
+
+```
+#!/bin/bash
+
+# Variables
+KMS_KEY_ARN="$1"
+ALGORITHM="RSASSA_PKCS1_V1_5_SHA_256"
+CLIENT_ID="test"
+AUTH_SERVER_TOKEN_ENDPOINT_URL="$2"
+
+# Helper functions
+base64url_encode() {
+    openssl enc -base64 -A | tr '+/' '-_' | tr -d '='
+}
+
+generate_jti() {
+    # Generates a random string for jti using /dev/urandom
+    head -c 16 /dev/urandom | base64 | tr -d '/+=' | cut -c -22
+}
+
+
+# JWT Claims
+ISSUER="$CLIENT_ID" # Issuer
+SUBJECT="$CLIENT_ID" # Subject
+AUDIENCE="$AUTH_SERVER_TOKEN_ENDPOINT_URL" # Audience
+JTI=$(generate_jti) # JWT ID
+CURRENT_TIME=$(date +%s)
+EXPIRATION_TIME=$(($CURRENT_TIME + 3600)) # 1 hour from now
+
+# Create JWT Header
+HEADER=$(jq -n --arg alg "RS256" --arg typ "JWT" '{alg: $alg, typ: $typ}')
+HEADER_BASE64=$(echo -n "$HEADER" | base64url_encode)
+
+# Create JWT Payload
+PAYLOAD=$(jq -n \
+    --arg iss "$ISSUER" \
+    --arg sub "$SUBJECT" \
+    --arg aud "$AUDIENCE" \
+    --arg jti "$JTI" \
+    --argjson iat $CURRENT_TIME \
+    --argjson exp $EXPIRATION_TIME \
+    '{iss: $iss, sub: $sub, aud: $aud, jti: $jti, iat: $iat, exp: $exp}')
+PAYLOAD_BASE64=$(echo -n "$PAYLOAD" | base64url_encode)
+
+# Prepare the message to be signed
+MESSAGE="$HEADER_BASE64.$PAYLOAD_BASE64"
+
+# Use AWS KMS to sign the message
+SIGNATURE_JSON=$(echo -n "$MESSAGE" | aws kms sign \
+    --key-id "$KMS_KEY_ARN" \
+    --message-type RAW \
+    --signing-algorithm "$ALGORITHM" \
+    --message fileb:///dev/stdin \
+    --output json)
+SIGNATURE=$(echo $SIGNATURE_JSON | jq -r '.Signature' | base64 -d | base64url_encode)
+
+# Construct the JWT
+JWT="$HEADER_BASE64.$PAYLOAD_BASE64.$SIGNATURE"
+
+# echo "jwt = \"$JWT\"" > terraform.tfvars
+# echo "$JWT" > /tmp/test
+
+EXCHANGED_JWT=$(curl --location --request POST ${AUTH_SERVER_TOKEN_ENDPOINT_URL} \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--data-urlencode 'client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer' \
+--data-urlencode "client_assertion=${JWT}" \
+--data-urlencode 'grant_type=client_credentials' | base64 | tr -d '\n')
+
+echo "token_info_json = \"$EXCHANGED_JWT\"" > terraform.tfvars
+```
+
+you can then use it via:
+
+```
+provider "keycloak" {
+  token_info_json = base64decode(var.token_info_json)
+  url             = "http://localhost:8080"
+  initial_login = false
+}
+
+```
