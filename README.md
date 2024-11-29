@@ -6,7 +6,10 @@ Terraform provider for [Keycloak](https://www.keycloak.org/).
 
 ## Migration to the new provider
 
-To migrate from `mrparkers/keycloak` to the `keycloak/keycloak` Terraform provider, you can use the `terraform state replace-provider` command.
+To migrate from `mrparkers/keycloak` to the `keycloak/keycloak` Terraform provider, you can use the `terraform state replace-provider` command:
+```
+terraform state replace-provider mrparkers/keycloak keycloak/keycloak
+```
 You can find the documentation for this command [here](https://developer.hashicorp.com/terraform/cli/commands/state/replace-provider).
 
 ## Docs
