@@ -168,6 +168,18 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Description: "Allows x509 calls using an unknown CA certificate (for development purposes)",
 				Default:     "",
 			},
+			"client_certificate": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "X.509 Certificate for requests against the server",
+				Default:     "",
+			},
+			"client_key": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "X.509 Key for requests against the server",
+				Default:     "",
+			},
 			"tls_insecure_skip_verify": {
 				Optional:    true,
 				Type:        schema.TypeBool,
@@ -211,6 +223,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		clientTimeout := data.Get("client_timeout").(int)
 		tlsInsecureSkipVerify := data.Get("tls_insecure_skip_verify").(bool)
 		rootCaCertificate := data.Get("root_ca_certificate").(string)
+		clientCert := data.Get("client_certificate").(string)
+		clientKey := data.Get("client_key").(string)
 		redHatSSO := data.Get("red_hat_sso").(bool)
 		additionalHeaders := make(map[string]string)
 		for k, v := range data.Get("additional_headers").(map[string]interface{}) {
@@ -221,7 +235,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
 
-		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
+		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, clientCert, clientKey, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,

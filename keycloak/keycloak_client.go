@@ -60,7 +60,7 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert, clientCert, clientKey string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	clientCredentials := &ClientCredentials{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
@@ -79,7 +79,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecre
 		}
 	}
 
-	httpClient, err := newHttpClient(tlsInsecureSkipVerify, clientTimeout, caCert)
+	httpClient, err := newHttpClient(tlsInsecureSkipVerify, clientTimeout, caCert, clientCert, clientKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %v", err)
 	}
@@ -499,7 +499,7 @@ func (keycloakClient *KeycloakClient) marshal(body interface{}) ([]byte, error) 
 	return json.Marshal(body)
 }
 
-func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string) (*http.Client, error) {
+func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert, clientCert, clientKey string) (*http.Client, error) {
 	cookieJar, err := cookiejar.New(&cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
 	})
@@ -516,6 +516,15 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM([]byte(caCert))
 		transport.TLSClientConfig.RootCAs = caCertPool
+	}
+
+	if keyCert := clientCert + clientKey; keyCert != "" {
+		cert, err := tls.X509KeyPair([]byte(clientCert), []byte(keyCert))
+		if err != nil {
+			return nil, err
+		}
+
+		transport.TLSClientConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	retryClient := retryablehttp.NewClient()
