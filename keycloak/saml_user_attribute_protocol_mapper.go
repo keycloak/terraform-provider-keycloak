@@ -3,6 +3,7 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 type SamlUserAttributeProtocolMapper struct {
@@ -12,10 +13,11 @@ type SamlUserAttributeProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	UserAttribute           string
-	FriendlyName            string
-	SamlAttributeName       string
-	SamlAttributeNameFormat string
+	UserAttribute            string
+	FriendlyName             string
+	SamlAttributeName        string
+	SamlAttributeNameFormat  string
+	AggregateAttributeValues bool
 }
 
 func (mapper *SamlUserAttributeProtocolMapper) convertToGenericProtocolMapper() *protocolMapper {
@@ -25,15 +27,21 @@ func (mapper *SamlUserAttributeProtocolMapper) convertToGenericProtocolMapper() 
 		Protocol:       "saml",
 		ProtocolMapper: "saml-user-attribute-mapper",
 		Config: map[string]string{
-			attributeNameField:       mapper.SamlAttributeName,
-			attributeNameFormatField: mapper.SamlAttributeNameFormat,
-			friendlyNameField:        mapper.FriendlyName,
-			userAttributeField:       mapper.UserAttribute,
+			attributeNameField:            mapper.SamlAttributeName,
+			attributeNameFormatField:      mapper.SamlAttributeNameFormat,
+			friendlyNameField:             mapper.FriendlyName,
+			userAttributeField:            mapper.UserAttribute,
+			aggregateAttributeValuesField: strconv.FormatBool(mapper.AggregateAttributeValues),
 		},
 	}
 }
 
-func (protocolMapper *protocolMapper) convertToSamlUserAttributeProtocolMapper(realmId, clientId, clientScopeId string) *SamlUserAttributeProtocolMapper {
+func (protocolMapper *protocolMapper) convertToSamlUserAttributeProtocolMapper(realmId, clientId, clientScopeId string) (*SamlUserAttributeProtocolMapper, error) {
+	aggregateAttributeValues, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToAccessTokenField])
+	if err != nil {
+		return nil, err
+	}
+
 	return &SamlUserAttributeProtocolMapper{
 		Id:            protocolMapper.Id,
 		Name:          protocolMapper.Name,
@@ -41,11 +49,12 @@ func (protocolMapper *protocolMapper) convertToSamlUserAttributeProtocolMapper(r
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		UserAttribute:           protocolMapper.Config[userAttributeField],
-		FriendlyName:            protocolMapper.Config[friendlyNameField],
-		SamlAttributeName:       protocolMapper.Config[attributeNameField],
-		SamlAttributeNameFormat: protocolMapper.Config[attributeNameFormatField],
-	}
+		UserAttribute:            protocolMapper.Config[userAttributeField],
+		FriendlyName:             protocolMapper.Config[friendlyNameField],
+		SamlAttributeName:        protocolMapper.Config[attributeNameField],
+		SamlAttributeNameFormat:  protocolMapper.Config[attributeNameFormatField],
+		AggregateAttributeValues: aggregateAttributeValues,
+	}, nil
 }
 
 func (keycloakClient *KeycloakClient) GetSamlUserAttributeProtocolMapper(ctx context.Context, realmId, clientId, clientScopeId, mapperId string) (*SamlUserAttributeProtocolMapper, error) {
@@ -56,7 +65,7 @@ func (keycloakClient *KeycloakClient) GetSamlUserAttributeProtocolMapper(ctx con
 		return nil, err
 	}
 
-	return protocolMapper.convertToSamlUserAttributeProtocolMapper(realmId, clientId, clientScopeId), nil
+	return protocolMapper.convertToSamlUserAttributeProtocolMapper(realmId, clientId, clientScopeId)
 }
 
 func (keycloakClient *KeycloakClient) DeleteSamlUserAttributeProtocolMapper(ctx context.Context, realmId, clientId, clientScopeId, mapperId string) error {
