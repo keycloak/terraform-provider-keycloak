@@ -4,9 +4,17 @@ Terraform provider for [Keycloak](https://www.keycloak.org/).
 > [!NOTE]
 > Please note that this is currently work-in-progress, please be patient while we are preparing for the first release in the new organization.
 
+## Migration to the new provider
+
+To migrate from `mrparkers/keycloak` to the `keycloak/keycloak` Terraform provider, you can use the `terraform state replace-provider` command:
+```
+terraform state replace-provider mrparkers/keycloak keycloak/keycloak
+```
+You can find the documentation for this command [here](https://developer.hashicorp.com/terraform/cli/commands/state/replace-provider).
+
 ## Docs
 
-All documentation for this provider can now be found on the Terraform Registry: https://registry.terraform.io/providers/mrparkers/keycloak/latest/docs
+All documentation for this provider can now be found on the Terraform Registry: https://registry.terraform.io/providers/keycloak/keycloak/latest/docs
 
 ## Installation
 
@@ -16,7 +24,7 @@ This provider can be installed automatically using Terraform >=0.13 by using the
 terraform {
   required_providers {
     keycloak = {
-      source = "mrparkers/keycloak"
+      source = "keycloak/keycloak"
       version = ">= 4.0.0"
     }
   }
@@ -50,14 +58,14 @@ The following versions are used when running acceptance tests in CI:
 ## Releases
 
 This provider uses [GoReleaser](https://goreleaser.com/) to build and publish releases. Each release published to GitHub
-contains binary files for Linux, macOS (darwin), and Windows, as configured within the [`.goreleaser.yml`](https://github.com/mrparkers/terraform-provider-keycloak/blob/master/.goreleaser.yml)
+contains binary files for Linux, macOS (darwin), and Windows, as configured within the [`.goreleaser.yml`](https://github.com/keycloak/terraform-provider-keycloak/blob/master/.goreleaser.yml)
 file.
 
 Each release also contains a `terraform-provider-keycloak_${RELEASE_VERSION}_SHA256SUMS` file, accompanied by a signature
 created by a PGP key with the fingerprint `C508 6791 5E11 6CD2`. This key can be found on my Keybase account at https://keybase.io/mrparkers.
 
-You can find the list of releases [here](https://github.com/mrparkers/terraform-provider-keycloak/releases).
-You can find the changelog for each version [here](https://github.com/mrparkers/terraform-provider-keycloak/blob/master/CHANGELOG.md).
+You can find the list of releases [here](https://github.com/keycloak/terraform-provider-keycloak/releases).
+You can find the changelog for each version [here](https://github.com/keycloak/terraform-provider-keycloak/blob/master/CHANGELOG.md).
 
 Note: Prior to v2.0.0, a statically linked build for use within Alpine linux was included with each release. This is no longer
 done due to [GoReleaser not supporting CGO](https://goreleaser.com/limitations/cgo/). Instead of using a statically linked,

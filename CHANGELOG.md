@@ -1,3 +1,14 @@
+## 4.5.0 (December 6, 2024)
+
+IMPROVEMENTS:
+
+- various dependency and readme updates ([#1014](https://github.com/keycloak/terraform-provider-keycloak/pull/1014), [#1015](https://github.com/keycloak/terraform-provider-keycloak/pull/1015), [#1022](https://github.com/keycloak/terraform-provider-keycloak/pull/1022), [#1024](https://github.com/keycloak/terraform-provider-keycloak/pull/1024))
+- move to the Keycloak organization ([#1017](https://github.com/keycloak/terraform-provider-keycloak/pull/1017))
+- update go to 1.22 ([#1013](https://github.com/keycloak/terraform-provider-keycloak/pull/1013))
+- update license for project to Apache 2.0 [#1002](https://github.com/keycloak/terraform-provider-keycloak/pull/1002)
+
+Huge thanks to everybody supporting the license change to Apache 2.0!
+
 ## 4.4.0 (January 8, 2024)
 
 FEATURES:

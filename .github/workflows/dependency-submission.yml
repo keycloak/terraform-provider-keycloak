@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
           cache: true
 
       - name: Run snapshot action
-        uses: actions/go-dependency-submission@v1
+        uses: actions/go-dependency-submission@v2
         with:
           go-mod-path: go.mod
