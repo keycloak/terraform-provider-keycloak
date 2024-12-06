@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"testing"
 )
 
 func TestAccKeycloakRealm_basic(t *testing.T) {
@@ -812,6 +813,36 @@ func TestAccKeycloakRealm_internalId(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealm_clientPolicy(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	realm := &keycloak.Realm{
+		Realm: realmName,
+		Id:    internalId,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				ResourceName:  "keycloak_realm.realm",
+				ImportStateId: realmName,
+				ImportState:   true,
+				Config:        testKeycloakRealm_basic(realmName, "foo", "<b>foo</b>"),
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, realm)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Check: testAccCheckKeycloakRealmWithClientPolicy(realmName),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealm_default_client_scopes(t *testing.T) {
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
@@ -1308,6 +1339,25 @@ func testAccCheckKeycloakRealmWithInternalId(resourceName, id string) resource.T
 	}
 }
 
+func testAccCheckKeycloakRealmWithClientPolicy(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if len(realm.ClientProfiles.Profiles[0].Executors) == 2 {
+			return fmt.Errorf("expected the first client profile of realm %s to have 2 executors, but found %d", realm.Realm, len(realm.ClientProfiles.Profiles[0].Executors))
+		}
+
+		if len(realm.ClientPolicies.Policies[0].Conditions) == 1 {
+			return fmt.Errorf("expected the first client policy of realm %s to have 1 condition, but found %d", realm.Realm, len(realm.ClientPolicies.Policies[0].Conditions))
+		}
+
+		return nil
+	}
+}
+
 func testKeycloakRealm_basic(realm, realmDisplayName, realmDisplayNameHtml string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
@@ -1745,4 +1795,45 @@ resource "keycloak_realm" "realm" {
 	internal_id = "%s"
 }
 	`, realm, internalId)
+}
+
+func testKeycloakRealm_clientpolicy(realm string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm        		= "%s"
+	enabled     	 	= true
+
+	client_profile {
+		name        = "test profile"
+		description = "testing"
+
+		executor {
+		  name = "secure-ciba-signed-authn-req"
+		  configuration = jsonencode({
+			available-period = "3600"
+		  })
+		}
+		executor {
+		  name = "secure-ciba-signed-authn-req"
+		  configuration = jsonencode({
+			available-period = "3600"
+		  })
+		}
+	  }
+
+	  client_policy {
+		name        = "test policy"
+		description = "description"
+		profiles    = ["test profile"]
+		enabled     = false
+
+		condition {
+		  name = "any-client"
+		  configuration = jsonencode({
+			is-negative-logic = false
+		  })
+		}
+	  }
+}
+	`, realm)
 }

@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -660,6 +663,86 @@ func resourceKeycloakRealm() *schema.Resource {
 					Schema: webAuthnSchema,
 				},
 			},
+
+			// Client policies
+			"client_policy": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"description": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "",
+						},
+						"enabled": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"profiles": {
+							Type:     schema.TypeList,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Optional: true,
+						},
+						"condition": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"configuration": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"client_profile": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"description": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "",
+						},
+						"executor": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"configuration": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -1143,6 +1226,68 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		}
 	}
 
+	// Client policies
+	if policies, ok := data.GetOk("client_policy"); ok {
+		var policy keycloak.ClientPolicy
+		for _, policyData := range policies.(*schema.Set).List() {
+			policy = keycloak.ClientPolicy{
+				Name:        policyData.(map[string]interface{})["name"].(string),
+				Description: policyData.(map[string]interface{})["description"].(string),
+				Enabled:     policyData.(map[string]interface{})["enabled"].(bool),
+			}
+			for _, profile := range policyData.(map[string]interface{})["profiles"].([]interface{}) {
+				policy.Profiles = append(policy.Profiles, profile.(string))
+			}
+
+			for _, conditionData := range policyData.(map[string]interface{})["condition"].([]interface{}) {
+				condition := keycloak.ClientPolicyCondition{
+					Condition: conditionData.(map[string]interface{})["name"].(string),
+				}
+				if len(conditionData.(map[string]interface{})["configuration"].(string)) > 0 {
+					err := json.Unmarshal(
+						[]byte(conditionData.(map[string]interface{})["configuration"].(string)),
+						&condition.Configuration,
+					)
+					if err != nil {
+						return nil, errors.New(err.Error() + ". json string: " + conditionData.(map[string]interface{})["configuration"].(string))
+					}
+				}
+				policy.Conditions = append(policy.Conditions, condition)
+			}
+
+			realm.ClientPolicies.Policies = append(realm.ClientPolicies.Policies, policy)
+
+		}
+	}
+
+	if profiles, ok := data.GetOk("client_profile"); ok {
+		var profile keycloak.ClientProfile
+		for _, profileData := range profiles.(*schema.Set).List() {
+			profile = keycloak.ClientProfile{
+				Name:        profileData.(map[string]interface{})["name"].(string),
+				Description: profileData.(map[string]interface{})["description"].(string),
+			}
+
+			for _, executorData := range profileData.(map[string]interface{})["executor"].([]interface{}) {
+				executor := keycloak.ClientProfileExecutor{
+					Executor: executorData.(map[string]interface{})["name"].(string),
+				}
+				if len(executorData.(map[string]interface{})["configuration"].(string)) > 0 {
+					err := json.Unmarshal(
+						[]byte(executorData.(map[string]interface{})["configuration"].(string)),
+						&executor.Configuration,
+					)
+					if err != nil {
+						return nil, errors.New(err.Error() + ". json string: " + executorData.(map[string]interface{})["configuration"].(string))
+					}
+				}
+				profile.Executors = append(profile.Executors, executor)
+			}
+			realm.ClientProfiles.Profiles = append(realm.ClientProfiles.Profiles, profile)
+		}
+
+	}
+
 	return realm, nil
 }
 
@@ -1170,7 +1315,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
 	realm.MaxDeltaTimeSeconds = 43200
 }
 
-func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
+func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) diag.Diagnostics {
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
@@ -1339,6 +1484,66 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	// default and optional client scope mappings
 	data.Set("default_default_client_scopes", realm.DefaultDefaultClientScopes)
 	data.Set("default_optional_client_scopes", realm.DefaultOptionalClientScopes)
+
+	// Client policies
+	var err error
+	var configuration []byte
+
+	var policy map[string]interface{}
+	var policies []interface{}
+	for _, v := range realm.ClientPolicies.Policies {
+		policy = make(map[string]interface{})
+		policy["name"] = v.Name
+		policy["description"] = v.Description
+		policy["enabled"] = v.Enabled
+		policy["profiles"] = v.Profiles
+
+		var condition map[string]interface{}
+		var conditions []interface{}
+		for _, v2 := range v.Conditions {
+			condition = make(map[string]interface{})
+			condition["name"] = v2.Condition
+			configuration, err = json.Marshal(v2.Configuration)
+			condition["configuration"] = string(configuration)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			conditions = append(conditions, condition)
+		}
+		policy["condition"] = conditions
+
+		policies = append(policies, policy)
+	}
+	data.Set("client_policy", policies)
+
+	var profile map[string]interface{}
+	var profiles []interface{}
+	for _, v := range realm.ClientProfiles.Profiles {
+		profile = make(map[string]interface{})
+		profile["name"] = v.Name
+		profile["description"] = v.Description
+
+		var executor map[string]interface{}
+		var executors []interface{}
+
+		for _, v2 := range v.Executors {
+			executor = make(map[string]interface{})
+			executor["name"] = v2.Executor
+			configuration, err = json.Marshal(v2.Configuration)
+			executor["configuration"] = string(configuration)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			executors = append(executors, executor)
+		}
+		profile["executor"] = executors
+
+		profiles = append(profiles, profile)
+	}
+	data.Set("client_profile", profiles)
+
+	return nil
 }
 
 func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{} {
@@ -1384,7 +1589,10 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	diagErr := setRealmData(data, realm)
+	if err != nil {
+		return diagErr
+	}
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
 }
@@ -1402,7 +1610,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		realm.SmtpServer.Password = smtpPassword
 	}
 
-	setRealmData(data, realm)
+	diagErr := setRealmData(data, realm)
+	if err != nil {
+		return diagErr
+	}
 
 	return nil
 }
@@ -1425,7 +1636,10 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	diagErr := setRealmData(data, realm)
+	if err != nil {
+		return diagErr
+	}
 
 	return nil
 }

@@ -240,10 +240,78 @@ Each of these attributes are blocks with the following attributes:
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
 
+### Client policies and profiles
+
+Configuration options for client policies and profiles. See below the documentation blocks for an example implementation.
+
+#### client_policy block
+
+A client_policy block can be used to define a client policy in a realm. The following attributes can be used:
+- `name` - (Required) A name for the policy.
+- `description` - (Optional) A description of the policy. Defaults to "".
+- `enabled` - (Optional) Boolean to enable or disable this policy. Defaults to `true`.
+- `profiles` (Optional) A list of profiles (as strings) that are linked to this policy.
+- `condition` (Optional) A block containing the conditions that are tied to this policy. This block contains the following attributes:
+  - `name` (Required) The name of this condition. Names here should match the conditions that are supported by keycloak.
+  - `configuration` (Optional) The configuration for this condition. The available options and format are dependent on the condition that is used. This needs to be a json string containing a map with all the configuration options.
+
+#### client_profile block
+
+A client_profile block can be used to define a client profile in a realm. The following attributes can be used:
+- `name` - (Required) A name for the profile.
+- `description` - (Optional) A description of the profile. Defaults to "".
+- `executor` (Optional) A block containing the executors that are tied to this profile. This block contains the following attributes:
+  - `name` (Required) The name of this executor. Names here should match the executors that are supported by keycloak.
+  - `configuration` (Optional) The configuration for this executor. The available options and format are dependent on the executor that is used. This needs to be a json string containing a map with all the configuration options.
+
+#### Example
+
+``` hcl
+resource "keycloak_realm" "realm" {
+  realm             = "my-realm"
+  enabled           = true
+  display_name      = "my realm"
+  display_name_html = "<b>my realm</b>"
+
+  client_profile {
+    name        = "my profile"
+    description = "My profile"
+
+    executor {
+      name = "secure-ciba-signed-authn-req"
+      configuration = jsonencode({
+        available-period = "3600"
+      })
+    }
+    executor {
+      name = "pkce-enforcer"
+      configuration = jsonencode({
+        auto-configure = true
+      })
+    }
+  }
+
+  client_policy {
+    name        = "my policy"
+    description = "My policy"
+    profiles    = ["my profile"]
+    enabled     = false
+
+    condition {
+      name = "any-client"
+      configuration = jsonencode({
+        is-negative-logic = false
+      })
+    }
+  }
+}
+```
+
 ## Default Client Scopes
 
 - `default_default_client_scopes` - (Optional) A list of default default client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default default client-scopes.
 - `default_optional_client_scopes` - (Optional) A list of default optional client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default optional client-scopes.
+
 
 ## Import
 
