@@ -773,6 +773,18 @@ resource "keycloak_hardcoded_role_identity_provider_mapper" "oidc" {
   }
 }
 
+resource "keycloak_hardcoded_group_identity_provider_mapper" "oidc" {
+  realm                   = keycloak_realm.test.id
+  name                    = "hardcodedGroup"
+  identity_provider_alias = keycloak_oidc_identity_provider.oidc.alias
+  group                   = "testgroup"
+
+  #KC10 support
+  extra_config = {
+    syncMode = "INHERIT"
+  }
+}
+
 resource "keycloak_hardcoded_attribute_identity_provider_mapper" "oidc" {
   realm                   = keycloak_realm.test.id
   name                    = "hardcodedUserSessionAttribute"
@@ -840,6 +852,18 @@ resource "keycloak_hardcoded_role_identity_provider_mapper" "saml" {
   name                    = "hardcodedRole"
   identity_provider_alias = keycloak_saml_identity_provider.saml.alias
   role                    = "testrole"
+
+  #KC10 support
+  extra_config = {
+    syncMode = "INHERIT"
+  }
+}
+
+resource "keycloak_hardcoded_group_identity_provider_mapper" "saml" {
+  realm                   = keycloak_realm.test.id
+  name                    = "hardcodedGroup"
+  identity_provider_alias = keycloak_saml_identity_provider.saml.alias
+  group                   = "testgroup"
 
   #KC10 support
   extra_config = {

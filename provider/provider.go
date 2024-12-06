@@ -86,6 +86,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_saml_user_property_protocol_mapper":                resourceKeycloakSamlUserPropertyProtocolMapper(),
 			"keycloak_saml_script_protocol_mapper":                       resourceKeycloakSamlScriptProtocolMapper(),
 			"keycloak_hardcoded_attribute_identity_provider_mapper":      resourceKeycloakHardcodedAttributeIdentityProviderMapper(),
+			"keycloak_hardcoded_group_identity_provider_mapper":          resourceKeycloakHardcodedGroupIdentityProviderMapper(),
 			"keycloak_hardcoded_role_identity_provider_mapper":           resourceKeycloakHardcodedRoleIdentityProviderMapper(),
 			"keycloak_attribute_importer_identity_provider_mapper":       resourceKeycloakAttributeImporterIdentityProviderMapper(),
 			"keycloak_attribute_to_role_identity_provider_mapper":        resourceKeycloakAttributeToRoleIdentityProviderMapper(),
