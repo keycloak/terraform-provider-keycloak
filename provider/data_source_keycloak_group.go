@@ -31,6 +31,22 @@ func dataSourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
+			"sub_groups": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
