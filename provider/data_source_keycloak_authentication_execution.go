@@ -39,7 +39,7 @@ func dataSourceKeycloakAuthenticationExecutionRead(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionInfoToData(data, authenticationExecutionInfo)
+	mapFromAuthenticationExecutionInfoToData(keycloakClient, ctx, data, authenticationExecutionInfo)
 
 	return nil
 }

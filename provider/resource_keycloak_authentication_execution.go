@@ -43,6 +43,10 @@ func resourceKeycloakAuthenticationExecution() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"REQUIRED", "ALTERNATIVE", "OPTIONAL", "CONDITIONAL", "DISABLED"}, false), //OPTIONAL is removed from 8.0.0 onwards
 				Default:      "DISABLED",
 			},
+			"priority": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -54,25 +58,32 @@ func mapFromDataToAuthenticationExecution(data *schema.ResourceData) *keycloak.A
 		ParentFlowAlias: data.Get("parent_flow_alias").(string),
 		Authenticator:   data.Get("authenticator").(string),
 		Requirement:     data.Get("requirement").(string),
+		Priority:        data.Get("priority").(int),
 	}
 
 	return authenticationExecution
 }
 
-func mapFromAuthenticationExecutionToData(data *schema.ResourceData, authenticationExecution *keycloak.AuthenticationExecution) {
+func mapFromAuthenticationExecutionToData(keycloakClient *keycloak.KeycloakClient, ctx context.Context, data *schema.ResourceData, authenticationExecution *keycloak.AuthenticationExecution) {
 	data.SetId(authenticationExecution.Id)
 
 	data.Set("realm_id", authenticationExecution.RealmId)
 	data.Set("parent_flow_alias", authenticationExecution.ParentFlowAlias)
 	data.Set("authenticator", authenticationExecution.Authenticator)
 	data.Set("requirement", authenticationExecution.Requirement)
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25); prioritySupported {
+		data.Set("priority", authenticationExecution.Priority)
+	}
 }
 
-func mapFromAuthenticationExecutionInfoToData(data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) {
+func mapFromAuthenticationExecutionInfoToData(keycloakClient *keycloak.KeycloakClient, ctx context.Context, data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) {
 	data.SetId(authenticationExecutionInfo.Id)
 
 	data.Set("realm_id", authenticationExecutionInfo.RealmId)
 	data.Set("parent_flow_alias", authenticationExecutionInfo.ParentFlowAlias)
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25); prioritySupported {
+		data.Set("priority", authenticationExecutionInfo.Priority)
+	}
 }
 
 func resourceKeycloakAuthenticationExecutionCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -85,7 +96,7 @@ func resourceKeycloakAuthenticationExecutionCreate(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	mapFromAuthenticationExecutionToData(keycloakClient, ctx, data, authenticationExecution)
 
 	return resourceKeycloakAuthenticationExecutionRead(ctx, data, meta)
 }
@@ -102,7 +113,7 @@ func resourceKeycloakAuthenticationExecutionRead(ctx context.Context, data *sche
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	mapFromAuthenticationExecutionToData(keycloakClient, ctx, data, authenticationExecution)
 
 	return nil
 }
@@ -117,7 +128,7 @@ func resourceKeycloakAuthenticationExecutionUpdate(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	mapFromAuthenticationExecutionToData(keycloakClient, ctx, data, authenticationExecution)
 
 	return nil
 }
