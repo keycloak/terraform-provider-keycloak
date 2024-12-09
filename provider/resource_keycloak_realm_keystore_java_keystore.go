@@ -32,6 +32,12 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"internal_realm_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "Internal realm id, if it differs from 'realm_id'",
+			},
 			"active": {
 				Type:        schema.TypeBool,
 				Optional:    true,

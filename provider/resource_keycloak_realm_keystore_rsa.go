@@ -32,6 +32,12 @@ func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"internal_realm_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "Internal realm id, if it differs from 'realm_id'",
+			},
 			"active": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -80,9 +86,10 @@ func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
 
 func getRealmKeystoreRsaFromData(data *schema.ResourceData) *keycloak.RealmKeystoreRsa {
 	mapper := &keycloak.RealmKeystoreRsa{
-		Id:      data.Id(),
-		Name:    data.Get("name").(string),
-		RealmId: data.Get("realm_id").(string),
+		Id:              data.Id(),
+		Name:            data.Get("name").(string),
+		RealmId:         data.Get("realm_id").(string),
+		InternalRealmId: data.Get("internal_realm_id").(string),
 
 		Active:      data.Get("active").(bool),
 		Enabled:     data.Get("enabled").(bool),
