@@ -61,6 +61,23 @@ func TestAccKeycloakOpenidClient_basic_with_consent(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_basic_with_authorization(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_basic_with_authorization(clientId),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectAuthorizationSettings("keycloak_openid_client.client"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 	var client = &keycloak.OpenidClient{}
@@ -814,6 +831,29 @@ func testAccCheckKeycloakOpenidClientExistsWithCorrectConsentSettings(resourceNa
 	}
 }
 
+func testAccCheckKeycloakOpenidClientExistsWithCorrectAuthorizationSettings(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.AuthorizationSettings == nil {
+			return fmt.Errorf("expected openid client to have authorization settings")
+		}
+
+		if client.AuthorizationSettings.DecisionStrategy != "AFFIRMATIVE" {
+			return fmt.Errorf("expected openid client to have decision_strategy %v, but got %v", "AFFIRMATIVE", client.AuthorizationSettings.DecisionStrategy)
+		}
+
+		if client.AuthorizationSettings.PolicyEnforcementMode != "ENFORCING" {
+			return fmt.Errorf("expected openid client to have policy_enforcement_mode %v, but got %v", "ENFORCING", client.AuthorizationSettings.PolicyEnforcementMode)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakOpenidClientHasBackchannelSettings(resourceName, backchannelLogoutUrl string, backchannelLogoutSessionRequired, backchannelLogoutRevokeOfflineSessions bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -1280,6 +1320,31 @@ resource "keycloak_openid_client" "client" {
 	consent_required            = true
 	display_on_consent_screen	= true
 	consent_screen_text         = "some consent screen text"
+}
+	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_basic_with_authorization(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   				= "%s"
+	realm_id    				= data.keycloak_realm.realm.id
+	access_type 				= "CONFIDENTIAL"
+	client_authenticator_type    = "client-secret"
+	standard_flow_enabled        = false
+	implicit_flow_enabled        = false
+	direct_access_grants_enabled = false
+	service_accounts_enabled     = true
+
+	authorization {
+    	policy_enforcement_mode          = "ENFORCING"
+    	decision_strategy                = "AFFIRMATIVE"
+    	allow_remote_resource_management = "true"
+	}
 }
 	`, testAccRealm.Realm, clientId)
 }

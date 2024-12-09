@@ -502,6 +502,15 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 		data.Set("access_type", "CONFIDENTIAL")
 	}
 
+	if client.AuthorizationSettings != nil {
+		authorizationSettings := make(map[string]any)
+		authorizationSettings["policy_enforcement_mode"] = client.AuthorizationSettings.PolicyEnforcementMode
+		authorizationSettings["decision_strategy"] = client.AuthorizationSettings.DecisionStrategy
+		authorizationSettings["allow_remote_resource_management"] = client.AuthorizationSettings.AllowRemoteResourceManagement
+		authorizationSettings["keep_defaults"] = client.AuthorizationSettings.KeepDefaults
+		data.Set("authorization", []interface{}{authorizationSettings})
+	}
+
 	if (keycloak.OpenidAuthenticationFlowBindingOverrides{}) == client.AuthenticationFlowBindingOverrides {
 		data.Set("authentication_flow_binding_overrides", nil)
 	} else {
