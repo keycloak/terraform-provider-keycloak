@@ -49,7 +49,32 @@ func resourceKeycloakSamlClientDefaultScopesCreate(ctx context.Context, data *sc
 
 	data.SetId(samlClientDefaultScopesId(realmId, clientId))
 
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25); ok {
+		// when creating a new SAML client in 25, the saml_organisation scope is automagically added by KC
+		// if it's not specified in the defaultScopes, we are deleting it here
+		_ = resourceKeycloakSamlClientDefaultScopesRead(ctx, data, meta)
+		newDefaultScopes := data.Get("default_scopes").(*schema.Set)
+		samlOrganization := "saml_organization"
+
+		if setContainsString(newDefaultScopes, samlOrganization) && !setContainsString(defaultScopes, samlOrganization) {
+			err = keycloakClient.DetachSamlClientDefaultScopes(ctx, realmId, clientId, []string{samlOrganization})
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	return resourceKeycloakSamlClientDefaultScopesRead(ctx, data, meta)
+}
+
+func setContainsString(slice *schema.Set, s string) bool {
+	for _, sliceElement := range interfaceSliceToStringSlice(slice.List()) {
+		if sliceElement == s {
+			return true
+		}
+	}
+	return false
+
 }
 
 func samlClientDefaultScopesId(realmId string, clientId string) string {

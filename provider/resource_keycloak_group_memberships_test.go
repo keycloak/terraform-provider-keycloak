@@ -37,6 +37,8 @@ func TestAccKeycloakGroupMemberships_basic(t *testing.T) {
 
 func TestAccKeycloakGroupMemberships_basicUserWithBackslash(t *testing.T) {
 	t.Parallel()
+	// backslash usernames are weird and no longer supported >=22
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_22)
 
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandString(5) + `\\` + acctest.RandString(5)

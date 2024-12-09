@@ -16,7 +16,7 @@ type IdentityProviderConfig struct {
 	ClientSecret                    string                    `json:"clientSecret,omitempty"`
 	DisableUserInfo                 types.KeycloakBoolQuoted  `json:"disableUserInfo"`
 	UserInfoUrl                     string                    `json:"userInfoUrl,omitempty"`
-	HideOnLoginPage                 types.KeycloakBoolQuoted  `json:"hideOnLoginPage"`
+	HideOnLoginPage                 types.KeycloakBoolQuoted  `json:"hideOnLoginPage,omitempty"`
 	NameIDPolicyFormat              string                    `json:"nameIDPolicyFormat,omitempty"`
 	EntityId                        string                    `json:"entityId,omitempty"`
 	SingleLogoutServiceUrl          string                    `json:"singleLogoutServiceUrl,omitempty"`
@@ -65,6 +65,7 @@ type IdentityProvider struct {
 	AddReadTokenRoleOnCreate  bool                    `json:"addReadTokenRoleOnCreate"`
 	AuthenticateByDefault     bool                    `json:"authenticateByDefault"`
 	LinkOnly                  bool                    `json:"linkOnly"`
+	HideOnLogin               bool                    `json:"hideOnLogin,omitempty"` //since keycloak v26
 	TrustEmail                bool                    `json:"trustEmail"`
 	FirstBrokerLoginFlowAlias string                  `json:"firstBrokerLoginFlowAlias"`
 	PostBrokerLoginFlowAlias  string                  `json:"postBrokerLoginFlowAlias"`

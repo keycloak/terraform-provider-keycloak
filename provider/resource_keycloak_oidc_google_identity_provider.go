@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/imdario/mergo"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -86,15 +87,14 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 	return oidcResource
 }
 
-func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData) (*keycloak.IdentityProvider, error) {
-	rec, defaultConfig := getIdentityProviderFromData(data)
+func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
+	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	rec.ProviderId = data.Get("provider_id").(string)
 	rec.Alias = "google"
 
 	googleOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
 		ClientSecret:                data.Get("client_secret").(string),
-		HideOnLoginPage:             types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 		HostedDomain:                data.Get("hosted_domain").(string),
 		UserIp:                      types.KeycloakBoolQuoted(data.Get("use_user_ip_param").(bool)),
 		OfflineAccess:               types.KeycloakBoolQuoted(data.Get("request_refresh_token").(bool)),
@@ -102,6 +102,9 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData) (*keycloak
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		UseJwksUrl:                  true,
 		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
+
+		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
+		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if err := mergo.Merge(googleOidcIdentityProviderConfig, defaultConfig); err != nil {
@@ -113,16 +116,22 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData) (*keycloak
 	return rec, nil
 }
 
-func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider) error {
-	setIdentityProviderData(data, identityProvider)
+func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
+	setIdentityProviderData(data, identityProvider, keycloakVersion)
 	data.Set("provider_id", identityProvider.ProviderId)
 	data.Set("client_id", identityProvider.Config.ClientId)
-	data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
 	data.Set("hosted_domain", identityProvider.Config.HostedDomain)
 	data.Set("use_user_ip_param", identityProvider.Config.UserIp)
 	data.Set("request_refresh_token", identityProvider.Config.OfflineAccess)
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
 	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
+
+	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
+		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
+		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
+		return nil
+	}
+
 	return nil
 }

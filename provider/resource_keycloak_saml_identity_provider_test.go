@@ -160,8 +160,9 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 	firstLoginHint := randomBool()
 
 	firstSaml := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     firstEnabled,
+		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			EntityId:                        "https://example.com/entity_id/1",
 			SingleSignOnServiceUrl:          "https://example.com/signon/1",
@@ -189,8 +190,9 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 	}
 
 	secondSaml := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: !firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     !firstEnabled,
+		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			EntityId:                        "https://example.com/entity_id/2",
 			SingleSignOnServiceUrl:          "https://example.com/signon/2",

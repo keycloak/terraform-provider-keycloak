@@ -22,7 +22,26 @@ const (
 	Version_17 Version = "17.0.0"
 	Version_18 Version = "18.0.0"
 	Version_19 Version = "19.0.0"
+	Version_20 Version = "20.0.0"
+	Version_21 Version = "21.0.0"
+	Version_22 Version = "22.0.0"
+	Version_23 Version = "23.0.0"
+	Version_24 Version = "24.0.0"
+	Version_25 Version = "25.0.0"
+	Version_26 Version = "26.0.0"
 )
+
+func (v Version) AsVersion() *version.Version {
+	vv, err := version.NewVersion(string(v))
+	if err != nil {
+		return nil
+	}
+	return vv
+}
+
+func (KeycloakClient *KeycloakClient) Version() *version.Version {
+	return KeycloakClient.version
+}
 
 func (keycloakClient *KeycloakClient) VersionIsGreaterThanOrEqualTo(ctx context.Context, versionString Version) (bool, error) {
 	if keycloakClient.version == nil {
