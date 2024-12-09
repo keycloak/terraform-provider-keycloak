@@ -76,6 +76,7 @@ resource "keycloak_openid_user_realm_role_protocol_mapper" "user_realm_role_mapp
 - `add_to_id_token` - (Optional) Indicates if the property should be added as a claim to the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the property should be added as a claim to the access token. Defaults to `true`.
 - `add_to_userinfo` - (Optional) Indicates if the property should be added as a claim to the UserInfo response body. Defaults to `true`.
+- `add_to_token_introspection` - (Optional) Indicates if the property should be added as a claim to the Token Introspection response body. Defaults to `true`.
 
 ## Import
 
