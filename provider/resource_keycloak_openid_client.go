@@ -176,6 +176,11 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"exclude_issuer_from_auth_response": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"resource_server_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -357,6 +362,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		Attributes: keycloak.OpenidClientAttributes{
 			PkceCodeChallengeMethod:               data.Get("pkce_code_challenge_method").(string),
 			ExcludeSessionStateFromAuthResponse:   types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
+			ExcludeIssuerFromAuthResponse:         types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
 			AccessTokenLifespan:                   data.Get("access_token_lifespan").(string),
 			LoginTheme:                            data.Get("login_theme").(string),
 			ClientOfflineSessionIdleTimeout:       data.Get("client_offline_session_idle_timeout").(string),
