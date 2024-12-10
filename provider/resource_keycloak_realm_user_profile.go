@@ -442,6 +442,14 @@ func resourceKeycloakRealmUserProfileDelete(ctx context.Context, data *schema.Re
 		Groups:     []*keycloak.RealmUserProfileGroup{},
 	}
 
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_23); ok {
+		// since version 23 username and email are mandatory
+		// TODO validate if this overwrite doesn't cause any problems
+		realmUserProfile.Attributes = []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"},
+		}
+	}
+
 	err := keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
 	if err != nil {
 		return diag.FromErr(err)

@@ -202,7 +202,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 	return nil
 }
 
-func (keycloakClient *KeycloakClient) refresh(ctx context.Context) error {
+func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
 	refreshTokenData := keycloakClient.getAuthenticationFormData()
 
@@ -340,7 +340,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 			"status": response.Status,
 		})
 
-		err := keycloakClient.refresh(ctx)
+		err := keycloakClient.Refresh(ctx)
 		if err != nil {
 			return nil, "", fmt.Errorf("error refreshing credentials: %s", err)
 		}

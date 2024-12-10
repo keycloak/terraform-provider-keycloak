@@ -165,7 +165,23 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 						}
 
 						//keycloak versions < 7.0.0 have 63 events, versions >=7.0.0 have 67 events, versions >=12.0.0 have 69 events
-						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_14); ok {
+						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
+							if len(realmEventsConfig.EnabledEventTypes) != 91 {
+								return fmt.Errorf("exptected to enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); ok {
+							if len(realmEventsConfig.EnabledEventTypes) != 87 {
+								return fmt.Errorf("exptected to enabled_event_types to contain all(87) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24); ok {
+							if len(realmEventsConfig.EnabledEventTypes) != 83 {
+								return fmt.Errorf("exptected to enabled_event_types to contain all(83) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_23); ok {
+							if len(realmEventsConfig.EnabledEventTypes) != 80 {
+								return fmt.Errorf("exptected to enabled_event_types to contain all(80) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_14); ok {
 							if len(realmEventsConfig.EnabledEventTypes) != 79 {
 								return fmt.Errorf("exptected to enabled_event_types to contain all(79) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}

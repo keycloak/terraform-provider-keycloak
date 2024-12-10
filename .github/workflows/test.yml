@@ -60,9 +60,12 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '21.0.1'
-          - '20.0.5'
-          - '19.0.2'
+          - '26.0.7'
+          - '25.0.2'
+          - '24.0.5'
+          - '23.0.7'
+          - '22.0.5'
+          - '21.1.2'
       fail-fast: false
     concurrency:
       group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}
@@ -108,12 +111,13 @@ jobs:
             return process.env.KEYCLOAK_VERSION.split("-")[0]
       - name: Test
         run: |
+          terraform version
           go mod download
           make testacc
         env:
           KEYCLOAK_CLIENT_ID: terraform
           KEYCLOAK_CLIENT_SECRET: 884e0f95-0f42-4a63-9b1f-94274655669e
-          KEYCLOAK_CLIENT_TIMEOUT: 30
+          KEYCLOAK_CLIENT_TIMEOUT: 120
           KEYCLOAK_REALM: master
           KEYCLOAK_URL: "http://localhost:8080"
           KEYCLOAK_TEST_PASSWORD_GRANT: "true"

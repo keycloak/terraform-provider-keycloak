@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strconv"
 	"testing"
@@ -94,10 +95,12 @@ func TestAccKeycloakOidcGoogleIdentityProvider_createAfterManualDestroy(t *testi
 
 func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 	firstEnabled := randomBool()
+	firstHideOnLogin := randomBool()
 
 	firstOidc := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     firstEnabled,
+		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			HostedDomain:                "mycompany.com",
 			AcceptsPromptNoneForwFrmClt: false,
@@ -105,12 +108,14 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:                acctest.RandString(10),
 			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:                    randomStringInSlice(syncModes),
+			HideOnLoginPage:             types.KeycloakBoolQuoted(firstHideOnLogin),
 		},
 	}
 
 	secondOidc := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: !firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     !firstEnabled,
+		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			HostedDomain:                "mycompany.com",
 			AcceptsPromptNoneForwFrmClt: false,
@@ -118,6 +123,7 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:                acctest.RandString(10),
 			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:                    randomStringInSlice(syncModes),
+			HideOnLoginPage:             types.KeycloakBoolQuoted(!firstHideOnLogin),
 		},
 	}
 
@@ -262,6 +268,7 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 	client_secret     						= "%s"
 	gui_order                               = %s
 	sync_mode                               = "%s"
+	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.HostedDomain, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode)
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.HostedDomain, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, bool(idp.Config.HideOnLoginPage))
 }

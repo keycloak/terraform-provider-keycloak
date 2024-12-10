@@ -1384,6 +1384,11 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	err = meta.(*keycloak.KeycloakClient).Refresh(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	setRealmData(data, realm)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)

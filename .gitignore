@@ -32,3 +32,5 @@ site/
 *.zip
 
 .DS_Store
+
+test_env.json
