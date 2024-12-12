@@ -1327,7 +1327,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
-	var attributes map[string]interface{}{}
+	var attributes map[string]interface{}
 	if v, ok := data.GetOk("attributes"); ok {
 		existingAttributes := v.(map[string]interface{})
 		attributes = existingAttributes
