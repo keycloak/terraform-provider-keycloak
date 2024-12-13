@@ -62,6 +62,12 @@ func resourceKeycloakSamlUserAttributeProtocolMapper() *schema.Resource {
 				Required:     true,
 				ValidateFunc: validation.StringInSlice(keycloakSamlUserAttributeProtocolMapperNameFormats, false),
 			},
+			"aggregate_attributes": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Indicates if attribute values should be aggregated within the group attributes",
+			},
 		},
 	}
 }
@@ -74,10 +80,11 @@ func mapFromDataToSamlUserAttributeProtocolMapper(data *schema.ResourceData) *ke
 		ClientId:      data.Get("client_id").(string),
 		ClientScopeId: data.Get("client_scope_id").(string),
 
-		UserAttribute:           data.Get("user_attribute").(string),
-		FriendlyName:            data.Get("friendly_name").(string),
-		SamlAttributeName:       data.Get("saml_attribute_name").(string),
-		SamlAttributeNameFormat: data.Get("saml_attribute_name_format").(string),
+		UserAttribute:            data.Get("user_attribute").(string),
+		FriendlyName:             data.Get("friendly_name").(string),
+		SamlAttributeName:        data.Get("saml_attribute_name").(string),
+		SamlAttributeNameFormat:  data.Get("saml_attribute_name_format").(string),
+		AggregateAttributeValues: data.Get("aggregate_attributes").(bool),
 	}
 }
 
@@ -96,6 +103,7 @@ func mapFromSamlUserAttributeMapperToData(mapper *keycloak.SamlUserAttributeProt
 	data.Set("friendly_name", mapper.FriendlyName)
 	data.Set("saml_attribute_name", mapper.SamlAttributeName)
 	data.Set("saml_attribute_name_format", mapper.SamlAttributeNameFormat)
+	data.Set("aggregate_attributes", mapper.AggregateAttributeValues)
 }
 
 func resourceKeycloakSamlUserAttributeProtocolMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
