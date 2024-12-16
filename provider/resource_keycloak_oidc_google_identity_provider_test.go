@@ -31,6 +31,35 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcGoogleIdentityProvider_customDisplayName(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	display_name = "Example Google"
+}
+	`, testAccRealm.Realm),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					resource.TestCheckResourceAttr("keycloak_oidc_google_identity_provider.google", "display_name", "Example Google"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcGoogleIdentityProvider_extraConfig(t *testing.T) {
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
