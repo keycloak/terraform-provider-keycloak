@@ -2,7 +2,7 @@ name: Go Dependency Submission
 on:
   push:
     branches:
-      - master
+      - main
 
 permissions:
   contents: write

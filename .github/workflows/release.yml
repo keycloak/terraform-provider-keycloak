@@ -53,7 +53,7 @@ jobs:
           releaseDate=$(date '+%B-%-d-%Y' | tr '[:upper:]' '[:lower:]')
           releaseVersion=$(echo ${{ steps.get_tag_name.outputs.TAG }} | tr -d '.')
           tmp=$(mktemp -d)
-          echo "[Release Notes](https://github.com/keycloak/terraform-provider-keycloak/blob/master/CHANGELOG.md#${releaseVersion}-${releaseDate})" > ${tmp}/release-notes.md
+          echo "[Release Notes](https://github.com/keycloak/terraform-provider-keycloak/blob/main/CHANGELOG.md#${releaseVersion}-${releaseDate})" > ${tmp}/release-notes.md
           cat ${tmp}/release-notes.md
           echo ::set-output name=NOTES::${tmp}/release-notes.md
 
