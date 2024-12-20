@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xe
+set -e
 
 KEYCLOAK_URL="http://localhost:8080"
 KEYCLOAK_USER="keycloak"

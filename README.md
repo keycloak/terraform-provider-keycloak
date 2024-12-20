@@ -52,7 +52,7 @@ This provider will officially support the latest three major versions of Keycloa
 The following versions are used when running acceptance tests in CI:
 
 - 26.0.7 (latest)
-- 25.0.2
+- 25.0.6
 - 24.0.5
 - 23.0.7
 - 22.0.5
@@ -64,8 +64,7 @@ This provider uses [GoReleaser](https://goreleaser.com/) to build and publish re
 contains binary files for Linux, macOS (darwin), and Windows, as configured within the [`.goreleaser.yml`](https://github.com/keycloak/terraform-provider-keycloak/blob/master/.goreleaser.yml)
 file.
 
-Each release also contains a `terraform-provider-keycloak_${RELEASE_VERSION}_SHA256SUMS` file, accompanied by a signature
-created by a PGP key with the fingerprint `C508 6791 5E11 6CD2`. This key can be found on my Keybase account at https://keybase.io/mrparkers.
+Each release also contains a `terraform-provider-keycloak_${RELEASE_VERSION}_SHA256SUMS` file that can be used to check integrity.
 
 You can find the list of releases [here](https://github.com/keycloak/terraform-provider-keycloak/releases).
 You can find the changelog for each version [here](https://github.com/keycloak/terraform-provider-keycloak/blob/master/CHANGELOG.md).
@@ -76,7 +75,7 @@ build you can use the `linux_amd64` build as long as `libc6-compat` is installed
 
 ## Development
 
-This project requires Go 1.19 and Terraform 1.4.1.
+This project requires Go 1.22 and Terraform 1.4.1.
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependency management, which allows this project to exist outside of an existing GOPATH.
 
 After cloning the repository, you can build the project by running `make build`.

@@ -10,10 +10,10 @@ build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o terraform-provider-keycloak_$(VERSION)
 
 build-example: build
-	mkdir -p example/.terraform/plugins/terraform.local/keycloak/keycloak/4.0.0/$(GOOS)_$(GOARCH)
-	mkdir -p example/terraform.d/plugins/terraform.local/keycloak/keycloak/4.0.0/$(GOOS)_$(GOARCH)
-	cp terraform-provider-keycloak_* example/.terraform/plugins/terraform.local/keycloak/keycloak/4.0.0/$(GOOS)_$(GOARCH)/
-	cp terraform-provider-keycloak_* example/terraform.d/plugins/terraform.local/keycloak/keycloak/4.0.0/$(GOOS)_$(GOARCH)/
+	mkdir -p example/.terraform/plugins/terraform.local/keycloak/keycloak/4.5.0/$(GOOS)_$(GOARCH)
+	mkdir -p example/terraform.d/plugins/terraform.local/keycloak/keycloak/4.5.0/$(GOOS)_$(GOARCH)
+	cp terraform-provider-keycloak_* example/.terraform/plugins/terraform.local/keycloak/keycloak/4.5.0/$(GOOS)_$(GOARCH)/
+	cp terraform-provider-keycloak_* example/terraform.d/plugins/terraform.local/keycloak/keycloak/4.5.0/$(GOOS)_$(GOARCH)/
 
 local: deps
 	docker compose up --build -d
