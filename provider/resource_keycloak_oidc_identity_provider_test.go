@@ -30,6 +30,44 @@ func TestAccKeycloakOidcIdentityProvider_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcIdentityProvider_customDisplayName(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	issuer = "hello"
+
+	display_name = "Example Provider"
+}
+	`, testAccRealm.Realm, oidcName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "display_name", "Example Provider"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcIdentityProvider_extraConfig(t *testing.T) {
 	t.Parallel()
 

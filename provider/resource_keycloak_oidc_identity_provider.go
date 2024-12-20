@@ -16,6 +16,12 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Default:     "oidc",
 			Description: "provider id, is always oidc, unless you have a custom implementation",
 		},
+		"display_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The human-friendly name of the identity provider, used in the log in form.",
+		},
 		"backchannel_supported": {
 			Type:        schema.TypeBool,
 			Optional:    true,
