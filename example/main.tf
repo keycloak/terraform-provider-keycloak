@@ -1096,6 +1096,14 @@ resource "keycloak_realm_user_profile" "userprofile" {
   realm_id = keycloak_realm.test.id
 
   attribute {
+    name = "username"
+  }
+
+  attribute {
+    name = "email"
+  }
+
+  attribute {
     name         = "field1"
     display_name = "Field 1"
     group        = "group1"

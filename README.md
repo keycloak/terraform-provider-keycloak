@@ -105,6 +105,20 @@ KEYCLOAK_URL="http://localhost:8080" \
 make testacc
 ```
 
+### Run examples
+
+You can run examples against a Keycloak instance.
+Follow the commands for running examples against a local environment that was created via `make local`:
+
+```
+make build-example
+cd example
+terraform init
+terraform plan -out tfplan
+terraform apply tfplan
+rm tfplan
+```
+
 ## Acknowledgments
 
 The Keycloak Terraform Provider was originally created by [Michael Parker](https://github.com/mrparkers). Many thanks for the hard work and dedication in building the foundation for this project.
