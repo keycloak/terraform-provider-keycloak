@@ -7,7 +7,7 @@ on:
 jobs:
   wait:
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Wait for acceptance tests
     steps:
       - name: Wait for acceptance tests
@@ -25,7 +25,7 @@ jobs:
     permissions: write-all
     needs:
       - wait
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
