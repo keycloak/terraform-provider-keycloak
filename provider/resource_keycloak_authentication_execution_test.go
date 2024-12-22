@@ -99,6 +99,96 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 	})
 }
 
+func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriority(t *testing.T) {
+	t.Parallel()
+
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
+		t.Skip()
+	}
+
+	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakAuthenticationExecution_multipleExecutionsWithPriority(authParentFlowAlias, 112, 111),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.cookie_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.cookie_execution", "priority", "112"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.cookie_execution", 1),
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.kerberos_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.kerberos_execution", "priority", "111"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.kerberos_execution", 0),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionPriority(t *testing.T) {
+	t.Parallel()
+
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
+		t.Skip()
+	}
+
+	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakAuthenticationExecution_multipleExecutions(authParentFlowAlias),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.cookie_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.cookie_execution", "priority", "0"),
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.kerberos_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.kerberos_execution", "priority", "0"),
+				),
+			},
+			{
+				Config: testKeycloakAuthenticationExecution_multipleExecutionsWithKerberosPriority(authParentFlowAlias, 10),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.cookie_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.cookie_execution", "priority", "0"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.cookie_execution", 0),
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.kerberos_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.kerberos_execution", "priority", "10"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.kerberos_execution", 1),
+				),
+			},
+			{
+				Config: testKeycloakAuthenticationExecution_multipleExecutionsWithPriority(authParentFlowAlias, 112, 111),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.cookie_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.cookie_execution", "priority", "112"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.cookie_execution", 1),
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.kerberos_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.kerberos_execution", "priority", "111"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.kerberos_execution", 0),
+				),
+			},
+
+			{
+				Config: testKeycloakAuthenticationExecution_multipleExecutionsWithPriority(authParentFlowAlias, 200, 201),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.cookie_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.cookie_execution", "priority", "200"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.cookie_execution", 0),
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.kerberos_execution"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution.kerberos_execution", "priority", "201"),
+					testAccCheckKeycloakAuthenticationExecutionIndex("keycloak_authentication_execution.kerberos_execution", 1),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakAuthenticationExecutionExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getAuthenticationExecutionFromState(s, resourceName)
@@ -165,6 +255,39 @@ func getAuthenticationExecutionFromState(s *terraform.State, resourceName string
 	return authenticationExecution, nil
 }
 
+func testAccCheckKeycloakAuthenticationExecutionIndex(resourceName string, idx int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		id := rs.Primary.ID
+		realm := rs.Primary.Attributes["realm_id"]
+		parentFlowAlias := rs.Primary.Attributes["parent_flow_alias"]
+		providerID := rs.Primary.Attributes["authenticator"]
+
+		authenticationExecutionInfo, err := keycloakClient.GetAuthenticationExecutionInfoFromProviderId(testCtx, realm, parentFlowAlias, providerID)
+		if err != nil {
+			return err
+		}
+
+		if authenticationExecutionInfo == nil {
+			return fmt.Errorf("authentication flow with id %s does not exists", id)
+		}
+
+		if authenticationExecutionInfo.Id != id {
+			return fmt.Errorf("expected authenticationExecutionInfo with ID %s but got %s", id, authenticationExecutionInfo.Id)
+		}
+
+		if authenticationExecutionInfo.Index != idx {
+			return fmt.Errorf("expected index %d but got %d at %s", idx, authenticationExecutionInfo.Index, resourceName)
+		}
+
+		return nil
+	}
+}
+
 func getExecutionImportId(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -196,6 +319,7 @@ resource "keycloak_authentication_execution" "execution" {
 	parent_flow_alias = keycloak_authentication_flow.flow.alias
 	authenticator     = "auth-cookie"
 }
+
 	`, testAccRealm.Realm, parentAlias)
 }
 
@@ -217,4 +341,85 @@ resource "keycloak_authentication_execution" "execution" {
 	requirement       = "%s"
 }
 	`, testAccRealm.Realm, parentAlias, requirement)
+}
+
+func testKeycloakAuthenticationExecution_multipleExecutions(parentAlias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id = data.keycloak_realm.realm.id
+	alias    = "%s"
+}
+
+resource "keycloak_authentication_execution" "cookie_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-cookie"
+}
+
+resource "keycloak_authentication_execution" "kerberos_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-spnego"
+}
+
+	`, testAccRealm.Realm, parentAlias)
+}
+
+func testKeycloakAuthenticationExecution_multipleExecutionsWithKerberosPriority(parentAlias string, priorityKerberos int) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id = data.keycloak_realm.realm.id
+	alias    = "%s"
+}
+
+resource "keycloak_authentication_execution" "cookie_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-cookie"
+}
+
+resource "keycloak_authentication_execution" "kerberos_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-spnego"
+	priority          = %d
+}
+
+	`, testAccRealm.Realm, parentAlias, priorityKerberos)
+}
+
+func testKeycloakAuthenticationExecution_multipleExecutionsWithPriority(parentAlias string, priorityCookie int, priorityKerberos int) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id = data.keycloak_realm.realm.id
+	alias    = "%s"
+}
+
+resource "keycloak_authentication_execution" "cookie_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-cookie"
+	priority          = %d
+}
+
+resource "keycloak_authentication_execution" "kerberos_execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	authenticator     = "auth-spnego"
+	priority          = %d
+}
+
+	`, testAccRealm.Realm, parentAlias, priorityCookie, priorityKerberos)
 }

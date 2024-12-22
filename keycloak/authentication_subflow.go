@@ -45,10 +45,7 @@ func (keycloakClient *KeycloakClient) NewAuthenticationSubFlow(ctx context.Conte
 	}
 	authenticationSubFlow.Id = getIdFromLocationHeader(location)
 
-	if authenticationSubFlow.Requirement != "DISABLED" {
-		return keycloakClient.UpdateAuthenticationSubFlow(ctx, authenticationSubFlow)
-	}
-	return nil
+	return keycloakClient.UpdateAuthenticationSubFlow(ctx, authenticationSubFlow)
 }
 
 func (keycloakClient *KeycloakClient) GetAuthenticationSubFlow(ctx context.Context, realmId, parentFlowAlias, id string) (*AuthenticationSubFlow, error) {
@@ -71,7 +68,7 @@ func (keycloakClient *KeycloakClient) GetAuthenticationSubFlow(ctx context.Conte
 	}
 	authenticationSubFlow.Authenticator = subFlowExecution.Authenticator
 	authenticationSubFlow.Requirement = subFlowExecution.Requirement
-
+	authenticationSubFlow.Priority = subFlowExecution.Priority
 	return &authenticationSubFlow, nil
 }
 
@@ -110,6 +107,7 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationSubFlow(ctx context.Co
 		ParentFlowAlias: authenticationSubFlow.ParentFlowAlias,
 		Id:              executionId,
 		Requirement:     authenticationSubFlow.Requirement,
+		Priority:        authenticationSubFlow.Priority,
 	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 

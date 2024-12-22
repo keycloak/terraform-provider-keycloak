@@ -9,7 +9,7 @@ Allows for creating and managing an authentication execution within Keycloak.
 An authentication execution is an action that the user or service may or may not take when authenticating through an authentication
 flow.
 
-~> Due to limitations in the Keycloak API, the ordering of authentication executions within a flow must be specified using `depends_on`. Authentication executions that are created first will appear first within the flow.
+~> Following limitation affects Keycloak < 25:  Due to limitations in the Keycloak API, the ordering of authentication executions within a flow must be specified using `depends_on`. Authentication executions that are created first will appear first within the flow.
 
 ## Example Usage
 
@@ -30,6 +30,7 @@ resource "keycloak_authentication_execution" "execution_one" {
   parent_flow_alias = "${keycloak_authentication_flow.flow.alias}"
   authenticator     = "auth-cookie"
   requirement       = "ALTERNATIVE"
+  priority			= 10
 }
 
 # second execution
@@ -38,10 +39,7 @@ resource "keycloak_authentication_execution" "execution_two" {
   parent_flow_alias = "${keycloak_authentication_flow.flow.alias}"
   authenticator     = "identity-provider-redirector"
   requirement       = "ALTERNATIVE"
-
-  depends_on = [
-    keycloak_authentication_execution.execution_one
-  ]
+  priority			= 20
 }
 ```
 
@@ -51,6 +49,7 @@ resource "keycloak_authentication_execution" "execution_two" {
 - `parent_flow_alias` - (Required) The alias of the flow this execution is attached to.
 - `authenticator` - (Required) The name of the authenticator. This can be found by experimenting with the GUI and looking at HTTP requests within the network tab of your browser's development tools.
 - `requirement`- (Optional) The requirement setting, which can be one of `REQUIRED`, `ALTERNATIVE`, `OPTIONAL`, `CONDITIONAL`, or `DISABLED`. Defaults to `DISABLED`.
+- `priority`- (Optional) The authenticator priority. Lower values will be executed prior higher values (Only supported by Keycloak >= 25).
 
 ## Import
 
