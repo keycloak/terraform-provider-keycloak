@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/imdario/mergo"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -114,6 +115,12 @@ func resourceKeycloakUser() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"import": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				ForceNew: true,
+			},
 		},
 	}
 }
@@ -204,17 +211,36 @@ func resourceKeycloakUserCreate(ctx context.Context, data *schema.ResourceData, 
 
 	user := mapFromDataToUser(data)
 
-	err := keycloakClient.NewUser(ctx, user)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	if !data.Get("import").(bool) {
+		err := keycloakClient.NewUser(ctx, user)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
-	v, isInitialPasswordSet := data.GetOk("initial_password")
-	if isInitialPasswordSet {
-		passwordBlock := v.([]interface{})[0].(map[string]interface{})
-		passwordValue := passwordBlock["value"].(string)
-		isPasswordTemporary := passwordBlock["temporary"].(bool)
-		err := keycloakClient.ResetUserPassword(ctx, user.RealmId, user.Id, passwordValue, isPasswordTemporary)
+		v, isInitialPasswordSet := data.GetOk("initial_password")
+		if isInitialPasswordSet {
+			passwordBlock := v.([]interface{})[0].(map[string]interface{})
+			passwordValue := passwordBlock["value"].(string)
+			isPasswordTemporary := passwordBlock["temporary"].(bool)
+			err := keycloakClient.ResetUserPassword(ctx, user.RealmId, user.Id, passwordValue, isPasswordTemporary)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	} else {
+		username := data.Get("username").(string)
+		existingUser, err := keycloakClient.GetUserByUsername(ctx, data.Get("realm_id").(string), username)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if existingUser == nil {
+			return diag.FromErr(fmt.Errorf("no user found for username %s", username))
+		}
+
+		if err = mergo.Merge(user, existingUser); err != nil {
+			return diag.FromErr(err)
+		}
+		err = keycloakClient.UpdateUser(ctx, user)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -257,6 +283,10 @@ func resourceKeycloakUserUpdate(ctx context.Context, data *schema.ResourceData, 
 }
 
 func resourceKeycloakUserDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if data.Get("import").(bool) {
+		return nil
+	}
+
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
@@ -279,6 +309,7 @@ func resourceKeycloakUserImport(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	d.Set("realm_id", parts[0])
+	d.Set("import", false)
 	d.SetId(parts[1])
 
 	diagnostics := resourceKeycloakUserRead(ctx, d, meta)
