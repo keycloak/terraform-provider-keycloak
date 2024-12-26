@@ -17,8 +17,7 @@ import (
 )
 
 func TestAccKeycloakRealmUserProfile_featureDisabled(t *testing.T) {
-	// TODO Fix test(?)
-	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_22)
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
@@ -28,8 +27,44 @@ func TestAccKeycloakRealmUserProfile_featureDisabled(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakRealmUserProfile_featureDisabled(realmName),
+				Config:      testKeycloakRealmUserProfile_userProfileDisabled(realmName),
 				ExpectError: regexp.MustCompile("User Profile is disabled"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmUserProfile_featureNotSet(t *testing.T) {
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
+				ExpectError: regexp.MustCompile("User Profile is disabled"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
+				Check:  testAccCheckKeycloakRealmUserProfileExists("keycloak_realm_user_profile.realm_user_profile"),
 			},
 		},
 	})
@@ -452,13 +487,35 @@ func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
 	})
 }
 
-func testKeycloakRealmUserProfile_featureDisabled(realm string) string {
+func testKeycloakRealmUserProfile_userProfileDisabled(realm string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+
+	attributes = {
+		userProfileEnabled  = false
+	}
+}
+resource "keycloak_realm_user_profile" "realm_user_profile" {
+	realm_id = keycloak_realm.realm.id
+}
+`, realm)
+}
+
+func testKeycloakRealmUserProfile_userProfileEnabledNotSet(realm string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 resource "keycloak_realm_user_profile" "realm_user_profile" {
 	realm_id = keycloak_realm.realm.id
+
+	attribute {
+		name = "username"
+    }
+	attribute {
+		name = "email"
+    }
 }
 `, realm)
 }

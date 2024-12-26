@@ -8,7 +8,7 @@ Allows for managing Realm User Profiles within Keycloak.
 
 A user profile defines a schema for representing user attributes and how they are managed within a realm.
 
-Information for Keycloak versions < 22:
+Information for Keycloak versions < 24:
 The realm linked to the `keycloak_realm_user_profile` resource must have the user profile feature enabled.
 It can be done via the administration UI, or by setting the `userProfileEnabled` realm attribute to `true`.
 
