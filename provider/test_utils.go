@@ -79,6 +79,17 @@ func skipIfVersionIsLessThanOrEqualTo(ctx context.Context, t *testing.T, keycloa
 	}
 }
 
+func skipIfVersionIsLessThan(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
+	ok, err := keycloakClient.VersionIsLessThan(ctx, version)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
+	if ok {
+		t.Skipf("keycloak server version is less than %s, skipping...", version)
+	}
+}
+
 func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
 	ok, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, version)
 	if err != nil {

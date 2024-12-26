@@ -11,7 +11,6 @@ import (
 )
 
 func TestAccKeycloakOpenidClientPermission_basic(t *testing.T) {
-	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"
