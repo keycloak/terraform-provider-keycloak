@@ -363,6 +363,95 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	unmanagedPolicyEnabled := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ENABLED),
+	}
+
+	unmanagedPolicyDisabled := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(DISABLED),
+	}
+
+	unmanagedPolicyAdminEdit := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ADMIN_EDIT),
+	}
+
+	unmanagedPolicyAdminView := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ADMIN_VIEW),
+	}
+
+	unmanagedPolicyNotSet := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyEnabled),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyEnabled,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyDisabled),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyNotSet),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyAdminEdit),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyAdminEdit,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyAdminView),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyAdminView,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyNotSet),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+		},
+	})
+}
+
 func testKeycloakRealmUserProfile_featureDisabled(realm string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
@@ -386,6 +475,10 @@ resource "keycloak_realm" "realm" {
 
 resource "keycloak_realm_user_profile" "realm_user_profile" {
 	realm_id = keycloak_realm.realm.id
+
+	{{- if .userProfile.UnmanagedAttributePolicy }}
+	unmanaged_attribute_policy = "{{ .userProfile.UnmanagedAttributePolicy}}"
+	{{- end }}
 
 	{{- range $_, $attribute := .userProfile.Attributes }}
 	attribute {

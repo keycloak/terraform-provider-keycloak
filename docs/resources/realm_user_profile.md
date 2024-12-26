@@ -7,11 +7,8 @@ page_title: "keycloak_realm_user_profile Resource"
 Allows for managing Realm User Profiles within Keycloak.
 
 A user profile defines a schema for representing user attributes and how they are managed within a realm.
-This is a preview feature, hence not fully supported and disabled by default.
-To enable it, start the server with one of the following flags:
-- WildFly distribution: `-Dkeycloak.profile.feature.declarative_user_profile=enabled`
-- Quarkus distribution: `--features=preview` or `--features=declarative-user-profile`
 
+Information for Keycloak versions < 22:
 The realm linked to the `keycloak_realm_user_profile` resource must have the user profile feature enabled.
 It can be done via the administration UI, or by setting the `userProfileEnabled` realm attribute to `true`.
 
@@ -20,14 +17,11 @@ It can be done via the administration UI, or by setting the `userProfileEnabled`
 ```hcl
 resource "keycloak_realm" "realm" {
   realm = "my-realm"
-
-  attributes = {
-    userProfileEnabled = true
-  }
 }
 
 resource "keycloak_realm_user_profile" "userprofile" {
   realm_id = keycloak_realm.my_realm.id
+  unmanaged_attribute_policy = "ENABLED"
 
   attribute {
     name         = "field1"
@@ -98,6 +92,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
 - `realm_id` - (Required) The ID of the realm the user profile applies to.
 - `attribute` - (Optional) An ordered list of [attributes](#attribute-arguments).
 - `group` - (Optional) A list of [groups](#group-arguments).
+- `unmanaged_attribute_policy` - (Optional) Unmanaged attributes are user attributes not explicitly defined in the user profile configuration. By default, unmanaged attributes are not enabled. Value could be one of `DISABLED`, `ENABLED`, `ADMIN_EDIT` or `ADMIN_VIEW`. If value is not specified it means `DISABLED`
 
 ### Attribute Arguments
 
