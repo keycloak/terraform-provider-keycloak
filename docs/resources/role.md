@@ -152,6 +152,7 @@ resource "keycloak_role" "admin_role" {
 - `description` - (Optional) The description of the role
 - `composite_roles` - (Optional) When specified, this role will be a composite role, composed of all roles that have an ID present within this list.
 - `attributes` - (Optional) A map representing attributes for the role. In order to add multivalue attributes, use `##` to seperate the values. Max length for each value is 255 chars
+- `import` - (Optional) When `true`, the role with the specified `name` is assumed to already exist, and it will be imported into state instead of being created. This attribute is useful when dealing with roles that Keycloak creates automatically during realm creation, such as the client roles `create-client`, `view-realm`, ... for the client `realm-management` created per realm. Note, that the role will not be removed during destruction if `import` is `true`.
 
 
 ## Import
