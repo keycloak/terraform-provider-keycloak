@@ -23,6 +23,10 @@ func dataSourceKeycloakAuthenticationExecution() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"priority": {
+				Type:     schema.TypeInt,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -39,7 +43,7 @@ func dataSourceKeycloakAuthenticationExecutionRead(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionInfoToData(data, authenticationExecutionInfo)
+	mapFromAuthenticationExecutionInfoToData(ctx, keycloakClient, data, authenticationExecutionInfo)
 
 	return nil
 }

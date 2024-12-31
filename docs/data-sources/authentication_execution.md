@@ -30,4 +30,4 @@ data "keycloak_authentication_execution" "browser_auth_cookie" {
 ## Attributes Reference
 
 - `id` - (Computed) The unique ID of the authentication execution, which can be used as an argument to other resources supported by this provider.
-
+- `priority` - (Computed) The authenticator priority.

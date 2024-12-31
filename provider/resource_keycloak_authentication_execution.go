@@ -85,11 +85,22 @@ func mapFromAuthenticationExecutionToData(ctx context.Context, keycloakClient *k
 	return nil
 }
 
-func mapFromAuthenticationExecutionInfoToData(data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) {
+func mapFromAuthenticationExecutionInfoToData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) error {
 	data.SetId(authenticationExecutionInfo.Id)
 
 	data.Set("realm_id", authenticationExecutionInfo.RealmId)
 	data.Set("parent_flow_alias", authenticationExecutionInfo.ParentFlowAlias)
+
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
+	if err != nil {
+		return err
+	}
+
+	if versionOk {
+		data.Set("priority", authenticationExecutionInfo.Priority)
+	}
+
+	return nil
 }
 
 func resourceKeycloakAuthenticationExecutionCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

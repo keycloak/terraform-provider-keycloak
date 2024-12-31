@@ -112,3 +112,7 @@ func stringSliceContains(s []string, e string) bool {
 func stringPointer(s string) *string {
 	return &s
 }
+
+func intPointer(i int) *int {
+	return &i
+}
