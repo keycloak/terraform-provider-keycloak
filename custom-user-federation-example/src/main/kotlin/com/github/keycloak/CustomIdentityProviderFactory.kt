@@ -7,7 +7,6 @@ import org.keycloak.models.KeycloakSession
 import org.keycloak.protocol.oidc.representations.OIDCConfigurationRepresentation
 import org.keycloak.util.JsonSerialization
 import java.io.IOException
-import java.io.InputStream
 
 class CustomIdentityProviderFactory : AbstractIdentityProviderFactory<CustomIdentityProvider>() {
 	override fun getName(): String = "custom idp"
@@ -17,14 +16,14 @@ class CustomIdentityProviderFactory : AbstractIdentityProviderFactory<CustomIden
 		return CustomIdentityProvider(session, CustomIdentityProviderConfig(model))
 	}
 
-	override fun parseConfig(session: KeycloakSession, inputStream: InputStream): Map<String, String> {
-		return parseOIDCConfig(session, inputStream)
+	override fun parseConfig(session: KeycloakSession, rawConfig: String): Map<String, String> {
+		return parseOIDCConfig(session, rawConfig)
 	}
 
-	private fun parseOIDCConfig(session: KeycloakSession, inputStream: InputStream): Map<String, String> {
+	private fun parseOIDCConfig(session: KeycloakSession, rawConfig: String): Map<String, String> {
 		val rep: OIDCConfigurationRepresentation
 		try {
-			rep = JsonSerialization.readValue(inputStream, OIDCConfigurationRepresentation::class.java)
+			rep = JsonSerialization.readValue(rawConfig, OIDCConfigurationRepresentation::class.java)
 		} catch (e: IOException) {
 			throw RuntimeException("failed to load openid connect metadata", e)
 		}

@@ -5,7 +5,7 @@ import org.keycloak.credential.CredentialInput
 import org.keycloak.credential.CredentialInputUpdater
 import org.keycloak.credential.CredentialInputValidator
 import org.keycloak.models.credential.PasswordCredentialModel
-import org.keycloak.credential.LegacyUserCredentialManager
+import org.keycloak.credential.UserCredentialManager
 import org.keycloak.models.*
 import org.keycloak.models.credential.*
 import org.keycloak.storage.ReadOnlyException
@@ -50,7 +50,7 @@ class CustomUserStorageProvider(private val session: KeycloakSession, private va
                 }
 
 				override fun credentialManager(): SubjectCredentialManager {
-					return LegacyUserCredentialManager(session, realm, this)
+					return UserCredentialManager(session, realm, this)
 				}
 			}
 
