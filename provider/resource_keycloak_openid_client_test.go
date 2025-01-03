@@ -512,7 +512,7 @@ func TestAccKeycloakOpenidClient_pkceCodeChallengeMethod(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_pkceChallengeMethod(clientId, "invalidMethod"),
-				ExpectError: regexp.MustCompile(`expected pkce_code_challenge_method to be one of \[\ plain S256\], got invalidMethod`),
+				ExpectError: regexp.MustCompile(`expected pkce_code_challenge_method to be one of \[\"" "plain" "S256"\], got invalidMethod`),
 			},
 			{
 				Config: testKeycloakOpenidClient_omitPkceChallengeMethod(clientId),
