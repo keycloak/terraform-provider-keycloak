@@ -58,7 +58,6 @@ func resourceKeycloakRole() *schema.Resource {
 			"import": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
 				ForceNew: true,
 			},
 		},
@@ -104,7 +103,10 @@ func resourceKeycloakRoleCreate(ctx context.Context, data *schema.ResourceData, 
 
 	role := mapFromDataToRole(data)
 
-	if data.Get("import").(bool) {
+	importValue, importSpecified := data.GetOk("import")
+	imp := importSpecified && importValue.(bool)
+
+	if imp {
 		realmId := data.Get("realm_id").(string)
 		name := data.Get("name").(string)
 		clientId := data.Get("client_id").(string)
@@ -313,7 +315,6 @@ func resourceKeycloakRoleImport(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	d.Set("realm_id", parts[0])
-	d.Set("import", false)
 	d.SetId(parts[1])
 
 	diagnostics := resourceKeycloakRoleRead(ctx, d, meta)

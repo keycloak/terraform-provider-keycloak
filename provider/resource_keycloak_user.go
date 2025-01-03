@@ -118,7 +118,6 @@ func resourceKeycloakUser() *schema.Resource {
 			"import": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
 				ForceNew: true,
 			},
 		},
@@ -211,7 +210,10 @@ func resourceKeycloakUserCreate(ctx context.Context, data *schema.ResourceData, 
 
 	user := mapFromDataToUser(data)
 
-	if !data.Get("import").(bool) {
+	importValue, importSpecified := data.GetOk("import")
+	imp := importSpecified && importValue.(bool)
+
+	if !imp {
 		err := keycloakClient.NewUser(ctx, user)
 		if err != nil {
 			return diag.FromErr(err)
@@ -309,7 +311,6 @@ func resourceKeycloakUserImport(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	d.Set("realm_id", parts[0])
-	d.Set("import", false)
 	d.SetId(parts[1])
 
 	diagnostics := resourceKeycloakUserRead(ctx, d, meta)

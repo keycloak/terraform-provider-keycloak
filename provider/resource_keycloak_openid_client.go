@@ -298,7 +298,6 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			"import": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
 				ForceNew: true,
 			},
 		},
@@ -526,7 +525,10 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	if data.Get("import").(bool) {
+	importValue, importSpecified := data.GetOk("import")
+	imp := importSpecified && importValue.(bool)
+
+	if imp {
 		existingClient, err := keycloakClient.GetOpenidClientByClientId(ctx, client.RealmId, client.ClientId)
 		if err != nil {
 			return diag.FromErr(err)
@@ -626,7 +628,6 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 	}
 
 	d.Set("realm_id", parts[0])
-	d.Set("import", false)
 	d.SetId(parts[1])
 
 	diagnostics := resourceKeycloakOpenidClientRead(ctx, d, meta)
