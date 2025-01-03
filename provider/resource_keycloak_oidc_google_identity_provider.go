@@ -1,9 +1,9 @@
 package provider
 
 import (
+	"dario.cat/mergo"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/imdario/mergo"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )

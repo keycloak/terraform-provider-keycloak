@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/imdario/mergo"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
