@@ -571,6 +571,10 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 		return diag.FromErr(err)
 	}
 
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
+	}
+
 	return nil
 }
 

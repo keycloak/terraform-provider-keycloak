@@ -264,6 +264,10 @@ func resourceKeycloakUserRead(ctx context.Context, data *schema.ResourceData, me
 
 	mapFromUserToData(data, user)
 
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
+	}
+
 	return nil
 }
 
