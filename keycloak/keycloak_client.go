@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -16,6 +15,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/go-version"
 
@@ -60,7 +61,7 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsClientCert string, tlsClientPrivateKey string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	clientCredentials := &ClientCredentials{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
@@ -79,7 +80,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecre
 		}
 	}
 
-	httpClient, err := newHttpClient(tlsInsecureSkipVerify, clientTimeout, caCert)
+	httpClient, err := newHttpClient(tlsInsecureSkipVerify, clientTimeout, caCert, tlsClientCert, tlsClientPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %v", err)
 	}
@@ -170,7 +171,6 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		serverVersion = strings.ReplaceAll(info.SystemInfo.ServerVersion, ".GA", "")
 	} else {
 		regex, err := regexp.Compile(`\.redhat-\w+`)
-
 		if err != nil {
 			fmt.Println("Error compiling regex:", err)
 			return err
@@ -499,7 +499,7 @@ func (keycloakClient *KeycloakClient) marshal(body interface{}) ([]byte, error) 
 	return json.Marshal(body)
 }
 
-func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string) (*http.Client, error) {
+func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string, tlsClientCert string, tlsClientPrivateKey string) (*http.Client, error) {
 	cookieJar, err := cookiejar.New(&cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
 	})
@@ -516,6 +516,14 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM([]byte(caCert))
 		transport.TLSClientConfig.RootCAs = caCertPool
+	}
+
+	if tlsClientCert != "" && tlsClientPrivateKey != "" {
+		clientKeyPairCert, err := tls.X509KeyPair([]byte(tlsClientCert), []byte(tlsClientPrivateKey))
+		if err != nil {
+			return nil, err
+		}
+		transport.TLSClientConfig.Certificates = []tls.Certificate{clientKeyPairCert}
 	}
 
 	retryClient := retryablehttp.NewClient()

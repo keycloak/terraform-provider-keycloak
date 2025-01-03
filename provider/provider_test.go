@@ -4,23 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-var testAccProviderFactories map[string]func() (*schema.Provider, error)
-var testAccProvider *schema.Provider
-var keycloakClient *keycloak.KeycloakClient
-var testAccRealm *keycloak.Realm
-var testAccRealmTwo *keycloak.Realm
-var testAccRealmUserFederation *keycloak.Realm
-var testCtx context.Context
+var (
+	testAccProviderFactories   map[string]func() (*schema.Provider, error)
+	testAccProvider            *schema.Provider
+	keycloakClient             *keycloak.KeycloakClient
+	testAccRealm               *keycloak.Realm
+	testAccRealmTwo            *keycloak.Realm
+	testAccRealmUserFederation *keycloak.Realm
+	testCtx                    context.Context
+)
 
 var requiredEnvironmentVariables = []string{
 	"KEYCLOAK_CLIENT_ID",
@@ -56,7 +59,7 @@ func init() {
 		}
 	}
 
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 5, "", false, userAgent, false, map[string]string{
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 5, "", "", "", false, userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {

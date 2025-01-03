@@ -87,5 +87,7 @@ The following arguments are supported:
 - `client_timeout` - (Optional) Sets the timeout of the client when addressing Keycloak, in seconds. Defaults to the environment variable `KEYCLOAK_CLIENT_TIMEOUT`, or `15` if the environment variable is not specified.
 - `tls_insecure_skip_verify` - (Optional) Allows ignoring insecure certificates when set to `true`. Defaults to `false`. Disabling this security check is dangerous and should only be done in local or test environments.
 - `root_ca_certificate` - (Optional) Allows x509 calls using an unknown CA certificate (for development purposes)
+-   `tls_client_certificate` - (Optional) The TLS client certificate in PEM format when the keycloak server is configured with TLS mutual authentication.
+-   `tls_client_private_key` - (Optional) The TLS client pkcs1 private key in PEM format when the keycloak server is configured with TLS mutual authentication.
 - `base_path` - (Optional) The base path used for accessing the Keycloak REST API.  Defaults to the environment variable `KEYCLOAK_BASE_PATH`, or an empty string if the environment variable is not specified. Note that users of the legacy distribution of Keycloak will need to set this attribute to `/auth`.
 - `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API.
