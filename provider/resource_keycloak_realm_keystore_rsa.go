@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	keycloakRealmKeystoreRsaAlgorithm = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "RSA-OAEP"}
+	keycloakRealmKeystoreRsaAlgorithm = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "RSA1_5", "RSA-OAEP", "RSA-OAEP-256"}
 )
 
 func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
