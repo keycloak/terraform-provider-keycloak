@@ -17,8 +17,9 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 		},
 		"display_name": {
 			Type:        schema.TypeString,
+			Optional:    true,
 			Computed:    true,
-			Description: "Not used by this provider, Will be implicitly Google",
+			Description: "The human-friendly name of the identity provider, used in the log in form.",
 		},
 		"provider_id": {
 			Type:        schema.TypeString,
