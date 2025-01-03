@@ -87,6 +87,7 @@ is set to `true`.
   - `direct_grant_id` - (Optional) Direct grant flow id (flow needs to exist)
 - `login_theme` - (Optional) The client login theme. This will override the default theme for the realm.
 - `exclude_session_state_from_auth_response` - (Optional) When `true`, the parameter `session_state` will not be included in OpenID Connect Authentication Response.
+- `exclude_issuer_from_auth_response` - (Optional) When `true`, the parameter `iss` will not be included in OpenID Connect Authentication Response.
 - `use_refresh_tokens` - (Optional) If this is `true`, a refresh_token will be created and added to the token response. If this is `false` then no refresh_token will be generated.  Defaults to `true`.
 - `use_refresh_tokens_client_credentials` - (Optional) If this is `true`, a refresh_token will be created and added to the token response if the client_credentials grant is used and a user session will be created. If this is `false` then no refresh_token will be generated and the associated user session will be removed, in accordance with OAuth 2.0 RFC6749 Section 4.4.3. Defaults to `false`.
 - `oauth2_device_authorization_grant_enabled` - (Optional) Enables support for OAuth 2.0 Device Authorization Grant, which means that client is an application on device that has limited input capabilities or lack a suitable browser.
