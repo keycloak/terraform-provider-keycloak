@@ -45,7 +45,7 @@ jobs:
 
       - name: Get tag name
         id: get_tag_name
-        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        run: echo "name=TAG::${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Build release notes link
         id: build-release-notes
@@ -55,7 +55,7 @@ jobs:
           tmp=$(mktemp -d)
           echo "[Release Notes](https://github.com/keycloak/terraform-provider-keycloak/blob/main/CHANGELOG.md#${releaseVersion}-${releaseDate})" > ${tmp}/release-notes.md
           cat ${tmp}/release-notes.md
-          echo ::set-output name=NOTES::${tmp}/release-notes.md
+          echo "name=NOTES::${tmp}/release-notes.md" >> $GITHUB_OUTPUT
 
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@v6
