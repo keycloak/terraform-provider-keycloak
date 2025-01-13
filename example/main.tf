@@ -2,7 +2,7 @@ terraform {
   required_providers {
     keycloak = {
       source  = "terraform.local/keycloak/keycloak"
-      version = ">= 4.0.0"
+      version = ">= 5.0.0"
     }
   }
 }
