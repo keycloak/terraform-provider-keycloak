@@ -29,6 +29,7 @@ type Realm struct {
 	DisplayName       string `json:"displayName"`
 	DisplayNameHtml   string `json:"displayNameHtml"`
 	UserManagedAccess bool   `json:"userManagedAccessAllowed"`
+	Organizations     bool   `json:"organizationsEnabled"`
 
 	// Login Config
 	RegistrationAllowed         bool   `json:"registrationAllowed"`

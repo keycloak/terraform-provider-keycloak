@@ -116,6 +116,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"organizations": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 
 			// Login Config
 
