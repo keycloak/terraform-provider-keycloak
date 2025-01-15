@@ -1,3 +1,58 @@
+## 5.0.0 (January 13, 2025)
+
+FEATURES:
+- Fix user & userprofile tests by @denniskniep in [#1042](https://github.com/keycloak/terraform-provider-keycloak/pull/1042)
+- add support for keycloak version up to current (26.0.7) by @sschum in [#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028)
+- feat:(roles): Importable role by rolename by @denniskniep in [#1043](https://github.com/keycloak/terraform-provider-keycloak/pull/1043)
+- feat(user): Importable user by username by @denniskniep in [#1041](https://github.com/keycloak/terraform-provider-keycloak/pull/1041)
+- feat(authFlow): added optional priority by @denniskniep in [#1040](https://github.com/keycloak/terraform-provider-keycloak/pull/1040)
+- feat: Recognise the 'apple' provider ID in attribute importer mapper by @greed42 in [#1036](https://github.com/keycloak/terraform-provider-keycloak/pull/1036)
+- Add support for remote debugging by @thomasdarimont in [#1048](https://github.com/keycloak/terraform-provider-keycloak/pull/1048)
+- unit tests are now working with KC 21 to 26 by @sschum and @markus-qvest-seidl in [#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028)
+	- Please check IdP provider sync mode as the default has changed to "LEGACY"
+	- Keycloak 25: SAML clients have a default 'saml_organization'. If 'saml_organization' isn't specified in the provider configuration, the provider will delete this scope.
+
+IMPROVEMENTS:
+
+- Add attribute_force_default to ldap_user_attribute_mapper by @Vincevrp in [#1057](https://github.com/keycloak/terraform-provider-keycloak/pull/1057)
+- chore: Ignore local scratch dir by @thomasdarimont in [#1063](https://github.com/keycloak/terraform-provider-keycloak/pull/1063)
+- Code cleanups by @thomasdarimont in [#1050](https://github.com/keycloak/terraform-provider-keycloak/pull/1050)
+- Updated dependencies by @sschu in [#1051](https://github.com/keycloak/terraform-provider-keycloak/pull/1051)
+- Updated example to KC26.0.7 by @sschu in [#1046](https://github.com/keycloak/terraform-provider-keycloak/pull/1046)
+- update golang.org/x/net and golang.org/x/crypto by @AbrohamLincoln in [#1034](https://github.com/keycloak/terraform-provider-keycloak/pull/1034)
+- Update index.md: The default client timeout is 15 seconds by @giner in [#1018](https://github.com/keycloak/terraform-provider-keycloak/pull/1018)
+- Small readme fixed and version updates by @sschu in [#1035](https://github.com/keycloak/terraform-provider-keycloak/pull/1035)
+- Update expired certificates by @sschu in [#1045](https://github.com/keycloak/terraform-provider-keycloak/pull/1045)
+- Fixed examples and user-federation-example by @denniskniep in [#1039](https://github.com/keycloak/terraform-provider-keycloak/pull/1039)
+
+BUG FIXES:
+
+- Prevent force replacing resources when `import` value in state is nil by @kherock in [#1054](https://github.com/keycloak/terraform-provider-keycloak/pull/1054)
+- fix: Revise Keycloak environment handling (#1061) by @thomasdarimont in [#1062](https://github.com/keycloak/terraform-provider-keycloak/pull/1062)
+- fix: Revise Keycloak debugging configuration (#1059) by @thomasdarimont in [#1060](https://github.com/keycloak/terraform-provider-keycloak/pull/1060)
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+[@AbrohamLincoln](https://github.com/AbrohamLincoln)
+[@denniskniep](https://github.com/denniskniep)
+[@giner](https://github.com/giner)
+[@greed42](https://github.com/greed42)
+[@markus-qvest-seidl](https://github.com/markus-qvest-seidl)
+[@sschum](https://github.com/sschum)
+[@kherock](https://github.com/kherock)
+[@Vincevrp](https://github.com/Vincevrp)
+
+## 4.5.0 (December 6, 2024)
+
+IMPROVEMENTS:
+
+- various dependency and readme updates ([#1014](https://github.com/keycloak/terraform-provider-keycloak/pull/1014), [#1015](https://github.com/keycloak/terraform-provider-keycloak/pull/1015), [#1022](https://github.com/keycloak/terraform-provider-keycloak/pull/1022), [#1024](https://github.com/keycloak/terraform-provider-keycloak/pull/1024))
+- move to the Keycloak organization ([#1017](https://github.com/keycloak/terraform-provider-keycloak/pull/1017))
+- update go to 1.22 ([#1013](https://github.com/keycloak/terraform-provider-keycloak/pull/1013))
+- update license for project to Apache 2.0 [#1002](https://github.com/keycloak/terraform-provider-keycloak/pull/1002)
+
+Huge thanks to everybody supporting the license change to Apache 2.0!
+
 ## 4.4.0 (January 8, 2024)
 
 FEATURES:

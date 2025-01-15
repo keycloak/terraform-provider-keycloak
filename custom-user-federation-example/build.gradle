@@ -1,50 +1,22 @@
-buildscript {
-	ext.kotlinVersion = '1.3.31'
-	ext.keycloakVersion = '19.0.2'
-	ext.shadowJarVersion = '4.0.2'
-
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}"
-        classpath "com.github.jengelman.gradle.plugins:shadow:${shadowJarVersion}"
-    }
+plugins {
+	id 'org.jetbrains.kotlin.jvm' version '2.0.20'
+	id 'com.gradleup.shadow' version '8.3.0'
+	id 'java-library'
 }
 
-apply {
-    plugin 'java'
-    plugin 'kotlin'
-    plugin 'com.github.johnrengelman.shadow'
-}
-
-shadowJar {
-    classifier = null
+ext {
+	keycloakVersion = '26.0.7'
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
-    compile "org.keycloak:keycloak-core:${keycloakVersion}"
-    compile "org.keycloak:keycloak-services:${keycloakVersion}"
-    compile "org.keycloak:keycloak-server-spi:${keycloakVersion}"
-    compile "org.keycloak:keycloak-server-spi-private:${keycloakVersion}"
-    compile "org.keycloak:keycloak-model-legacy:${keycloakVersion}"
+	compileOnly "org.keycloak:keycloak-services:${keycloakVersion}"
+	compileOnly "org.keycloak:keycloak-model-storage:${keycloakVersion}"
 }
 
 repositories {
     mavenCentral()
 }
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
-
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+kotlin {
+	jvmToolchain(21)
 }

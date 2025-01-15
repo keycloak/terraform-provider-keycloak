@@ -9,7 +9,6 @@ import (
 )
 
 func TestAccKeycloakDataSourceUserRoles(t *testing.T) {
-	t.Parallel()
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"
 	realmRoleName := acctest.RandomWithPrefix("tf-acc")

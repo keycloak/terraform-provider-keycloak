@@ -17,7 +17,7 @@ type LdapUserFederation struct {
 
 	ImportEnabled     bool
 	EditMode          string // can be "READ_ONLY", "WRITABLE", or "UNSYNCED"
-	SyncRegistrations bool   // I think this field controls whether or not BatchSizeForSync, FullSyncPeriod, and ChangedSyncPeriod are needed
+	SyncRegistrations bool   // I think this field controls whether BatchSizeForSync, FullSyncPeriod, and ChangedSyncPeriod are needed
 
 	Vendor                 string // can be "other", "edirectory", "ad", "rhds", or "tivoli". honestly I don't think this field actually does anything
 	UsernameLDAPAttribute  string

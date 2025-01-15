@@ -5,8 +5,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -1384,6 +1384,11 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	err = meta.(*keycloak.KeycloakClient).Refresh(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	setRealmData(data, realm)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
@@ -1397,7 +1402,7 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not detected
+	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not be detected
 	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok {
 		realm.SmtpServer.Password = smtpPassword
 	}

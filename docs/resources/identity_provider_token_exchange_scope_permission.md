@@ -18,7 +18,7 @@ When enabling Identity Provider Permissions, Keycloak does several things automa
 The only thing that is missing is a policy set on the permission.
 As the policy lives within the context of the realm-management client, you cannot create a policy resource and link to from with your _.tf_ file. This would also cause an implicit cycle dependency.
 Thus, the only way to manage this in terraform is to create and manage the policy internally from within this terraform resource itself.
-At the moment only a client policy type is supported. The client policy will automatically be created for the clients parameter.
+At the moment only a client policy type is supported. The client policy will automatically be created for the `clients` parameter.
 
 ## Example Usage
 

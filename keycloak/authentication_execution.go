@@ -7,7 +7,7 @@ import (
 )
 
 // this is only used when creating an execution on a flow.
-// other fields can be provided to the API but they are ignored
+// other fields can be provided to the API, but they are ignored
 // POST /realms/${realmId}/authentication/flows/${flowAlias}/executions/execution
 type authenticationExecutionCreate struct {
 	Provider string `json:"provider"` //authenticator of the execution
@@ -18,9 +18,10 @@ type authenticationExecutionRequirementUpdate struct {
 	ParentFlowAlias string `json:"-"`
 	Id              string `json:"id"`
 	Requirement     string `json:"requirement"`
+	Priority        int    `json:"priority,omitempty"`
 }
 
-// this type is returned by GET /realms/${realmId}/authentication/flows/${flowAlias}/executions
+// AuthenticationExecution is returned by GET /realms/${realmId}/authentication/flows/${flowAlias}/executions
 type AuthenticationExecution struct {
 	Id                   string `json:"id"`
 	RealmId              string `json:"-"`
@@ -34,7 +35,7 @@ type AuthenticationExecution struct {
 	Requirement          string `json:"requirement"`
 }
 
-// another model is used for GET /realms/${realmId}/authentication/executions/${executionId}, but I am going to try to avoid using this API
+// AuthenticationExecutionInfo is used for GET /realms/${realmId}/authentication/executions/${executionId}, but I am going to try to avoid using this API
 type AuthenticationExecutionInfo struct {
 	Id                   string `json:"id"`
 	RealmId              string `json:"-"`
@@ -48,6 +49,7 @@ type AuthenticationExecutionInfo struct {
 	Level                int    `json:"level"`
 	ProviderId           string `json:"providerId"`
 	Requirement          string `json:"requirement"`
+	Priority             int    `json:"priority"`
 }
 
 type AuthenticationExecutionList []*AuthenticationExecutionInfo
@@ -154,6 +156,7 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationExecution(ctx context.
 		ParentFlowAlias: execution.ParentFlowAlias,
 		Id:              execution.Id,
 		Requirement:     execution.Requirement,
+		Priority:        execution.Priority,
 	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func randomBool() bool {
@@ -76,6 +76,17 @@ func skipIfVersionIsLessThanOrEqualTo(ctx context.Context, t *testing.T, keycloa
 
 	if ok {
 		t.Skipf("keycloak server version is less than or equal to %s, skipping...", version)
+	}
+}
+
+func skipIfVersionIsLessThan(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
+	ok, err := keycloakClient.VersionIsLessThan(ctx, version)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
+	if ok {
+		t.Skipf("keycloak server version is less than %s, skipping...", version)
 	}
 }
 

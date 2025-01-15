@@ -2,25 +2,27 @@ name: Go Dependency Submission
 on:
   push:
     branches:
-      - master
+      - main
+    paths-ignore:
+      - '**/*.md'
 
 permissions:
   contents: write
 
 jobs:
   go-dependency-submission:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
           cache: true
 
       - name: Run snapshot action
-        uses: actions/go-dependency-submission@v1
+        uses: actions/go-dependency-submission@v2
         with:
           go-mod-path: go.mod

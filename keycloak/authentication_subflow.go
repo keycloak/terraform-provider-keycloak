@@ -13,7 +13,7 @@ type AuthenticationSubFlow struct {
 	ParentFlowAlias string `json:"-"`
 	ProviderId      string `json:"providerId"` // "basic-flow" or "client-flow" or form-flow see /keycloak/server-spi/src/main/java/org/keycloak/models/AuthenticationFlowModel.java
 	TopLevel        bool   `json:"topLevel"`   // should only be false if this is a subflow
-	BuiltIn         bool   `json:"builtIn"`    // this controls whether or not this flow can be edited from the console. it can be updated, but this provider will only set it to `true`
+	BuiltIn         bool   `json:"builtIn"`    // this controls whether this flow can be edited from the console. it can be updated, but this provider will only set it to `true`
 	Description     string `json:"description"`
 	//execution part
 	Authenticator string `json:"-"` //can be any authenticator see /auth/admin/master/console/#/server-info/providers (not limited to the authenticator spi section) for example could also be part of the form-action spi
@@ -45,10 +45,7 @@ func (keycloakClient *KeycloakClient) NewAuthenticationSubFlow(ctx context.Conte
 	}
 	authenticationSubFlow.Id = getIdFromLocationHeader(location)
 
-	if authenticationSubFlow.Requirement != "DISABLED" {
-		return keycloakClient.UpdateAuthenticationSubFlow(ctx, authenticationSubFlow)
-	}
-	return nil
+	return keycloakClient.UpdateAuthenticationSubFlow(ctx, authenticationSubFlow)
 }
 
 func (keycloakClient *KeycloakClient) GetAuthenticationSubFlow(ctx context.Context, realmId, parentFlowAlias, id string) (*AuthenticationSubFlow, error) {
@@ -71,7 +68,7 @@ func (keycloakClient *KeycloakClient) GetAuthenticationSubFlow(ctx context.Conte
 	}
 	authenticationSubFlow.Authenticator = subFlowExecution.Authenticator
 	authenticationSubFlow.Requirement = subFlowExecution.Requirement
-
+	authenticationSubFlow.Priority = subFlowExecution.Priority
 	return &authenticationSubFlow, nil
 }
 
@@ -110,6 +107,7 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationSubFlow(ctx context.Co
 		ParentFlowAlias: authenticationSubFlow.ParentFlowAlias,
 		Id:              executionId,
 		Requirement:     authenticationSubFlow.Requirement,
+		Priority:        authenticationSubFlow.Priority,
 	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 
