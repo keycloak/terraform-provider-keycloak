@@ -179,7 +179,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
-			"organizations": {
+			"organizations_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -750,7 +750,7 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		DisplayName:       data.Get("display_name").(string),
 		DisplayNameHtml:   data.Get("display_name_html").(string),
 		UserManagedAccess: data.Get("user_managed_access").(bool),
-		Organizations:     data.Get("organizations").(bool),
+		OrganizationsEnabled:     data.Get("organizations_enabled").(bool),
 
 		// Login Config
 		RegistrationAllowed:         data.Get("registration_allowed").(bool),
@@ -1185,7 +1185,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
-	data.Set("organizations", realm.Organizations)
+	data.Set("organizations_enabled", realm.OrganizationsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)

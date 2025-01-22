@@ -116,7 +116,7 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
-			"organizations": {
+			"organizations_enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
