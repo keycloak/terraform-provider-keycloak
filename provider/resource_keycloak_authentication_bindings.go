@@ -55,6 +55,12 @@ func resourceKeycloakAuthenticationBindings() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -67,6 +73,7 @@ func setAuthenticationBindingsData(data *schema.ResourceData, realm *keycloak.Re
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 }
 
 func resetAuthenticationBindingsForRealm(realm *keycloak.Realm) {
@@ -76,6 +83,7 @@ func resetAuthenticationBindingsForRealm(realm *keycloak.Realm) {
 	realm.ResetCredentialsFlow = stringPointer("reset credentials")
 	realm.ClientAuthenticationFlow = stringPointer("clients")
 	realm.DockerAuthenticationFlow = stringPointer("docker auth")
+	realm.FirstBrokerLoginFlow = stringPointer("first broker login")
 }
 
 func resourceKeycloakAuthenticationBindingsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -474,6 +474,11 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Description: "Which flow should be used for DockerAuthenticationFlow",
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Computed:    true,
+			},
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,

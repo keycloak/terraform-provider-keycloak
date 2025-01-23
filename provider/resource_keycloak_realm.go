@@ -605,6 +605,12 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Optional:    true,
+				Computed:    true,
+			},
 
 			// misc attributes
 			"attributes": {
@@ -714,6 +720,12 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm) {
 		realm.DockerAuthenticationFlow = stringPointer(flow.(string))
 	} else {
 		realm.DockerAuthenticationFlow = stringPointer("docker auth")
+	}
+
+	if flow, ok := data.GetOk("first_broker_login_flow"); ok {
+		realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
+	} else {
+		realm.FirstBrokerLoginFlow = stringPointer("first broker login")
 	}
 }
 
@@ -1288,6 +1300,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})

@@ -105,6 +105,7 @@ type Realm struct {
 	ResetCredentialsFlow     *string `json:"resetCredentialsFlow,omitempty"`
 	ClientAuthenticationFlow *string `json:"clientAuthenticationFlow,omitempty"`
 	DockerAuthenticationFlow *string `json:"dockerAuthenticationFlow,omitempty"`
+	FirstBrokerLoginFlow     *string `json:"firstBrokerLoginFlow,omitempty"`
 
 	// OTP Policy
 	OTPPolicyAlgorithm       string `json:"otpPolicyAlgorithm,omitempty"`

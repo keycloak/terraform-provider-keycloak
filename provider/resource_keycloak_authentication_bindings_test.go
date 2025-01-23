@@ -124,6 +124,22 @@ func TestAccKeycloakAuthenticationBindings_dockerAuthenticationGrant(t *testing.
 	})
 }
 
+func TestAccKeycloakAuthenticationBindings_firstBrokerLoginFlow(t *testing.T) {
+	flow := "first_broker_login_flow"
+	flowAlias := "firstBrokerLoginCopyFlow"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
+				Check:  testAccCheckKeycloakAuthenticationBindingBrowserSet(testAccRealm.Realm, "FirstBrokerLoginFlow", flowAlias),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakAuthenticationBindings_existingFlow(t *testing.T) {
 	flow := "browser_flow"
 	flowAlias := "browser"
