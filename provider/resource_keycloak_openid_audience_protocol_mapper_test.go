@@ -233,7 +233,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(t 
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(clientId, mapperName),
-				ExpectError: regexp.MustCompile("validation error: client .+ does not exist"),
+				ExpectError: regexp.MustCompile("validation error: generic client with name \\S+ does not exist"),
 			},
 		},
 	})
