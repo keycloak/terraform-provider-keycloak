@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"reflect"
 	"testing"
 
@@ -125,6 +126,8 @@ func TestAccKeycloakAuthenticationBindings_dockerAuthenticationGrant(t *testing.
 }
 
 func TestAccKeycloakAuthenticationBindings_firstBrokerLoginFlow(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
+
 	flow := "first_broker_login_flow"
 	flowAlias := "firstBrokerLoginCopyFlow"
 

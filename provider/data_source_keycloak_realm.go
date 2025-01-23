@@ -537,6 +537,7 @@ func dataSourceKeycloakRealm() *schema.Resource {
 
 func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion := keycloakClient.Version()
 
 	realmName := data.Get("realm").(string)
 
@@ -545,7 +546,7 @@ func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }

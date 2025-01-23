@@ -207,6 +207,7 @@ The arguments below can be used to configure authentication flow bindings:
 - `reset_credentials_flow` - (Optional) The desired flow to use when a user attempts to reset their credentials. Defaults to `reset credentials`.
 - `client_authentication_flow` - (Optional) The desired flow for client authentication. Defaults to `clients`.
 - `docker_authentication_flow` - (Optional) The desired flow for Docker authentication. Defaults to `docker auth`.
+- `first_broker_login_flow` - (Optional) The desired flow for First Broker Login (since Keycloak 24). Defaults to `first broker login`.
 
 ### OTP Policy
 
