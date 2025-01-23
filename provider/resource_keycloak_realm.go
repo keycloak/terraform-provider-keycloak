@@ -744,13 +744,13 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 	}
 
 	realm := &keycloak.Realm{
-		Id:                realmId.(string),
-		Realm:             data.Get("realm").(string),
-		Enabled:           data.Get("enabled").(bool),
-		DisplayName:       data.Get("display_name").(string),
-		DisplayNameHtml:   data.Get("display_name_html").(string),
-		UserManagedAccess: data.Get("user_managed_access").(bool),
-		OrganizationsEnabled:     data.Get("organizations_enabled").(bool),
+		Id:                   realmId.(string),
+		Realm:                data.Get("realm").(string),
+		Enabled:              data.Get("enabled").(bool),
+		DisplayName:          data.Get("display_name").(string),
+		DisplayNameHtml:      data.Get("display_name_html").(string),
+		UserManagedAccess:    data.Get("user_managed_access").(bool),
+		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
 		// Login Config
 		RegistrationAllowed:         data.Get("registration_allowed").(bool),
