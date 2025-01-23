@@ -256,25 +256,6 @@ func (keycloakClient *KeycloakClient) GetOpenidClientOptionalScopes(ctx context.
 	return keycloakClient.getOpenidClientScopes(ctx, realmId, clientId, "optional")
 }
 
-func (keycloakClient *KeycloakClient) getRealmClientScopes(ctx context.Context, realmId, t string) ([]*OpenidClientScope, error) {
-	var scopes []*OpenidClientScope
-
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/default-%s-client-scopes", realmId, t), &scopes, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return scopes, nil
-}
-
-func (keycloakClient *KeycloakClient) GetRealmDefaultClientScopes(ctx context.Context, realmId string) ([]*OpenidClientScope, error) {
-	return keycloakClient.getRealmClientScopes(ctx, realmId, "default")
-}
-
-func (keycloakClient *KeycloakClient) GetRealmOptionalClientScopes(ctx context.Context, realmId string) ([]*OpenidClientScope, error) {
-	return keycloakClient.getRealmClientScopes(ctx, realmId, "optional")
-}
-
 func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
 	openidClient, err := keycloakClient.GetOpenidClient(ctx, realmId, clientId)
 	if err != nil && ErrorIs404(err) {

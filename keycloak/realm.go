@@ -23,12 +23,13 @@ type Keys struct {
 }
 
 type Realm struct {
-	Id                string `json:"id,omitempty"`
-	Realm             string `json:"realm"`
-	Enabled           bool   `json:"enabled"`
-	DisplayName       string `json:"displayName"`
-	DisplayNameHtml   string `json:"displayNameHtml"`
-	UserManagedAccess bool   `json:"userManagedAccessAllowed"`
+	Id                   string `json:"id,omitempty"`
+	Realm                string `json:"realm"`
+	Enabled              bool   `json:"enabled"`
+	DisplayName          string `json:"displayName"`
+	DisplayNameHtml      string `json:"displayNameHtml"`
+	UserManagedAccess    bool   `json:"userManagedAccessAllowed"`
+	OrganizationsEnabled bool   `json:"organizationsEnabled,omitempty"`
 
 	// Login Config
 	RegistrationAllowed         bool   `json:"registrationAllowed"`

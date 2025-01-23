@@ -180,6 +180,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"organizations_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 
 			// Login Config
 			"registration_allowed": {
@@ -754,12 +759,13 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 
 	realm := &keycloak.Realm{
-		Id:                realmId.(string),
-		Realm:             data.Get("realm").(string),
-		Enabled:           data.Get("enabled").(bool),
-		DisplayName:       data.Get("display_name").(string),
-		DisplayNameHtml:   data.Get("display_name_html").(string),
-		UserManagedAccess: data.Get("user_managed_access").(bool),
+		Id:                   realmId.(string),
+		Realm:                data.Get("realm").(string),
+		Enabled:              data.Get("enabled").(bool),
+		DisplayName:          data.Get("display_name").(string),
+		DisplayNameHtml:      data.Get("display_name_html").(string),
+		UserManagedAccess:    data.Get("user_managed_access").(bool),
+		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
 		// Login Config
 		RegistrationAllowed:         data.Get("registration_allowed").(bool),
@@ -1194,6 +1200,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
+	data.Set("organizations_enabled", realm.OrganizationsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)
