@@ -1,46 +1,78 @@
+
+
+## 5.0.1 (January 24, 2025)
+
+FEATURES:
+
+* feat: allow configuration of display_name for oidc identity providers ([#1033](https://github.com/keycloak/terraform-provider-keycloak/pull/1033))
+* Configure default and optional client scopes per realm via dedicated resources ([#1079](https://github.com/keycloak/terraform-provider-keycloak/pull/1079))
+
+IMPROVEMENTS:
+
+* Ignore changes on markdown files in pipeline triggers ([#1070](https://github.com/keycloak/terraform-provider-keycloak/pull/1070))
+* Updated KC26 version to KC26.0.8 ([#1075](https://github.com/keycloak/terraform-provider-keycloak/pull/1075))
+* Add aggregate attributes flag to keycloak_saml_user_attribute_protocol_mapper ([#1080](https://github.com/keycloak/terraform-provider-keycloak/pull/1080))
+* 1073 add organization setting to realm ([#1076](https://github.com/keycloak/terraform-provider-keycloak/pull/1076))
+* refactor: speed up audience mapper validation ([#961](https://github.com/keycloak/terraform-provider-keycloak/pull/961))
+* 1067 Add first broker login flow to authentication flow bindings ([#1084](https://github.com/keycloak/terraform-provider-keycloak/pull/1084))
+
+BUG FIXES:
+
+* chore: Remove temporary note from readme.md ([#1068](https://github.com/keycloak/terraform-provider-keycloak/pull/1068))
+* fix: allow definition of multivalued user profile attributes ([#1071](https://github.com/keycloak/terraform-provider-keycloak/pull/1071))
+* chore: fixed deprecation warning in release pipeline ([#1072](https://github.com/keycloak/terraform-provider-keycloak/pull/1072))
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [@bnjns](https://github.com/bnjns)
+- [@pboehm](https://github.com/pboehm)
+- [@robson90](https://github.com/robson90)
+- [@sybereal](https://github.com/sybereal)
+
 ## 5.0.0 (January 13, 2025)
 
 FEATURES:
-- Fix user & userprofile tests by @denniskniep in [#1042](https://github.com/keycloak/terraform-provider-keycloak/pull/1042)
-- add support for keycloak version up to current (26.0.7) by @sschum in [#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028)
-- feat:(roles): Importable role by rolename by @denniskniep in [#1043](https://github.com/keycloak/terraform-provider-keycloak/pull/1043)
-- feat(user): Importable user by username by @denniskniep in [#1041](https://github.com/keycloak/terraform-provider-keycloak/pull/1041)
-- feat(authFlow): added optional priority by @denniskniep in [#1040](https://github.com/keycloak/terraform-provider-keycloak/pull/1040)
-- feat: Recognise the 'apple' provider ID in attribute importer mapper by @greed42 in [#1036](https://github.com/keycloak/terraform-provider-keycloak/pull/1036)
-- Add support for remote debugging by @thomasdarimont in [#1048](https://github.com/keycloak/terraform-provider-keycloak/pull/1048)
-- unit tests are now working with KC 21 to 26 by @sschum and @markus-qvest-seidl in [#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028)
+
+- Fix user & userprofile tests ([#1042](https://github.com/keycloak/terraform-provider-keycloak/pull/1042))
+- add support for keycloak version up to current (26.0.7) ([#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028))
+- feat:(roles): Importable role by rolename ([#1043](https://github.com/keycloak/terraform-provider-keycloak/pull/1043))
+- feat(user): Importable user by username ([#1041](https://github.com/keycloak/terraform-provider-keycloak/pull/1041))
+- feat(authFlow): added optional priority ([#1040](https://github.com/keycloak/terraform-provider-keycloak/pull/1040))
+- feat: Recognise the 'apple' provider ID in attribute importer mapper ([#1036](https://github.com/keycloak/terraform-provider-keycloak/pull/1036))
+- Add support for remote debugging ([#1048](https://github.com/keycloak/terraform-provider-keycloak/pull/1048))
+- unit tests are now working with KC 21 to 26 ([#1028](https://github.com/keycloak/terraform-provider-keycloak/pull/1028))
 	- Please check IdP provider sync mode as the default has changed to "LEGACY"
 	- Keycloak 25: SAML clients have a default 'saml_organization'. If 'saml_organization' isn't specified in the provider configuration, the provider will delete this scope.
 
 IMPROVEMENTS:
 
-- Add attribute_force_default to ldap_user_attribute_mapper by @Vincevrp in [#1057](https://github.com/keycloak/terraform-provider-keycloak/pull/1057)
-- chore: Ignore local scratch dir by @thomasdarimont in [#1063](https://github.com/keycloak/terraform-provider-keycloak/pull/1063)
-- Code cleanups by @thomasdarimont in [#1050](https://github.com/keycloak/terraform-provider-keycloak/pull/1050)
-- Updated dependencies by @sschu in [#1051](https://github.com/keycloak/terraform-provider-keycloak/pull/1051)
-- Updated example to KC26.0.7 by @sschu in [#1046](https://github.com/keycloak/terraform-provider-keycloak/pull/1046)
-- update golang.org/x/net and golang.org/x/crypto by @AbrohamLincoln in [#1034](https://github.com/keycloak/terraform-provider-keycloak/pull/1034)
-- Update index.md: The default client timeout is 15 seconds by @giner in [#1018](https://github.com/keycloak/terraform-provider-keycloak/pull/1018)
-- Small readme fixed and version updates by @sschu in [#1035](https://github.com/keycloak/terraform-provider-keycloak/pull/1035)
-- Update expired certificates by @sschu in [#1045](https://github.com/keycloak/terraform-provider-keycloak/pull/1045)
-- Fixed examples and user-federation-example by @denniskniep in [#1039](https://github.com/keycloak/terraform-provider-keycloak/pull/1039)
+- Add attribute_force_default to ldap_user_attribute_mapper ([#1057](https://github.com/keycloak/terraform-provider-keycloak/pull/1057))
+- chore: Ignore local scratch dir ([#1063](https://github.com/keycloak/terraform-provider-keycloak/pull/1063))
+- Code cleanups ([#1050](https://github.com/keycloak/terraform-provider-keycloak/pull/1050))
+- Updated dependencies ([#1051](https://github.com/keycloak/terraform-provider-keycloak/pull/1051))
+- Updated example to KC26.0.7 ([#1046](https://github.com/keycloak/terraform-provider-keycloak/pull/1046))
+- update golang.org/x/net and golang.org/x/crypto ([#1034](https://github.com/keycloak/terraform-provider-keycloak/pull/1034))
+- Update index.md: The default client timeout is 15 seconds ([#1018](https://github.com/keycloak/terraform-provider-keycloak/pull/1018))
+- Small readme fixed and version updates ([#1035](https://github.com/keycloak/terraform-provider-keycloak/pull/1035))
+- Update expired certificates ([#1045](https://github.com/keycloak/terraform-provider-keycloak/pull/1045))
+- Fixed examples and user-federation-example ([#1039](https://github.com/keycloak/terraform-provider-keycloak/pull/1039))
 
 BUG FIXES:
 
-- Prevent force replacing resources when `import` value in state is nil by @kherock in [#1054](https://github.com/keycloak/terraform-provider-keycloak/pull/1054)
-- fix: Revise Keycloak environment handling (#1061) by @thomasdarimont in [#1062](https://github.com/keycloak/terraform-provider-keycloak/pull/1062)
-- fix: Revise Keycloak debugging configuration (#1059) by @thomasdarimont in [#1060](https://github.com/keycloak/terraform-provider-keycloak/pull/1060)
+- Prevent force replacing resources when `import` value in state is nil ([#1054](https://github.com/keycloak/terraform-provider-keycloak/pull/1054))
+- fix: Revise Keycloak environment handling (#1061) ([#1062](https://github.com/keycloak/terraform-provider-keycloak/pull/1062))
+- fix: Revise Keycloak debugging configuration (#1059) ([#1060](https://github.com/keycloak/terraform-provider-keycloak/pull/1060))
 
 Huge thanks to all the individuals who have contributed towards this release:
 
-[@AbrohamLincoln](https://github.com/AbrohamLincoln)
-[@denniskniep](https://github.com/denniskniep)
-[@giner](https://github.com/giner)
-[@greed42](https://github.com/greed42)
-[@markus-qvest-seidl](https://github.com/markus-qvest-seidl)
-[@sschum](https://github.com/sschum)
-[@kherock](https://github.com/kherock)
-[@Vincevrp](https://github.com/Vincevrp)
+- [@AbrohamLincoln](https://github.com/AbrohamLincoln)
+- [@denniskniep](https://github.com/denniskniep)
+- [@giner](https://github.com/giner)
+- [@greed42](https://github.com/greed42)
+- [@markus-qvest-seidl](https://github.com/markus-qvest-seidl)
+- [@sschum](https://github.com/sschum)
+- [@kherock](https://github.com/kherock)
+- [@Vincevrp](https://github.com/Vincevrp)
 
 ## 4.5.0 (December 6, 2024)
 
