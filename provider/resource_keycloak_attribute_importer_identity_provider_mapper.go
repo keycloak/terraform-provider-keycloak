@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakAttributeImporterIdentityProviderMapper() *schema.Resource {
@@ -67,7 +67,7 @@ func getAttributeImporterIdentityProviderMapperFromData(ctx context.Context, dat
 		}
 
 		rec.Config.Claim = data.Get("claim_name").(string)
-	} else if identityProvider.ProviderId == "facebook" || identityProvider.ProviderId == "google" {
+	} else if identityProvider.ProviderId == "apple" || identityProvider.ProviderId == "facebook" || identityProvider.ProviderId == "google" {
 		rec.IdentityProviderMapper = fmt.Sprintf("%s-user-attribute-mapper", identityProvider.ProviderId)
 		rec.Config.JsonField = data.Get("claim_name").(string)
 		rec.Config.UserAttributeName = data.Get("user_attribute").(string)

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
@@ -32,6 +32,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"keycloak_realm":                                             resourceKeycloakRealm(),
 			"keycloak_realm_events":                                      resourceKeycloakRealmEvents(),
+			"keycloak_realm_default_client_scopes":                       resourceKeycloakRealmDefaultClientScopes(),
+			"keycloak_realm_optional_client_scopes":                      resourceKeycloakRealmOptionalClientScopes(),
 			"keycloak_realm_keystore_aes_generated":                      resourceKeycloakRealmKeystoreAesGenerated(),
 			"keycloak_realm_keystore_ecdsa_generated":                    resourceKeycloakRealmKeystoreEcdsaGenerated(),
 			"keycloak_realm_keystore_hmac_generated":                     resourceKeycloakRealmKeystoreHmacGenerated(),

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakAuthenticationExecution() *schema.Resource {
@@ -23,6 +23,10 @@ func dataSourceKeycloakAuthenticationExecution() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"priority": {
+				Type:     schema.TypeInt,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -39,7 +43,7 @@ func dataSourceKeycloakAuthenticationExecutionRead(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionInfoToData(data, authenticationExecutionInfo)
+	mapFromAuthenticationExecutionInfoToData(ctx, keycloakClient, data, authenticationExecutionInfo)
 
 	return nil
 }

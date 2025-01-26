@@ -2,11 +2,11 @@ package provider
 
 import (
 	"context"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 // a struct that represents the "desired" state configured via terraform
-// the key for 'clientRoles' is keycloak's client-id (the uuid, not to be confused with the OAuth Client Id)
+// the key for 'clientRoles' is keycloak's client-id (the uuid, not to be confused with the OAuth `Client Id`)
 type roleMapping struct {
 	clientRoles map[string][]*keycloak.Role
 	realmRoles  []*keycloak.Role
@@ -115,7 +115,7 @@ func roleExists(roles []*keycloak.Role, role *keycloak.Role) bool {
 	return false
 }
 
-// calculate the set difference: returns `a \ b`, i.e. every role that exist in a, but not in b
+// calculate the set difference: returns `a \ b`, i.e. every role that exist in `a`, but not in `b`
 func minusRoles(a, b []*keycloak.Role) []*keycloak.Role {
 	var aWithoutB []*keycloak.Role
 

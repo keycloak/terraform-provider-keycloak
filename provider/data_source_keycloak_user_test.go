@@ -11,8 +11,6 @@ import (
 )
 
 func TestAccKeycloakDataSourceUser(t *testing.T) {
-	t.Parallel()
-
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"
 

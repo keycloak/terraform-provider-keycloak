@@ -47,6 +47,7 @@ resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_map
 - `client_id` - (Optional) The client this protocol mapper should be attached to. Conflicts with `client_scope_id`. One of `client_id` or `client_scope_id` must be specified.
 - `client_scope_id` - (Optional) The client scope this protocol mapper should be attached to. Conflicts with `client_id`. One of `client_id` or `client_scope_id` must be specified.
 - `friendly_name` - (Optional) An optional human-friendly name for this attribute.
+- `aggregate_attributes`- (Optional) Indicates whether this attribute is a single value or an array of values. Defaults to `false`.
 
 ## Import
 

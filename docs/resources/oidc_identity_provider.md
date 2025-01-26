@@ -33,7 +33,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 ## Argument Reference
 
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
-- `alias` - (Required) The alias uniquely identifies an identity provider and it is also used to build the redirect uri.
+- `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
 - `authorization_url` - (Required) The Authorization Url.
 - `client_id` - (Required) The client or client identifier registered within the identity provider.
 - `client_secret` - (Required) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format.
@@ -42,7 +42,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `enabled` - (Optional) When `true`, users will be able to log in to this realm using this identity provider. Defaults to `true`.
 - `store_token` - (Optional) When `true`, tokens will be stored after authenticating users. Defaults to `true`.
 - `add_read_token_role_on_create` - (Optional) When `true`, new users will be able to read stored tokens. This will automatically assign the `broker.read-token` role. Defaults to `false`.
-- `link_only` - (Optional) When `true`, users cannot login using this provider, but their existing accounts will be linked when possible. Defaults to `false`.
+- `link_only` - (Optional) When `true`, users cannot sign-in using this provider, but their existing accounts will be linked when possible. Defaults to `false`.
 - `trust_email` - (Optional) When `true`, email addresses for users in this provider will automatically be verified regardless of the realm's email verification policy. Defaults to `false`.
 - `first_broker_login_flow_alias` - (Optional) The authentication flow to use when users log in for the first time through this identity provider. Defaults to `first broker login`.
 - `post_broker_login_flow_alias` - (Optional) The authentication flow to use after users have successfully logged in, which can be used to perform additional user verification (such as OTP checking). Defaults to an empty string, which means no post login flow will be used.
@@ -54,7 +54,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `issuer` - (Optional) The issuer identifier for the issuer of the response. If not provided, no validation will be performed.
 - `disable_user_info` - (Optional) When `true`, disables the usage of the user info service to obtain additional user information. Defaults to `false`.
 - `hide_on_login_page` - (Optional) When `true`, this provider will be hidden on the login page, and is only accessible when requested explicitly. Defaults to `false`.
-- `logout_url` - (Optional) The Logout URL is the end session endpoint to use to logout user from external identity provider.
+- `logout_url` - (Optional) The Logout URL is the end session endpoint to use to sign-out the user from external identity provider.
 - `login_hint` - (Optional) Pass login hint to identity provider.
 - `ui_locales` - (Optional) Pass current locale to identity provider. Defaults to `false`.
 - `accepts_prompt_none_forward_from_client` (Optional) When `true`, the IDP will accept forwarded authentication requests that contain the `prompt=none` query parameter. Defaults to `false`.

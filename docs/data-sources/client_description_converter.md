@@ -62,9 +62,11 @@ resource "keycloak_saml_client" "saml_client" {
 ## Attributes Reference
 
 The exported attributes for this data source are a combination of the attributes for the [`keycloak_openid_client`][2]
-and [`keycloak_saml_client`][3] resources. You can also refer to the [ClientRepresentation][4] Javadocs for more details.
+and [`keycloak_saml_client`][3] resources. You can also refer to the [ClientRepresentation Javadocs][4] or [API docs][5] for more details.
 
-[1]: https://www.keycloak.org/docs-api/6.0/javadocs/org/keycloak/exportimport/ClientDescriptionConverter.html
-[2]: providers/mrparkers/keycloak/latest/docs/resources/openid_client
-[3]: providers/mrparkers/keycloak/latest/docs/resources/saml_client
-[4]: https://www.keycloak.org/docs-api/6.0/javadocs/org/keycloak/representations/idm/ClientRepresentation.html
+[1]: https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/exportimport/ClientDescriptionConverter.html
+[2]: https://registry.terraform.io/providers/keycloak/keycloak/latest/docs/resources/openid_client
+[3]: https://registry.terraform.io/providers/keycloak/keycloak/latest/docs/resources/saml_client
+[4]: https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/representations/idm/ClientRepresentation.html
+[5]: https://www.keycloak.org/docs-api/latest/rest-api/index.html#ClientRepresentation
+

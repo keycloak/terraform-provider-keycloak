@@ -2,7 +2,7 @@ package provider
 
 import (
 	"fmt"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strings"
 	"testing"
@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenidClient_basic(t *testing.T) {
@@ -512,7 +512,7 @@ func TestAccKeycloakOpenidClient_pkceCodeChallengeMethod(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_pkceChallengeMethod(clientId, "invalidMethod"),
-				ExpectError: regexp.MustCompile(`expected pkce_code_challenge_method to be one of \[\ plain S256\], got invalidMethod`),
+				ExpectError: regexp.MustCompile(`expected pkce_code_challenge_method to be one of \[\"" "plain" "S256"\], got invalidMethod`),
 			},
 			{
 				Config: testKeycloakOpenidClient_omitPkceChallengeMethod(clientId),

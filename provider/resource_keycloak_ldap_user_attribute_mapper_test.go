@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakLdapUserAttributeMapper_basic(t *testing.T) {
@@ -96,6 +96,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
 		IsMandatoryInLdap:       randomBool(),
 		ReadOnly:                randomBool(),
 		AlwaysReadValueFromLdap: true,
+		ForceDefaultValue:       randomBool(),
 		AttributeDefaultValue:   acctest.RandString(10),
 		IsBinaryAttribute:       randomBool(),
 	}
@@ -105,6 +106,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
 		LdapAttribute:           acctest.RandString(10),
 		IsMandatoryInLdap:       randomBool(),
 		ReadOnly:                randomBool(),
+		ForceDefaultValue:       randomBool(),
 		AlwaysReadValueFromLdap: randomBool(),
 		AttributeDefaultValue:   acctest.RandString(10),
 		IsBinaryAttribute:       false,
@@ -261,11 +263,12 @@ resource "keycloak_ldap_user_attribute_mapper" "username" {
 	read_only                   = %t
 	always_read_value_from_ldap = %t
 	is_mandatory_in_ldap        = %t
+	attribute_force_default     = "%t"
 	attribute_default_value     = "%s"
 	is_binary_attribute         = %t
 }
 	`, testAccRealmUserFederation.Realm, mapper.Name, mapper.UserModelAttribute, mapper.LdapAttribute, mapper.ReadOnly, mapper.AlwaysReadValueFromLdap, mapper.IsMandatoryInLdap,
-		mapper.AttributeDefaultValue, mapper.IsBinaryAttribute)
+		mapper.ForceDefaultValue, mapper.AttributeDefaultValue, mapper.IsBinaryAttribute)
 }
 
 func testKeycloakLdapUserAttributeMapper_updateLdapUserFederationBefore(userAttributeMapperName string) string {

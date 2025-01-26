@@ -3,12 +3,23 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
+
+const (
+	DISABLED   string = "DISABLED"
+	ENABLED           = "ENABLED"
+	ADMIN_VIEW        = "ADMIN_VIEW"
+	ADMIN_EDIT        = "ADMIN_EDIT"
+)
+
+const USER_PROFILE_ENABLED string = "userProfileEnabled"
 
 func resourceKeycloakRealmUserProfile() *schema.Resource {
 	return &schema.Resource{
@@ -34,6 +45,11 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 						"display_name": {
 							Type:     schema.TypeString,
 							Optional: true,
+						},
+						"multi_valued": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
 						},
 						"group": {
 							Type:     schema.TypeString,
@@ -125,6 +141,12 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 					},
 				},
 			},
+			"unmanaged_attribute_policy": {
+				Type:         schema.TypeString,
+				Default:      DISABLED,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{DISABLED, ENABLED, ADMIN_VIEW, ADMIN_EDIT}, false),
+			},
 		},
 	}
 }
@@ -134,6 +156,12 @@ func getRealmUserProfileAttributeFromData(m map[string]interface{}) *keycloak.Re
 		Name:        m["name"].(string),
 		DisplayName: m["display_name"].(string),
 		Group:       m["group"].(string),
+	}
+
+	if v, ok := m["multivalued"].(bool); ok {
+		attribute.MultiValued = v
+	} else {
+		attribute.MultiValued = false
 	}
 
 	if v, ok := m["permissions"]; ok && len(v.([]interface{})) > 0 {
@@ -287,13 +315,23 @@ func getRealmUserProfileGroupsFromData(lst []interface{}) []*keycloak.RealmUserP
 	return groups
 }
 
-func getRealmUserProfileFromData(data *schema.ResourceData) *keycloak.RealmUserProfile {
+func getRealmUserProfileFromData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData) (*keycloak.RealmUserProfile, error) {
 	realmUserProfile := &keycloak.RealmUserProfile{}
 
 	realmUserProfile.Attributes = getRealmUserProfileAttributesFromData(data.Get("attribute").([]interface{}))
 	realmUserProfile.Groups = getRealmUserProfileGroupsFromData(data.Get("group").(*schema.Set).List())
 
-	return realmUserProfile
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_24)
+	if err != nil {
+		return nil, err
+	}
+
+	unmanagedAttr, unmanagedAttrOk := data.Get("unmanaged_attribute_policy").(string)
+	if versionOk && unmanagedAttrOk && unmanagedAttr != DISABLED {
+		realmUserProfile.UnmanagedAttributePolicy = &unmanagedAttr
+	}
+
+	return realmUserProfile, nil
 }
 
 func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) map[string]interface{} {
@@ -302,6 +340,8 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 	attributeData["name"] = attr.Name
 
 	attributeData["display_name"] = attr.DisplayName
+	attributeData["multi_valued"] = attr.MultiValued
+
 	attributeData["group"] = attr.Group
 	if attr.Selector != nil && len(attr.Selector.Scopes) != 0 {
 		attributeData["enabled_when_scope"] = attr.Selector.Scopes
@@ -388,7 +428,7 @@ func getRealmUserProfileGroupData(group *keycloak.RealmUserProfileGroup) map[str
 	return groupData
 }
 
-func setRealmUserProfileData(data *schema.ResourceData, realmUserProfile *keycloak.RealmUserProfile) {
+func setRealmUserProfileData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmUserProfile *keycloak.RealmUserProfile) error {
 	attributes := make([]interface{}, 0)
 	for _, attr := range realmUserProfile.Attributes {
 		attributes = append(attributes, getRealmUserProfileAttributeData(attr))
@@ -400,16 +440,39 @@ func setRealmUserProfileData(data *schema.ResourceData, realmUserProfile *keyclo
 		groups = append(groups, getRealmUserProfileGroupData(group))
 	}
 	data.Set("group", groups)
+
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_24)
+	if err != nil {
+		return err
+	}
+
+	if versionOk {
+		if realmUserProfile.UnmanagedAttributePolicy != nil {
+			data.Set("unmanaged_attribute_policy", *realmUserProfile.UnmanagedAttributePolicy)
+		} else {
+			data.Set("unmanaged_attribute_policy", DISABLED)
+		}
+	}
+	return nil
 }
 
 func resourceKeycloakRealmUserProfileCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	realmId := data.Get("realm_id").(string)
+
+	err := checkUserProfileEnabled(ctx, keycloakClient, realmId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	data.SetId(realmId)
 
-	realmUserProfile := getRealmUserProfileFromData(data)
+	realmUserProfile, err := getRealmUserProfileFromData(ctx, keycloakClient, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
+	err = keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -427,7 +490,10 @@ func resourceKeycloakRealmUserProfileRead(ctx context.Context, data *schema.Reso
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	setRealmUserProfileData(data, realmUserProfile)
+	err = setRealmUserProfileData(ctx, keycloakClient, data, realmUserProfile)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -436,13 +502,27 @@ func resourceKeycloakRealmUserProfileDelete(ctx context.Context, data *schema.Re
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	realmId := data.Get("realm_id").(string)
 
-	// The realm user profile cannot be deleted, so instead we set it back to its "zero" values.
-	realmUserProfile := &keycloak.RealmUserProfile{
-		Attributes: []*keycloak.RealmUserProfileAttribute{},
-		Groups:     []*keycloak.RealmUserProfileGroup{},
+	err := checkUserProfileEnabled(ctx, keycloakClient, realmId)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
-	err := keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
+	// The realm user profile cannot be deleted, so instead we set it back to its "zero" values.
+	realmUserProfile := &keycloak.RealmUserProfile{
+		Attributes:               []*keycloak.RealmUserProfileAttribute{},
+		Groups:                   []*keycloak.RealmUserProfileGroup{},
+		UnmanagedAttributePolicy: nil,
+	}
+
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_23); ok {
+		// since version 23 username and email are mandatory
+		// TODO validate if this overwrite doesn't cause any problems
+		realmUserProfile.Attributes = []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"},
+		}
+	}
+
+	err = keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -454,14 +534,53 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
-	realmUserProfile := getRealmUserProfileFromData(data)
-
-	err := keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
+	err := checkUserProfileEnabled(ctx, keycloakClient, realmId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	setRealmUserProfileData(data, realmUserProfile)
+	realmUserProfile, err := getRealmUserProfileFromData(ctx, keycloakClient, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setRealmUserProfileData(ctx, keycloakClient, data, realmUserProfile)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
+}
+
+func checkUserProfileEnabled(ctx context.Context, keycloakClient *keycloak.KeycloakClient, realmId string) error {
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_24)
+	if err != nil {
+		return err
+	}
+
+	if versionOk {
+		return nil
+	}
+
+	realm, err := keycloakClient.GetRealm(ctx, realmId)
+	if err != nil {
+		return err
+	}
+
+	userProfileEnabled := realm.Attributes[USER_PROFILE_ENABLED]
+	if userProfileEnabled != nil {
+		if value, ok := userProfileEnabled.(bool); ok && value {
+			return nil
+		}
+
+		if value, ok := userProfileEnabled.(string); ok && strings.ToLower(value) == "true" {
+			return nil
+		}
+	}
+	return fmt.Errorf("User Profile is disabled for the %s realm", realmId)
 }

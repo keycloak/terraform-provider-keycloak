@@ -7,7 +7,7 @@ page_title: "keycloak_custom_user_federation Resource"
 Allows for creating and managing custom user federation providers within Keycloak.
 
 A custom user federation provider is an implementation of Keycloak's [User Storage SPI](https://www.keycloak.org/docs/4.2/server_development/index.html#_user-storage-spi).
-An example of this implementation can be found [here](https://github.com/mrparkers/terraform-provider-keycloak/tree/master/custom-user-federation-example).
+An example of this implementation can be found [here](https://github.com/keycloak/terraform-provider-keycloak/tree/master/custom-user-federation-example).
 
 ## Example Usage
 
@@ -43,7 +43,7 @@ resource "keycloak_custom_user_federation" "custom_user_federation" {
 - `parent_id` - (Optional) Must be set to the realms' `internal_id`  when it differs from the realm. This can happen when existing resources are imported into the state.
 - `full_sync_period` - (Optional) How frequently Keycloak should sync all users, in seconds. Omit this property to disable periodic full sync.
 - `changed_sync_period` - (Optional) How frequently Keycloak should sync changed users, in seconds. Omit this property to disable periodic changed users sync.
-- `config` - (Optional) The provider configuration handed over to your custom user federation provider. In order to add multivalue settings, use `##` to seperate the values.
+- `config` - (Optional) The provider configuration handed over to your custom user federation provider. In order to add multivalued settings, use `##` to separate the values.
 
 ## Import
 

@@ -2,11 +2,12 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -175,6 +176,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 			},
 			"user_managed_access": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"organizations_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -605,6 +611,12 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Optional:    true,
+				Computed:    true,
+			},
 
 			// misc attributes
 			"attributes": {
@@ -679,7 +691,7 @@ func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	return "", false
 }
 
-func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm) {
+func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
 	if flow, ok := data.GetOk("browser_flow"); ok {
 		realm.BrowserFlow = stringPointer(flow.(string))
 	} else {
@@ -715,9 +727,17 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm) {
 	} else {
 		realm.DockerAuthenticationFlow = stringPointer("docker auth")
 	}
+
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
+		if flow, ok := data.GetOk("first_broker_login_flow"); ok {
+			realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
+		} else {
+			realm.FirstBrokerLoginFlow = stringPointer("first broker login")
+		}
+	}
 }
 
-func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
+func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.Realm, error) {
 	internationalizationEnabled := false
 	supportLocales := make([]string, 0)
 	defaultLocale := ""
@@ -739,12 +759,13 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 	}
 
 	realm := &keycloak.Realm{
-		Id:                realmId.(string),
-		Realm:             data.Get("realm").(string),
-		Enabled:           data.Get("enabled").(bool),
-		DisplayName:       data.Get("display_name").(string),
-		DisplayNameHtml:   data.Get("display_name_html").(string),
-		UserManagedAccess: data.Get("user_managed_access").(bool),
+		Id:                   realmId.(string),
+		Realm:                data.Get("realm").(string),
+		Enabled:              data.Get("enabled").(bool),
+		DisplayName:          data.Get("display_name").(string),
+		DisplayNameHtml:      data.Get("display_name_html").(string),
+		UserManagedAccess:    data.Get("user_managed_access").(bool),
+		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
 		// Login Config
 		RegistrationAllowed:         data.Get("registration_allowed").(bool),
@@ -1006,7 +1027,7 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		realm.PasswordPolicy = passwordPolicy.(string)
 	}
 
-	setRealmFlowBindings(data, realm)
+	setRealmFlowBindings(data, realm, keycloakVersion)
 
 	attributes := map[string]interface{}{}
 	if v, ok := data.GetOk("attributes"); ok {
@@ -1170,7 +1191,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
 	realm.MaxDeltaTimeSeconds = 43200
 }
 
-func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
+func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
@@ -1179,6 +1200,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
+	data.Set("organizations_enabled", realm.OrganizationsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)
@@ -1289,6 +1311,10 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
 
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
+		data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
+	}
+
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
 	webAuthnPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyAcceptableAaguids
@@ -1368,8 +1394,9 @@ func getHeaderSettings(realm *keycloak.Realm) map[string]interface{} {
 
 func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion := keycloakClient.Version()
 
-	realm, err := getRealmFromData(data)
+	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1384,33 +1411,40 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	err = meta.(*keycloak.KeycloakClient).Refresh(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	setRealmData(data, realm, keycloakVersion)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
 }
 
 func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion := keycloakClient.Version()
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Id())
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not detected
+	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not be detected
 	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok {
 		realm.SmtpServer.Password = smtpPassword
 	}
 
-	setRealmData(data, realm)
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }
 
 func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion := keycloakClient.Version()
 
-	realm, err := getRealmFromData(data)
+	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1425,7 +1459,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }

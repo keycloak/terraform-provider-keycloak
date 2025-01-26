@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -570,6 +569,10 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 	err = setOpenidClientData(ctx, keycloakClient, data, client)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
 	}
 
 	return nil

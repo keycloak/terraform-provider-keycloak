@@ -59,6 +59,6 @@ resource "keycloak_user_roles" "service_account_user_roles" {
 `email` - (Computed) The service account user's email.
 `first_name` - (Computed) The service account user's first name.
 `last_name` - (Computed) The service account user's last name.
-`enabled` - (Computed) Whether or not the service account user is enabled.
+`enabled` - (Computed) Whether the service account user is enabled.
 `attributes` - (Computed) The service account user's attributes.
 `federated_identity` - (Computed) This attribute exists in order to adhere to the spec of a Keycloak user, but a service account user will never have a federated identity, so this will always be `null`.

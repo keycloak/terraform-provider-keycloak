@@ -68,7 +68,7 @@ resource "keycloak_openid_client" "openid_client" {
 wildcards in the form of an asterisk can be used here. This attribute must be set if either `standard_flow_enabled` or `implicit_flow_enabled`
 is set to `true`.
 - `valid_post_logout_redirect_uris` - (Optional) A list of valid URIs a browser is permitted to redirect to after a successful logout.
-- `web_origins` - (Optional) A list of allowed CORS origins. To permit all valid redirect URIs, add `+`. Note that this will not include the `*` wildcard. To permit all origins, explicitly add `*`."
+- `web_origins` - (Optional) A list of allowed CORS origins. To permit all valid redirect URIs, add `+`. Note that this will not include the `*` wildcard. To permit all origins, explicitly add `*`.
 - `root_url` - (Optional) When specified, this URL is prepended to any relative URLs found within `valid_redirect_uris`, `web_origins`, and `admin_url`. NOTE: Due to limitations in the Keycloak API, when the `root_url` attribute is used, the `valid_redirect_uris`, `web_origins`, and `admin_url` attributes will be required.
 - `admin_url` - (Optional) URL to the admin interface of the client.
 - `base_url` - (Optional) Default URL to use when the auth server needs to redirect or link back to the client.

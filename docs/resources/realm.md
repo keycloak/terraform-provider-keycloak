@@ -83,6 +83,7 @@ resource "keycloak_realm" "realm" {
 - `display_name` - (Optional) The display name for the realm that is shown when logging in to the admin console.
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
+- `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm.
 - `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
 
@@ -207,6 +208,7 @@ The arguments below can be used to configure authentication flow bindings:
 - `reset_credentials_flow` - (Optional) The desired flow to use when a user attempts to reset their credentials. Defaults to `reset credentials`.
 - `client_authentication_flow` - (Optional) The desired flow for client authentication. Defaults to `clients`.
 - `docker_authentication_flow` - (Optional) The desired flow for Docker authentication. Defaults to `docker auth`.
+- `first_broker_login_flow` - (Optional) The desired flow for First Broker Login (since Keycloak 24). Defaults to `first broker login`.
 
 ### OTP Policy
 
@@ -229,12 +231,12 @@ the "Authentication" section of the realm configuration UI. These top level attr
 
 Each of these attributes are blocks with the following attributes:
 
-- `relying_party_entity_name` - (Optional) A human readable server name for the WebAuthn Relying Party. Defaults to `keycloak`.
+- `relying_party_entity_name` - (Optional) A human-readable server name for the WebAuthn Relying Party. Defaults to `keycloak`.
 - `relying_party_id` - (Optional) The WebAuthn relying party ID.
 - `signature_algorithms` - (Optional) A set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
 - `attestation_conveyance_preference` - (Optional) The preference of how to generate a WebAuthn attestation statement. Valid options are `not specified`, `none`, `indirect`, `direct`, or `enterprise`. Defaults to `not specified`.
 - `authenticator_attachment` - (Optional) The acceptable attachment pattern for the WebAuthn authenticator. Valid options are `not specified`, `platform`, or `cross-platform`. Defaults to `not specified`.
-- `require_resident_key` - (Optional) Specifies whether or not a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`.
+- `require_resident_key` - (Optional) Specifies whether a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`.
 - `user_verification_requirement` - (Optional) Specifies the policy for verifying a user logging in via WebAuthn. Valid options are `not specified`, `required`, `preferred`, or `discouraged`. Defaults to `not specified`.
 - `create_timeout` - (Optional) The timeout value for creating a user's public key credential in seconds. When set to `0`, this timeout option is not adapted. Defaults to `0`.
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
@@ -242,8 +244,8 @@ Each of these attributes are blocks with the following attributes:
 
 ## Default Client Scopes
 
-- `default_default_client_scopes` - (Optional) A list of default default client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default default client-scopes.
-- `default_optional_client_scopes` - (Optional) A list of default optional client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default optional client-scopes.
+- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_default_client_scopes`.
+- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_optional_client_scopes`.
 
 ## Import
 

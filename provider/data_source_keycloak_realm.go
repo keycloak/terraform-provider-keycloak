@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakRealm() *schema.Resource {
@@ -113,6 +113,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 			},
 			"user_managed_access": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"organizations_enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
@@ -474,6 +478,11 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Description: "Which flow should be used for DockerAuthenticationFlow",
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Computed:    true,
+			},
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -532,6 +541,7 @@ func dataSourceKeycloakRealm() *schema.Resource {
 
 func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion := keycloakClient.Version()
 
 	realmName := data.Get("realm").(string)
 
@@ -540,7 +550,7 @@ func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }
