@@ -1394,7 +1394,10 @@ func getHeaderSettings(realm *keycloak.Realm) map[string]interface{} {
 
 func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {
@@ -1423,7 +1426,10 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 
 func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Id())
 	if err != nil {
@@ -1442,7 +1448,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 
 func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {

@@ -205,7 +205,11 @@ func resourceKeycloakIdentityProviderImport(_ context.Context, d *schema.Resourc
 func resourceKeycloakIdentityProviderCreate(getIdentityProviderFromData identityProviderDataGetterFunc, setDataFromIdentityProvider identityProviderDataSetterFunc) func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		keycloakClient := meta.(*keycloak.KeycloakClient)
-		keycloakVersion := keycloakClient.Version()
+		keycloakVersion, err := keycloakClient.Version(ctx)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 		identityProvider, err := getIdentityProviderFromData(data, keycloakVersion)
 		if err != nil {
 			return diag.FromErr(err)
@@ -224,7 +228,10 @@ func resourceKeycloakIdentityProviderCreate(getIdentityProviderFromData identity
 func resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider identityProviderDataSetterFunc) func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		keycloakClient := meta.(*keycloak.KeycloakClient)
-		keycloakVersion := keycloakClient.Version()
+		keycloakVersion, err := keycloakClient.Version(ctx)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		realm := data.Get("realm").(string)
 		alias := data.Get("alias").(string)
 		identityProvider, err := keycloakClient.GetIdentityProvider(ctx, realm, alias)
@@ -239,7 +246,10 @@ func resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider identityPr
 func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identityProviderDataGetterFunc, setDataFromIdentityProvider identityProviderDataSetterFunc) func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		keycloakClient := meta.(*keycloak.KeycloakClient)
-		keycloakVersion := keycloakClient.Version()
+		keycloakVersion, err := keycloakClient.Version(ctx)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		identityProvider, err := getIdentityProviderFromData(data, keycloakVersion)
 		if err != nil {
 			return diag.FromErr(err)

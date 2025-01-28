@@ -39,54 +39,36 @@ func (v Version) AsVersion() *version.Version {
 	return vv
 }
 
-func (KeycloakClient *KeycloakClient) Version() *version.Version {
-	return KeycloakClient.version
+func (KeycloakClient *KeycloakClient) Version(ctx context.Context) (*version.Version, error) {
+	if KeycloakClient.version == nil {
+		err := KeycloakClient.login(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return KeycloakClient.version, nil
 }
 
 func (keycloakClient *KeycloakClient) VersionIsGreaterThanOrEqualTo(ctx context.Context, versionString Version) (bool, error) {
-	if keycloakClient.version == nil {
-		err := keycloakClient.login(ctx)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	v, err := version.NewVersion(string(versionString))
+	version, err := keycloakClient.Version(ctx)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
-
-	return keycloakClient.version.GreaterThanOrEqual(v), nil
+	return version.GreaterThanOrEqual(versionString.AsVersion()), nil
 }
 
 func (keycloakClient *KeycloakClient) VersionIsLessThanOrEqualTo(ctx context.Context, versionString Version) (bool, error) {
-	if keycloakClient.version == nil {
-		err := keycloakClient.login(ctx)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	v, err := version.NewVersion(string(versionString))
+	version, err := keycloakClient.Version(ctx)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
-
-	return keycloakClient.version.LessThanOrEqual(v), nil
+	return version.LessThanOrEqual(versionString.AsVersion()), nil
 }
 
 func (keycloakClient *KeycloakClient) VersionIsLessThan(ctx context.Context, versionString Version) (bool, error) {
-	if keycloakClient.version == nil {
-		err := keycloakClient.login(ctx)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	v, err := version.NewVersion(string(versionString))
+	version, err := keycloakClient.Version(ctx)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
-
-	return keycloakClient.version.LessThan(v), nil
+	return version.LessThan(versionString.AsVersion()), nil
 }
