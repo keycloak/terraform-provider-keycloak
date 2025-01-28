@@ -23,7 +23,7 @@ func getMillisecondsFromDurationString(s string) (string, error) {
 	return strconv.Itoa(int(duration.Seconds() * 1000)), nil
 }
 
-// Converts a string representing milliseconds from Keycloak API to a duration string used by the provider
+// GetDurationStringFromMilliseconds converts a string representing milliseconds from Keycloak API to a duration string used by the provider
 // Ex: "3600000" => "1h0m0s"
 func GetDurationStringFromMilliseconds(milliseconds string) (string, error) {
 	ms, err := strconv.Atoi(milliseconds)

@@ -13,10 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmUserProfile_featureDisabled(t *testing.T) {
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
+
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -25,8 +27,44 @@ func TestAccKeycloakRealmUserProfile_featureDisabled(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakRealmUserProfile_featureDisabled(realmName),
+				Config:      testKeycloakRealmUserProfile_userProfileDisabled(realmName),
 				ExpectError: regexp.MustCompile("User Profile is disabled"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmUserProfile_featureNotSet(t *testing.T) {
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
+				ExpectError: regexp.MustCompile("User Profile is disabled"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
+				Check:  testAccCheckKeycloakRealmUserProfileExists("keycloak_realm_user_profile.realm_user_profile"),
 			},
 		},
 	})
@@ -38,6 +76,10 @@ func TestAccKeycloakRealmUserProfile_basicEmpty(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	realmUserProfile := &keycloak.RealmUserProfile{}
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_23); ok {
+		// Username and email can't be removed in this version
+		realmUserProfile.Attributes = []*keycloak.RealmUserProfileAttribute{{Name: "username"}, {Name: "email"}}
+	}
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -59,10 +101,12 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 
 	realmUserProfile := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{Name: "attribute1"},
 			{
 				Name:        "attribute2",
 				DisplayName: "attribute 2",
+				MultiValued: false,
 				Group:       "group",
 				Selector:    &keycloak.RealmUserProfileSelector{Scopes: []string{"roles"}},
 				Required: &keycloak.RealmUserProfileRequired{
@@ -118,12 +162,14 @@ func TestAccKeycloakRealmUserProfile_group(t *testing.T) {
 
 	withoutGroup := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{Name: "attribute"},
 		},
 	}
 
 	withGroup := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{Name: "attribute"},
 		},
 		Groups: []*keycloak.RealmUserProfileGroup{
@@ -165,14 +211,14 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 
 	withoutValidator := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
-			{
-				Name: "attribute",
-			},
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+			{Name: "attribute"},
 		},
 	}
 
 	withInitialConfig := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
@@ -185,6 +231,7 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 
 	withNewConfig := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
@@ -196,6 +243,7 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 
 	withNewValidator := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
@@ -258,6 +306,7 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 
 	withoutPermissions := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 			},
@@ -266,6 +315,7 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 
 	viewAttributeMissing := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Permissions: &keycloak.RealmUserProfilePermissions{
@@ -277,6 +327,7 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 
 	editAttributeMissing := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Permissions: &keycloak.RealmUserProfilePermissions{
@@ -288,6 +339,7 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 
 	bothAttributesMissing := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name:        "attribute",
 				Permissions: &keycloak.RealmUserProfilePermissions{},
@@ -297,6 +349,7 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 
 	withRightPermissions := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
 			{
 				Name: "attribute",
 				Permissions: &keycloak.RealmUserProfilePermissions{
@@ -346,13 +399,124 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 	})
 }
 
-func testKeycloakRealmUserProfile_featureDisabled(realm string) string {
+func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	unmanagedPolicyEnabled := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ENABLED),
+	}
+
+	unmanagedPolicyDisabled := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(DISABLED),
+	}
+
+	unmanagedPolicyAdminEdit := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ADMIN_EDIT),
+	}
+
+	unmanagedPolicyAdminView := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+		UnmanagedAttributePolicy: stringPointer(ADMIN_VIEW),
+	}
+
+	unmanagedPolicyNotSet := &keycloak.RealmUserProfile{
+		Groups: []*keycloak.RealmUserProfileGroup{},
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyEnabled),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyEnabled,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyDisabled),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyNotSet),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyAdminEdit),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyAdminEdit,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyAdminView),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyAdminView,
+				),
+			},
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyNotSet),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", unmanagedPolicyNotSet,
+				),
+			},
+		},
+	})
+}
+
+func testKeycloakRealmUserProfile_userProfileDisabled(realm string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+
+	attributes = {
+		userProfileEnabled  = false
+	}
+}
+resource "keycloak_realm_user_profile" "realm_user_profile" {
+	realm_id = keycloak_realm.realm.id
+}
+`, realm)
+}
+
+func testKeycloakRealmUserProfile_userProfileEnabledNotSet(realm string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 resource "keycloak_realm_user_profile" "realm_user_profile" {
 	realm_id = keycloak_realm.realm.id
+
+	attribute {
+		name = "username"
+    }
+	attribute {
+		name = "email"
+    }
 }
 `, realm)
 }
@@ -369,6 +533,10 @@ resource "keycloak_realm" "realm" {
 
 resource "keycloak_realm_user_profile" "realm_user_profile" {
 	realm_id = keycloak_realm.realm.id
+
+	{{- if .userProfile.UnmanagedAttributePolicy }}
+	unmanaged_attribute_policy = "{{ .userProfile.UnmanagedAttributePolicy}}"
+	{{- end }}
 
 	{{- range $_, $attribute := .userProfile.Attributes }}
 	attribute {
@@ -491,10 +659,19 @@ func testAccCheckKeycloakRealmUserProfileStateEqual(resourceName string, realmUs
 			return err
 		}
 
+		// JSON is not as stable to compare as a struct, ex. empty arrays are not always present in JSON
+		// TODO this should be replaced with an actual comparison the json == json is a quick fix.
 		if !reflect.DeepEqual(realmUserProfile, realmUserProfileFromState) {
 			j1, _ := json.Marshal(realmUserProfile)
 			j2, _ := json.Marshal(realmUserProfileFromState)
-			return fmt.Errorf("%v\nshould be equal to\n%v", string(j1), string(j2))
+			sj1 := string(j1)
+			sj2 := string(j2)
+
+			if sj1 == sj2 { // might be a dialect difference, ex. empty arrays represented as null
+				return nil
+			}
+
+			return fmt.Errorf("%v\nshould be equal to\n%v", sj1, sj2)
 		}
 
 		return nil

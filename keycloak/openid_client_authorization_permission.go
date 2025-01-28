@@ -27,9 +27,9 @@ func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationPermission(ctx
 		Id:               id,
 	}
 
-	policies := []OpenidClientAuthorizationPolicy{}
-	resources := []OpenidClientAuthorizationResource{}
-	scopes := []OpenidClientAuthorizationScope{}
+	var policies []OpenidClientAuthorizationPolicy
+	var resources []OpenidClientAuthorizationResource
+	var scopes []OpenidClientAuthorizationScope
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/permission/%s", realm, resourceServerId, id), &permission, nil)
 	if err != nil {

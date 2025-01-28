@@ -17,6 +17,7 @@ type LdapUserAttributeMapper struct {
 	ReadOnly                bool
 	AlwaysReadValueFromLdap bool
 	UserModelAttribute      string
+	ForceDefaultValue       bool
 	AttributeDefaultValue   string
 	IsBinaryAttribute       bool
 }
@@ -44,6 +45,9 @@ func convertFromLdapUserAttributeMapperToComponent(ldapUserAttributeMapper *Ldap
 			"user.model.attribute": {
 				ldapUserAttributeMapper.UserModelAttribute,
 			},
+			"attribute.force.default": {
+				strconv.FormatBool(ldapUserAttributeMapper.ForceDefaultValue),
+			},
 			"attribute.default.value": {
 				ldapUserAttributeMapper.AttributeDefaultValue,
 			},
@@ -70,6 +74,11 @@ func convertFromComponentToLdapUserAttributeMapper(component *component, realmId
 		return nil, err
 	}
 
+	forceDefaultValue, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("attribute.force.default"))
+	if err != nil {
+		return nil, err
+	}
+
 	isBinaryAttribute, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("is.binary.attribute"))
 	if err != nil {
 		return nil, err
@@ -86,6 +95,7 @@ func convertFromComponentToLdapUserAttributeMapper(component *component, realmId
 		ReadOnly:                readOnly,
 		AlwaysReadValueFromLdap: alwaysReadValueFromLdap,
 		UserModelAttribute:      component.getConfig("user.model.attribute"),
+		ForceDefaultValue:       forceDefaultValue,
 		AttributeDefaultValue:   component.getConfig("attribute.default.value"),
 		IsBinaryAttribute:       isBinaryAttribute,
 	}, nil

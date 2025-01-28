@@ -63,7 +63,7 @@ resource "keycloak_ldap_role_mapper" "ldap_role_mapper" {
 - `membership_ldap_attribute` - (Required) The name of the LDAP attribute that is used for membership mappings.
 - `membership_attribute_type` - (Optional) Can be one of `DN` or `UID`. Defaults to `DN`.
 - `membership_user_ldap_attribute` - (Required) The name of the LDAP attribute on a user that is used for membership mappings.
-- `roles_ldap_filter` - (Optional) When specified, adds an additional custom filter to be used when querying for roles. Must start with `(` and end with `)`.
+- `roles_ldap_filter` - (Optional) When specified, adds a custom filter to be used when querying for roles. Must start with `(` and end with `)`.
 - `mode` - (Optional) Can be one of `READ_ONLY`, `LDAP_ONLY` or `IMPORT`. Defaults to `READ_ONLY`.
 - `user_roles_retrieve_strategy` - (Optional) Can be one of `LOAD_ROLES_BY_MEMBER_ATTRIBUTE`, `GET_ROLES_FROM_USER_MEMBEROF_ATTRIBUTE`, or `LOAD_ROLES_BY_MEMBER_ATTRIBUTE_RECURSIVELY`. Defaults to `LOAD_ROLES_BY_MEMBER_ATTRIBUTE`.
 - `memberof_ldap_attribute` - (Optional) Specifies the name of the LDAP attribute on the LDAP user that contains the roles the user has. Defaults to `memberOf`. This is only used when

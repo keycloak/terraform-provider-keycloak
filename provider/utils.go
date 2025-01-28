@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func keys(data map[string]string) []string {
@@ -111,4 +111,8 @@ func stringSliceContains(s []string, e string) bool {
 
 func stringPointer(s string) *string {
 	return &s
+}
+
+func intPointer(i int) *int {
+	return &i
 }
