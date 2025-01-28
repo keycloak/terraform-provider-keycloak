@@ -541,7 +541,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 
 func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realmName := data.Get("realm").(string)
 
