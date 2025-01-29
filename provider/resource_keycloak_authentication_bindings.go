@@ -93,7 +93,10 @@ func resetAuthenticationBindingsForRealm(realm *keycloak.Realm, keycloakVersion 
 
 func resourceKeycloakAuthenticationBindingsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Get("realm_id").(string))
 	if err != nil {
@@ -124,7 +127,10 @@ func resourceKeycloakAuthenticationBindingsCreate(ctx context.Context, data *sch
 
 func resourceKeycloakAuthenticationBindingsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Id())
 	if err != nil {
@@ -138,7 +144,10 @@ func resourceKeycloakAuthenticationBindingsRead(ctx context.Context, data *schem
 
 func resourceKeycloakAuthenticationBindingsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Id())
 	if err != nil {
@@ -157,7 +166,10 @@ func resourceKeycloakAuthenticationBindingsDelete(ctx context.Context, data *sch
 
 func resourceKeycloakAuthenticationBindingsUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-	keycloakVersion := keycloakClient.Version()
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realm, err := keycloakClient.GetRealm(ctx, data.Id())
 	if err != nil {
