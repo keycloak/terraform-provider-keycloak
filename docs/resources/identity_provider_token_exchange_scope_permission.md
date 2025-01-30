@@ -7,7 +7,7 @@ page_title: "keycloak_identity_provider_token_exchange_scope_permission Resource
 Allows you to manage Identity Provider "Token exchange" Scope Based Permissions.
 
 This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource.
-More information about enabling the preview feature can be found here: https://www.keycloak.org/docs/latest/securing_apps/index.html#_token-exchange
+More information about enabling the preview feature can be found here: https://www.keycloak.org/securing-apps/token-exchange
 
 When enabling Identity Provider Permissions, Keycloak does several things automatically:
 1. Enable Authorization on build-in realm-management client
