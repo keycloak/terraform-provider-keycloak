@@ -106,7 +106,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 			{
 				Name:        "attribute2",
 				DisplayName: "attribute 2",
-				MultiValued: false,
+				MultiValued: true,
 				Group:       "group",
 				Selector:    &keycloak.RealmUserProfileSelector{Scopes: []string{"roles"}},
 				Required: &keycloak.RealmUserProfileRequired{
@@ -543,6 +543,10 @@ resource "keycloak_realm_user_profile" "realm_user_profile" {
         name = "{{ $attribute.Name }}"
 		{{- if $attribute.DisplayName }}
         display_name = "{{ $attribute.DisplayName }}"
+		{{- end }}
+
+		{{- if $attribute.MultiValued }}
+        multi_valued = "{{ $attribute.MultiValued }}"
 		{{- end }}
 
 		{{- if $attribute.Group }}
