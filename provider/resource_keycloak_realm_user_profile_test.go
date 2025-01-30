@@ -99,6 +99,11 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
+	mvSupported, err := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
 	realmUserProfile := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
 			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
@@ -106,7 +111,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 			{
 				Name:        "attribute2",
 				DisplayName: "attribute 2",
-				MultiValued: true,
+				MultiValued: mvSupported,
 				Group:       "group",
 				Selector:    &keycloak.RealmUserProfileSelector{Scopes: []string{"roles"}},
 				Required: &keycloak.RealmUserProfileRequired{
