@@ -158,7 +158,7 @@ func getRealmUserProfileAttributeFromData(m map[string]interface{}) *keycloak.Re
 		Group:       m["group"].(string),
 	}
 
-	if v, ok := m["multivalued"].(bool); ok {
+	if v, ok := m["multi_valued"].(bool); ok {
 		attribute.MultiValued = v
 	} else {
 		attribute.MultiValued = false
