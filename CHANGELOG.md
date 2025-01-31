@@ -1,4 +1,13 @@
+## 5.1.1 (January 31, 2025)
 
+IMPROVEMENTS:
+
+* 1100 run ci on release branches ([#1102](https://github.com/keycloak/terraform-provider-keycloak/pull/1102))
+
+BUG FIXES:
+
+* 1091 fixed provider crash with initial_login set to false ([#1103](https://github.com/keycloak/terraform-provider-keycloak/pull/1103))
+* 1099 fix multi-valued user attributes cannot be enabled by ([#1107](https://github.com/keycloak/terraform-provider-keycloak/pull/1107))
 
 ## 5.1.0 (January 24, 2025)
 
