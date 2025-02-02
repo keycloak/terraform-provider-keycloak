@@ -92,6 +92,11 @@ jobs:
           terraform_wrapper: false
           terraform_version: 1.9.8
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Build user-federation-example with Gradle
+        run:  make user-federation-example
+
       - name: Start Keycloak Container
         run: |
           docker run -d --name keycloak \
@@ -102,6 +107,7 @@ jobs:
           -e KEYCLOAK_ADMIN_PASSWORD=password \
           -e KC_FEATURES=preview \
           -v $PWD/provider/misc:/opt/keycloak/misc:z \
+          -v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} start-dev
 
       - name: Initialize Keycloak
