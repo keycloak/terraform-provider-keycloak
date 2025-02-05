@@ -26,6 +26,7 @@ import (
 
 type KeycloakClient struct {
 	baseUrl           string
+	authnUrl          string
 	realm             string
 	clientCredentials *ClientCredentials
 	httpClient        *http.Client
@@ -60,7 +61,7 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	clientCredentials := &ClientCredentials{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
@@ -84,8 +85,13 @@ func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecre
 		return nil, fmt.Errorf("failed to create http client: %v", err)
 	}
 
+	baseUrl := url + basePath
+	if adminUrl != "" {
+		baseUrl = adminUrl + basePath
+	}
 	keycloakClient := KeycloakClient{
-		baseUrl:           url + basePath,
+		baseUrl:           baseUrl,
+		authnUrl:          url + basePath,
 		clientCredentials: clientCredentials,
 		httpClient:        httpClient,
 		initialLogin:      initialLogin,
@@ -112,7 +118,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecre
 }
 
 func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
-	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
+	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authnUrl, keycloakClient.realm)
 	accessTokenData := keycloakClient.getAuthenticationFormData()
 
 	tflog.Debug(ctx, "Login request", map[string]interface{}{
@@ -203,7 +209,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 }
 
 func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
-	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
+	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authnUrl, keycloakClient.realm)
 	refreshTokenData := keycloakClient.getAuthenticationFormData()
 
 	tflog.Debug(ctx, "Refresh request", map[string]interface{}{

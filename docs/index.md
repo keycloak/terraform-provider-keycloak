@@ -79,6 +79,7 @@ The following arguments are supported:
 
 - `client_id` - (Required) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`.
 - `url` - (Required) The URL of the Keycloak instance, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_URL`.
+- `admin_url` - (Optional) The admin URL of the Keycloak instance if different from the main URL, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_ADMIN_URL`.
 - `client_secret` - (Optional) The secret for the client used by the provider for authentication via the client credentials grant. This can be found or changed using the "Credentials" tab in the client settings. Defaults to the environment variable `KEYCLOAK_CLIENT_SECRET`. This attribute is required when using the client credentials grant, and cannot be set when using the password grant.
 - `username` - (Optional) The username of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_USER`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `password` - (Optional) The password of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_PASSWORD`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
