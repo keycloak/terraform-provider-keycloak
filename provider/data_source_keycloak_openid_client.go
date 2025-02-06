@@ -160,7 +160,7 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
-			"always_display_in_console" : {
+			"always_display_in_console": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},

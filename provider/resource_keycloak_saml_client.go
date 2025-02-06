@@ -325,7 +325,7 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		BaseUrl:                 data.Get("base_url").(string),
 		MasterSamlProcessingUrl: data.Get("master_saml_processing_url").(string),
 		FullScopeAllowed:        data.Get("full_scope_allowed").(bool),
-		ConsentRequired:   		 data.Get("consent_required").(bool),
+		ConsentRequired:         data.Get("consent_required").(bool),
 		AlwaysDisplayInConsole:  data.Get("always_display_in_console").(bool),
 		Attributes:              samlAttributes,
 	}

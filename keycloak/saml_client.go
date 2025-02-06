@@ -58,7 +58,7 @@ type SamlClient struct {
 
 	FullScopeAllowed bool `json:"fullScopeAllowed"`
 
-	ConsentRequired bool `json:"consentRequired"`
+	ConsentRequired        bool `json:"consentRequired"`
 	AlwaysDisplayInConsole bool `json:"alwaysDisplayInConsole"`
 
 	Attributes *SamlClientAttributes `json:"attributes"`
