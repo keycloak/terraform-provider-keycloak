@@ -45,6 +45,8 @@ resource "keycloak_saml_client" "saml_client" {
 - `encrypt_assertions` - (Optional) When `true`, the SAML assertions will be encrypted by Keycloak using the client's public key. Defaults to `false`.
 - `client_signature_required` - (Optional) When `true`, Keycloak will expect that documents originating from a client will be signed using the certificate and/or key configured via `signing_certificate` and `signing_private_key`. Defaults to `true`.
 - `force_post_binding` - (Optional) When `true`, Keycloak will always respond to an authentication request via the SAML POST Binding. Defaults to `true`.
+ `consent_required` - (Optional) When `true`, users have to consent to client access. Defaults to `false`.
+- `always_display_in_console` - (Optional) When `True` Keycloak will always list this client in the Account UI, even if the user does not have an active session. Defaults to `false`.
 - `front_channel_logout` - (Optional) When `true`, this client will require a browser redirect in order to perform a logout. Defaults to `true`.
 - `name_id_format` - (Optional) Sets the Name ID format for the subject.
 - `force_name_id_format` - (Optional) Ignore requested NameID subject format and use the one defined in `name_id_format` instead. Defaults to `false`.

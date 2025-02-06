@@ -219,6 +219,11 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"display_on_consent_screen": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -381,6 +386,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		AdminUrl:          data.Get("admin_url").(string),
 		BaseUrl:           data.Get("base_url").(string),
 		ConsentRequired:   data.Get("consent_required").(bool),
+		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
 	}
 
 	if rootUrlOk {
@@ -463,6 +469,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("full_scope_allowed", client.FullScopeAllowed)
 	data.Set("consent_required", client.ConsentRequired)
 
+	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)

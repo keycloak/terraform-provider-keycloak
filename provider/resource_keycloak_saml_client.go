@@ -93,6 +93,16 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"consent_required": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"front_channel_logout": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -315,6 +325,8 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		BaseUrl:                 data.Get("base_url").(string),
 		MasterSamlProcessingUrl: data.Get("master_saml_processing_url").(string),
 		FullScopeAllowed:        data.Get("full_scope_allowed").(bool),
+		ConsentRequired:   		 data.Get("consent_required").(bool),
+		AlwaysDisplayInConsole:  data.Get("always_display_in_console").(bool),
 		Attributes:              samlAttributes,
 	}
 
@@ -340,6 +352,8 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 	data.Set("encrypt_assertions", client.Attributes.EncryptAssertions)
 	data.Set("client_signature_required", client.Attributes.ClientSignatureRequired)
 	data.Set("force_post_binding", client.Attributes.ForcePostBinding)
+	data.Set("consent_required", client.ConsentRequired)
+	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
 	if (keycloak.SamlAuthenticationFlowBindingOverrides{}) == client.AuthenticationFlowBindingOverrides {
 		data.Set("authentication_flow_binding_overrides", nil)
