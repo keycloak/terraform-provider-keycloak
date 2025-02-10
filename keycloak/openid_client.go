@@ -61,6 +61,7 @@ type OpenidClient struct {
 type OpenidClientAttributes struct {
 	PkceCodeChallengeMethod               string                           `json:"pkce.code.challenge.method"`
 	ExcludeSessionStateFromAuthResponse   types.KeycloakBoolQuoted         `json:"exclude.session.state.from.auth.response"`
+	ExcludeIssuerFromAuthResponse         types.KeycloakBoolQuoted         `json:"exclude.issuer.from.auth.response"`
 	AccessTokenLifespan                   string                           `json:"access.token.lifespan"`
 	LoginTheme                            string                           `json:"login_theme"`
 	ClientOfflineSessionIdleTimeout       string                           `json:"client.offline.session.idle.timeout,omitempty"`
