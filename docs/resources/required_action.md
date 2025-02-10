@@ -12,6 +12,11 @@ Allows for creating and managing required actions within Keycloak.
 ## Example Usage
 
 ```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
 resource "keycloak_required_action" "required_action" {
   realm_id = keycloak_realm.realm.realm
   alias    = "UPDATE_PASSWORD"
