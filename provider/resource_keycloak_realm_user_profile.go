@@ -55,10 +55,6 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"multivalued": {
-							Type:     schema.TypeBool,
-							Optional: true,
-						},
 						"enabled_when_scope": {
 							Type:     schema.TypeSet,
 							Optional: true,
@@ -160,7 +156,6 @@ func getRealmUserProfileAttributeFromData(m map[string]interface{}) *keycloak.Re
 		Name:        m["name"].(string),
 		DisplayName: m["display_name"].(string),
 		Group:       m["group"].(string),
-		Multivalued: m["multivalued"].(bool),
 	}
 
 	if v, ok := m["multi_valued"].(bool); ok {
@@ -348,7 +343,6 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 	attributeData["multi_valued"] = attr.MultiValued
 
 	attributeData["group"] = attr.Group
-	attributeData["multivalued"] = attr.Multivalued
 	if attr.Selector != nil && len(attr.Selector.Scopes) != 0 {
 		attributeData["enabled_when_scope"] = attr.Selector.Scopes
 	}
