@@ -120,21 +120,6 @@ resource "keycloak_required_action" "update-password" {
     max_auth_age = "600"
   }
 }
-resource "keycloak_required_action" "custom-configured_totp" {
-  realm_id       = keycloak_realm.test.realm
-  alias          = "CONFIGURE_TOTP"
-  default_action = true
-  enabled        = true
-  name           = "Custom configure totp"
-  priority       = keycloak_required_action.custom-terms-and-conditions.priority + 15
-}
-
-resource "keycloak_required_action" "required_action" {
-  realm_id = keycloak_realm.test.realm
-  alias    = "webauthn-register"
-  enabled  = true
-  name     = "Webauthn Register"
-}
 
 resource "keycloak_required_action" "custom-configured_totp" {
   realm_id       = keycloak_realm.test.realm
@@ -454,25 +439,25 @@ resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
 }
 
 resource "keycloak_ldap_custom_mapper" "custom_mapper" {
-  name                    = "custom-mapper"
-  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
-  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+	name                    = "custom-mapper"
+	realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+	ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
 
-  provider_id   = "msad-user-account-control-mapper"
-  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+	provider_id        		= "msad-user-account-control-mapper"
+	provider_type           = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
 }
 
 resource "keycloak_ldap_custom_mapper" "custom_mapper_with_config" {
-  name                    = "custom-mapper-with-config"
-  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
-  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+	name                    = "custom-mapper-with-config"
+	realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+	ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
 
-  provider_id   = "user-attribute-ldap-mapper"
-  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
-  config = {
-    "user.model.attribute" = "username"
-    "ldap.attribute"       = "cn"
-  }
+	provider_id             = "user-attribute-ldap-mapper"
+	provider_type           = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+	config                  = {
+		"user.model.attribute" = "username"
+		"ldap.attribute"       = "cn"
+	}
 }
 
 
