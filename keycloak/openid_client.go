@@ -55,6 +55,7 @@ type OpenidClient struct {
 	Attributes                         OpenidClientAttributes                   `json:"attributes"`
 	AuthorizationSettings              *OpenidClientAuthorizationSettings       `json:"authorizationSettings,omitempty"`
 	ConsentRequired                    bool                                     `json:"consentRequired"`
+	AlwaysDisplayInConsole             bool                                     `json:"alwaysDisplayInConsole"`
 	AuthenticationFlowBindingOverrides OpenidAuthenticationFlowBindingOverrides `json:"authenticationFlowBindingOverrides,omitempty"`
 }
 
