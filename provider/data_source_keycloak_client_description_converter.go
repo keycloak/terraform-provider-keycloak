@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -189,6 +190,10 @@ func dataSourceKeycloakClientDescriptionConverter() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Computed: true,
 			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -231,6 +236,7 @@ func setClientDescriptionConverterData(data *schema.ResourceData, description *k
 	data.Set("standard_flow_enabled", description.StandardFlowEnabled)
 	data.Set("surrogate_auth_required", description.SurrogateAuthRequired)
 	data.Set("web_origins", description.WebOrigins)
+	data.Set("always_display_in_console", description.AlwaysDisplayInConsole)
 }
 
 func dataSourceKeycloakClientDescriptionConverterRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
