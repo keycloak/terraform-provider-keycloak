@@ -14,6 +14,7 @@ terraform-provider-keycloak_*
 *.out
 
 .idea/
+.vscode/
 .terraform/
 terraform.d/
 .terraform.lock.hcl
