@@ -34,11 +34,17 @@ services:
     - KC_FEATURES=preview
     - QUARKUS_HTTP_ACCESS_LOG_ENABLED=true
     - QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true
+    - KC_HTTPS_CLIENT_AUTH=required
+    - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/misc/tls-server-cert.pem
+    - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/misc/tls-server-key.pem
+    - KC_TRUSTSTORE_PATHS=/opt/keycloak/misc/tls-client-cert.pem
+
 # Enable for remote java debugging
 #    - DEBUG=true
 #    - DEBUG_PORT=*:8787
     ports:
     - "8080:8080"
+    - "8443:8443"
 # Enable for remote java debugging
 #    - "8787:8787"
     volumes:
