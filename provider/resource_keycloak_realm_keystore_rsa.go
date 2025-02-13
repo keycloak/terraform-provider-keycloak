@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -9,7 +10,8 @@ import (
 )
 
 var (
-	keycloakRealmKeystoreRsaAlgorithm = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "RSA-OAEP"}
+	keycloakRealmKeystoreRsaAlgorithm    = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512"}
+	keycloakRealmKeystoreRsaEncAlgorithm = []string{"RSA1_5", "RSA-OAEP", "RSA-OAEP-256"}
 )
 
 func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
@@ -53,7 +55,7 @@ func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
 			"algorithm": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice(keycloakRealmKeystoreRsaAlgorithm, false),
+				ValidateFunc: validation.StringInSlice(append(keycloakRealmKeystoreRsaAlgorithm, keycloakRealmKeystoreRsaEncAlgorithm...), false),
 				Default:      "RS256",
 				Description:  "Intended algorithm for the key",
 			},
