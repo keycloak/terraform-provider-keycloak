@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"golang.org/x/net/publicsuffix"
 
