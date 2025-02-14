@@ -105,7 +105,7 @@ resource "keycloak_realm_translation" "test_translation" {
   realm_id = keycloak_realm.test.id
   language = "en"
   translations = {
-    "extra" : "translation"
+    "test" : "translation"
   }
 }
 
