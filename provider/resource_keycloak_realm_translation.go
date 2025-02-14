@@ -15,16 +15,19 @@ func resourceKeycloakRealmTranslation() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmTranslationRead,
 		DeleteContext: resourceKeycloakRealmTranslationDelete,
 		UpdateContext: resourceKeycloakRealmTranslationUpdate,
+		Description:   "Manage realm-level translations.",
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The realm in which the translation exists.",
 			},
-			"language": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+			"locale": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The locale for the translations.",
 			},
 			"translations": {
 				Optional: true,
@@ -32,6 +35,7 @@ func resourceKeycloakRealmTranslation() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The mapping of translation keys to values.",
 			},
 		},
 	}
@@ -40,39 +44,39 @@ func resourceKeycloakRealmTranslation() *schema.Resource {
 func resourceKeycloakRealmTranslationRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	realmId := data.Get("realm_id").(string)
-	language := data.Get("language").(string)
-	realmLanguageTranslations, err := keycloakClient.GetRealmTranslations(ctx, realmId, language)
+	locale := data.Get("locale").(string)
+	realmLocaleTranslations, err := keycloakClient.GetRealmTranslations(ctx, realmId, locale)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	data.Set("translations", realmLanguageTranslations)
+	data.Set("translations", realmLocaleTranslations)
 	return nil
 }
 
 func resourceKeycloakRealmTranslationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*keycloak.KeycloakClient)
 	realm := d.Get("realm_id").(string)
-	language := d.Get("language").(string)
+	locale := d.Get("locale").(string)
 	translations := d.Get("translations").(map[string]interface{})
 	translationsConverted := convertTranslations(translations)
 
-	err := client.UpdateRealmTranslations(ctx, realm, language, translationsConverted)
+	err := client.UpdateRealmTranslations(ctx, realm, locale, translationsConverted)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", realm, language)) // Set resource ID as "realm/language"
+	d.SetId(fmt.Sprintf("%s/%s", realm, locale)) // Set resource ID as "realm/locale"
 	return resourceKeycloakRealmTranslationRead(ctx, d, meta)
 }
 
 func resourceKeycloakRealmTranslationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*keycloak.KeycloakClient)
 	realm := d.Get("realm_id").(string)
-	language := d.Get("language").(string)
+	locale := d.Get("locale").(string)
 	translations := d.Get("translations").(map[string]interface{})
 	translationsConverted := convertTranslations(translations)
 
-	err := client.DeleteRealmTranslations(ctx, realm, language, translationsConverted)
+	err := client.DeleteRealmTranslations(ctx, realm, locale, translationsConverted)
 	if err != nil {
 		return diag.FromErr(err)
 	}
