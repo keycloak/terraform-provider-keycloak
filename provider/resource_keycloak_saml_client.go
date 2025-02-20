@@ -7,11 +7,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
-	"reflect"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -245,6 +246,11 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Optional:         true,
 				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.SamlClientAttributes{}).Elem()),
 			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -385,6 +391,7 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 	data.Set("logout_service_redirect_binding_url", client.Attributes.LogoutServiceRedirectBindingURL)
 	data.Set("full_scope_allowed", client.FullScopeAllowed)
 	data.Set("login_theme", client.Attributes.LoginTheme)
+	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
 	if canonicalizationMethod, ok := mapKeyFromValue(keycloakSamlClientCanonicalizationMethods, client.Attributes.CanonicalizationMethod); ok {
 		data.Set("canonicalization_method", canonicalizationMethod)
