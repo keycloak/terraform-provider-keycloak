@@ -61,6 +61,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"consent_required": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"front_channel_logout": {
 				Type:     schema.TypeBool,
 				Computed: true,
