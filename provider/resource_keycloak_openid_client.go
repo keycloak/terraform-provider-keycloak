@@ -539,6 +539,9 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 	}
 
 	if data.Get("import").(bool) {
+		existingClient, err := keycloakClient.GetOpenidClientByClientId(ctx, client.RealmId, client.ClientId)
+		client.Id = existingClient.Id
+
 		err = keycloakClient.UpdateOpenidClient(ctx, client)
 		if err != nil {
 			return diag.FromErr(err)
