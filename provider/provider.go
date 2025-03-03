@@ -153,6 +153,12 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Description: "The base URL of the Keycloak instance, before `/auth`",
 				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_URL", nil),
 			},
+			"admin_url": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "The admin URL of the Keycloak instance if different from the main URL, before `/auth`",
+				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_ADMIN_URL", nil),
+			},
 			"initial_login": {
 				Optional:    true,
 				Type:        schema.TypeBool,
@@ -205,6 +211,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 		url := data.Get("url").(string)
 		basePath := data.Get("base_path").(string)
+		adminUrl := data.Get("admin_url").(string)
 		clientId := data.Get("client_id").(string)
 		clientSecret := data.Get("client_secret").(string)
 		username := data.Get("username").(string)
@@ -224,7 +231,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
 
-		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
+		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
