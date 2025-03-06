@@ -36,6 +36,7 @@ resource "keycloak_realm_keystore_java_keystore" "java_keystore" {
 
 - `name` - (Required) Display name of provider when linked in admin console.
 - `realm_id` - (Required) The realm this keystore exists in.
+- `internal_realm_id` - (Optional) The internal id for the realm, if the realm is imported into Terraform. This is not relevant for realms created through Terraform.
 - `keystore` - (Required) Path to keys file on keycloak instance.
 - `keystore_password` - (Required) Password for the keys.
 - `key_alias` - (Required) Alias for the private key.
