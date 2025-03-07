@@ -21,7 +21,7 @@ resource "keycloak_realm_client_policy_profile" "profile" {
     name = "intent-client-bind-checker"
 
     configuration = {
-      auto-configure = true
+      auto-configure = "true"
     }
   }
 
