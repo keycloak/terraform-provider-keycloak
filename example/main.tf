@@ -439,25 +439,25 @@ resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
 }
 
 resource "keycloak_ldap_custom_mapper" "custom_mapper" {
-	name                    = "custom-mapper"
-	realm_id                = keycloak_ldap_user_federation.openldap.realm_id
-	ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+  name                    = "custom-mapper"
+  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
 
-	provider_id        		= "msad-user-account-control-mapper"
-	provider_type           = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+  provider_id   = "msad-user-account-control-mapper"
+  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
 }
 
 resource "keycloak_ldap_custom_mapper" "custom_mapper_with_config" {
-	name                    = "custom-mapper-with-config"
-	realm_id                = keycloak_ldap_user_federation.openldap.realm_id
-	ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+  name                    = "custom-mapper-with-config"
+  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
 
-	provider_id             = "user-attribute-ldap-mapper"
-	provider_type           = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
-	config                  = {
-		"user.model.attribute" = "username"
-		"ldap.attribute"       = "cn"
-	}
+  provider_id   = "user-attribute-ldap-mapper"
+  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+  config = {
+    "user.model.attribute" = "username"
+    "ldap.attribute"       = "cn"
+  }
 }
 
 
@@ -1157,5 +1157,43 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
   group {
     name = "group2"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile" "profile" {
+  name     = "my-profile"
+  realm_id = keycloak_realm.test.id
+  executor {
+    name = "intent-client-bind-checker"
+    configuration = {
+      auto-configure = true
+    }
+  }
+  executor {
+    name = "secure-session"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "policy" {
+  realm_id    = "my-profile"
+  name        = keycloak_realm.test.id
+  description = "Some desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.profile.name
+  ]
+
+  condition {
+    name = "client-type"
+    configuration = {
+      "protocol" = "openid-connect"
+    }
+  }
+
+  condition {
+    name = "client-attributes"
+    configuration = {
+      "is-negative-logic" = false
+      "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
+    }
   }
 }
