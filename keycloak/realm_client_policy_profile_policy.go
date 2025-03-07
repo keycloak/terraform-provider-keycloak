@@ -6,21 +6,21 @@ import (
 )
 
 type RealmClientPolicyProfilePolicyCondition struct {
-	Name     string                 		 `json:"condition"`
+	Name          string                 `json:"condition"`
 	Configuration map[string]interface{} `json:"configuration"`
 }
 
 type RealmClientPolicyProfilePolicy struct {
-	Name        string                                     `json:"name"`
-	RealmId     string                                     `json:"-"`
-	Description string                                     `json:"description"`
-	Enabled     bool                                       `json:"enabled"`
-	Conditions  []RealmClientPolicyProfilePolicyCondition  `json:"conditions"`
-	Profiles    []string                                   `json:"profiles"`
+	Name        string                                    `json:"name"`
+	RealmId     string                                    `json:"-"`
+	Description string                                    `json:"description"`
+	Enabled     bool                                      `json:"enabled"`
+	Conditions  []RealmClientPolicyProfilePolicyCondition `json:"conditions"`
+	Profiles    []string                                  `json:"profiles"`
 }
 
 type RealmClientPolicyProfilePolicies struct {
-	Policies       []RealmClientPolicyProfilePolicy `json:"policies"`
+	Policies []RealmClientPolicyProfilePolicy `json:"policies"`
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealmClientPolicyProfilePolicies(ctx context.Context, realmId string, policies *RealmClientPolicyProfilePolicies) error {
@@ -29,7 +29,6 @@ func (keycloakClient *KeycloakClient) UpdateRealmClientPolicyProfilePolicies(ctx
 
 func (keycloakClient *KeycloakClient) GetAllRealmClientPolicyProfilePolices(ctx context.Context, realmId string) (*RealmClientPolicyProfilePolicies, error) {
 	var realmClientPolicyProfilePolicies *RealmClientPolicyProfilePolicies
-
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/client-policies/policies", realmId), &realmClientPolicyProfilePolicies, nil)
 	if err != nil {
@@ -46,7 +45,7 @@ func (keycloakClient *KeycloakClient) GetRealmClientPolicyProfilePolicyByName(ct
 	}
 
 	for _, policy := range realmClientPolicyProfilePolicies.Policies {
-		if policy.Name == name {	
+		if policy.Name == name {
 			return &policy, nil
 		}
 	}
