@@ -179,18 +179,15 @@ func mapFromRealmClientPolicyProfileToData(data *schema.ResourceData, profile *k
 
 	executors := make([]interface{}, 0)
 	for _, ex := range profile.Executors {
+
+		config := make(map[string]interface{})
+		for key, value := range ex.Configuration {
+			config[key] = value.(string)
+		}
+
 		executorMap := map[string]interface{}{
-			"name": ex.Name,
-			"configuration": func() map[string]interface{} {
-				if ex.Configuration != nil {
-					config := make(map[string]interface{})
-					for key, value := range ex.Configuration {
-						config[key] = value
-					}
-					return config
-				}
-				return nil
-			},
+			"name":          ex.Name,
+			"configuration": config,
 		}
 		executors = append(executors, executorMap)
 	}
