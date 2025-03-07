@@ -41,7 +41,6 @@ func resourceKeycloakRealmClientPolicyProfile() *schema.Resource {
 						"configuration": {
 							Type:     schema.TypeMap,
 							Optional: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
 					},
 				},
@@ -61,7 +60,7 @@ func resourceKeycloakRealmClientPolicyProfileUpdate(ctx context.Context, data *s
 
 	for i, p := range realmClientPolicyProfiles.Profiles {
 		if p.Name == profile.Name {
-			realmClientPolicyProfiles.Profiles[i] = p
+			realmClientPolicyProfiles.Profiles[i] = *profile
 		}
 	}
 
@@ -151,14 +150,8 @@ func mapFromDataToRealmClientPolicyProfile(data *schema.ResourceData) *keycloak.
 		executorMap := executor.(map[string]interface{})
 
 		exec := keycloak.RealmClientPolicyProfileExecutor{
-			Name: executorMap["name"].(string),
-		}
-
-		if config, exists := executorMap["configuration"]; exists {
-			exec.Configuration = make(map[string]interface{})
-			for key, value := range config.(map[string]interface{}) {
-				exec.Configuration[key] = value
-			}
+			Name:          executorMap["name"].(string),
+			Configuration: executorMap["configuration"].(map[string]interface{}),
 		}
 
 		executors = append(executors, exec)
@@ -180,14 +173,9 @@ func mapFromRealmClientPolicyProfileToData(data *schema.ResourceData, profile *k
 	executors := make([]interface{}, 0)
 	for _, ex := range profile.Executors {
 
-		config := make(map[string]interface{})
-		for key, value := range ex.Configuration {
-			config[key] = value.(string)
-		}
-
 		executorMap := map[string]interface{}{
 			"name":          ex.Name,
-			"configuration": config,
+			"configuration": ex.Configuration,
 		}
 		executors = append(executors, executorMap)
 	}
