@@ -71,9 +71,9 @@ resource "keycloak_realm" "realm" {
 }
 	
 resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= keycloak_realm.realm.realm
-	name					= "%s"
-	description		= "%s"
+	realm_id      = keycloak_realm.realm.realm
+	name          = "%s"
+	description   = "%s"
 }
 	`, realm, name, description)
 }
@@ -85,14 +85,14 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= keycloak_realm.realm.realm
-	name					= "%s"
-	description		= "%s"
+	realm_id    = keycloak_realm.realm.realm
+	name        = "%s"
+	description = "%s"
 
 	executor {
 		name = "%s"
 		configuration = {
-			auto-configure = tostring(true)
+			auto-configure = "true"
 		}
 	}
 }
@@ -106,15 +106,15 @@ resource "keycloak_realm" "realm" {
 }
 
 	resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= keycloak_realm.realm.realm
-	name					= "%s"
-	description		= "%s"
+	realm_id    = keycloak_realm.realm.realm
+	name        = "%s"
+	description	= "%s"
 }
 
 resource "keycloak_realm_client_policy_profile_policy" "policy" {
-	realm_id			= keycloak_realm.realm.realm
-  name        	= "%s"
-  description 	= "%s"
+	realm_id    = keycloak_realm.realm.realm
+  name        = "%s"
+  description = "%s"
 
   profiles = [
     keycloak_realm_client_policy_profile.profile.name
@@ -124,7 +124,7 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     name = "%s"
     configuration = {
 			is_negative_logic = false
-			attributes				= jsonencode([{"key": "something", "value": "other"}])
+			attributes        = jsonencode([{"key": "test-key", "value": "test-value"}])
 			}
   }
 }
