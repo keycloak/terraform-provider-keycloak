@@ -130,7 +130,7 @@ func resourceKeycloakRealmClientPolicyProfileRead(ctx context.Context, data *sch
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	
+
 	for _, profile := range realmClientPolicyProfiles.Profiles {
 		if profile.Name == name {
 			profile.RealmId = realmId
@@ -149,26 +149,26 @@ func mapFromDataToRealmClientPolicyProfile(data *schema.ResourceData) *keycloak.
 
 	for _, executor := range data.Get("executor").([]interface{}) {
 		executorMap := executor.(map[string]interface{})
-	
+
 		exec := keycloak.RealmClientPolicyProfileExecutor{
 			Name: executorMap["name"].(string),
 		}
-	
+
 		if config, exists := executorMap["configuration"]; exists {
 			exec.Configuration = make(map[string]interface{})
 			for key, value := range config.(map[string]interface{}) {
 				exec.Configuration[key] = value
 			}
 		}
-	
+
 		executors = append(executors, exec)
 	}
 
 	return &keycloak.RealmClientPolicyProfile{
-		Name:        	data.Get("name").(string),
-		RealmId:      data.Get("realm_id").(string),
-		Description: 	data.Get("description").(string),
-		Executors: 		executors,
+		Name:        data.Get("name").(string),
+		RealmId:     data.Get("realm_id").(string),
+		Description: data.Get("description").(string),
+		Executors:   executors,
 	}
 }
 
@@ -196,6 +196,6 @@ func mapFromRealmClientPolicyProfileToData(data *schema.ResourceData, profile *k
 	}
 
 	data.Set("executor", executors)
-	
+
 	return nil
 }
