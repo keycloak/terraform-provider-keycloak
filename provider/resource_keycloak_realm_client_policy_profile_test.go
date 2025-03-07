@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccKeycloakRealmClientPolicyProfile_basic(t *testing.T) {
-	realmName := "master"
+	realmName := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "test-profile"
 	description := "Test description"
 
@@ -19,14 +20,14 @@ func TestAccKeycloakRealmClientPolicyProfile_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmClientPolicyProfile_basic(realmName, resourceName, description),
-				Check: testAccCheckKeycloakRealmClientPolicyProfileExists(realmName, resourceName),
+				Check:  testAccCheckKeycloakRealmClientPolicyProfileExists(realmName, resourceName),
 			},
 		},
 	})
 }
 
 func TestAccKeycloakRealmClientPolicyProfile_basicWithExecutor(t *testing.T) {
-	realmName := "master"
+	realmName := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "test-profile-no-executor"
 	description := "Test description no executor"
 	executorName := "intent-client-bind-checker"
@@ -37,14 +38,14 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithExecutor(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmClientPolicyProfile_basicWithExecutor(realmName, resourceName, description, executorName),
-				Check: testAccCheckKeycloakRealmClientPolicyProfileWithExecutorExists(realmName, resourceName, executorName),
+				Check:  testAccCheckKeycloakRealmClientPolicyProfileWithExecutorExists(realmName, resourceName, executorName),
 			},
 		},
 	})
 }
 
 func TestAccKeycloakRealmClientPolicyProfile_basicWithExecutorAndConfiguration(t *testing.T) {
-	realmName := "master"
+	realmName := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "test-profile-no-executor"
 	description := "Test description no executor"
 	executorName := "intent-client-bind-checker"
@@ -67,7 +68,7 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithExecutorAndConfiguration(t
 }
 
 func TestAccKeycloakRealmClientPolicyProfile_basicWithPolicy(t *testing.T) {
-	realmName := "master"
+	realmName := acctest.RandomWithPrefix("tf-acc")
 	profileName := "test-profile"
 	profileDescription := "Test profile description"
 	policyName := "test-policy"
@@ -80,7 +81,7 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithPolicy(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmClientPolicyProfile_basicWithPolicy(realmName, profileName, profileDescription, policyName, policyDescription, conditionName),
-				Check: testAccCheckKeycloakRealmClientPolicyProfilePolicyExists(realmName, policyName),
+				Check:  testAccCheckKeycloakRealmClientPolicyProfilePolicyExists(realmName, policyName),
 			},
 		},
 	})
@@ -152,7 +153,6 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 }
 	`, realm, profileName, profileDescription, realm, policyName, policyDescription, conditionName)
 }
-
 
 func testAccCheckKeycloakRealmClientPolicyProfileExists(realm string, profileName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {

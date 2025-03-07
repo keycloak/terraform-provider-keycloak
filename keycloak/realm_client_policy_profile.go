@@ -6,15 +6,15 @@ import (
 )
 
 type RealmClientPolicyProfileExecutor struct {
-	Name      		string                 `json:"executor"`
+	Name          string                 `json:"executor"`
 	Configuration map[string]interface{} `json:"configuration"`
 }
 
 type RealmClientPolicyProfile struct {
-	Name        string                              `json:"name"`
-	RealmId     string                              `json:"-"`
-	Description string                              `json:"description"`
-	Executors   []RealmClientPolicyProfileExecutor  `json:"executors"`
+	Name        string                             `json:"name"`
+	RealmId     string                             `json:"-"`
+	Description string                             `json:"description"`
+	Executors   []RealmClientPolicyProfileExecutor `json:"executors"`
 }
 
 type RealmClientPolicyProfiles struct {
@@ -45,7 +45,7 @@ func (keycloakClient *KeycloakClient) GetRealmClientPolicyProfileByName(ctx cont
 	}
 
 	for _, profile := range realmClientPolicyProfiles.Profiles {
-		if profile.Name == name {	
+		if profile.Name == name {
 			return &profile, nil
 		}
 	}

@@ -141,7 +141,7 @@ func resourceKeycloakRealmClientPolicyProfilePolicyRead(ctx context.Context, dat
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	
+
 	for _, policy := range realmClientPolicyProfilePolicies.Policies {
 		if policy.Name == name {
 			policy.RealmId = realmId
@@ -165,7 +165,7 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		cond := keycloak.RealmClientPolicyProfilePolicyCondition{
 			Name: conditionMap["name"].(string),
 		}
-	
+
 		if v, ok := conditionMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
@@ -173,7 +173,7 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 			}
 			cond.Configuration = configurations
 		}
-		
+
 		conditions = append(conditions, cond)
 	}
 
@@ -182,12 +182,12 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 	}
 
 	return &keycloak.RealmClientPolicyProfilePolicy{
-		Name:        	data.Get("name").(string),
-		RealmId:      data.Get("realm_id").(string),
-		Description: 	data.Get("description").(string),
-		Enabled: 	    data.Get("enabled").(bool),
-		Profiles:     profiles,
-		Conditions:   conditions,
+		Name:        data.Get("name").(string),
+		RealmId:     data.Get("realm_id").(string),
+		Description: data.Get("description").(string),
+		Enabled:     data.Get("enabled").(bool),
+		Profiles:    profiles,
+		Conditions:  conditions,
 	}
 }
 
@@ -200,22 +200,22 @@ func mapFromRealmClientPolicyProfilePolicyToData(data *schema.ResourceData, poli
 
 	conditions := make([]interface{}, 0)
 	for _, cond := range policy.Conditions {
-	
+
 		conditionMap := map[string]interface{}{
 			"name": cond.Name,
 		}
-				
+
 		if cond.Configuration != nil {
 			configurations := make(map[string]interface{})
 			for k, v := range cond.Configuration {
-					configurations[k] = v
+				configurations[k] = v
 			}
 			conditionMap["configuration"] = configurations
 		}
 		conditions = append(conditions, conditionMap)
 	}
-	
+
 	data.Set("condition", conditions)
-	
+
 	return nil
 }
