@@ -89,8 +89,12 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithPolicy(t *testing.T) {
 
 func testKeycloakRealmClientPolicyProfile_basic(realm string, name string, description string) string {
 	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+	
 resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= "%s"
+	realm_id			= keycloak_realm.realm.realm
 	name					= "%s"
 	description		= "%s"
 }
@@ -99,8 +103,12 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 
 func testKeycloakRealmClientPolicyProfile_basicWithExecutor(realm string, name string, description string, executorName string) string {
 	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
 resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= "%s"
+	realm_id			= keycloak_realm.realm.realm
 	name					= "%s"
 	description		= "%s"
 	executor {
@@ -112,8 +120,12 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 
 func testKeycloakRealmClientPolicyProfile_basicWithExecutorAndConfiguration(realm string, name string, description string, executorName string) string {
 	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
 resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= "%s"
+	realm_id			= keycloak_realm.realm.realm
 	name					= "%s"
 	description		= "%s"
 	executor {
@@ -128,14 +140,18 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 
 func testKeycloakRealmClientPolicyProfile_basicWithPolicy(realm string, profileName string, profileDescription string, policyName string, policyDescription string, conditionName string) string {
 	return fmt.Sprintf(`
-resource "keycloak_realm_client_policy_profile" "profile" {
-	realm_id			= "%s"
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+	resource "keycloak_realm_client_policy_profile" "profile" {
+	realm_id			= keycloak_realm.realm.realm
 	name					= "%s"
 	description		= "%s"
 }
 
 resource "keycloak_realm_client_policy_profile_policy" "policy" {
-	realm_id			= "%s"
+	realm_id			= keycloak_realm.realm.realm
   name        	= "%s"
   description 	= "%s"
 
@@ -151,7 +167,7 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 			}
   }
 }
-	`, realm, profileName, profileDescription, realm, policyName, policyDescription, conditionName)
+	`, realm, profileName, profileDescription, policyName, policyDescription, conditionName)
 }
 
 func testAccCheckKeycloakRealmClientPolicyProfileExists(realm string, profileName string) resource.TestCheckFunc {
