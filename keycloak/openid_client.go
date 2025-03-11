@@ -312,18 +312,18 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 	return nil
 }
 
-func (keycloakClient *KeycloakClient) RegenerateOpenIdClientSecret(ctx context.Context, client *OpenidClient) (string, error) {
+func (keycloakClient *KeycloakClient) RegenerateOpenIdClientSecret(ctx context.Context, client *OpenidClient) (*OpenidClientSecret, error) {
 	body, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", client.RealmId, client.Id), nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var clientSecret OpenidClientSecret
 	if err := json.Unmarshal(body, &clientSecret); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return clientSecret.Value, nil
+	return &clientSecret, nil
 }
 
 func (keycloakClient *KeycloakClient) AttachOpenidClientDefaultScopes(ctx context.Context, realmId, clientId string, scopeNames []string) error {
