@@ -69,6 +69,10 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Computed:  true,
 				Sensitive: true,
 			},
+			"client_secret_regenerate_when_changed": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"client_authenticator_type": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -604,6 +608,11 @@ func resourceKeycloakOpenidClientUpdate(ctx context.Context, data *schema.Resour
 		return diag.FromErr(err)
 	}
 
+	err = evaluateSecretRegeneration(ctx, keycloakClient, data, client)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	err = keycloakClient.UpdateOpenidClient(ctx, client)
 	if err != nil {
 		return diag.FromErr(err)
@@ -652,4 +661,35 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 	}
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.KeycloakClient, d *schema.ResourceData, client *keycloak.OpenidClient) error {
+	// Skip rotation in case of Public client
+	if client.PublicClient {
+		return nil
+	}
+
+	// Skip if secret value is set explicitly
+	if d.HasChange("client_secret") {
+		return nil
+	}
+
+	if d.HasChange("client_secret_regenerate_when_changed") {
+		oldValue, newValue := d.GetChange("client_secret_regenerate_when_changed")
+
+		// Don't do anything when the value is set for the first time or was set to null
+		if oldValue == "" || newValue == "" {
+			return nil
+		}
+
+		value, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
+		if err != nil {
+			return err
+		}
+
+		client.ClientSecret = value
+		d.Set("client_secret", value)
+	}
+
+	return nil
 }
