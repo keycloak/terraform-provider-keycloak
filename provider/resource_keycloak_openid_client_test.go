@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakOpenidClient_basic(t *testing.T) {
@@ -76,7 +76,7 @@ func TestAccKeycloakOpenidClient_createAfterManualDestroy(t *testing.T) {
 				Config: testKeycloakOpenidClient_basic(clientId),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
-					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client),
+					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, false),
 				),
 			},
 			{
@@ -821,6 +821,51 @@ func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testin
 	})
 }
 
+func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	var client = &keycloak.OpenidClient{}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{ // Create client with client_secret_regenerate_when_changed = null
+				Config: testKeycloakOpenidClient_basic(clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
+				),
+			},
+			{ // Set client_secret_regenerate_when_changed = "initial-value" and validate that secret wasn't regenerated
+				Config: testKeycloakOpenidClient_basicWithSecretRegenerate(clientId, "initial-value"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "initial-value"),
+					testAccCheckKeycloakOpenidClientExistsWithSameSecret("keycloak_openid_client.client", client),
+					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
+				),
+			},
+			{ // Set client_secret_regenerate_when_changed = "second-value" and validate that secret was regenerated
+				Config: testKeycloakOpenidClient_basicWithSecretRegenerate(clientId, "second-value"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "second-value"),
+					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
+					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
+				),
+			},
+			{ // Set client_secret_regenerate_when_changed = null and validate that the secret wasn't regenerated
+				Config: testKeycloakOpenidClient_basic(clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					testAccCheckKeycloakOpenidClientExistsWithSameSecret("keycloak_openid_client.client", client),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -968,7 +1013,7 @@ func testAccCheckKeycloakOpenidClientOauth2Device(resourceName string,
 	}
 }
 
-func testAccCheckKeycloakOpenidClientFetch(resourceName string, client *keycloak.OpenidClient) resource.TestCheckFunc {
+func testAccCheckKeycloakOpenidClientFetch(resourceName string, client *keycloak.OpenidClient, withSecret bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedClient, err := getOpenidClientFromState(s, resourceName)
 		if err != nil {
@@ -977,6 +1022,10 @@ func testAccCheckKeycloakOpenidClientFetch(resourceName string, client *keycloak
 
 		client.Id = fetchedClient.Id
 		client.RealmId = fetchedClient.RealmId
+
+		if withSecret {
+			client.ClientSecret = fetchedClient.ClientSecret
+		}
 
 		return nil
 	}
@@ -1296,6 +1345,36 @@ func testAccCheckKeycloakOpenidClientExistsWithEnabledStatus(resourceName string
 	}
 }
 
+func testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret(resourceName string, client *keycloak.OpenidClient) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		c, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if c.ClientSecret == client.ClientSecret {
+			return fmt.Errorf("expected openid client to have new secret value but got same")
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientExistsWithSameSecret(resourceName string, client *keycloak.OpenidClient) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		c, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if c.ClientSecret != client.ClientSecret {
+			return fmt.Errorf("expected openid client to have same secret value but got different")
+		}
+
+		return nil
+	}
+}
+
 func getOpenidClientFromState(s *terraform.State, resourceName string) (*keycloak.OpenidClient, error) {
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
@@ -1325,6 +1404,21 @@ resource "keycloak_openid_client" "client" {
 	access_type = "CONFIDENTIAL"
 }
 	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_basicWithSecretRegenerate(clientId string, regenerateValue string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "CONFIDENTIAL"
+	client_secret_regenerate_when_changed = "%s"
+}
+	`, testAccRealm.Realm, clientId, regenerateValue)
 }
 
 func testKeycloakOpenidClient_basic_with_consent(clientId string) string {
