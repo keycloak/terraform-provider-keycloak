@@ -682,13 +682,13 @@ func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.Ke
 			return nil
 		}
 
-		value, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
+		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
 		if err != nil {
 			return err
 		}
 
-		client.ClientSecret = value
-		d.Set("client_secret", value)
+		client.ClientSecret = secret.Value
+		d.Set("client_secret", secret.Value)
 	}
 
 	return nil
