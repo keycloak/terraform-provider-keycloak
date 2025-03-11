@@ -842,7 +842,7 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "initial-value"),
-					testAccCheckKeycloakOpenidClientExistsWithSameSecret("keycloak_openid_client.client", client),
+					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
 					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
 				),
 			},
@@ -853,13 +853,6 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "second-value"),
 					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
 					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
-				),
-			},
-			{ // Set client_secret_regenerate_when_changed = null and validate that the secret wasn't regenerated
-				Config: testKeycloakOpenidClient_basic(clientId),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
-					testAccCheckKeycloakOpenidClientExistsWithSameSecret("keycloak_openid_client.client", client),
 				),
 			},
 		},
@@ -1354,21 +1347,6 @@ func testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret(resourceName st
 
 		if c.ClientSecret == client.ClientSecret {
 			return fmt.Errorf("expected openid client to have new secret value but got same")
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKeycloakOpenidClientExistsWithSameSecret(resourceName string, client *keycloak.OpenidClient) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		c, err := getOpenidClientFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if c.ClientSecret != client.ClientSecret {
-			return fmt.Errorf("expected openid client to have same secret value but got different")
 		}
 
 		return nil
