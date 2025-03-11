@@ -64,14 +64,16 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ValidateFunc: validation.StringInSlice(keycloakOpenidClientAccessTypes, false),
 			},
 			"client_secret": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Computed:  true,
-				Sensitive: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"client_secret_regenerate_when_changed"},
 			},
 			"client_secret_regenerate_when_changed": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"client_secret"},
 			},
 			"client_authenticator_type": {
 				Type:     schema.TypeString,
@@ -316,10 +318,19 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ForceNew: true,
 			},
 		},
-		CustomizeDiff: customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+		CustomizeDiff: resourceKeycloakOpenidClientDiff(),
+	}
+}
+
+func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
+	return customdiff.All(
+		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			return d.HasChange("service_accounts_enabled")
 		}),
-	}
+		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return d.HasChange("client_secret_regenerate_when_changed")
+		}),
+	)
 }
 
 func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient, error) {
@@ -664,24 +675,8 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 }
 
 func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.KeycloakClient, d *schema.ResourceData, client *keycloak.OpenidClient) error {
-	// Skip rotation in case of Public client
-	if client.PublicClient {
-		return nil
-	}
-
-	// Skip if secret value is set explicitly
-	if d.HasChange("client_secret") {
-		return nil
-	}
 
 	if d.HasChange("client_secret_regenerate_when_changed") {
-		oldValue, newValue := d.GetChange("client_secret_regenerate_when_changed")
-
-		// Don't do anything when the value is set for the first time or was set to null
-		if oldValue == "" || newValue == "" {
-			return nil
-		}
-
 		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
 		if err != nil {
 			return err
