@@ -841,7 +841,7 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 				Config: testKeycloakOpenidClient_basicWithSecretRegenerate(clientId, "initial-value"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "initial-value"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed.rotation", "initial-value"),
 					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
 					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
 				),
@@ -850,7 +850,7 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 				Config: testKeycloakOpenidClient_basicWithSecretRegenerate(clientId, "second-value"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed", "second-value"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_regenerate_when_changed.rotation", "second-value"),
 					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
 					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
 				),
@@ -1394,7 +1394,9 @@ resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "CONFIDENTIAL"
-	client_secret_regenerate_when_changed = "%s"
+	client_secret_regenerate_when_changed = {
+		rotation = "%s"
+	}
 }
 	`, testAccRealm.Realm, clientId, regenerateValue)
 }
