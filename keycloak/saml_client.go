@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"reflect"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type SamlClientAttributes struct {
@@ -57,6 +58,9 @@ type SamlClient struct {
 	MasterSamlProcessingUrl string   `json:"adminUrl"`
 
 	FullScopeAllowed bool `json:"fullScopeAllowed"`
+	ConsentRequired  bool `json:"consentRequired"`
+
+	AlwaysDisplayInConsole bool `json:"alwaysDisplayInConsole"`
 
 	Attributes *SamlClientAttributes `json:"attributes"`
 

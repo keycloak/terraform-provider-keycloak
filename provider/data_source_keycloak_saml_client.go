@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -57,6 +58,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"force_post_binding": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"consent_required": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
@@ -176,6 +181,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 			},
 			"login_theme": {
 				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
 				Computed: true,
 			},
 		},

@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"reflect"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type OpenidClientRole struct {
@@ -56,6 +57,7 @@ type OpenidClient struct {
 	AuthorizationSettings              *OpenidClientAuthorizationSettings       `json:"authorizationSettings,omitempty"`
 	ConsentRequired                    bool                                     `json:"consentRequired"`
 	AuthenticationFlowBindingOverrides OpenidAuthenticationFlowBindingOverrides `json:"authenticationFlowBindingOverrides,omitempty"`
+	AlwaysDisplayInConsole             bool                                     `json:"alwaysDisplayInConsole"`
 }
 
 type OpenidClientAttributes struct {

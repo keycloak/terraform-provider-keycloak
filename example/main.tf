@@ -109,6 +109,18 @@ resource "keycloak_required_action" "custom-terms-and-conditions" {
   name           = "Custom Terms and Conditions"
 }
 
+resource "keycloak_required_action" "update-password" {
+  realm_id       = keycloak_realm.test.realm
+  alias          = "UPDATE_PASSWORD"
+  default_action = true
+  enabled        = true
+  name           = "Update Password"
+
+  config {
+    max_auth_age = "600"
+  }
+}
+
 resource "keycloak_required_action" "custom-configured_totp" {
   realm_id       = keycloak_realm.test.realm
   alias          = "CONFIGURE_TOTP"
@@ -1020,7 +1032,7 @@ resource "keycloak_authentication_execution" "browser-copy-cookie" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "auth-cookie"
   requirement       = "ALTERNATIVE"
-  priority			= 20
+  priority          = 20
 }
 
 resource "keycloak_authentication_execution" "browser-copy-kerberos" {
@@ -1028,7 +1040,7 @@ resource "keycloak_authentication_execution" "browser-copy-kerberos" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "auth-spnego"
   requirement       = "DISABLED"
-  priority			= 10
+  priority          = 10
 }
 
 resource "keycloak_authentication_execution" "browser-copy-idp-redirect" {
@@ -1036,7 +1048,7 @@ resource "keycloak_authentication_execution" "browser-copy-idp-redirect" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "identity-provider-redirector"
   requirement       = "ALTERNATIVE"
-  priority			= 30
+  priority          = 30
 }
 
 resource "keycloak_authentication_subflow" "browser-copy-flow-forms" {
@@ -1044,7 +1056,7 @@ resource "keycloak_authentication_subflow" "browser-copy-flow-forms" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   alias             = "browser-copy-flow-forms"
   requirement       = "ALTERNATIVE"
-  priority			= 40
+  priority          = 40
 }
 
 resource "keycloak_authentication_execution" "browser-copy-auth-username-password-form" {
@@ -1052,7 +1064,7 @@ resource "keycloak_authentication_execution" "browser-copy-auth-username-passwor
   parent_flow_alias = keycloak_authentication_subflow.browser-copy-flow-forms.alias
   authenticator     = "auth-username-password-form"
   requirement       = "REQUIRED"
-  priority			= 50
+  priority          = 50
 }
 
 resource "keycloak_authentication_execution" "browser-copy-otp" {
@@ -1060,7 +1072,7 @@ resource "keycloak_authentication_execution" "browser-copy-otp" {
   parent_flow_alias = keycloak_authentication_subflow.browser-copy-flow-forms.alias
   authenticator     = "auth-otp-form"
   requirement       = "REQUIRED"
-  priority			= 60
+  priority          = 60
 }
 
 resource "keycloak_authentication_execution_config" "config" {

@@ -2,19 +2,18 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"strconv"
-	"testing"
 )
 
 func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
@@ -39,8 +38,6 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	var javaKeystore = &keycloak.RealmKeystoreJavaKeystore{}
 
@@ -72,9 +69,7 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
-
-	algorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
+	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -96,8 +91,6 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	enabled := randomBool()
 	active := randomBool()
@@ -148,8 +141,7 @@ func testAccCheckRealmKeystoreJavaExists(resourceName string) resource.TestCheck
 	}
 }
 
-func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.
-	TestCheckFunc {
+func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedKeystore, err := getKeycloakRealmKeystoreJavaFromState(s, resourceName)
 		if err != nil {

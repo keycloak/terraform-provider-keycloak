@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -9,7 +10,7 @@ import (
 )
 
 var (
-	keycloakRealmKeystoreJavaKeystoreAlgorithm = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512"}
+	keycloakRealmKeystoreJavaKeystoreAlgorithm = []string{"AES", "EdDSA", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "RSA1_5", "RSA-OAEP", "RSA-OAEP-256", "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW"}
 )
 
 func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {

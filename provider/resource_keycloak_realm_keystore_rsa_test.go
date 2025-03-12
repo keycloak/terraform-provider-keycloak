@@ -7,16 +7,17 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"log"
 	"math/big"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmKeystoreRsa_basic(t *testing.T) {
@@ -78,7 +79,8 @@ func TestAccKeycloakRealmKeystoreRsa_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreRsa_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	algorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
+	rsaAlgorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
+	rsaEncAlgorithm := randomStringInSlice(keycloakRealmKeystoreRsaEncAlgorithm)
 	privateKey, certificate := generateKeyAndCert(2048)
 
 	resource.Test(t, resource.TestCase{
@@ -87,12 +89,22 @@ func TestAccKeycloakRealmKeystoreRsa_algorithmValidation(t *testing.T) {
 		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation(algorithm, "algorithm",
+				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation("rsa", rsaAlgorithm, "algorithm",
 					acctest.RandString(10), privateKey, certificate),
 				ExpectError: regexp.MustCompile("expected algorithm to be one of .+ got .+"),
 			},
 			{
-				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation(algorithm, "algorithm", algorithm,
+				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation("rsa", rsaAlgorithm, "algorithm", rsaAlgorithm,
+					privateKey, certificate),
+				Check: testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation("rsa-enc", rsaEncAlgorithm, "algorithm",
+					acctest.RandString(10), privateKey, certificate),
+				ExpectError: regexp.MustCompile("expected algorithm to be one of .+ got .+"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation("rsa-enc", rsaEncAlgorithm, "algorithm", rsaEncAlgorithm,
 					privateKey, certificate),
 				Check: testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
 			},
@@ -216,7 +228,6 @@ data "keycloak_realm" "realm" {
 }
 
 resource "keycloak_realm_keystore_rsa" "realm_rsa" {
-
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
@@ -228,7 +239,7 @@ resource "keycloak_realm_keystore_rsa" "realm_rsa" {
 	`, testAccRealmUserFederation.Realm, rsaName, privateKey, certificate)
 }
 
-func testKeycloakRealmKeystoreRsa_basicWithAttrValidation(rsaName, attr, val, privateKey,
+func testKeycloakRealmKeystoreRsa_basicWithAttrValidation(provider, rsaName, attr, val, privateKey,
 	certificate string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -243,6 +254,7 @@ resource "keycloak_realm_keystore_rsa" "realm_rsa" {
 
     private_key = "%s"
     certificate = "%s"
+	provider_id = "%s"
 }
-	`, testAccRealmUserFederation.Realm, rsaName, attr, val, privateKey, certificate)
+	`, testAccRealmUserFederation.Realm, rsaName, attr, val, privateKey, certificate, provider)
 }
