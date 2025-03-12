@@ -71,9 +71,13 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ConflictsWith: []string{"client_secret_regenerate_when_changed"},
 			},
 			"client_secret_regenerate_when_changed": {
-				Type:          schema.TypeString,
+				Type:          schema.TypeMap,
+				Description:   "Arbitrary map of values that, when changed, will trigger rotation of the secret",
 				Optional:      true,
 				ConflictsWith: []string{"client_secret"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"client_authenticator_type": {
 				Type:     schema.TypeString,
