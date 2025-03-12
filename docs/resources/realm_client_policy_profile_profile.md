@@ -16,6 +16,7 @@ resource "keycloak_realm" "realm" {
 resource "keycloak_realm_client_policy_profile" "profile" {
   name     = "my-profile"
   realm_id = keycloak_realm.realm.id
+  description = "Some desc"
 
   executor {
     name = "intent-client-bind-checker"
@@ -28,15 +29,15 @@ resource "keycloak_realm_client_policy_profile" "profile" {
   executor {
     name = "secret-rotation"
     configuration = {
-      "expiration-period" : 2505600,
-      "rotated-expiration-period" : 172800,
-      "remaining-rotation-period" : 864000
+      expiration-period = 2505600,
+      rotated-expiration-period = 172800,
+      remaining-rotation-period = 864000
     }
   }
 }
 
 resource "keycloak_realm_client_policy_profile_policy" "policy" {
-  realm_id    = "my-profile"
+  name        = "my-profile"
   realm_id    = keycloak_realm.realm.id
   description = "Some desc"
   profiles = [
@@ -53,8 +54,8 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
   condition {
     name = "client-attributes"
     configuration = {
-      "is-negative-logic" = false
-      "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
+      is-negative-logic = false
+      attributes        = jsonencode([{ "key" : "test-key", "value" : "test-value" }])
     }
   }
 }
