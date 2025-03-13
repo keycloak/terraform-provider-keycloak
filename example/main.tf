@@ -101,10 +101,10 @@ resource "keycloak_realm" "test" {
   }
 }
 
-resource "keycloak_realm_translation" "test_translation" {
+resource "keycloak_realm_localization" "test_translation" {
   realm_id = keycloak_realm.test.id
   locale   = "en"
-  translations = {
+  texts = {
     "test" : "translation"
   }
 }

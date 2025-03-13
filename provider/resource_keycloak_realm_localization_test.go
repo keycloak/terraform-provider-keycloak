@@ -11,7 +11,7 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-func TestAccKeycloakRealmTranslation_basic(t *testing.T) {
+func TestAccKeycloakRealmLocalizationTexts_basic(t *testing.T) {
 	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
@@ -19,17 +19,17 @@ func TestAccKeycloakRealmTranslation_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmTranslationsDestroy(),
+		CheckDestroy:      testAccCheckKeycloakRealmLocalizationTextsDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmTranslation_basic(realmName),
-				Check:  testAccCheckKeycloakRealmTranslationsExist("keycloak_realm_translation.realm_translation", "en", map[string]string{"k": "v"}),
+				Config: testKeycloakRealmLocalizationTexts_basic(realmName),
+				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "en", map[string]string{"k": "v"}),
 			},
 		},
 	})
 }
 
-func TestAccKeycloakRealmTranslation_empty(t *testing.T) {
+func TestAccKeycloakRealmLocalizationTexts_empty(t *testing.T) {
 	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
@@ -37,11 +37,11 @@ func TestAccKeycloakRealmTranslation_empty(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmTranslationsDestroy(),
+		CheckDestroy:      testAccCheckKeycloakRealmLocalizationTextsDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmTranslation_empty(realmName),
-				Check:  testAccCheckKeycloakRealmTranslationsExist("keycloak_realm_translation.realm_translation", "en", map[string]string{}),
+				Config: testKeycloakRealmLocalizationTexts_empty(realmName),
+				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "en", map[string]string{}),
 			},
 		},
 	})
@@ -49,7 +49,7 @@ func TestAccKeycloakRealmTranslation_empty(t *testing.T) {
 
 // Tests creating a realm translation in a realm without localization in a non-default locale
 // The translation should exist, but it won't take effect.
-func TestAccKeycloakRealmTranslation_noLocalization(t *testing.T) {
+func TestAccKeycloakRealmLocalizationTexts_noLocalization(t *testing.T) {
 	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
@@ -57,28 +57,28 @@ func TestAccKeycloakRealmTranslation_noLocalization(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmTranslationsDestroy(),
+		CheckDestroy:      testAccCheckKeycloakRealmLocalizationTextsDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmTranslation_noInternationalization(realmName),
-				Check:  testAccCheckKeycloakRealmTranslationsExist("keycloak_realm_translation.realm_translation", "de", map[string]string{"k": "v"}),
+				Config: testKeycloakRealmLocalizationTexts_noInternationalization(realmName),
+				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "de", map[string]string{"k": "v"}),
 			},
 		},
 	})
 }
 
-func testAccCheckKeycloakRealmTranslationsDestroy() resource.TestCheckFunc {
+func testAccCheckKeycloakRealmLocalizationTextsDestroy() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "keycloak_realm_translation" {
+			if rs.Type != "keycloak_realm_localization" {
 				continue
 			}
 
 			realm := rs.Primary.Attributes["realm_id"]
 			locale := rs.Primary.Attributes["locale"]
 
-			realmTranslation, _ := keycloakClient.GetRealmTranslations(testCtx, realm, locale)
-			if realmTranslation != nil {
+			realmLocalizationTexts, _ := keycloakClient.GetRealmLocalizationTexts(testCtx, realm, locale)
+			if realmLocalizationTexts != nil {
 				return fmt.Errorf("translation for realm %s", realm)
 			}
 		}
@@ -87,7 +87,7 @@ func testAccCheckKeycloakRealmTranslationsDestroy() resource.TestCheckFunc {
 	}
 }
 
-func testKeycloakRealmTranslation_basic(realm string) string {
+func testKeycloakRealmLocalizationTexts_basic(realm string) string {
 	return fmt.Sprintf(`
 	resource "keycloak_realm" "realm" {
 		realm = "%s"
@@ -99,17 +99,17 @@ func testKeycloakRealmTranslation_basic(realm string) string {
 		}
 	}
 
-	resource "keycloak_realm_translation" "realm_translation" {
+	resource "keycloak_realm_localization" "realm_localization" {
 		realm_id                          = keycloak_realm.realm.id
 		locale  = "en"
-		translations = {
+		texts = {
 			"k": "v"
 		}
 	}
 		`, realm)
 }
 
-func testKeycloakRealmTranslation_empty(realm string) string {
+func testKeycloakRealmLocalizationTexts_empty(realm string) string {
 	return fmt.Sprintf(`
 	resource "keycloak_realm" "realm" {
 		realm = "%s"
@@ -121,32 +121,32 @@ func testKeycloakRealmTranslation_empty(realm string) string {
 		}
 	}
 
-	resource "keycloak_realm_translation" "realm_translation" {
+	resource "keycloak_realm_localization" "realm_localization" {
 		realm_id                          = keycloak_realm.realm.id
 		locale  = "en"
-		translations = {
+		texts = {
 		}
 	}
 		`, realm)
 }
 
-func testKeycloakRealmTranslation_noInternationalization(realm string) string {
+func testKeycloakRealmLocalizationTexts_noInternationalization(realm string) string {
 	return fmt.Sprintf(`
 	resource "keycloak_realm" "realm" {
 		realm = "%s"
 	}
 
-	resource "keycloak_realm_translation" "realm_translation" {
+	resource "keycloak_realm_localization" "realm_localization" {
 		realm_id                          = keycloak_realm.realm.id
 		locale  = "de"
-		translations = {
+		texts = {
 			"k": "v"
 		}
 	}
 		`, realm)
 }
 
-func getRealmTranslationFromState(s *terraform.State, resourceName string) (map[string]string, string, error) {
+func getRealmLocalizationTextsFromState(s *terraform.State, resourceName string) (map[string]string, string, error) {
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, "", fmt.Errorf("resource not found: %s", resourceName)
@@ -155,24 +155,24 @@ func getRealmTranslationFromState(s *terraform.State, resourceName string) (map[
 	realm := rs.Primary.Attributes["realm_id"]
 	locale := rs.Primary.Attributes["locale"]
 
-	realmTranslations, err := keycloakClient.GetRealmTranslations(testCtx, realm, locale)
+	realmLocalizationTexts, err := keycloakClient.GetRealmLocalizationTexts(testCtx, realm, locale)
 	if err != nil {
 		return nil, "", fmt.Errorf("error getting realm user profile: %s", err)
 	}
-	return *realmTranslations, locale, nil
+	return *realmLocalizationTexts, locale, nil
 }
 
-func testAccCheckKeycloakRealmTranslationsExist(resourceName string, expectedLocale string, expectedTranslations map[string]string) resource.TestCheckFunc {
+func testAccCheckKeycloakRealmLocalizationTextsExist(resourceName string, expectedLocale string, expectedLocalizationTexts map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		translations, locale, err := getRealmTranslationFromState(s, resourceName)
+		texts, locale, err := getRealmLocalizationTextsFromState(s, resourceName)
 		if err != nil {
 			return err
 		}
 		if expectedLocale != locale {
-			return fmt.Errorf("assigned and expected translations locale do not match %v != %v", locale, expectedLocale)
+			return fmt.Errorf("assigned and expected texts locale do not match %v != %v", locale, expectedLocale)
 		}
-		if !reflect.DeepEqual(translations, expectedTranslations) {
-			return fmt.Errorf("assigned and expected realm translations do not match %v != %v", translations, expectedTranslations)
+		if !reflect.DeepEqual(texts, expectedLocalizationTexts) {
+			return fmt.Errorf("assigned and expected realm texts do not match %v != %v", texts, expectedLocalizationTexts)
 		}
 
 		return nil

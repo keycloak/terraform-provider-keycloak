@@ -1,14 +1,14 @@
 ---
-page_title: "keycloak_realm_translation Resource"
+page_title: "keycloak_realm_localization Resource"
 ---
 
-# keycloak_realm_tranlsation Resource
+# keycloak_realm_localization Resource
 
-Allows for managing Realm Translations overrides within Keycloak.
+Allows for managing Realm Localization Text overrides within Keycloak.
 
-A translation defines a schema for representing a locale with a map of key/value pairs and how they are managed within a realm.
+A localization resource defines a schema for representing a locale with a map of key/value pairs and how they are managed within a realm.
 
-Note: whilst you can provide translations for unsupported locales, they will not take effect until they are defined within the realm resource.
+Note: whilst you can provide localization texts for unsupported locales, they will not take effect until they are defined within the realm resource.
 
 ## Example Usage
 
@@ -17,10 +17,10 @@ resource "keycloak_realm" "realm" {
   realm = "my-realm"
 }
 
-resource "keycloak_realm_translation" "realm_translation" {
+resource "keycloak_realm_localization" "german_texts" {
   realm_id = keycloak_realm.my_realm.id
   locale = "de"
-  translations = {
+  texts = {
     "Hello" : "Hallo"
   }
 }
@@ -29,8 +29,8 @@ resource "keycloak_realm_translation" "realm_translation" {
 ## Argument Reference
 
 - `realm_id` - (Required) The ID of the realm the user profile applies to.
-- `locale` - (Required) The locale (language code) the translations apply to.
-- `translations` - (Optional) A map of translation keys to values.
+- `locale` - (Required) The locale (language code) the texts apply to.
+- `texts` - (Optional) A map of translation keys to values.
 
 
 ## Import
