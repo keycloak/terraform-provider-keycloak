@@ -15,8 +15,6 @@ import (
 func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 	t.Parallel()
 
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
-
 	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -40,8 +38,6 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	var javaKeystore = &keycloak.RealmKeystoreJavaKeystore{}
 
@@ -73,8 +69,6 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
-
 	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
 
 	resource.Test(t, resource.TestCase{
@@ -97,8 +91,6 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	enabled := randomBool()
 	active := randomBool()
@@ -149,8 +141,7 @@ func testAccCheckRealmKeystoreJavaExists(resourceName string) resource.TestCheck
 	}
 }
 
-func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.
-	TestCheckFunc {
+func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedKeystore, err := getKeycloakRealmKeystoreJavaFromState(s, resourceName)
 		if err != nil {
