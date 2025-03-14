@@ -125,7 +125,7 @@ resource "keycloak_required_action" "update-password" {
   name           = "Update Password"
 
   config = {
-    max_auth_age = "300"
+    max_auth_age = "600"
   }
 }
 
