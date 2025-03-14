@@ -115,6 +115,9 @@ resource "keycloak_required_action" "custom-terms-and-conditions" {
   default_action = true
   enabled        = true
   name           = "Custom Terms and Conditions"
+  config = {
+    max_auth_age = "300"
+  }
 }
 
 resource "keycloak_required_action" "update-password" {
