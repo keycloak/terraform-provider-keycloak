@@ -34,20 +34,6 @@ jobs:
           make vet
           make fmtcheck
 
-      # we only want to run tests if any code changes (not for README or docs changes)
-      - name: Check Changed Files
-        id: files
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            .github
-            go.mod
-            go.sum
-            main.go
-            keycloak
-            provider
-            scripts
-
     outputs:
       code-files-changed: steps.files.outputs.any_changed
 
