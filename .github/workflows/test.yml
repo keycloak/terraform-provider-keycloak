@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.1.3'
+          - '26.1.4'
           - '26.0.8'
           - '25.0.6'
           - '24.0.5'
@@ -86,7 +86,7 @@ jobs:
       - name: Start Keycloak Container
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.1.3" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.1.4" ]]; then
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           fi
 
