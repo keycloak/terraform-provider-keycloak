@@ -14,7 +14,7 @@ services:
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
-    image: quay.io/keycloak/keycloak:26.1.3
+    image: quay.io/keycloak/keycloak:26.1.4
     command: --verbose start-dev --features=preview
     depends_on:
     - postgres
