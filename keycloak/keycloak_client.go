@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"golang.org/x/net/publicsuffix"
 
@@ -293,7 +293,7 @@ func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 		request.Header.Set("User-Agent", keycloakClient.userAgent)
 	}
 
-	if request.Method == http.MethodPost || request.Method == http.MethodPut || request.Method == http.MethodDelete {
+	if request.Header.Get("Content-type") == "" && (request.Method == http.MethodPost || request.Method == http.MethodPut || request.Method == http.MethodDelete) {
 		request.Header.Set("Content-type", "application/json")
 	}
 }
