@@ -126,6 +126,20 @@ KEYCLOAK_URL="http://localhost:8080" \
 make testacc
 ```
 
+You can also run the same tests on Keycloak's https port with the Keycloak terraform provider authenticating to the server with a client TLS certificate:
+```
+KEYCLOAK_CLIENT_ID=terraform \
+KEYCLOAK_CLIENT_SECRET=884e0f95-0f42-4a63-9b1f-94274655669e \
+KEYCLOAK_CLIENT_TIMEOUT=5 \
+KEYCLOAK_REALM=master \
+KEYCLOAK_TEST_PASSWORD_GRANT=true \
+KEYCLOAK_URL="https://localhost:8443" \
+KEYCLOAK_TLS_CLIENT_CERT="$(cat provider/misc/tls-client-cert.pem)" \
+KEYCLOAK_TLS_CLIENT_KEY="$(cat provider/misc/tls-client-key.pem)" \
+KEYCLOAK_TLS_CA_CERT="$(cat provider/misc/tls-server-cert.pem)" \
+make testacc
+```
+
 ### Run examples
 
 You can run examples against a Keycloak instance.
