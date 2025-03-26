@@ -500,7 +500,7 @@ func (keycloakClient *KeycloakClient) marshal(body interface{}) ([]byte, error) 
 }
 
 func RetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
-	// do not retry on context.Canceled or context.DeadlineExceeded
+	// do retry on context.Canceled or context.DeadlineExceeded
 	if ctx.Err() != nil {
 		return true, ctx.Err()
 	}
