@@ -30,6 +30,7 @@ like to manage your entire Keycloak instance, or in any other realm if you only 
     1. Set `Direct Access Grants Enabled` to `OFF`
     1. Set `Service Accounts Enabled` to `ON`.
 1. Grant required roles for managing Keycloak via the `Service Account Roles` tab in the client you created in step 1, see [Assigning Roles](#assigning-roles) section below.
+1. Add scope "roles" as DefaultClientScope
 
 ### Password Grant Setup
 
