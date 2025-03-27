@@ -332,6 +332,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	if err != nil {
 		return nil, "", fmt.Errorf("error sending request: %v", err)
 	}
+	defer response.Body.Close()
 
 	// Unauthorized: Token could have expired
 	// Forbidden: After creating a realm, following GETs for the realm return 403 until you refresh
@@ -354,9 +355,8 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 		if err != nil {
 			return nil, "", fmt.Errorf("error sending request after refresh: %v", err)
 		}
+		defer response.Body.Close()
 	}
-
-	defer response.Body.Close()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
