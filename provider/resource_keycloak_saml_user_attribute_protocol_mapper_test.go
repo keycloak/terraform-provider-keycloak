@@ -161,6 +161,29 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_updateClientIdForceNew(t *te
 		},
 	})
 }
+func TestAccKeycloakSamlUserAttributeProtocolMapper_aggregateAttributes(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_saml_user_attribute_protocol_mapper.saml_user_attribute_mapper"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccKeycloakSamlUserAttributeProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlUserAttributeProtocolMapper_aggregateAttributes(clientId, mapperName, false),
+				Check:  testKeycloakSamlUserAttributeProtocolMapperHasAggregateAttributes(resourceName, false),
+			},
+			{
+				Config: testKeycloakSamlUserAttributeProtocolMapper_aggregateAttributes(clientId, mapperName, true),
+				Check:  testKeycloakSamlUserAttributeProtocolMapperHasAggregateAttributes(resourceName, true),
+			},
+		},
+	})
+}
 
 func testAccKeycloakSamlUserAttributeProtocolMapperDestroy() resource.TestCheckFunc {
 	return func(state *terraform.State) error {
@@ -187,6 +210,18 @@ func testKeycloakSamlUserAttributeProtocolMapperExists(resourceName string) reso
 			return err
 		}
 
+		return nil
+	}
+}
+func testKeycloakSamlUserAttributeProtocolMapperHasAggregateAttributes(resourceName string, aggregateAttributes bool) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		mapper, err := getSamlUserAttributeMapperUsingState(state, resourceName)
+		if err != nil {
+			return err
+		}
+		if mapper.AggregateAttributeValues != aggregateAttributes {
+			return fmt.Errorf("aggregate attributes is %t, expected %t", mapper.AggregateAttributeValues, aggregateAttributes)
+		}
 		return nil
 	}
 }
@@ -285,4 +320,26 @@ resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_map
 	saml_attribute_name        = "bar"
 	saml_attribute_name_format = "%s"
 }`, testAccRealm.Realm, clientName, mapperName, samlAttributeNameFormat)
+}
+func testKeycloakSamlUserAttributeProtocolMapper_aggregateAttributes(clientId, mapperName string, aggregateAttributes bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_saml_client" "saml_client" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = "%s"
+}
+
+resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_mapper" {
+	name                       = "%s"
+	realm_id                   = data.keycloak_realm.realm.id
+	client_id                  = "${keycloak_saml_client.saml_client.id}"
+
+	user_attribute             = "foo"
+	saml_attribute_name        = "bar"
+	saml_attribute_name_format = "Unspecified"
+	aggregate_attributes	   = %t
+}`, testAccRealm.Realm, clientId, mapperName, aggregateAttributes)
 }
