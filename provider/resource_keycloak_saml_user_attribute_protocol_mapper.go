@@ -80,10 +80,11 @@ func mapFromDataToSamlUserAttributeProtocolMapper(data *schema.ResourceData) *ke
 		ClientId:      data.Get("client_id").(string),
 		ClientScopeId: data.Get("client_scope_id").(string),
 
-		UserAttribute:           data.Get("user_attribute").(string),
-		FriendlyName:            data.Get("friendly_name").(string),
-		SamlAttributeName:       data.Get("saml_attribute_name").(string),
-		SamlAttributeNameFormat: data.Get("saml_attribute_name_format").(string),
+		UserAttribute:            data.Get("user_attribute").(string),
+		FriendlyName:             data.Get("friendly_name").(string),
+		SamlAttributeName:        data.Get("saml_attribute_name").(string),
+		SamlAttributeNameFormat:  data.Get("saml_attribute_name_format").(string),
+		AggregateAttributeValues: data.Get("aggregate_attributes").(bool),
 	}
 }
 
