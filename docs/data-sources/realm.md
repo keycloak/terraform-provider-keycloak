@@ -29,4 +29,4 @@ resource "keycloak_role" "group" {
 
 ## Attributes Reference
 
-See the docs for the [`keycloak_realm` resource](https://registry.terraform.io/providers/mrparkers/keycloak/latest/docs/resources/realm) for details on the exported attributes.
+See the docs for the [`keycloak_realm` resource](https://registry.terraform.io/providers/keycloak/keycloak/latest/docs/resources/realm) for details on the exported attributes.

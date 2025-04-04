@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// https://www.keycloak.org/docs-api/6.0/javadocs/org/keycloak/representations/idm/ClientRepresentation.html
+// GenericClientRepresentation https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/representations/idm/ClientRepresentation.html
 type GenericClientRepresentation struct {
 	Access                             map[string]string        `json:"access"`
 	AdminUrl                           string                   `json:"adminUrl"`
@@ -44,6 +44,7 @@ type GenericClientRepresentation struct {
 	StandardFlowEnabled                bool                     `json:"standardFlowEnabled"`
 	SurrogateAuthRequired              bool                     `json:"surrogateAuthRequired"`
 	WebOrigins                         []string                 `json:"webOrigins"`
+	AlwaysDisplayInConsole             bool                     `json:"alwaysDisplayInConsole"`
 }
 
 func (keycloakClient *KeycloakClient) NewGenericClientDescription(ctx context.Context, realmId string, body string) (*GenericClientRepresentation, error) {

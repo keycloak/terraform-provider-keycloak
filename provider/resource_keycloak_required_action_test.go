@@ -26,6 +26,28 @@ func TestAccKeycloakRequiredAction_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRequiredAction_withConfig(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	requiredActionAlias := "UPDATE_PASSWORD"
+	maxAuthAgeConfig := "3600"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRequiredAction_withConfig(realmName, requiredActionAlias, 37, maxAuthAgeConfig),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRequiresActionExists(realmName, requiredActionAlias),
+					resource.TestCheckResourceAttr("keycloak_required_action.required_action", "realm_id", realmName),
+					resource.TestCheckResourceAttr("keycloak_required_action.required_action", "config.%", "1"),
+					resource.TestCheckResourceAttr("keycloak_required_action.required_action", "config.max_auth_age", maxAuthAgeConfig),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRequiredAction_unregisteredAction(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	requiredActionAlias := "webauthn-register"
@@ -126,6 +148,25 @@ resource "keycloak_required_action" "required_action" {
 	priority		= %d
 }
 	`, realm, requiredActionAlias, priority)
+}
+
+func testKeycloakRequiredAction_withConfig(realm, requiredActionAlias string, priority int, maxAuthAgeConfig string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+resource "keycloak_required_action" "required_action" {
+	realm_id		= "${keycloak_realm.realm.realm}"
+	alias			= "%s"
+	default_action 	= true
+	enabled			= true
+	name			= "My required Action"
+	priority		= %d
+	config = {
+		max_auth_age = "%s"
+	}
+}
+	`, realm, requiredActionAlias, priority, maxAuthAgeConfig)
 }
 
 func testKeycloakRequiredAction_import(realm, requiredActionAlias string) string {

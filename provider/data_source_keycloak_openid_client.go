@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakOpenidClient() *schema.Resource {
@@ -128,6 +128,10 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"exclude_issuer_from_auth_response": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"resource_server_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -233,6 +237,11 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 			"oauth2_device_polling_interval": {
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
 			},
 		},
 	}

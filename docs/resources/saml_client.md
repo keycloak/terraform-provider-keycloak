@@ -68,6 +68,8 @@ resource "keycloak_saml_client" "saml_client" {
 - `authentication_flow_binding_overrides` - (Optional) Override realm authentication flow bindings
     - `browser_id` - (Optional) Browser flow id, (flow needs to exist)
     - `direct_grant_id` - (Optional) Direct grant flow id (flow needs to exist)
+- `always_display_in_console` - (Optional) Always list this client in the Account UI, even if the user does not have an active session.
+- `consent_required` - (Optional) When `true`, users have to consent to client access. Defaults to `false`.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration attributes to this client. This can be used for custom attributes, or to add configuration attributes that is not yet supported by this Terraform provider. Use this attribute at your own risk, as s may conflict with top-level configuration attributes in future provider updates.
 
 ## Attributes Reference

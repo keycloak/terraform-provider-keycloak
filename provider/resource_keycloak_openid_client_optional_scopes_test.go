@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"strings"
 	"testing"
@@ -141,7 +141,7 @@ func TestAccKeycloakOpenidClientOptionalScopes_validateClientAccessType(t *testi
 	})
 }
 
-// if a optional client scope is manually detached from a client with optional scopes controlled by this resource, terraform should add it again
+// if an optional client scope is manually detached from a client with optional scopes controlled by this resource, terraform should add it again
 func TestAccKeycloakOpenidClientOptionalScopes_authoritativeAdd(t *testing.T) {
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")

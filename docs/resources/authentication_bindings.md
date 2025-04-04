@@ -66,3 +66,4 @@ resource "keycloak_authentication_bindings" "browser_authentication_binding" {
 - `reset_credentials_flow` - (Optional) The alias of the flow to assign to the realm ResetCredentialsFlow.
 - `client_authentication_flow` - (Optional) The alias of the flow to assign to the realm ClientAuthenticationFlow.
 - `docker_authentication_flow` - (Optional) The alias of the flow to assign to the realm DockerAuthenticationFlow.
+- `first_broker_login_flow` - (Optional) The alias of the flow to assign to the realm FirstBrokerLoginFlow (since Keycloak 24).

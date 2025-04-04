@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakAuthenticationExecution() *schema.Resource {
@@ -43,6 +43,10 @@ func resourceKeycloakAuthenticationExecution() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"REQUIRED", "ALTERNATIVE", "OPTIONAL", "CONDITIONAL", "DISABLED"}, false), //OPTIONAL is removed from 8.0.0 onwards
 				Default:      "DISABLED",
 			},
+			"priority": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -54,25 +58,49 @@ func mapFromDataToAuthenticationExecution(data *schema.ResourceData) *keycloak.A
 		ParentFlowAlias: data.Get("parent_flow_alias").(string),
 		Authenticator:   data.Get("authenticator").(string),
 		Requirement:     data.Get("requirement").(string),
+		Priority:        data.Get("priority").(int),
 	}
 
 	return authenticationExecution
 }
 
-func mapFromAuthenticationExecutionToData(data *schema.ResourceData, authenticationExecution *keycloak.AuthenticationExecution) {
+func mapFromAuthenticationExecutionToData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, authenticationExecution *keycloak.AuthenticationExecution) error {
+
 	data.SetId(authenticationExecution.Id)
 
 	data.Set("realm_id", authenticationExecution.RealmId)
 	data.Set("parent_flow_alias", authenticationExecution.ParentFlowAlias)
 	data.Set("authenticator", authenticationExecution.Authenticator)
 	data.Set("requirement", authenticationExecution.Requirement)
+
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
+	if err != nil {
+		return err
+	}
+
+	if versionOk {
+		data.Set("priority", authenticationExecution.Priority)
+	}
+
+	return nil
 }
 
-func mapFromAuthenticationExecutionInfoToData(data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) {
+func mapFromAuthenticationExecutionInfoToData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, authenticationExecutionInfo *keycloak.AuthenticationExecutionInfo) error {
 	data.SetId(authenticationExecutionInfo.Id)
 
 	data.Set("realm_id", authenticationExecutionInfo.RealmId)
 	data.Set("parent_flow_alias", authenticationExecutionInfo.ParentFlowAlias)
+
+	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
+	if err != nil {
+		return err
+	}
+
+	if versionOk {
+		data.Set("priority", authenticationExecutionInfo.Priority)
+	}
+
+	return nil
 }
 
 func resourceKeycloakAuthenticationExecutionCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -85,7 +113,10 @@ func resourceKeycloakAuthenticationExecutionCreate(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	err = mapFromAuthenticationExecutionToData(ctx, keycloakClient, data, authenticationExecution)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return resourceKeycloakAuthenticationExecutionRead(ctx, data, meta)
 }
@@ -102,7 +133,10 @@ func resourceKeycloakAuthenticationExecutionRead(ctx context.Context, data *sche
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	err = mapFromAuthenticationExecutionToData(ctx, keycloakClient, data, authenticationExecution)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -117,7 +151,10 @@ func resourceKeycloakAuthenticationExecutionUpdate(ctx context.Context, data *sc
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationExecutionToData(data, authenticationExecution)
+	err = mapFromAuthenticationExecutionToData(ctx, keycloakClient, data, authenticationExecution)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

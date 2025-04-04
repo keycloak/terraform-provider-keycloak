@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakDefaultRoles() *schema.Resource {
@@ -106,6 +106,20 @@ func resourceKeycloakDefaultRolesReconcile(ctx context.Context, data *schema.Res
 	realm, err := keycloakClient.GetRealm(ctx, local.RealmId)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if realm == nil {
+		return diag.Diagnostics{{
+			Severity: diag.Error,
+			Summary:  "realm not found: " + local.RealmId,
+		}}
+	}
+	if realm.DefaultRole == nil || realm.DefaultRole.Id == "" {
+		return diag.Diagnostics{{
+			Severity: diag.Error,
+			Summary:  "realm does not have a default role",
+		}}
+
 	}
 
 	data.SetId(realm.DefaultRole.Id)

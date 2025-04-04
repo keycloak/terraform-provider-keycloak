@@ -12,7 +12,8 @@ type KeycloakSliceHashDelimited []string
 func (s KeycloakSliceHashDelimited) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	if s == nil || len(s) == 0 {
-		buf.WriteString(`""`)
+		// Allows omitempty to work
+		return []byte("null"), nil
 	} else {
 		buf.WriteString(`"`)
 

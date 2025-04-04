@@ -8,13 +8,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakCustomUserFederation_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to load this custom provider in CI
 
 	name := acctest.RandomWithPrefix("tf-acc")
 	providerId := "custom"
@@ -39,9 +38,8 @@ func TestAccKeycloakCustomUserFederation_basic(t *testing.T) {
 }
 
 func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to load this custom provider in CI
 
 	name := acctest.RandomWithPrefix("tf-acc")
 	configValue := acctest.RandomWithPrefix("tf-acc")
@@ -75,9 +73,8 @@ func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
 }
 
 func TestAccKeycloakCustomUserFederation_createAfterManualDestroy(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to load this custom provider in CI
 
 	var customFederation = &keycloak.CustomUserFederation{}
 

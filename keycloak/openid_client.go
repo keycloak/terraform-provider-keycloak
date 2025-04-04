@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
 	"reflect"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type OpenidClientRole struct {
@@ -56,11 +57,13 @@ type OpenidClient struct {
 	AuthorizationSettings              *OpenidClientAuthorizationSettings       `json:"authorizationSettings,omitempty"`
 	ConsentRequired                    bool                                     `json:"consentRequired"`
 	AuthenticationFlowBindingOverrides OpenidAuthenticationFlowBindingOverrides `json:"authenticationFlowBindingOverrides,omitempty"`
+	AlwaysDisplayInConsole             bool                                     `json:"alwaysDisplayInConsole"`
 }
 
 type OpenidClientAttributes struct {
 	PkceCodeChallengeMethod               string                           `json:"pkce.code.challenge.method"`
 	ExcludeSessionStateFromAuthResponse   types.KeycloakBoolQuoted         `json:"exclude.session.state.from.auth.response"`
+	ExcludeIssuerFromAuthResponse         types.KeycloakBoolQuoted         `json:"exclude.issuer.from.auth.response"`
 	AccessTokenLifespan                   string                           `json:"access.token.lifespan"`
 	LoginTheme                            string                           `json:"login_theme"`
 	ClientOfflineSessionIdleTimeout       string                           `json:"client.offline.session.idle.timeout,omitempty"`
@@ -254,25 +257,6 @@ func (keycloakClient *KeycloakClient) GetOpenidClientDefaultScopes(ctx context.C
 
 func (keycloakClient *KeycloakClient) GetOpenidClientOptionalScopes(ctx context.Context, realmId, clientId string) ([]*OpenidClientScope, error) {
 	return keycloakClient.getOpenidClientScopes(ctx, realmId, clientId, "optional")
-}
-
-func (keycloakClient *KeycloakClient) getRealmClientScopes(ctx context.Context, realmId, t string) ([]*OpenidClientScope, error) {
-	var scopes []*OpenidClientScope
-
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/default-%s-client-scopes", realmId, t), &scopes, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return scopes, nil
-}
-
-func (keycloakClient *KeycloakClient) GetRealmDefaultClientScopes(ctx context.Context, realmId string) ([]*OpenidClientScope, error) {
-	return keycloakClient.getRealmClientScopes(ctx, realmId, "default")
-}
-
-func (keycloakClient *KeycloakClient) GetRealmOptionalClientScopes(ctx context.Context, realmId string) ([]*OpenidClientScope, error) {
-	return keycloakClient.getRealmClientScopes(ctx, realmId, "optional")
 }
 
 func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {

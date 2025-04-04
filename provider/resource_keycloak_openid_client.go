@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -176,6 +175,11 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"exclude_issuer_from_auth_response": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"resource_server_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -296,6 +300,11 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 			"import": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -357,6 +366,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		Attributes: keycloak.OpenidClientAttributes{
 			PkceCodeChallengeMethod:               data.Get("pkce_code_challenge_method").(string),
 			ExcludeSessionStateFromAuthResponse:   types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
+			ExcludeIssuerFromAuthResponse:         types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
 			AccessTokenLifespan:                   data.Get("access_token_lifespan").(string),
 			LoginTheme:                            data.Get("login_theme").(string),
 			ClientOfflineSessionIdleTimeout:       data.Get("client_offline_session_idle_timeout").(string),
@@ -377,11 +387,12 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 			DisplayOnConsentScreen:                types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
 			PostLogoutRedirectUris:                types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
 		},
-		ValidRedirectUris: validRedirectUris,
-		WebOrigins:        webOrigins,
-		AdminUrl:          data.Get("admin_url").(string),
-		BaseUrl:           data.Get("base_url").(string),
-		ConsentRequired:   data.Get("consent_required").(bool),
+		ValidRedirectUris:      validRedirectUris,
+		WebOrigins:             webOrigins,
+		AdminUrl:               data.Get("admin_url").(string),
+		BaseUrl:                data.Get("base_url").(string),
+		ConsentRequired:        data.Get("consent_required").(bool),
+		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
 	}
 
 	if rootUrlOk {
@@ -463,6 +474,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("root_url", &client.RootUrl)
 	data.Set("full_scope_allowed", client.FullScopeAllowed)
 	data.Set("consent_required", client.ConsentRequired)
+	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
@@ -570,6 +582,10 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 	err = setOpenidClientData(ctx, keycloakClient, data, client)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
 	}
 
 	return nil

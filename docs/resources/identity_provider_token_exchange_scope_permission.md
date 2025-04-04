@@ -7,7 +7,7 @@ page_title: "keycloak_identity_provider_token_exchange_scope_permission Resource
 Allows you to manage Identity Provider "Token exchange" Scope Based Permissions.
 
 This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource.
-More information about enabling the preview feature can be found here: https://www.keycloak.org/docs/latest/securing_apps/index.html#_token-exchange
+More information about enabling the preview feature can be found here: https://www.keycloak.org/securing-apps/token-exchange
 
 When enabling Identity Provider Permissions, Keycloak does several things automatically:
 1. Enable Authorization on build-in realm-management client
@@ -18,7 +18,7 @@ When enabling Identity Provider Permissions, Keycloak does several things automa
 The only thing that is missing is a policy set on the permission.
 As the policy lives within the context of the realm-management client, you cannot create a policy resource and link to from with your _.tf_ file. This would also cause an implicit cycle dependency.
 Thus, the only way to manage this in terraform is to create and manage the policy internally from within this terraform resource itself.
-At the moment only a client policy type is supported. The client policy will automatically be created for the clients parameter.
+At the moment only a client policy type is supported. The client policy will automatically be created for the `clients` parameter.
 
 ## Example Usage
 

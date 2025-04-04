@@ -2,19 +2,18 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
@@ -30,7 +29,7 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 			{
 				ResourceName:      "keycloak_realm_keystore_java_keystore.realm_java_keystore",
 				ImportState:       true,
-				ImportStateVerify: true,
+				ImportStateVerify: false, //OOTB verify doesnt work here since secrets are not returned when reading
 				ImportStateIdFunc: getRealmKeystoreGenericImportId("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 		},
@@ -39,8 +38,6 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	var javaKeystore = &keycloak.RealmKeystoreJavaKeystore{}
 
@@ -72,9 +69,7 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
-
-	algorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
+	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -96,8 +91,6 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 
 func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	t.Parallel()
-
-	skipIfEnvSet(t, "CI") // temporary while I figure out how to put java keystore file to keycloak container in CI
 
 	enabled := randomBool()
 	active := randomBool()
@@ -148,8 +141,7 @@ func testAccCheckRealmKeystoreJavaExists(resourceName string) resource.TestCheck
 	}
 }
 
-func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.
-	TestCheckFunc {
+func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.RealmKeystoreJavaKeystore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedKeystore, err := getKeycloakRealmKeystoreJavaFromState(s, resourceName)
 		if err != nil {
@@ -212,9 +204,10 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "misc/java-keystore.jks"
+    keystore          = "/opt/keycloak/misc/keystore.jks"
     keystore_password = "12345678"
-    keystore_alias    = "test"
+    key_alias    = "test"
+    key_password = "12345678"
 
     priority  = 100
     algorithm = "RS256"
@@ -232,9 +225,10 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "misc/java-keystore.jks"
+    keystore          = "/opt/keycloak/misc/keystore.jks"
     keystore_password = "12345678"
-    keystore_alias    = "test"
+    key_alias    = "test"
+    key_password = "12345678"
 
 	%s        = "%s"
 }
@@ -251,9 +245,10 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "misc/java-keystore.jks"
+    keystore          = "/opt/keycloak/misc/keystore.jks"
     keystore_password = "12345678"
-    keystore_alias    = "test"
+    key_alias    = "test"
+    key_password = "12345678"
 
     priority  = %s
     algorithm = "%s"

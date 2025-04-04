@@ -5,7 +5,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strconv"
 	"testing"
@@ -24,6 +25,44 @@ func TestAccKeycloakOidcIdentityProvider_basic(t *testing.T) {
 			{
 				Config: testKeycloakOidcIdentityProvider_basic(oidcName),
 				Check:  testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOidcIdentityProvider_customDisplayName(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	issuer = "hello"
+
+	display_name = "Example Provider"
+}
+	`, testAccRealm.Realm, oidcName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "display_name", "Example Provider"),
+				),
 			},
 		},
 	})
@@ -125,11 +164,13 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 	t.Parallel()
 
 	firstEnabled := randomBool()
+	firstHideOnLogin := randomBool()
 
 	firstOidc := &keycloak.IdentityProvider{
-		Realm:   testAccRealm.Realm,
-		Alias:   acctest.RandString(10),
-		Enabled: firstEnabled,
+		Realm:       testAccRealm.Realm,
+		Alias:       acctest.RandString(10),
+		Enabled:     firstEnabled,
+		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			AuthorizationUrl: "https://example.com/auth",
 			TokenUrl:         "https://example.com/token",
@@ -137,13 +178,15 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:     acctest.RandString(10),
 			GuiOrder:         strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:         randomStringInSlice(syncModes),
+			HideOnLoginPage:  types.KeycloakBoolQuoted(firstHideOnLogin),
 		},
 	}
 
 	secondOidc := &keycloak.IdentityProvider{
-		Realm:   testAccRealm.Realm,
-		Alias:   acctest.RandString(10),
-		Enabled: !firstEnabled,
+		Realm:       testAccRealm.Realm,
+		Alias:       acctest.RandString(10),
+		Enabled:     !firstEnabled,
+		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			AuthorizationUrl: "https://example.com/auth",
 			TokenUrl:         "https://example.com/token",
@@ -151,6 +194,7 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:     acctest.RandString(10),
 			GuiOrder:         strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:         randomStringInSlice(syncModes),
+			HideOnLoginPage:  types.KeycloakBoolQuoted(!firstHideOnLogin),
 		},
 	}
 
@@ -329,15 +373,16 @@ data "keycloak_realm" "realm" {
 }
 
 resource "keycloak_oidc_identity_provider" "oidc" {
-	realm             = data.keycloak_realm.realm.id
-	alias             = "%s"
-	enabled           = %t
-	authorization_url = "%s"
-	token_url         = "%s"
-	client_id         = "%s"
-	client_secret     = "%s"
-	gui_order         = %s
-	sync_mode         = "%s"
+	realm              = data.keycloak_realm.realm.id
+	alias              = "%s"
+	enabled            = %t
+	authorization_url  = "%s"
+	token_url          = "%s"
+	client_id          = "%s"
+	client_secret      = "%s"
+	gui_order          = %s
+	sync_mode          = "%s"
+    hide_on_login_page = %t
 }
-	`, testAccRealm.Realm, oidc.Alias, oidc.Enabled, oidc.Config.AuthorizationUrl, oidc.Config.TokenUrl, oidc.Config.ClientId, oidc.Config.ClientSecret, oidc.Config.GuiOrder, oidc.Config.SyncMode)
+	`, testAccRealm.Realm, oidc.Alias, oidc.Enabled, oidc.Config.AuthorizationUrl, oidc.Config.TokenUrl, oidc.Config.ClientId, oidc.Config.ClientSecret, oidc.Config.GuiOrder, oidc.Config.SyncMode, bool(oidc.Config.HideOnLoginPage))
 }

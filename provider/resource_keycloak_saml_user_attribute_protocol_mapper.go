@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 var keycloakSamlUserAttributeProtocolMapperNameFormats = []string{"Basic", "URI Reference", "Unspecified"}
@@ -62,6 +62,12 @@ func resourceKeycloakSamlUserAttributeProtocolMapper() *schema.Resource {
 				Required:     true,
 				ValidateFunc: validation.StringInSlice(keycloakSamlUserAttributeProtocolMapperNameFormats, false),
 			},
+			"aggregate_attributes": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Indicates if attribute values should be aggregated within the group attributes",
+			},
 		},
 	}
 }
@@ -96,6 +102,7 @@ func mapFromSamlUserAttributeMapperToData(mapper *keycloak.SamlUserAttributeProt
 	data.Set("friendly_name", mapper.FriendlyName)
 	data.Set("saml_attribute_name", mapper.SamlAttributeName)
 	data.Set("saml_attribute_name_format", mapper.SamlAttributeNameFormat)
+	data.Set("aggregate_attributes", mapper.AggregateAttributeValues)
 }
 
 func resourceKeycloakSamlUserAttributeProtocolMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
