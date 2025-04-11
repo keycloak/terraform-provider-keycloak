@@ -110,6 +110,12 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "The issuer identifier for the issuer of the response. If not provided, no validation will be performed.",
 		},
+		"disable_type_claim_check": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Disables the validation of the `typ` claim of tokens received from the Identity Provider. If this is `off` the type claim is validated (default).",
+		},
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcSchema)
@@ -141,6 +147,7 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		Issuer:                      data.Get("issuer").(string),
+		DisableTypeClaimCheck:       types.KeycloakBoolQuoted(data.Get("disable_type_claim_check").(bool)),
 
 		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
 		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
@@ -169,6 +176,7 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("ui_locales", identityProvider.Config.UILocales)
 	data.Set("issuer", identityProvider.Config.Issuer)
+	data.Set("disable_type_claim_check", identityProvider.Config.DisableTypeClaimCheck)
 
 	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
 		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
