@@ -44,6 +44,13 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			},
 			Computed: true,
 		},
+		"extra_origins": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
 		"attestation_conveyance_preference": {
 			Type:        schema.TypeString,
 			Description: "Either none, indirect or direct",
