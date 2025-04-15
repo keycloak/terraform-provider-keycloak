@@ -37,7 +37,7 @@ func (mapper *SamlUserAttributeProtocolMapper) convertToGenericProtocolMapper() 
 }
 
 func (protocolMapper *protocolMapper) convertToSamlUserAttributeProtocolMapper(realmId, clientId, clientScopeId string) (*SamlUserAttributeProtocolMapper, error) {
-	aggregateAttributeValues, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToAccessTokenField])
+	aggregateAttributeValues, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[aggregateAttributeValuesField])
 	if err != nil {
 		return nil, err
 	}

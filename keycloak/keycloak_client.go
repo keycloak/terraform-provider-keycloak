@@ -535,6 +535,7 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: tlsInsecureSkipVerify},
 		Proxy:           http.ProxyFromEnvironment,
 	}
+	transport.MaxIdleConnsPerHost = 100
 
 	if caCert != "" {
 		caCertPool := x509.NewCertPool()

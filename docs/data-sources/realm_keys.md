@@ -21,7 +21,7 @@ resource "keycloak_realm" "realm" {
 }
 
 data "keycloak_realm_keys" "realm_keys" {
-  realm_id   = keycloak_realm.realm
+  realm_id   = keycloak_realm.realm.id
   algorithms = ["AES", "RS256"]
   status     = ["ACTIVE", "PASSIVE"]
 }

@@ -2,14 +2,15 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
-	"regexp"
-	"strconv"
-	"testing"
 )
 
 /*
@@ -26,6 +27,35 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basic(t *testing.T) {
 			{
 				Config: testKeycloakOidcGoogleIdentityProvider_basic(),
 				Check:  testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOidcGoogleIdentityProvider_customAlias(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	alias = "example"
+}
+	`, testAccRealm.Realm),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					resource.TestCheckResourceAttr("keycloak_oidc_google_identity_provider.google", "alias", "example"),
+				),
 			},
 		},
 	})

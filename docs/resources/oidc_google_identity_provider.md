@@ -35,6 +35,8 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `client_id` - (Required) The client or client identifier registered within the identity provider.
 - `client_secret` - (Required) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format.
+- `alias` - (Optional) The alias for the Google identity provider.
+- `display_name` - (Optional) Display name for the Google identity provider in the GUI.
 - `enabled` - (Optional) When `true`, users will be able to log in to this realm using this identity provider. Defaults to `true`.
 - `store_token` - (Optional) When `true`, tokens will be stored after authenticating users. Defaults to `true`.
 - `add_read_token_role_on_create` - (Optional) When `true`, new users will be able to read stored tokens. This will automatically assign the `broker.read-token` role. Defaults to `false`.
@@ -57,8 +59,6 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 ## Attribute Reference
 
 - `internal_id` - (Computed) The unique ID that Keycloak assigns to the identity provider upon creation.
-- `alias` - (Computed) The alias for the Google identity provider.
-- `display_name` - (Computed) Display name for the Google identity provider in the GUI.
 
 ## Import
 
