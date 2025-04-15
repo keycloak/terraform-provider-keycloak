@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_authenticatorconfigrepresentation
+// AuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#AuthenticatorConfigRepresentation
 type AuthenticationExecutionConfig struct {
 	RealmId     string            `json:"-"`
 	ExecutionId string            `json:"-"`
@@ -14,7 +14,7 @@ type AuthenticationExecutionConfig struct {
 	Config      map[string]string `json:"config"`
 }
 
-// https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_newexecutionconfig
+// NewAuthenticationExecutionConfig creates a new AuthenticationExecutionConfig
 func (keycloakClient *KeycloakClient) NewAuthenticationExecutionConfig(ctx context.Context, config *AuthenticationExecutionConfig) (string, error) {
 	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s/config", config.RealmId, config.ExecutionId), config)
 	if err != nil {
@@ -23,17 +23,17 @@ func (keycloakClient *KeycloakClient) NewAuthenticationExecutionConfig(ctx conte
 	return getIdFromLocationHeader(location), nil
 }
 
-// https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_getauthenticatorconfig
+// GetAuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#_get_adminrealmsrealmauthenticationconfigid
 func (keycloakClient *KeycloakClient) GetAuthenticationExecutionConfig(ctx context.Context, config *AuthenticationExecutionConfig) error {
 	return keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/config/%s", config.RealmId, config.Id), config, nil)
 }
 
-// https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_updateauthenticatorconfig
+// UpdateAuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#_put_adminrealmsrealmauthenticationconfigid
 func (keycloakClient *KeycloakClient) UpdateAuthenticationExecutionConfig(ctx context.Context, config *AuthenticationExecutionConfig) error {
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/authentication/config/%s", config.RealmId, config.Id), config)
 }
 
-// https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_removeauthenticatorconfig
+// DeleteAuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#_delete_adminrealmsrealmauthenticationconfigid
 func (keycloakClient *KeycloakClient) DeleteAuthenticationExecutionConfig(ctx context.Context, config *AuthenticationExecutionConfig) error {
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/authentication/config/%s", config.RealmId, config.Id), nil)
 }

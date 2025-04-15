@@ -27,6 +27,7 @@ type RealmUserProfileAttribute struct {
 	DisplayName string                                      `json:"displayName,omitempty"`
 	Group       string                                      `json:"group,omitempty"`
 	Name        string                                      `json:"name"`
+	MultiValued bool                                        `json:"multivalued,omitempty"`
 	Permissions *RealmUserProfilePermissions                `json:"permissions,omitempty"`
 	Required    *RealmUserProfileRequired                   `json:"required,omitempty"`
 	Selector    *RealmUserProfileSelector                   `json:"selector,omitempty"`
@@ -41,8 +42,9 @@ type RealmUserProfileGroup struct {
 }
 
 type RealmUserProfile struct {
-	Attributes []*RealmUserProfileAttribute `json:"attributes"`
-	Groups     []*RealmUserProfileGroup     `json:"groups,omitempty"`
+	Attributes               []*RealmUserProfileAttribute `json:"attributes"`
+	Groups                   []*RealmUserProfileGroup     `json:"groups,omitempty"`
+	UnmanagedAttributePolicy *string                      `json:"unmanagedAttributePolicy,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealmUserProfile(ctx context.Context, realmId string, realmUserProfile *RealmUserProfile) error {

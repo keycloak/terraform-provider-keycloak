@@ -7,11 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenidClientAuthorizationUserPolicy(t *testing.T) {
-	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"

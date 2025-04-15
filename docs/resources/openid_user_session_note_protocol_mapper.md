@@ -75,7 +75,7 @@ resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_
 - `client_id` - (Optional) The client this protocol mapper should be attached to. Conflicts with `client_scope_id`. One of `client_id` or `client_scope_id` must be specified.
 - `client_scope_id` - (Optional) The client scope this protocol mapper should be attached to. Conflicts with `client_id`. One of `client_id` or `client_scope_id` must be specified.
 - `claim_value_type` - (Optional) The claim type used when serializing JSON tokens. Can be one of `String`, `JSON`, `long`, `int`, or `boolean`. Defaults to `String`.
-- `session_note` - (Optional) String value being the name of stored user session note within the UserSessionModel.note map.
+- `session_note` - (Optional) String value being the name of stored user session note within the `UserSessionModel.note` map.
 - `session_note_label` - (Optional) **Deprecated** Use `session_note` instead.
 - `add_to_id_token` - (Optional) Indicates if the property should be added as a claim to the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the property should be added as a claim to the access token. Defaults to `true`.

@@ -7,11 +7,8 @@ page_title: "keycloak_realm_user_profile Resource"
 Allows for managing Realm User Profiles within Keycloak.
 
 A user profile defines a schema for representing user attributes and how they are managed within a realm.
-This is a preview feature, hence not fully supported and disabled by default.
-To enable it, start the server with one of the following flags:
-- WildFly distribution: `-Dkeycloak.profile.feature.declarative_user_profile=enabled`
-- Quarkus distribution: `--features=preview` or `--features=declarative-user-profile`
 
+Information for Keycloak versions < 24:
 The realm linked to the `keycloak_realm_user_profile` resource must have the user profile feature enabled.
 It can be done via the administration UI, or by setting the `userProfileEnabled` realm attribute to `true`.
 
@@ -20,20 +17,18 @@ It can be done via the administration UI, or by setting the `userProfileEnabled`
 ```hcl
 resource "keycloak_realm" "realm" {
   realm = "my-realm"
-
-  attributes = {
-    userProfileEnabled = true
-  }
 }
 
 resource "keycloak_realm_user_profile" "userprofile" {
   realm_id = keycloak_realm.my_realm.id
+  unmanaged_attribute_policy = "ENABLED"
 
   attribute {
     name         = "field1"
     display_name = "Field 1"
     group        = "group1"
 
+    multi_valued = false
     enabled_when_scope = ["offline_access"]
 
     required_for_roles  = ["user"]
@@ -98,11 +93,13 @@ resource "keycloak_realm_user_profile" "userprofile" {
 - `realm_id` - (Required) The ID of the realm the user profile applies to.
 - `attribute` - (Optional) An ordered list of [attributes](#attribute-arguments).
 - `group` - (Optional) A list of [groups](#group-arguments).
+- `unmanaged_attribute_policy` - (Optional) Unmanaged attributes are user attributes not explicitly defined in the user profile configuration. By default, unmanaged attributes are not enabled. Value could be one of `DISABLED`, `ENABLED`, `ADMIN_EDIT` or `ADMIN_VIEW`. If value is not specified it means `DISABLED`
 
 ### Attribute Arguments
 
 - `name` - (Required) The name of the attribute.
 - `display_name` - (Optional) The display name of the attribute.
+- `multi_valued` - (Optional) If the attribute supports multiple values. Defaults to `false`.
 - `group` - (Optional) The group that the attribute belong to.
 - `enabled_when_scope` - (Optional) A list of scopes. The attribute will only be enabled when these scopes are requested by clients.
 - `required_for_roles` - (Optional) A list of roles for which the attribute will be required.

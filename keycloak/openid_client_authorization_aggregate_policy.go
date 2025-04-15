@@ -58,7 +58,7 @@ func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationAggregatePolic
 	var keycloakPolicies []map[string]interface{}
 	errTwo := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/policy/%s/associatedPolicies", realmId, resourceServerId, policyId), &keycloakPolicies, nil)
 	if errTwo != nil {
-		return nil, err
+		return nil, errTwo
 	}
 
 	for i := 0; i < len(keycloakPolicies); i++ {

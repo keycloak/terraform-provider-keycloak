@@ -148,7 +148,7 @@ func (keycloakClient *KeycloakClient) GetUserByUsername(ctx context.Context, rea
 		return nil, err
 	}
 
-	// more than one user could be returned so we need to search through all of the results and return the correct one
+	// more than one user could be returned so we need to search through all results and return the correct one
 	// ex: foo and foo-user could both exist, but searching for "foo" will return both
 	for _, user := range users {
 		if user.Username == username {

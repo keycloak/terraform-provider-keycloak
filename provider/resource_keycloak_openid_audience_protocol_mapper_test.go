@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_basicClient(t *testing.T) {
@@ -233,7 +233,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(t 
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(clientId, mapperName),
-				ExpectError: regexp.MustCompile("validation error: client .+ does not exist"),
+				ExpectError: regexp.MustCompile("validation error: generic client with name \\S+ does not exist"),
 			},
 		},
 	})

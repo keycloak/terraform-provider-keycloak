@@ -14,10 +14,14 @@ terraform-provider-keycloak_*
 *.out
 
 .idea/
+.vscode/
 .terraform/
 terraform.d/
 .terraform.lock.hcl
 terraform.tfstate*
+
+# local experiments or reproducers
+scratch/
 
 .gradle/
 
@@ -32,3 +36,5 @@ site/
 *.zip
 
 .DS_Store
+
+test_env.json

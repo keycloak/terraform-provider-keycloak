@@ -58,7 +58,7 @@ resource "keycloak_role" "pet_api_read_pet_details" {
 }
 
 // Map a role from the "pet_api" api client to the "extended_pet_details" client scope
-resource "keycloak_generic_client_role_mapper" "pet_api_read_pet_details_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_api_read_pet_details_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_scope_id = keycloak_openid_client_scope.extended_pet_details.id
   role_id   = keycloak_role.pet_api_read_pet_details.id
@@ -98,7 +98,7 @@ resource "keycloak_openid_client" "pet_app" {
     "http://localhost:5555/openid-callback",
   ]
 
-  // disable full scope, roles are assigned via keycloak_generic_client_role_mapper
+  // disable full scope, roles are assigned via keycloak_generic_role_mapper
   full_scope_allowed = false
 }
 
@@ -130,31 +130,31 @@ resource "keycloak_openid_hardcoded_role_protocol_mapper" "pet_app_pet_api_read_
 }
 
 // Map all roles from the "pet_api" api client to the "pet_app" consumer client, read_pet_details comes via client scope
-resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_read_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_app_pet_api_read_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
   role_id   = keycloak_role.pet_api_read_pet.id
 }
 
-resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_delete_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_app_pet_api_delete_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
   role_id   = keycloak_role.pet_api_delete_pet.id
 }
 
-resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_create_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_app_pet_api_create_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
   role_id   = keycloak_role.pet_api_create_pet.id
 }
 
-resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_update_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_app_pet_api_update_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
   role_id   = keycloak_role.pet_api_update_pet.id
 }
 
-resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_admin_role_mapping" {
+resource "keycloak_generic_role_mapper" "pet_app_pet_api_admin_role_mapping" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
   role_id   = keycloak_role.pet_api_admin.id
@@ -162,7 +162,7 @@ resource "keycloak_generic_client_role_mapper" "pet_app_pet_api_admin_role_mappi
 
 // Realm roles
 
-resource "keycloak_role" "realm_reader" {  
+resource "keycloak_role" "realm_reader" {
   realm_id  = keycloak_realm.roles_example.id
   name        = "realm_reader"
   description = "Reader realm role"
@@ -184,7 +184,7 @@ resource "keycloak_role" "realm_admin" {
   ]
 }
 
-// Client scope for realm roles mapping 
+// Client scope for realm roles mapping
 
 resource "keycloak_openid_client_scope" "petstore_api_access_scope" {
   realm_id  = keycloak_realm.roles_example.id
@@ -192,7 +192,7 @@ resource "keycloak_openid_client_scope" "petstore_api_access_scope" {
   description = "Optional scope offering additional information for petstore api access"
 }
 
-resource "keycloak_generic_client_role_mapper" "petstore_api_access_scope_admin" {
+resource "keycloak_generic_role_mapper" "petstore_api_access_scope_admin" {
     realm_id  = keycloak_realm.roles_example.id
     client_scope_id =  keycloak_openid_client_scope.petstore_api_access_scope.id
     role_id         = keycloak_role.realm_admin.id

@@ -70,7 +70,7 @@ resource "keycloak_openid_user_property_protocol_mapper" "user_property_mapper" 
 
 - `realm_id` - (Required) The realm this protocol mapper exists within.
 - `name` - (Required) The display name of this protocol mapper in the GUI.
-- `user_property` - (Required) The built in user property (such as email) to map a claim for.
+- `user_property` - (Required) The built-in user property (such as email) to map a claim for.
 - `claim_name` - (Required) The name of the claim to insert into a token.
 - `client_id` - (Optional) The client this protocol mapper should be attached to. Conflicts with `client_scope_id`. One of `client_id` or `client_scope_id` must be specified.
 - `client_scope_id` - (Optional) The client scope this protocol mapper should be attached to. Conflicts with `client_id`. One of `client_id` or `client_scope_id` must be specified. `client_scope_id` - (Required if `client_id` is not specified) The client scope this protocol mapper is attached to.

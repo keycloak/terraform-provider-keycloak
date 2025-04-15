@@ -7,8 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"golang.org/x/net/publicsuffix"
 
@@ -144,7 +144,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 
 	defer accessTokenResponse.Body.Close()
 
-	body, _ := ioutil.ReadAll(accessTokenResponse.Body)
+	body, _ := io.ReadAll(accessTokenResponse.Body)
 
 	tflog.Debug(ctx, "Login response", map[string]interface{}{
 		"response": string(body),
@@ -202,7 +202,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 	return nil
 }
 
-func (keycloakClient *KeycloakClient) refresh(ctx context.Context) error {
+func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
 	refreshTokenData := keycloakClient.getAuthenticationFormData()
 
@@ -232,7 +232,7 @@ func (keycloakClient *KeycloakClient) refresh(ctx context.Context) error {
 
 	defer refreshTokenResponse.Body.Close()
 
-	body, _ := ioutil.ReadAll(refreshTokenResponse.Body)
+	body, _ := io.ReadAll(refreshTokenResponse.Body)
 
 	tflog.Debug(ctx, "Refresh response", map[string]interface{}{
 		"response": string(body),
@@ -293,7 +293,7 @@ func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 		request.Header.Set("User-Agent", keycloakClient.userAgent)
 	}
 
-	if request.Method == http.MethodPost || request.Method == http.MethodPut || request.Method == http.MethodDelete {
+	if request.Header.Get("Content-type") == "" && (request.Method == http.MethodPost || request.Method == http.MethodPut || request.Method == http.MethodDelete) {
 		request.Header.Set("Content-type", "application/json")
 	}
 }
@@ -320,7 +320,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	}
 
 	if body != nil {
-		request.Body = ioutil.NopCloser(bytes.NewReader(body))
+		request.Body = io.NopCloser(bytes.NewReader(body))
 		requestLogArgs["body"] = string(body)
 	}
 
@@ -332,6 +332,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	if err != nil {
 		return nil, "", fmt.Errorf("error sending request: %v", err)
 	}
+	defer response.Body.Close()
 
 	// Unauthorized: Token could have expired
 	// Forbidden: After creating a realm, following GETs for the realm return 403 until you refresh
@@ -340,7 +341,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 			"status": response.Status,
 		})
 
-		err := keycloakClient.refresh(ctx)
+		err := keycloakClient.Refresh(ctx)
 		if err != nil {
 			return nil, "", fmt.Errorf("error refreshing credentials: %s", err)
 		}
@@ -348,17 +349,16 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 		keycloakClient.addRequestHeaders(request)
 
 		if body != nil {
-			request.Body = ioutil.NopCloser(bytes.NewReader(body))
+			request.Body = io.NopCloser(bytes.NewReader(body))
 		}
 		response, err = keycloakClient.httpClient.Do(request)
 		if err != nil {
 			return nil, "", fmt.Errorf("error sending request after refresh: %v", err)
 		}
+		defer response.Body.Close()
 	}
 
-	defer response.Body.Close()
-
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -499,6 +499,30 @@ func (keycloakClient *KeycloakClient) marshal(body interface{}) ([]byte, error) 
 	return json.Marshal(body)
 }
 
+func RetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// do retry on context.Canceled or context.DeadlineExceeded
+	if ctx.Err() != nil {
+		return true, ctx.Err()
+	}
+
+	// 429 Too Many Requests is recoverable. Sometimes the server puts
+	// a Retry-After response header to indicate when the server is
+	// available to start processing request from client.
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return true, nil
+	}
+
+	// Check the response code. We retry on 500-range responses to allow
+	// the server time to recover, as 500's are typically not permanent
+	// errors and may relate to outages on the server side. This will catch
+	// invalid response codes as well, like 0 and 999.
+	if resp.StatusCode == 0 || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented) {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string) (*http.Client, error) {
 	cookieJar, err := cookiejar.New(&cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
@@ -511,6 +535,7 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: tlsInsecureSkipVerify},
 		Proxy:           http.ProxyFromEnvironment,
 	}
+	transport.MaxIdleConnsPerHost = 100
 
 	if caCert != "" {
 		caCertPool := x509.NewCertPool()
@@ -519,9 +544,10 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 	}
 
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 1
+	retryClient.CheckRetry = RetryPolicy
+	retryClient.RetryMax = 5
 	retryClient.RetryWaitMin = time.Second * 1
-	retryClient.RetryWaitMax = time.Second * 3
+	retryClient.RetryWaitMax = time.Second * 60
 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = time.Second * time.Duration(clientTimeout)

@@ -49,7 +49,7 @@ resource "keycloak_group" "child_group_with_optional_attributes" {
 - `realm_id` - (Required) The realm this group exists in.
 - `parent_id` - (Optional) The ID of this group's parent. If omitted, this group will be defined at the root level.
 - `name` - (Required) The name of the group.
-- `attributes` - (Optional) A map representing attributes for the group. In order to add multivalue attributes, use `##` to seperate the values. Max length for each value is 255 chars
+- `attributes` - (Optional) A map representing attributes for the group. In order to add multivalued attributes, use `##` to separate the values. Max length for each value is 255 chars
 
 ## Attributes Reference
 

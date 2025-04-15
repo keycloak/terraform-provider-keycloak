@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
@@ -32,6 +32,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"keycloak_realm":                                             resourceKeycloakRealm(),
 			"keycloak_realm_events":                                      resourceKeycloakRealmEvents(),
+			"keycloak_realm_default_client_scopes":                       resourceKeycloakRealmDefaultClientScopes(),
+			"keycloak_realm_optional_client_scopes":                      resourceKeycloakRealmOptionalClientScopes(),
 			"keycloak_realm_keystore_aes_generated":                      resourceKeycloakRealmKeystoreAesGenerated(),
 			"keycloak_realm_keystore_ecdsa_generated":                    resourceKeycloakRealmKeystoreEcdsaGenerated(),
 			"keycloak_realm_keystore_hmac_generated":                     resourceKeycloakRealmKeystoreHmacGenerated(),
@@ -39,6 +41,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_realm_keystore_rsa":                                resourceKeycloakRealmKeystoreRsa(),
 			"keycloak_realm_keystore_rsa_generated":                      resourceKeycloakRealmKeystoreRsaGenerated(),
 			"keycloak_realm_user_profile":                                resourceKeycloakRealmUserProfile(),
+			"keycloak_realm_localization":                                resourceKeycloakRealmLocalization(),
 			"keycloak_required_action":                                   resourceKeycloakRequiredAction(),
 			"keycloak_group":                                             resourceKeycloakGroup(),
 			"keycloak_group_memberships":                                 resourceKeycloakGroupMemberships(),
@@ -51,6 +54,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_scope":                               resourceKeycloakOpenidClientScope(),
 			"keycloak_ldap_user_federation":                              resourceKeycloakLdapUserFederation(),
 			"keycloak_ldap_user_attribute_mapper":                        resourceKeycloakLdapUserAttributeMapper(),
+			"keycloak_hardcoded_attribute_mapper":                        resourceKeycloakHardcodedAttributeMapper(),
 			"keycloak_ldap_group_mapper":                                 resourceKeycloakLdapGroupMapper(),
 			"keycloak_ldap_role_mapper":                                  resourceKeycloakLdapRoleMapper(),
 			"keycloak_ldap_hardcoded_role_mapper":                        resourceKeycloakLdapHardcodedRoleMapper(),
@@ -86,6 +90,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_saml_user_property_protocol_mapper":                resourceKeycloakSamlUserPropertyProtocolMapper(),
 			"keycloak_saml_script_protocol_mapper":                       resourceKeycloakSamlScriptProtocolMapper(),
 			"keycloak_hardcoded_attribute_identity_provider_mapper":      resourceKeycloakHardcodedAttributeIdentityProviderMapper(),
+			"keycloak_hardcoded_group_identity_provider_mapper":          resourceKeycloakHardcodedGroupIdentityProviderMapper(),
 			"keycloak_hardcoded_role_identity_provider_mapper":           resourceKeycloakHardcodedRoleIdentityProviderMapper(),
 			"keycloak_attribute_importer_identity_provider_mapper":       resourceKeycloakAttributeImporterIdentityProviderMapper(),
 			"keycloak_attribute_to_role_identity_provider_mapper":        resourceKeycloakAttributeToRoleIdentityProviderMapper(),
@@ -102,6 +107,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_time_policy":                         resourceKeycloakOpenidClientAuthorizationTimePolicy(),
 			"keycloak_openid_client_user_policy":                         resourceKeycloakOpenidClientAuthorizationUserPolicy(),
 			"keycloak_openid_client_client_policy":                       resourceKeycloakOpenidClientAuthorizationClientPolicy(),
+			"keycloak_openid_client_authorization_client_scope_policy":   resourceKeycloakOpenidClientAuthorizationClientScopePolicy(),
 			"keycloak_openid_client_authorization_scope":                 resourceKeycloakOpenidClientAuthorizationScope(),
 			"keycloak_openid_client_authorization_permission":            resourceKeycloakOpenidClientAuthorizationPermission(),
 			"keycloak_openid_client_service_account_role":                resourceKeycloakOpenidClientServiceAccountRole(),
