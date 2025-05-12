@@ -22,7 +22,9 @@ var nameIdPolicyFormats = map[string]string{
 var signatureAlgorithms = []string{
 	"RSA_SHA1",
 	"RSA_SHA256",
+	"RSA_SHA256_MGF1",
 	"RSA_SHA512",
+	"RSA_SHA512_MGF1",
 	"DSA_SHA1",
 }
 
