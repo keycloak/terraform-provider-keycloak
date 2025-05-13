@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Wait for acceptance tests
         id: wait
-        uses: "WyriHaximus/github-action-wait-for-status@v1.8.0"
+        uses: "WyriHaximus/github-action-wait-for-status@a0d59308face45c8229ad5aef809d6df5a0c7620" # version v1.8.0
         with:
           ignoreActions: Wait for acceptance tests
           checkInterval: 30
@@ -38,7 +38,7 @@ jobs:
 
       - name: Import GPG key
         id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # version v6.3.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -58,7 +58,7 @@ jobs:
           echo "name=NOTES::${tmp}/release-notes.md" >> $GITHUB_OUTPUT
 
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # version v6.3.0
         with:
           args: release --clean --release-notes=${{ steps.build-release-notes.outputs.NOTES }}
         env:

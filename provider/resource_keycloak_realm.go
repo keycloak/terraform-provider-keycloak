@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -68,6 +69,13 @@ func resourceKeycloakRealm() *schema.Resource {
 
 	webAuthnSchema := map[string]*schema.Schema{
 		"acceptable_aaguids": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional: true,
+		},
+		"extra_origins": {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -1087,6 +1095,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		webAuthnPolicy := v.([]interface{})[0].(map[string]interface{})
 
 		realm.WebAuthnPolicyAcceptableAaguids = interfaceSliceToStringSlice(webAuthnPolicy["acceptable_aaguids"].(*schema.Set).List())
+		realm.WebAuthnPolicyExtraOrigins = interfaceSliceToStringSlice(webAuthnPolicy["extra_origins"].(*schema.Set).List())
 
 		if webAuthnPolicyAttestationConveyancePreference, ok := webAuthnPolicy["attestation_conveyance_preference"]; ok {
 			realm.WebAuthnPolicyAttestationConveyancePreference = webAuthnPolicyAttestationConveyancePreference.(string)
@@ -1128,6 +1137,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		webAuthnPasswordlessPolicy := v.([]interface{})[0].(map[string]interface{})
 
 		realm.WebAuthnPolicyPasswordlessAcceptableAaguids = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["acceptable_aaguids"].(*schema.Set).List())
+		realm.WebAuthnPolicyPasswordlessExtraOrigins = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["extra_origins"].(*schema.Set).List())
 
 		if webAuthnPolicyPasswordlessAttestationConveyancePreference, ok := webAuthnPasswordlessPolicy["attestation_conveyance_preference"]; ok {
 			realm.WebAuthnPolicyPasswordlessAttestationConveyancePreference = webAuthnPolicyPasswordlessAttestationConveyancePreference.(string)
@@ -1318,6 +1328,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
 	webAuthnPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyAcceptableAaguids
+	webAuthnPolicy["extra_origins"] = realm.WebAuthnPolicyExtraOrigins
 	webAuthnPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyAttestationConveyancePreference
 	webAuthnPolicy["authenticator_attachment"] = realm.WebAuthnPolicyAuthenticatorAttachment
 	webAuthnPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyAvoidSameAuthenticatorRegister
@@ -1342,6 +1353,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	//WebAuthn Passwordless
 	webAuthnPasswordlessPolicy := make(map[string]interface{})
 	webAuthnPasswordlessPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyPasswordlessAcceptableAaguids
+	webAuthnPasswordlessPolicy["extra_origins"] = realm.WebAuthnPolicyPasswordlessExtraOrigins
 	webAuthnPasswordlessPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyPasswordlessAttestationConveyancePreference
 	webAuthnPasswordlessPolicy["authenticator_attachment"] = realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment
 	webAuthnPasswordlessPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister
