@@ -1,5 +1,5 @@
 plugins {
-	id 'org.jetbrains.kotlin.jvm' version '2.1.20'
+	id 'org.jetbrains.kotlin.jvm' version '2.1.21'
 	id 'com.gradleup.shadow' version '8.3.6'
 	id 'java-library'
 }
