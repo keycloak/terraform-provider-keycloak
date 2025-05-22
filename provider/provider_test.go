@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 var testAccProviderFactories map[string]func() (*schema.Provider, error)
@@ -20,6 +21,7 @@ var keycloakClient *keycloak.KeycloakClient
 var testAccRealm *keycloak.Realm
 var testAccRealmTwo *keycloak.Realm
 var testAccRealmUserFederation *keycloak.Realm
+var testAccRealmOrganization *keycloak.Realm
 var testCtx context.Context
 
 var requiredEnvironmentVariables = []string{
@@ -105,6 +107,15 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 	}
 
 	var err error
+
+	validVersion, err := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26)
+	if err != nil {
+		log.Printf("Unable to check keycloak version: %s", err)
+	}
+	if validVersion {
+		r.OrganizationsEnabled = true
+	}
+
 	for i := 0; i < 3; i++ { // on CI this sometimes fails and keycloak can't be reached
 		err = keycloakClient.NewRealm(testCtx, r)
 		if err != nil {
