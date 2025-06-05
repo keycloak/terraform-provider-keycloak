@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -137,8 +136,6 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
 	oidcResource.ValidateRawResourceConfigFuncs = []schema.ValidateRawResourceConfigFunc{
-		// this validation will show a warning to encourage the use of the write-only version whenever possible
-		validation.PreferWriteOnlyAttribute(cty.GetAttrPath("client_secret"), cty.GetAttrPath("client_secret_wo")),
 		// validate that argument is required if none of the checkExists attributes exist
 		requiredWithoutAll(cty.GetAttrPath("client_secret"), []cty.Path{cty.GetAttrPath("client_secret_wo"), cty.GetAttrPath("client_secret_wo_version")}),
 	}

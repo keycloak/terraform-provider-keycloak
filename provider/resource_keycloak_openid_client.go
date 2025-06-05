@@ -333,10 +333,6 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 		CustomizeDiff: customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			return d.HasChange("service_accounts_enabled")
 		}),
-		ValidateRawResourceConfigFuncs: []schema.ValidateRawResourceConfigFunc{
-			// this validation will show a warning to encourage the use of the write-only version whenever possible
-			validation.PreferWriteOnlyAttribute(cty.GetAttrPath("client_secret"), cty.GetAttrPath("client_secret_wo")),
-		},
 	}
 }
 
