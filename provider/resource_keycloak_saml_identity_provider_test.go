@@ -2,10 +2,11 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -109,6 +110,29 @@ func TestAccKeycloakSamlIdentityProvider_extraConfigInvalid(t *testing.T) {
 			{
 				Config:      testKeycloakSamlIdentityProvider_extra_config(samlName, "syncMode", customConfigValue),
 				ExpectError: regexp.MustCompile("extra_config key \"syncMode\" is not allowed"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakSamlIdentityProvider_linkOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
+	t.Parallel()
+
+	samlName := acctest.RandomWithPrefix("tf-acc")
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlIdentityProvider_linkOrganization(samlName, organizationName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlIdentityProviderExists("keycloak_saml_identity_provider.saml"),
+					testAccCheckKeycloakSamlIdentityProviderLinkOrganization("keycloak_saml_identity_provider.saml"),
+				),
 			},
 		},
 	})
@@ -291,6 +315,21 @@ func testAccCheckKeycloakSamlIdentityProviderHasNameIdPolicyFormatValue(resource
 	}
 }
 
+func testAccCheckKeycloakSamlIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedSaml, err := getKeycloakSamlIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if fetchedSaml.OrganizationId == "" {
+			return fmt.Errorf("expected saml provider to be linked with an organization, but it was not")
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakSamlIdentityProviderDestroy() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {
@@ -439,4 +478,34 @@ resource "keycloak_saml_identity_provider" "saml" {
 	authn_context_comparison_type = "%s"
 }
 	`, testAccRealm.Realm, saml.Alias, saml.Enabled, saml.Config.EntityId, saml.Config.SingleSignOnServiceUrl, bool(saml.Config.BackchannelSupported), bool(saml.Config.ValidateSignature), bool(saml.Config.HideOnLoginPage), saml.Config.NameIDPolicyFormat, saml.Config.SingleLogoutServiceUrl, saml.Config.SigningCertificate, saml.Config.SignatureAlgorithm, saml.Config.XmlSigKeyInfoKeyNameTransformer, bool(saml.Config.PostBindingAuthnRequest), bool(saml.Config.PostBindingResponse), bool(saml.Config.PostBindingLogout), bool(saml.Config.ForceAuthn), bool(saml.Config.WantAssertionsSigned), bool(saml.Config.WantAssertionsEncrypted), saml.Config.GuiOrder, saml.Config.SyncMode, arrayOfStringsForTerraformResource(authnContextClassRefs), arrayOfStringsForTerraformResource(authnContextDeclRefs), saml.Config.AuthnContextComparisonType)
+}
+
+func testKeycloakSamlIdentityProvider_linkOrganization(saml, organizationName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm   = data.keycloak_realm.realm.id
+	name    = "%s"
+	enabled = true
+
+	domain {
+		name     = "example.com"
+		verified = true
+ 	}
+}
+
+resource "keycloak_saml_identity_provider" "saml" {
+	realm             			= data.keycloak_realm.realm.id
+	alias             			= "%s"
+	entity_id					= "https://example.com/entity_id"
+	single_sign_on_service_url  = "https://example.com/auth"
+
+	organization_id					= keycloak_organization.org.id
+	org_domain 						= "example.com"
+	org_redirect_mode_email_matches = true
+}
+	`, testAccRealm.Realm, organizationName, saml)
 }

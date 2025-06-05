@@ -126,6 +126,27 @@ func TestAccKeycloakOidcGoogleIdentityProvider_extraConfigInvalid(t *testing.T) 
 	})
 }
 
+func TestAccKeycloakOidcGoogleIdentityProvider_linkOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcGoogleIdentityProvider_linkOrganization(organizationName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					testAccCheckKeycloakOidcGoogleIdentityProviderLinkOrganization("keycloak_oidc_google_identity_provider.google"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcGoogleIdentityProvider_createAfterManualDestroy(t *testing.T) {
 	var idp = &keycloak.IdentityProvider{}
 
@@ -243,6 +264,21 @@ func testAccCheckKeycloakOidcGoogleIdentityProviderHasCustomConfigValue(resource
 	}
 }
 
+func testAccCheckKeycloakOidcGoogleIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if fetchedOidc.OrganizationId == "" {
+			return fmt.Errorf("expected custom oidc provider to be linked with an organization, but it was not")
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakOidcGoogleIdentityProviderDestroy() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {
@@ -330,4 +366,33 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 	hide_on_login_page                      = %t
 }
 	`, testAccRealm.Realm, idp.Enabled, idp.Config.HostedDomain, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, bool(idp.Config.HideOnLoginPage))
+}
+
+func testKeycloakOidcGoogleIdentityProvider_linkOrganization(organizationName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm   = data.keycloak_realm.realm.id
+	name    = "%s"
+	enabled = true
+
+	domain {
+		name     = "example.com"
+		verified = true
+ 	}
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	organization_id   				= keycloak_organization.org.id
+	org_domain		  				= "example.com"
+	org_redirect_mode_email_matches = true
+}
+	`, testAccRealm.Realm, organizationName)
 }

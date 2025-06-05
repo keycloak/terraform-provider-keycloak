@@ -3,13 +3,15 @@ package provider
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"reflect"
-	"strings"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var syncModes = []string{
@@ -100,6 +102,11 @@ func resourceKeycloakIdentityProvider() *schema.Resource {
 				Default:     "",
 				Description: "Alias of authentication flow, which is triggered after each login with this identity provider. Useful if you want additional verification of each user authenticated with this identity provider (for example OTP). Leave this empty if you don't want any additional authenticators to be triggered after login with this identity provider. Also note, that authenticator implementations must assume that user is already set in ClientSession as identity provider already set it.",
 			},
+			"organization_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "ID of organization with which this identity is linked.",
+			},
 			// all schema values below this point will be configuration values that are shared among all identity providers
 			"extra_config": {
 				Type:             schema.TypeMap,
@@ -119,6 +126,15 @@ func resourceKeycloakIdentityProvider() *schema.Resource {
 				ValidateFunc: validation.StringInSlice(syncModes, false),
 				Description:  "Sync Mode",
 			},
+			"org_redirect_mode_email_matches": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"org_domain": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -126,9 +142,11 @@ func resourceKeycloakIdentityProvider() *schema.Resource {
 func getIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, *keycloak.IdentityProviderConfig) {
 	// some identity provider config is shared among all identity providers, so this default config will be used as a base to merge extra config into
 	defaultIdentityProviderConfig := &keycloak.IdentityProviderConfig{
-		GuiOrder:    data.Get("gui_order").(string),
-		SyncMode:    data.Get("sync_mode").(string),
-		ExtraConfig: getExtraConfigFromData(data),
+		GuiOrder:                    data.Get("gui_order").(string),
+		SyncMode:                    data.Get("sync_mode").(string),
+		OrgDomain:                   data.Get("org_domain").(string),
+		OrgRedirectModeEmailMatches: types.KeycloakBoolQuoted(data.Get("org_redirect_mode_email_matches").(bool)),
+		ExtraConfig:                 getExtraConfigFromData(data),
 	}
 
 	identityProvider := &keycloak.IdentityProvider{
@@ -143,6 +161,7 @@ func getIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *ver
 		TrustEmail:                data.Get("trust_email").(bool),
 		FirstBrokerLoginFlowAlias: data.Get("first_broker_login_flow_alias").(string),
 		PostBrokerLoginFlowAlias:  data.Get("post_broker_login_flow_alias").(string),
+		OrganizationId:            data.Get("organization_id").(string),
 		InternalId:                data.Get("internal_id").(string),
 	}
 	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26.AsVersion()) {
@@ -168,6 +187,7 @@ func setIdentityProviderData(data *schema.ResourceData, identityProvider *keyclo
 	data.Set("trust_email", identityProvider.TrustEmail)
 	data.Set("first_broker_login_flow_alias", identityProvider.FirstBrokerLoginFlowAlias)
 	data.Set("post_broker_login_flow_alias", identityProvider.PostBrokerLoginFlowAlias)
+	data.Set("organization_id", identityProvider.OrganizationId)
 
 	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26.AsVersion()) {
 		data.Set("hide_on_login_page", identityProvider.HideOnLogin)
@@ -176,6 +196,8 @@ func setIdentityProviderData(data *schema.ResourceData, identityProvider *keyclo
 	// identity provider config
 	data.Set("gui_order", identityProvider.Config.GuiOrder)
 	data.Set("sync_mode", identityProvider.Config.SyncMode)
+	data.Set("org_domain", identityProvider.Config.OrgDomain)
+	data.Set("org_redirect_mode_email_matches", identityProvider.Config.OrgRedirectModeEmailMatches)
 	setExtraConfigData(data, identityProvider.Config.ExtraConfig)
 }
 
@@ -215,12 +237,32 @@ func resourceKeycloakIdentityProviderCreate(getIdentityProviderFromData identity
 			return diag.FromErr(err)
 		}
 
+		organization_id := identityProvider.OrganizationId
+		identityProvider.OrganizationId = ""
+
 		if err = keycloakClient.NewIdentityProvider(ctx, identityProvider); err != nil {
 			return diag.FromErr(err)
 		}
 		if err = setDataFromIdentityProvider(data, identityProvider, keycloakVersion); err != nil {
 			return diag.FromErr(err)
 		}
+
+		if organization_id != "" {
+			identityProvider.OrganizationId = organization_id
+			if err = setDataFromIdentityProvider(data, identityProvider, keycloakVersion); err != nil {
+				return diag.FromErr(err)
+			}
+
+			err = keycloakClient.LinkIdentityProviderWithOrganization(ctx, identityProvider.Realm, identityProvider.Alias, identityProvider.OrganizationId)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			if err = keycloakClient.UpdateIdentityProvider(ctx, identityProvider); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		return resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider)(ctx, data, meta)
 	}
 }
@@ -251,6 +293,25 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 			return diag.FromErr(err)
 		}
 		identityProvider, err := getIdentityProviderFromData(data, keycloakVersion)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		currentIdentityProvider, err := keycloakClient.GetIdentityProvider(ctx, identityProvider.Realm, identityProvider.Alias)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if currentIdentityProvider.OrganizationId != "" && data.HasChange("organization_id") {
+			err = keycloakClient.UnlinkIdentityProviderFromOrganization(ctx, identityProvider.Realm, identityProvider.Alias, currentIdentityProvider.OrganizationId)
+		}
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if identityProvider.OrganizationId != "" && data.HasChange("organization_id") {
+			err = keycloakClient.LinkIdentityProviderWithOrganization(ctx, identityProvider.Realm, identityProvider.Alias, identityProvider.OrganizationId)
+		}
 		if err != nil {
 			return diag.FromErr(err)
 		}
