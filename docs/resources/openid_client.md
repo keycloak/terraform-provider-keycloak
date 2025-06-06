@@ -10,6 +10,13 @@ Clients are entities that can use Keycloak for user authentication. Typically,
 clients are applications that redirect users to Keycloak for authentication
 in order to take advantage of Keycloak's user sessions for SSO.
 
+> **NOTICE:** This resource now supports [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)
+> for client secret via the new arguments `client_secret_wo` and `client_secret_wo_version`. Using write-only arguments
+> prevents sensitive values from being stored in plan and state files. You cannot use `client_secret_wo` and
+> `client_secret_wo_version` alongside `client_secret` as this will result in a validation error due to conflicts.
+>
+> For backward compatibility, the behavior of the original `client_secret` argument remains unchanged.
+
 ## Example Usage
 
 ```hcl
@@ -74,7 +81,6 @@ resource "keycloak_openid_client" "openid_client" {
     "key2" = "value2"
   }
 }
-```
 ```
 
 ## Example Usage with Regenerating the Client Secret using Time provider
