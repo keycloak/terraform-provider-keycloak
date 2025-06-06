@@ -30,6 +30,7 @@ const (
 	Version_25   Version = "25.0.0"
 	Version_26   Version = "26.0.0"
 	Version_26_1 Version = "26.1.0"
+	Version_26_2 Version = "26.2.0"
 )
 
 func (v Version) AsVersion() *version.Version {
