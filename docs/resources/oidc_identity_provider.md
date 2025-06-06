@@ -8,6 +8,14 @@ Allows for creating and managing OIDC Identity Providers within Keycloak.
 
 OIDC (OpenID Connect) identity providers allows users to authenticate through a third party system using the OIDC standard.
 
+> **NOTICE:** This resource now supports [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)
+> for client secret via the new arguments `client_secret_wo` and `client_secret_wo_version`. Using write-only arguments
+> prevents sensitive values from being stored in plan and state files. You cannot use `client_secret_wo` and
+> `client_secret_wo_version` alongside `client_secret` as this will result in a validation error due to conflicts.
+>
+> For backward compatibility, the behavior of the original `client_secret` argument remains unchanged.
+
+
 ## Example Usage
 
 ```hcl
@@ -30,13 +38,43 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 }
 ```
 
+## Example Usage with `client_secret_wo`
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
+ephemeral "random_password" "openid_client_secret" {
+  length           = 16
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
+  realm                    = keycloak_realm.realm.id
+  alias                    = "my-idp"
+  authorization_url        = "https://authorizationurl.com"
+  client_id                = "clientID"
+  client_secret_wo         = ephemeral.random_password.openid_client_secret.result
+  client_secret_wo_version = 1
+  token_url                = "https://tokenurl.com"
+
+  extra_config = {
+    "clientAuthMethod" = "client_secret_post"
+  }
+}
+```
+
 ## Argument Reference
 
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
 - `authorization_url` - (Required) The Authorization Url.
 - `client_id` - (Required) The client or client identifier registered within the identity provider.
-- `client_secret` - (Required) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format.
+- `client_secret` - (Optional) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format. Required without `client_secret_wo` and `client_secret_wo_version`.
+- `client_secret_wo` - (Optional, Write-Only) The secret for clients with an `access_type` of `CONFIDENTIAL` or `BEARER-ONLY`. This is a write-only argument and Terraform does not store them in state or plan files. If omitted, this will fallback to use `client_secret`.
+- `client_secret_wo_version` - (Optional) Functions as a flag and/or trigger to indicate Terraform when to use the input value in `client_secret_wo` to execute a Create or Update operation. The value of this argument is stored in the state and plan files. Required when using `client_secret_wo`.
 - `token_url` - (Required) The Token URL.
 - `display_name` - (Optional) Display name for the identity provider in the GUI.
 - `enabled` - (Optional) When `true`, users will be able to log in to this realm using this identity provider. Defaults to `true`.
