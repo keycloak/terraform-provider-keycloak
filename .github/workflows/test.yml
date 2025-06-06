@@ -87,8 +87,14 @@ jobs:
       - name: Start Keycloak Container
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          EXTRA_FEATURES=",admin-fine-grained-authz:v1"
+          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6"]];
+# these KC versions work with the custom-user-federation-example compiled against latest Keycloak
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
+          fi
+          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" ]];
+# since KC26.2.5, admin-fine-grained-authz:v2 is supported so we need to go back to v1 for now
+            EXTRA_FEATURES=",admin-fine-grained-authz:v1"
           fi
 
           docker run -d --name keycloak \
@@ -97,7 +103,7 @@ jobs:
           -e KC_LOG_LEVEL=INFO \
           -e KEYCLOAK_ADMIN=keycloak \
           -e KEYCLOAK_ADMIN_PASSWORD=password \
-          -e KC_FEATURES=preview,admin-fine-grained-authz:v1 \
+          -e KC_FEATURES=preview${EXTRA_FEATURES} \
           -v $PWD/provider/misc:/opt/keycloak/misc:z \
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} start-dev

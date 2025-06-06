@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -x
+
 set -e
 
 KEYCLOAK_URL="http://localhost:8080"
