@@ -88,7 +88,7 @@ jobs:
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6"]];
+          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]];
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           fi
           if [[ "${{ matrix.keycloak-version }}" == "26.2.5" ]];
