@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"reflect"
 	"strings"
 
@@ -64,10 +65,27 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ValidateFunc: validation.StringInSlice(keycloakOpenidClientAccessTypes, false),
 			},
 			"client_secret": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Computed:  true,
-				Sensitive: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version"},
+			},
+			"client_secret_wo": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{"client_secret"},
+				RequiredWith:  []string{"client_secret_wo_version"},
+				Description:   "Client Secret as write-only argument",
+			},
+			"client_secret_wo_version": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				ConflictsWith: []string{"client_secret"},
+				RequiredWith:  []string{"client_secret_wo"},
+				Description:   "Version of the Client secret write-only argument",
 			},
 			"client_authenticator_type": {
 				Type:     schema.TypeString,
@@ -395,6 +413,15 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
 	}
 
+	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
+		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
+		if clientSecretWriteOnlyDiags.HasError() {
+			return nil, errors.New("error reading 'client_secret_wo' argument")
+		}
+
+		openidClient.ClientSecret = clientSecretWriteOnly.AsString()
+	}
+
 	if rootUrlOk {
 		openidClient.RootUrl = &rootUrlString
 	}
@@ -459,7 +486,6 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("name", client.Name)
 	data.Set("enabled", client.Enabled)
 	data.Set("description", client.Description)
-	data.Set("client_secret", client.ClientSecret)
 	data.Set("client_authenticator_type", client.ClientAuthenticatorType)
 	data.Set("standard_flow_enabled", client.StandardFlowEnabled)
 	data.Set("implicit_flow_enabled", client.ImplicitFlowEnabled)
@@ -505,7 +531,13 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 		data.Set("service_account_user_id", "")
 	}
 
-	// access type
+	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+		data.Set("client_secret_wo_version", v.(int))
+	} else {
+		data.Set("client_secret", client.ClientSecret)
+	}
+
+	// access typess
 	if client.PublicClient {
 		data.Set("access_type", "PUBLIC")
 	} else if client.BearerOnly {
