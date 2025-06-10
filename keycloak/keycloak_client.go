@@ -160,43 +160,45 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 	keycloakClient.clientCredentials.RefreshToken = clientCredentials.RefreshToken
 	keycloakClient.clientCredentials.TokenType = clientCredentials.TokenType
 
-	info, err := keycloakClient.GetServerInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	serverVersion := info.SystemInfo.ServerVersion
-	if strings.Contains(serverVersion, ".GA") {
-		serverVersion = strings.ReplaceAll(info.SystemInfo.ServerVersion, ".GA", "")
-	} else {
-		regex, err := regexp.Compile(`\.redhat-\w+`)
-
-		if err != nil {
-			fmt.Println("Error compiling regex:", err)
-			return err
-		}
-
-		// Check if the pattern is found in serverVersion
-		if regex.MatchString(serverVersion) {
-			// Replace the matched pattern with an empty string
-			serverVersion = regex.ReplaceAllString(serverVersion, "")
-		}
-	}
-
-	v, err := version.NewVersion(serverVersion)
-	if err != nil {
-		return err
-	}
-
-	if keycloakClient.redHatSSO {
-		keycloakVersion, err := version.NewVersion(redHatSSO7VersionMap[v.Segments()[1]])
+	if keycloakClient.realm == "master" {
+		info, err := keycloakClient.GetServerInfo(ctx)
 		if err != nil {
 			return err
 		}
 
-		keycloakClient.version = keycloakVersion
-	} else {
-		keycloakClient.version = v
+		serverVersion := info.SystemInfo.ServerVersion
+		if strings.Contains(serverVersion, ".GA") {
+			serverVersion = strings.ReplaceAll(info.SystemInfo.ServerVersion, ".GA", "")
+		} else {
+			regex, err := regexp.Compile(`\.redhat-\w+`)
+
+			if err != nil {
+				fmt.Println("Error compiling regex:", err)
+				return err
+			}
+
+			// Check if the pattern is found in serverVersion
+			if regex.MatchString(serverVersion) {
+				// Replace the matched pattern with an empty string
+				serverVersion = regex.ReplaceAllString(serverVersion, "")
+			}
+		}
+
+		v, err := version.NewVersion(serverVersion)
+		if err != nil {
+			return err
+		}
+
+		if keycloakClient.redHatSSO {
+			keycloakVersion, err := version.NewVersion(redHatSSO7VersionMap[v.Segments()[1]])
+			if err != nil {
+				return err
+			}
+
+			keycloakClient.version = keycloakVersion
+		} else {
+			keycloakClient.version = v
+		}
 	}
 
 	return nil
