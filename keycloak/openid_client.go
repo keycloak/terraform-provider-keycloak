@@ -83,6 +83,7 @@ type OpenidClientAttributes struct {
 	Oauth2DeviceCodeLifespan              string                           `json:"oauth2.device.code.lifespan,omitempty"`
 	Oauth2DevicePollingInterval           string                           `json:"oauth2.device.polling.interval,omitempty"`
 	PostLogoutRedirectUris                types.KeycloakSliceHashDelimited `json:"post.logout.redirect.uris,omitempty"`
+	StandardTokenExchangeEnabled          types.KeycloakBoolQuoted         `json:"standard.token.exchange.enabled,omitempty"`
 }
 
 type OpenidAuthenticationFlowBindingOverrides struct {
@@ -123,6 +124,10 @@ func (keycloakClient *KeycloakClient) ValidateOpenidClient(ctx context.Context, 
 
 	if client.Attributes.LoginTheme != "" && !serverInfo.ThemeIsInstalled("login", client.Attributes.LoginTheme) {
 		return fmt.Errorf("validation error: theme \"%s\" does not exist on the server", client.Attributes.LoginTheme)
+	}
+
+	if client.Attributes.StandardTokenExchangeEnabled == true && client.PublicClient {
+		return fmt.Errorf("validation error: standard token exchange cannot be enabled on public clients")
 	}
 
 	return nil
