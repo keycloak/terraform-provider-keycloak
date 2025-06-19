@@ -12,6 +12,7 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 	oidcGoogleSchema := map[string]*schema.Schema{
 		"alias": {
 			Type:        schema.TypeString,
+			Optional:    true,
 			Computed:    true,
 			Description: "The alias uniquely identifies an identity provider and it is also used to build the redirect uri. In case of google this is computed and always google",
 		},
@@ -91,7 +92,13 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	rec.ProviderId = data.Get("provider_id").(string)
-	rec.Alias = "google"
+
+	aliasRaw, ok := data.GetOk("alias")
+	if ok {
+		rec.Alias = aliasRaw.(string)
+	} else {
+		rec.Alias = "google"
+	}
 
 	googleOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
