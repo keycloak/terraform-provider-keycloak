@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"reflect"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type IdentityProviderConfig struct {
@@ -53,6 +54,8 @@ type IdentityProviderConfig struct {
 	AuthnContextComparisonType      string                    `json:"authnContextComparisonType,omitempty"`
 	AuthnContextDeclRefs            types.KeycloakSliceQuoted `json:"authnContextDeclRefs,omitempty"`
 	Issuer                          string                    `json:"issuer,omitempty"`
+	OrgRedirectModeEmailMatches     types.KeycloakBoolQuoted  `json:"kc.org.broker.redirect.mode.email-matches,omitempty"`
+	OrgDomain                       string                    `json:"kc.org.domain,omitempty"`
 }
 
 type IdentityProvider struct {
@@ -70,6 +73,7 @@ type IdentityProvider struct {
 	TrustEmail                bool                    `json:"trustEmail"`
 	FirstBrokerLoginFlowAlias string                  `json:"firstBrokerLoginFlowAlias"`
 	PostBrokerLoginFlowAlias  string                  `json:"postBrokerLoginFlowAlias"`
+	OrganizationId            string                  `json:"organizationId,omitempty"`
 	Config                    *IdentityProviderConfig `json:"config"`
 }
 
@@ -100,6 +104,23 @@ func (keycloakClient *KeycloakClient) UpdateIdentityProvider(ctx context.Context
 
 func (keycloakClient *KeycloakClient) DeleteIdentityProvider(ctx context.Context, realm, alias string) error {
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/identity-provider/instances/%s", realm, alias), nil)
+}
+
+func (keycloakClient *KeycloakClient) LinkIdentityProviderWithOrganization(ctx context.Context, realm, alias string, orgId string) error {
+	_, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/organizations/%s/identity-providers", realm, orgId), alias)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (keycloakClient *KeycloakClient) UnlinkIdentityProviderFromOrganization(ctx context.Context, realm, alias string, orgId string) error {
+	if orgId == "" {
+		return nil
+	}
+	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/organizations/%s/identity-providers/%s", realm, orgId, alias), nil)
+
 }
 
 func (f *IdentityProviderConfig) UnmarshalJSON(data []byte) error {
