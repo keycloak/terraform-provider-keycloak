@@ -15,6 +15,7 @@ type IdentityProviderConfig struct {
 	ClientId                        string                    `json:"clientId,omitempty"`
 	ClientSecret                    string                    `json:"clientSecret,omitempty"`
 	DisableUserInfo                 types.KeycloakBoolQuoted  `json:"disableUserInfo"`
+	DisableTypeClaimCheck           types.KeycloakBoolQuoted  `json:"disableTypeClaimCheck"`
 	UserInfoUrl                     string                    `json:"userInfoUrl,omitempty"`
 	HideOnLoginPage                 types.KeycloakBoolQuoted  `json:"hideOnLoginPage,omitempty"`
 	NameIDPolicyFormat              string                    `json:"nameIDPolicyFormat,omitempty"`
