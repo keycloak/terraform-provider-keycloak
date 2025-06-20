@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakCustomUserFederation_basic(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	name := acctest.RandomWithPrefix("tf-acc")
@@ -38,7 +38,7 @@ func TestAccKeycloakCustomUserFederation_basic(t *testing.T) {
 }
 
 func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	name := acctest.RandomWithPrefix("tf-acc")
@@ -73,7 +73,7 @@ func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
 }
 
 func TestAccKeycloakCustomUserFederation_createAfterManualDestroy(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_1)
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	var customFederation = &keycloak.CustomUserFederation{}

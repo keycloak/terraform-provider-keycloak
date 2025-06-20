@@ -18,6 +18,7 @@ var (
 	addToAccessTokenField                = "access.token.claim"
 	addToIdTokenField                    = "id.token.claim"
 	addToUserInfoField                   = "userinfo.token.claim"
+	addToTokenIntrospectionField         = "introspection.token.claim"
 	attributeNameField                   = "attribute.name"
 	attributeNameFormatField             = "attribute.nameformat"
 	claimNameField                       = "claim.name"
