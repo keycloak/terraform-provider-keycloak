@@ -48,16 +48,16 @@ resource "keycloak_oidc_identity_provider" "this" {
 
 - `realm` - (Required) The realm this organization exists in.
 - `name` - (Required) The name of the organization.
-- `alias` - (Optional) The alias unique identifies the organization. Same as the name if not specified. The alias can not be changed after the organization has been created.
+- `alias` - (Optional) The alias unique identifies the organization. Same as the name if not specified. The alias cannot be changed after the organization has been created.
 - `description` - (Optional) The description of the organization.
-- `redirect_url` - (Optional) The landing page after user completes registration or accepting an invitation to the organization. If left empty, the user will be redirected to the account console by default.
+- `redirect_url` - (Optional) The landing page after user completes registration or accepts an invitation to the organization. If left empty, the user will be redirected to the account console by default.
 - `domain` - (Required) A list of [domains](#domain-arguments). At least one domain is required.
-- `attributes` - (Optional) A map representing attributes for the group. In order to add multivalued attributes, use `##` to separate the values. Max length for each value is 255 chars
+- `attributes` - (Optional) A map representing attributes for the group. In order to add multivalued attributes, use `##` to separate the values. Max length for each value is 255 chars.
 
 ### Domain arguments
 
 - `name` - (Required) The domain name
-- `verified` - (Optional) Whether domain is verified or not. Default is false
+- `verified` - (Optional) Whether domain is verified or not. Default is false.
 
 ## Import
 
