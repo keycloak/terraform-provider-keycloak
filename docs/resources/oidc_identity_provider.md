@@ -92,6 +92,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `issuer` - (Optional) The issuer identifier for the issuer of the response. If not provided, no validation will be performed.
 - `disable_user_info` - (Optional) When `true`, disables the usage of the user info service to obtain additional user information. Defaults to `false`.
 - `hide_on_login_page` - (Optional) When `true`, this provider will be hidden on the login page, and is only accessible when requested explicitly. Defaults to `false`.
+- `disable_type_claim_check` - (Optional) When `true`, disables the check for the `typ` claim of tokens received from the identity provider. Defaults to `false`.
 - `logout_url` - (Optional) The Logout URL is the end session endpoint to use to sign-out the user from external identity provider.
 - `login_hint` - (Optional) Pass login hint to identity provider.
 - `ui_locales` - (Optional) Pass current locale to identity provider. Defaults to `false`.
