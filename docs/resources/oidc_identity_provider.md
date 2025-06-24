@@ -98,6 +98,9 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `ui_locales` - (Optional) Pass current locale to identity provider. Defaults to `false`.
 - `accepts_prompt_none_forward_from_client` (Optional) When `true`, the IDP will accept forwarded authentication requests that contain the `prompt=none` query parameter. Defaults to `false`.
 - `default_scopes` - (Optional) The scopes to be sent when asking for authorization. It can be a space-separated list of scopes. Defaults to `openid`.
+- `organization_id` - (Optional) The ID of the organization to link this identity provider to.
+- `org_domain` - (Optional) The organization domain to associate this identity provider with. it is used to map users to an organization based on their email domain and to authenticate them accordingly in the scope of the organization.
+- `org_redirect_mode_email_matches` - (Optional) Indicates whether to automatically redirect user to this identity provider when email domain matches domain.
 - `sync_mode` - (Optional) The default sync mode to use for all mappers attached to this identity provider. Can be once of `IMPORT`, `FORCE`, or `LEGACY`.
 - `gui_order` - (Optional) A number defining the order of this identity provider in the GUI.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration to this identity provider. This can be used for custom oidc provider implementations, or to add configuration that is not yet supported by this Terraform provider. Use this attribute at your own risk, as custom attributes may conflict with top-level configuration attributes in future provider updates.
