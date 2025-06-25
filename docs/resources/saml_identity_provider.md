@@ -71,6 +71,9 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `authn_context_class_refs` - (Optional) Ordered list of requested AuthnContext ClassRefs.
 - `authn_context_decl_refs` - (Optional) Ordered list of requested AuthnContext DeclRefs.
 - `authn_context_comparison_type` - (Optional) Specifies the comparison method used to evaluate the requested context classes or statements.
+- `organization_id` - (Optional) The ID of the organization to link this identity provider to.
+- `org_domain` - (Optional) The organization domain to associate this identity provider with. It is used to map users to an organization based on their email domain and to authenticate them accordingly in the scope of the organization.
+- `org_redirect_mode_email_matches` - (Optional) Indicates whether to automatically redirect users to this identity provider when email domain matches domain.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration to this identity provider. This can be used for custom oidc provider implementations, or to add configuration that is not yet supported by this Terraform provider. Use this attribute at your own risk, as custom attributes may conflict with top-level configuration attributes in future provider updates.
 
 ## Import
