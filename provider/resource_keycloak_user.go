@@ -20,7 +20,7 @@ func resourceKeycloakUser() *schema.Resource {
 		ReadContext:   resourceKeycloakUserRead,
 		DeleteContext: resourceKeycloakUserDelete,
 		UpdateContext: resourceKeycloakUserUpdate,
-		// This resource can be imported using {{realm}}/{{user_id}}. The User's ID is displayed in the GUI when editing
+		// This resource can be imported using {{realm}}/({{user_id}}|{{user_name}}). The User's ID is displayed in the GUI when editing
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakUserImport,
 		},
@@ -304,12 +304,15 @@ func resourceKeycloakUserImport(ctx context.Context, d *schema.ResourceData, met
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{userId}}")
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/({{userId}}|{{userName}})")
 	}
 
 	_, err := keycloakClient.GetUser(ctx, parts[0], parts[1])
 	if err != nil {
-		return nil, err
+		_, err := keycloakClient.GetUserByUsername(ctx, parts[0], parts[1])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	d.Set("realm_id", parts[0])
