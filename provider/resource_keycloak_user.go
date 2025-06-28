@@ -307,9 +307,9 @@ func resourceKeycloakUserImport(ctx context.Context, d *schema.ResourceData, met
 		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/({{userId}}|{{userName}})")
 	}
 
-	_, err := keycloakClient.GetUser(ctx, parts[0], parts[1])
+	user, err := keycloakClient.GetUser(ctx, parts[0], parts[1])
 	if err != nil {
-		_, err := keycloakClient.GetUserByUsername(ctx, parts[0], parts[1])
+		user, err = keycloakClient.GetUserByUsername(ctx, parts[0], parts[1])
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +317,7 @@ func resourceKeycloakUserImport(ctx context.Context, d *schema.ResourceData, met
 
 	d.Set("realm_id", parts[0])
 	d.Set("import", false)
-	d.SetId(parts[1])
+	d.SetId(user.Id)
 
 	diagnostics := resourceKeycloakUserRead(ctx, d, meta)
 	if diagnostics.HasError() {
