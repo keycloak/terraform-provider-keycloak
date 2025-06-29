@@ -1941,7 +1941,7 @@ resource "keycloak_openid_client" "client" {
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "CONFIDENTIAL"
 	standard_token_exchange_enabled = true
-	allow_refresh_token_in_standard_exchange = "%s"
+	allow_refresh_token_in_standard_token_exchange = "%s"
 }
 	`, testAccRealm.Realm, clientId, allowRefreshTokenInStandardTokenExchange)
 }
