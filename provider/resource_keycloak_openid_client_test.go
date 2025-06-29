@@ -825,11 +825,11 @@ func TestAccKeycloakOpenidClient_allowRefreshTokenInStandardExchange(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId, "SAME_SESSION"),
-				Check:  testAccCheckKeycloakOpenidClientEnableStandardTokenExchange("keycloak_openid_client.client", true),
+				Check:  testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange("keycloak_openid_client.client", "SAME_SESSION"),
 			},
 			{
 				Config: testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId, ""),
-				Check:  testAccCheckKeycloakOpenidClientEnableStandardTokenExchange("keycloak_openid_client.client", false),
+				Check:  testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange("keycloak_openid_client.client", ""),
 			},
 		},
 	})
@@ -1343,7 +1343,7 @@ func testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange(resourc
 		}
 
 		if client.Attributes.AllowRefreshTokenInStandardTokenExchange != AllowRefreshTokenInStandardTokenExchange {
-			return fmt.Errorf("expected openid client to have enable standard token exchange set to %t, but got %v", AllowRefreshTokenInStandardTokenExchange, client.Attributes.AllowRefreshTokenInStandardTokenExchange)
+			return fmt.Errorf("expected openid client to have enable standard token exchange set to %s, but got %v", AllowRefreshTokenInStandardTokenExchange, client.Attributes.AllowRefreshTokenInStandardTokenExchange)
 		}
 
 		return nil
