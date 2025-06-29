@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/go-cty/cty"
 
 	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -283,6 +284,15 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"standard_token_exchange_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"allow_refresh_token_in_standard_token_exchange": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"frontchannel_logout_url": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -382,28 +392,30 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		FrontChannelLogoutEnabled: data.Get("frontchannel_logout_enabled").(bool),
 		FullScopeAllowed:          data.Get("full_scope_allowed").(bool),
 		Attributes: keycloak.OpenidClientAttributes{
-			PkceCodeChallengeMethod:               data.Get("pkce_code_challenge_method").(string),
-			ExcludeSessionStateFromAuthResponse:   types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
-			ExcludeIssuerFromAuthResponse:         types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
-			AccessTokenLifespan:                   data.Get("access_token_lifespan").(string),
-			LoginTheme:                            data.Get("login_theme").(string),
-			ClientOfflineSessionIdleTimeout:       data.Get("client_offline_session_idle_timeout").(string),
-			ClientOfflineSessionMaxLifespan:       data.Get("client_offline_session_max_lifespan").(string),
-			ClientSessionIdleTimeout:              data.Get("client_session_idle_timeout").(string),
-			ClientSessionMaxLifespan:              data.Get("client_session_max_lifespan").(string),
-			UseRefreshTokens:                      types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool)),
-			UseRefreshTokensClientCredentials:     types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
-			FrontchannelLogoutUrl:                 data.Get("frontchannel_logout_url").(string),
-			BackchannelLogoutUrl:                  data.Get("backchannel_logout_url").(string),
-			BackchannelLogoutRevokeOfflineTokens:  types.KeycloakBoolQuoted(data.Get("backchannel_logout_revoke_offline_sessions").(bool)),
-			BackchannelLogoutSessionRequired:      types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool)),
-			ExtraConfig:                           getExtraConfigFromData(data),
-			Oauth2DeviceAuthorizationGrantEnabled: types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
-			Oauth2DeviceCodeLifespan:              data.Get("oauth2_device_code_lifespan").(string),
-			Oauth2DevicePollingInterval:           data.Get("oauth2_device_polling_interval").(string),
-			ConsentScreenText:                     data.Get("consent_screen_text").(string),
-			DisplayOnConsentScreen:                types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
-			PostLogoutRedirectUris:                types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
+			PkceCodeChallengeMethod:                  data.Get("pkce_code_challenge_method").(string),
+			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
+			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
+			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
+			LoginTheme:                               data.Get("login_theme").(string),
+			ClientOfflineSessionIdleTimeout:          data.Get("client_offline_session_idle_timeout").(string),
+			ClientOfflineSessionMaxLifespan:          data.Get("client_offline_session_max_lifespan").(string),
+			ClientSessionIdleTimeout:                 data.Get("client_session_idle_timeout").(string),
+			ClientSessionMaxLifespan:                 data.Get("client_session_max_lifespan").(string),
+			UseRefreshTokens:                         types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool)),
+			UseRefreshTokensClientCredentials:        types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
+			StandardTokenExchangeEnabled:             types.KeycloakBoolQuoted(data.Get("standard_token_exchange_enabled").(bool)),
+			AllowRefreshTokenInStandardTokenExchange: data.Get("allow_refresh_token_in_standard_token_exchange").(string),
+			FrontchannelLogoutUrl:                    data.Get("frontchannel_logout_url").(string),
+			BackchannelLogoutUrl:                     data.Get("backchannel_logout_url").(string),
+			BackchannelLogoutRevokeOfflineTokens:     types.KeycloakBoolQuoted(data.Get("backchannel_logout_revoke_offline_sessions").(bool)),
+			BackchannelLogoutSessionRequired:         types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool)),
+			ExtraConfig:                              getExtraConfigFromData(data),
+			Oauth2DeviceAuthorizationGrantEnabled:    types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
+			Oauth2DeviceCodeLifespan:                 data.Get("oauth2_device_code_lifespan").(string),
+			Oauth2DevicePollingInterval:              data.Get("oauth2_device_polling_interval").(string),
+			ConsentScreenText:                        data.Get("consent_screen_text").(string),
+			DisplayOnConsentScreen:                   types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
+			PostLogoutRedirectUris:                   types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
 		},
 		ValidRedirectUris:      validRedirectUris,
 		WebOrigins:             webOrigins,
@@ -506,6 +518,8 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)
 	data.Set("use_refresh_tokens_client_credentials", client.Attributes.UseRefreshTokensClientCredentials)
+	data.Set("standard_token_exchange_enabled", client.Attributes.StandardTokenExchangeEnabled)
+	data.Set("allow_refresh_token_in_standard_token_exchange", client.Attributes.AllowRefreshTokenInStandardTokenExchange)
 	data.Set("oauth2_device_authorization_grant_enabled", client.Attributes.Oauth2DeviceAuthorizationGrantEnabled)
 	data.Set("oauth2_device_code_lifespan", client.Attributes.Oauth2DeviceCodeLifespan)
 	data.Set("oauth2_device_polling_interval", client.Attributes.Oauth2DevicePollingInterval)

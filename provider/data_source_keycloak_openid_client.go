@@ -204,6 +204,14 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"standard_token_exchange_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"allow_refresh_token_in_standard_token_exchange": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"backchannel_logout_url": {
 				Type:     schema.TypeString,
 				Computed: true,
