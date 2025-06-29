@@ -794,6 +794,9 @@ func TestAccKeycloakOpenidClient_useRefreshTokens(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_enableStandardTokenExchange(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -815,6 +818,9 @@ func TestAccKeycloakOpenidClient_enableStandardTokenExchange(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_allowRefreshTokenInStandardExchange(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
