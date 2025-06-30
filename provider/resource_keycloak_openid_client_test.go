@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -792,6 +793,54 @@ func TestAccKeycloakOpenidClient_useRefreshTokens(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_enableStandardTokenExchange(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_enableStandardTokenExchange(clientId, true),
+				Check:  testAccCheckKeycloakOpenidClientEnableStandardTokenExchange("keycloak_openid_client.client", true),
+			},
+			{
+				Config: testKeycloakOpenidClient_enableStandardTokenExchange(clientId, false),
+				Check:  testAccCheckKeycloakOpenidClientEnableStandardTokenExchange("keycloak_openid_client.client", false),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_allowRefreshTokenInStandardExchange(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId, "SAME_SESSION"),
+				Check:  testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange("keycloak_openid_client.client", "SAME_SESSION"),
+			},
+			{
+				Config: testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId, ""),
+				Check:  testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_useRefreshTokensClientCredentials(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -1271,6 +1320,36 @@ func testAccCheckKeycloakOpenidClientUseRefreshTokens(resourceName string, useRe
 
 		if client.Attributes.UseRefreshTokens != types.KeycloakBoolQuoted(useRefreshTokens) {
 			return fmt.Errorf("expected openid client to have use refresh tokens set to %t, but got %v", useRefreshTokens, client.Attributes.UseRefreshTokens)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientEnableStandardTokenExchange(resourceName string, enableStandardTokenExchange bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.StandardTokenExchangeEnabled != types.KeycloakBoolQuoted(enableStandardTokenExchange) {
+			return fmt.Errorf("expected openid client to have enable standard token exchange set to %t, but got %v", enableStandardTokenExchange, client.Attributes.StandardTokenExchangeEnabled)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientAllowRefreshTokenInStandardExchange(resourceName string, AllowRefreshTokenInStandardTokenExchange string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.AllowRefreshTokenInStandardTokenExchange != AllowRefreshTokenInStandardTokenExchange {
+			return fmt.Errorf("expected openid client to have enable standard token exchange set to %s, but got %v", AllowRefreshTokenInStandardTokenExchange, client.Attributes.AllowRefreshTokenInStandardTokenExchange)
 		}
 
 		return nil
@@ -1832,6 +1911,39 @@ resource "keycloak_openid_client" "client" {
 	use_refresh_tokens = %t
 }
 	`, testAccRealm.Realm, clientId, useRefreshTokens)
+}
+
+func testKeycloakOpenidClient_enableStandardTokenExchange(clientId string, enableStandardTokenExchange bool) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "CONFIDENTIAL"
+	standard_token_exchange_enabled = %t
+}
+	`, testAccRealm.Realm, clientId, enableStandardTokenExchange)
+}
+
+func testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId string, allowRefreshTokenInStandardTokenExchange string) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "CONFIDENTIAL"
+	standard_token_exchange_enabled = true
+	allow_refresh_token_in_standard_token_exchange = "%s"
+}
+	`, testAccRealm.Realm, clientId, allowRefreshTokenInStandardTokenExchange)
 }
 
 func testKeycloakOpenidClient_useRefreshTokensClientCredentials(clientId string, useRefreshTokensClientCredentials bool) string {
