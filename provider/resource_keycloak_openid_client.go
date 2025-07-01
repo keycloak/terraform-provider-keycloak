@@ -354,15 +354,15 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 }
 
 func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
- 	return customdiff.All(
- 		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
- 			return d.HasChange("service_accounts_enabled")
- 		}),
- 		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
- 			return d.HasChange("client_secret_regenerate_when_changed")
- 		}),
- 	)
- }
+	return customdiff.All(
+		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return d.HasChange("service_accounts_enabled")
+		}),
+		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return d.HasChange("client_secret_regenerate_when_changed")
+		}),
+	)
+}
 
 func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient, error) {
 	validRedirectUris := make([]string, 0)
@@ -669,9 +669,9 @@ func resourceKeycloakOpenidClientUpdate(ctx context.Context, data *schema.Resour
 	}
 
 	err = evaluateSecretRegeneration(ctx, keycloakClient, data, client)
- 	if err != nil {
- 		return diag.FromErr(err)
- 	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	err = keycloakClient.UpdateOpenidClient(ctx, client)
 	if err != nil {
@@ -725,15 +725,15 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 
 func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.KeycloakClient, d *schema.ResourceData, client *keycloak.OpenidClient) error {
 
- 	if d.HasChange("client_secret_regenerate_when_changed") {
- 		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
- 		if err != nil {
- 			return err
- 		}
+	if d.HasChange("client_secret_regenerate_when_changed") {
+		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
+		if err != nil {
+			return err
+		}
 
- 		client.ClientSecret = secret.Value
- 		d.Set("client_secret", secret.Value)
- 	}
+		client.ClientSecret = secret.Value
+		d.Set("client_secret", secret.Value)
+	}
 
- 	return nil
- }
+	return nil
+}
