@@ -2,11 +2,10 @@ package keycloak
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"os"
 	"strconv"
 	"testing"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 )
 
 var requiredEnvironmentVariables = []string{
