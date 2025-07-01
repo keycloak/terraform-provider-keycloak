@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"reflect"
 	"strings"
-
-	"github.com/hashicorp/go-cty/cty"
 
 	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -332,8 +331,8 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			},
 		},
 		CustomizeDiff: customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
- 			return d.HasChange("service_accounts_enabled")
- 		}),
+			return d.HasChange("service_accounts_enabled")
+		}),
 	}
 }
 
