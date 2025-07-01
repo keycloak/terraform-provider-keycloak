@@ -317,6 +317,14 @@ func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 Sends an HTTP request and refreshes credentials on 403 or 401 errors
 */
 func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *http.Request, body []byte) ([]byte, string, error) {
+	if !keycloakClient.initialLogin {
+		keycloakClient.initialLogin = true
+		err := keycloakClient.login(ctx)
+		if err != nil {
+			return nil, "", fmt.Errorf("error logging in: %s", err)
+		}
+	}
+
 	requestMethod := request.Method
 	requestPath := request.URL.Path
 
