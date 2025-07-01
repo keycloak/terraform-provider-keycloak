@@ -70,32 +70,23 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional:      true,
 				Computed:      true,
 				Sensitive:     true,
-				ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version", "client_secret_regenerate_when_changed"},
+				ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version"},
 			},
 			"client_secret_wo": {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Sensitive:     true,
 				WriteOnly:     true,
-				ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+				ConflictsWith: []string{"client_secret"},
 				RequiredWith:  []string{"client_secret_wo_version"},
 				Description:   "Client Secret as write-only argument",
 			},
 			"client_secret_wo_version": {
 				Type:          schema.TypeInt,
 				Optional:      true,
-				ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+				ConflictsWith: []string{"client_secret"},
 				RequiredWith:  []string{"client_secret_wo"},
 				Description:   "Version of the Client secret write-only argument",
-			},
-			"client_secret_regenerate_when_changed": {
-				Type:          schema.TypeMap,
-				Description:   "Arbitrary map of values that, when changed, will trigger rotation of the secret",
-				Optional:      true,
-				ConflictsWith: []string{"client_secret", "client_secret_wo", "client_secret_wo_version"},
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 			"client_authenticator_type": {
 				Type:     schema.TypeString,
@@ -340,19 +331,10 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ForceNew: true,
 			},
 		},
-		CustomizeDiff: resourceKeycloakOpenidClientDiff(),
+		CustomizeDiff: customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+ 			return d.HasChange("service_accounts_enabled")
+ 		}),
 	}
-}
-
-func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
-	return customdiff.All(
-		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
-			return d.HasChange("service_accounts_enabled")
-		}),
-		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
-			return d.HasChange("client_secret_regenerate_when_changed")
-		}),
-	)
 }
 
 func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient, error) {
@@ -655,11 +637,6 @@ func resourceKeycloakOpenidClientUpdate(ctx context.Context, data *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	err = evaluateSecretRegeneration(ctx, keycloakClient, data, client)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	err = keycloakClient.UpdateOpenidClient(ctx, client)
 	if err != nil {
 		return diag.FromErr(err)
@@ -708,19 +685,4 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 	}
 
 	return []*schema.ResourceData{d}, nil
-}
-
-func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.KeycloakClient, d *schema.ResourceData, client *keycloak.OpenidClient) error {
-
-	if d.HasChange("client_secret_regenerate_when_changed") {
-		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
-		if err != nil {
-			return err
-		}
-
-		client.ClientSecret = secret.Value
-		d.Set("client_secret", secret.Value)
-	}
-
-	return nil
 }

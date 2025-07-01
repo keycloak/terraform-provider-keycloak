@@ -1207,8 +1207,8 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 }
 
 resource "keycloak_realm_client_policy_profile_policy" "policy" {
-  realm_id    = "my-profile"
   name        = keycloak_realm.test.id
+  realm_id    = "my-profile-policy"
   description = "Some desc"
   profiles = [
     keycloak_realm_client_policy_profile.profile.name
