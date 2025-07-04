@@ -105,7 +105,7 @@ jobs:
           -e KC_FEATURES=preview${EXTRA_FEATURES} \
           -v $PWD/provider/misc:/opt/keycloak/misc:z \
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
-          quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} start-dev
+          quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev
 
       - name: Initialize Keycloak
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
@@ -132,7 +132,12 @@ jobs:
           KEYCLOAK_TEST_PASSWORD_GRANT: "true"
           KEYCLOAK_VERSION: ${{ steps.keycloak-version.outputs.result }}
         timeout-minutes: 60
+
+      - name: Print container logs
+        if: always()
+        run: docker logs keycloak
       - name: Clean up
+        if: always()
         run: |
           docker stop keycloak
           docker rm keycloak
