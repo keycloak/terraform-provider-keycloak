@@ -74,7 +74,7 @@ build you can use the `linux_amd64` build as long as `libc6-compat` is installed
 
 ## Development
 
-This project requires Go 1.22 and Terraform 1.11.1.
+This project requires Go 1.23 and Terraform 1.12.2.
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependency management, which allows this project to exist outside an existing GOPATH.
 
 After cloning the repository, you can build the project by running `make build`.
