@@ -1,9 +1,15 @@
 package provider
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/base64"
+	"errors"
+	"fmt"
+	"io"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -28,6 +34,13 @@ func dataSourceKeycloakSamlClientInstallationProvider() *schema.Resource {
 			"value": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"zip_files": {
+				Type:     schema.TypeMap,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 	}
@@ -55,5 +68,42 @@ func dataSourceKeycloakSamlClientInstallationProviderRead(ctx context.Context, d
 	data.Set("provider_id", providerId)
 	data.Set("value", string(value))
 
+	zipFiles, err := readZipFiles(value)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	data.Set("zip_files", zipFiles)
+
 	return nil
+}
+
+func readZipFiles(content []byte) (map[string]string, error) {
+	zipReader, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		if errors.Is(err, zip.ErrFormat) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("error reading zip files: %w", err)
+	}
+
+	files := make(map[string]string, len(zipReader.File))
+	for _, file := range zipReader.File {
+		fileReader, err := file.Open()
+		if err != nil {
+			return nil, fmt.Errorf("error opening zip file for reading: %w", err)
+		}
+		fileContent, err := io.ReadAll(fileReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading zip file content: %w", err)
+		}
+		files[file.FileInfo().Name()] = string(fileContent)
+
+		err = fileReader.Close()
+		if err != nil {
+			return nil, fmt.Errorf("error closing zip file content: %w", err)
+		}
+	}
+
+	return files, nil
 }
