@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_basicClient(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -32,7 +32,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_basicClient(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_basicClientScope(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -52,7 +52,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_basicClientScope(t *testing.T) 
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_import(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -89,7 +89,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_update(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -115,7 +115,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var mapper = &keycloak.OpenIdAudienceProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -147,7 +147,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_createAfterManualDestroy(t *tes
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	updatedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -173,7 +173,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_updateClientIdForceNew(t *testi
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	newClientScopeId := acctest.RandomWithPrefix("tf-acc")
@@ -197,7 +197,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_updateClientScopeForceNew(t *te
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_updateRealmIdForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -222,7 +222,7 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_updateRealmIdForceNew(t *testin
 }
 
 func TestAccKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 

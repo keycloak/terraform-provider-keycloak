@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceRole_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	client := acctest.RandomWithPrefix("tf-acc")
 	realmRole := acctest.RandomWithPrefix("tf-acc")

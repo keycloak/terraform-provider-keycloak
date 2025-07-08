@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakGenericProtocolMapper_basicClient(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -33,7 +33,7 @@ func TestAccKeycloakGenericProtocolMapper_basicClient(t *testing.T) {
 }
 
 func TestAccKeycloakGenericProtocolMapper_basicClientScope(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -54,7 +54,7 @@ func TestAccKeycloakGenericProtocolMapper_basicClientScope(t *testing.T) {
 }
 
 func TestAccKeycloakGenericProtocolMapper_import(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -81,7 +81,7 @@ func TestAccKeycloakGenericProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakGenericProtocolMapper_update(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")

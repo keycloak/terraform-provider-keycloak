@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakRealmOptionalClientScopes_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
@@ -35,7 +35,7 @@ func TestAccKeycloakRealmOptionalClientScopes_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRealmOptionalClientScopes_empty(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(

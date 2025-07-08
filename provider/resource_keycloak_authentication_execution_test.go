@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakAuthenticationExecution_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	parentAuthFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -34,7 +34,7 @@ func TestAccKeycloakAuthenticationExecution_basic(t *testing.T) {
 }
 
 func TestAccKeycloakAuthenticationExecution_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var authenticationExecution = &keycloak.AuthenticationExecution{}
 
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
@@ -66,7 +66,7 @@ func TestAccKeycloakAuthenticationExecution_createAfterManualDestroy(t *testing.
 }
 
 func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequirement(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -100,7 +100,7 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 }
 
 func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriority(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
 		t.Skip()
@@ -129,7 +129,7 @@ func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriorit
 }
 
 func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionPriority(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
 		t.Skip()

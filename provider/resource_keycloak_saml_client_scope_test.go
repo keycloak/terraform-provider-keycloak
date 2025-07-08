@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakSamlClientScope_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -35,7 +35,7 @@ func TestAccKeycloakSamlClientScope_basic(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClientScope_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var clientScope = &keycloak.SamlClientScope{}
 
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -67,7 +67,7 @@ func TestAccKeycloakSamlClientScope_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClientScope_updateRealm(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -94,7 +94,7 @@ func TestAccKeycloakSamlClientScope_updateRealm(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClientScope_consentScreenText(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -119,7 +119,7 @@ func TestAccKeycloakSamlClientScope_consentScreenText(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClientScope_guiOrder(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 	guiOrder := acctest.RandIntRange(0, 1000)
 

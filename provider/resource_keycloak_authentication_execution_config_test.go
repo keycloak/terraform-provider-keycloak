@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakAuthenticationExecutionConfig_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	flowAlias := acctest.RandomWithPrefix("tf-acc")
 	configAlias := acctest.RandomWithPrefix("tf-acc")
@@ -51,7 +51,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_basic(t *testing.T) {
 }
 
 func TestAccKeycloakAuthenticationExecutionConfig_updateForcesNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	flowAlias := acctest.RandomWithPrefix("tf-acc")
 	configAliasOne := acctest.RandomWithPrefix("tf-acc")
@@ -91,7 +91,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_updateForcesNew(t *testing.T) 
 }
 
 func TestAccKeycloakAuthenticationExecutionConfig_import(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	flowAlias := acctest.RandomWithPrefix("tf-acc")
 	configAlias := acctest.RandomWithPrefix("tf-acc")

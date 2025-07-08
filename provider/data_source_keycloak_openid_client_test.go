@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceOpenidClient_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_openid_client.test"
 	resourceName := "keycloak_openid_client.test"
@@ -44,7 +44,7 @@ func TestAccKeycloakDataSourceOpenidClient_basic(t *testing.T) {
 }
 
 func TestAccKeycloakDataSourceOpenidClient_extraConfig(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc-test-extra-config")
 	dataSourceName := "data.keycloak_openid_client.test_extra_config"
 	resourceName := "keycloak_openid_client.test_extra_config"

@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakOpenidClientAuthorizationResource_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resourceName := acctest.RandomWithPrefix("tf-acc")
 
@@ -28,7 +28,7 @@ func TestAccKeycloakOpenidClientAuthorizationResource_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClientAuthorizationResource_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var authorizationResource = &keycloak.OpenidClientAuthorizationResource{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -58,7 +58,7 @@ func TestAccKeycloakOpenidClientAuthorizationResource_createAfterManualDestroy(t
 }
 
 func TestAccKeycloakOpenidClientAuthorizationResource_basicUpdateAll(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	ownerManagedAccess := randomBool()
 

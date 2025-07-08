@@ -304,7 +304,7 @@ func TestAccKeycloakUser_federatedLink(t *testing.T) {
 }
 
 func TestAccKeycloakUser_import(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,

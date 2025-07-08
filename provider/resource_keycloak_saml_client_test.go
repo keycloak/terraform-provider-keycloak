@@ -14,7 +14,7 @@ import (
 )
 
 func TestAccKeycloakSamlClient_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -37,7 +37,7 @@ func TestAccKeycloakSamlClient_basic(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -60,7 +60,7 @@ func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var client = &keycloak.SamlClient{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -92,7 +92,7 @@ func TestAccKeycloakSamlClient_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_updateRealm(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -120,7 +120,7 @@ func TestAccKeycloakSamlClient_updateRealm(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	enabled := randomBool()
 	frontChannelLogout := randomBool()
@@ -234,7 +234,7 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_certificateAndKey(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -257,7 +257,7 @@ func TestAccKeycloakSamlClient_certificateAndKey(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_encryptionCertificate(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -278,7 +278,7 @@ func TestAccKeycloakSamlClient_encryptionCertificate(t *testing.T) {
 }
 
 func TestAccCheckKeycloakSamlClient_authenticationFlowBindingOverrides(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -300,7 +300,7 @@ func TestAccCheckKeycloakSamlClient_authenticationFlowBindingOverrides(t *testin
 }
 
 func TestAccKeycloakSamlClient_extraConfig(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -333,7 +333,7 @@ func TestAccKeycloakSamlClient_extraConfig(t *testing.T) {
 }
 
 func TestAccKeycloakSamlClient_extraConfigInvalid(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 

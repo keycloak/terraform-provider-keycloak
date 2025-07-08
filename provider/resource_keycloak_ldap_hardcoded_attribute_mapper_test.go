@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakLdapHardcodedAttributeMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 	attributeMapperName := acctest.RandomWithPrefix("tf-acc")
@@ -37,7 +37,7 @@ func TestAccKeycloakLdapHardcodedAttributeMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapHardcodedAttributeMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var mapper = &keycloak.LdapHardcodedAttributeMapper{}
 
 	attributeName := acctest.RandomWithPrefix("tf-acc")

@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakOpenidClientServiceAccountRole_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "keycloak_openid_client_service_account_role.test"
 
@@ -35,7 +35,7 @@ func TestAccKeycloakOpenidClientServiceAccountRole_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClientServiceAccountRole_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var serviceAccountRole = &keycloak.OpenidClientServiceAccountRole{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -64,7 +64,7 @@ func TestAccKeycloakOpenidClientServiceAccountRole_createAfterManualDestroy(t *t
 }
 
 func TestAccKeycloakOpenidClientServiceAccountRole_enableAfterCreate(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	bearerClientId := acctest.RandomWithPrefix("tf-acc")
 	consumerClientId := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "keycloak_openid_client_service_account_role.consumer_service_account_role"

@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakGroup_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
@@ -22,7 +22,7 @@ func TestAccKeycloakGroup_basic(t *testing.T) {
 }
 
 func TestAccKeycloakGroup_basicGroupNameContainsBackSlash(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
@@ -52,7 +52,7 @@ func runTestBasicGroup(t *testing.T, groupName, attributeName, attributeValue st
 }
 
 func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	var group = &keycloak.Group{}
 
@@ -87,7 +87,7 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	groupNameBefore := acctest.RandomWithPrefix("tf-acc")
 	groupNameAfter := acctest.RandomWithPrefix("tf-acc")
@@ -118,7 +118,7 @@ func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 }
 
 func TestAccKeycloakGroup_updateRealm(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	group := acctest.RandomWithPrefix("tf-acc")
 
@@ -146,7 +146,7 @@ func TestAccKeycloakGroup_updateRealm(t *testing.T) {
 }
 
 func TestAccKeycloakGroup_nested(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	parentGroupName := acctest.RandomWithPrefix("tf-acc")
 	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
@@ -156,7 +156,7 @@ func TestAccKeycloakGroup_nested(t *testing.T) {
 }
 
 func TestAccKeycloakGroup_nestedGroupNameContainsBackSlash(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	parentGroupName := acctest.RandomWithPrefix("tf-acc")
 	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
@@ -240,7 +240,7 @@ func runTestNestedGroup(t *testing.T, parentGroupName, firstChildGroupName, seco
 }
 
 func TestAccKeycloakGroup_unsetOptionalAttributes(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	groupWithOptionalAttributes := &keycloak.Group{

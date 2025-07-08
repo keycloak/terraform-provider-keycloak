@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakLdapHardcodedGroupMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -35,7 +35,7 @@ func TestAccKeycloakLdapHardcodedGroupMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapHardcodedGroupMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var mapper = &keycloak.LdapHardcodedGroupMapper{}
 
 	groupName := acctest.RandomWithPrefix("tf-acc")

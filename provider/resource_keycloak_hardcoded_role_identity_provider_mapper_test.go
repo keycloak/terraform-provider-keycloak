@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakHardcodedRoleIdentityProviderMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
@@ -31,7 +31,7 @@ func TestAccKeycloakHardcodedRoleIdentityProviderMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakHardcodedRoleIdentityProviderMapper_withExtraConfig(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
@@ -52,7 +52,7 @@ func TestAccKeycloakHardcodedRoleIdentityProviderMapper_withExtraConfig(t *testi
 }
 
 func TestAccKeycloakHardcodedRoleIdentityProviderMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	var mapper = &keycloak.IdentityProviderMapper{}
 
@@ -84,7 +84,7 @@ func TestAccKeycloakHardcodedRoleIdentityProviderMapper_createAfterManualDestroy
 }
 
 func TestAccKeycloakHardcodedRoleIdentityProviderMapper_withExtraConfig_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	var mapper = &keycloak.IdentityProviderMapper{}
 
@@ -117,7 +117,7 @@ func TestAccKeycloakHardcodedRoleIdentityProviderMapper_withExtraConfig_createAf
 }
 
 func TestAccKeycloakHardcodedRoleIdentityProviderMapper_basicUpdateAll(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	identityProviderAliasName := acctest.RandomWithPrefix("tf-acc")
 

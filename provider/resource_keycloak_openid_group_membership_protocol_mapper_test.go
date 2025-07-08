@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClient(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -30,7 +30,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClient(t *testing.T
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClientScope(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -50,7 +50,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClientScope(t *test
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_import(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -87,7 +87,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_update(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper"
 
 	mapperOne := &keycloak.OpenIdGroupMembershipProtocolMapper{
@@ -128,7 +128,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var mapper = &keycloak.OpenIdGroupMembershipProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -160,7 +160,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_createAfterManualDestroy
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateMapperNameForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperNameOne := acctest.RandomWithPrefix("tf-acc")
 	mapperNameTwo := acctest.RandomWithPrefix("tf-acc")
@@ -185,7 +185,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateMapperNameForceNew
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientIdOne := acctest.RandomWithPrefix("tf-acc")
 	clientIdTwo := acctest.RandomWithPrefix("tf-acc")
 
@@ -209,7 +209,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateClientIdForceNew(t
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientScopeOne := acctest.RandomWithPrefix("tf-acc")
 	clientScopeTwo := acctest.RandomWithPrefix("tf-acc")
 

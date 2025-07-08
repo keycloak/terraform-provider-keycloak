@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakLdapCustomMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	customMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -35,7 +35,7 @@ func TestAccKeycloakLdapCustomMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapCustomMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	var mapper = &keycloak.LdapCustomMapper{}
 
@@ -65,7 +65,7 @@ func TestAccKeycloakLdapCustomMapper_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakLdapCustomMapper_updateLdapUserFederation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	customMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -87,7 +87,7 @@ func TestAccKeycloakLdapCustomMapper_updateLdapUserFederation(t *testing.T) {
 }
 
 func TestAccKeycloakLdapCustomMapper_updateInPlace(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	customMapperBefore := &keycloak.LdapCustomMapper{
 		Name:         acctest.RandString(10),

@@ -18,7 +18,7 @@ import (
  */
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -42,7 +42,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_clientDuplicateNameValidation(t
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -66,7 +66,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_clientScopeDuplicateNameValidat
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -90,7 +90,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientDuplicateNameValid
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -114,7 +114,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientScopeDuplicateName
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -138,7 +138,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientDuplicateNameValidat
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -162,7 +162,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientScopeDuplicateNameVa
 }
 
 func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -186,7 +186,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientDuplicateNameValidati
 }
 
 func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -210,7 +210,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientScopeDuplicateNameVal
 }
 
 func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -234,7 +234,7 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientDuplicateNameValida
 }
 
 func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -258,7 +258,7 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientScopeDuplicateNameV
 }
 
 func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -282,7 +282,7 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_clientScopeDuplicateNameVa
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -306,7 +306,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientScopeDuplicateNameV
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -330,7 +330,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientDuplicateNameValid
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientScopeDuplicateNameValidation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -359,7 +359,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientScopeDuplicateName
  */
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -375,7 +375,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_validateClientOrClientScopeSet(
 }
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -391,7 +391,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_validateClientOrClientSc
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -407,7 +407,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClientOrClientScop
 }
 
 func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -423,7 +423,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClientOrClientScope
 }
 
 func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -439,7 +439,7 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_validateClientOrClientSco
 }
 
 func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -455,7 +455,7 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_validateClientOrClientScop
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -471,7 +471,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClientOrClientSco
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClientOrClientScopeSet(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

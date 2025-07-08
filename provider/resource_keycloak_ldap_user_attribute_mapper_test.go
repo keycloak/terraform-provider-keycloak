@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakLdapUserAttributeMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -35,7 +35,7 @@ func TestAccKeycloakLdapUserAttributeMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	var mapper = &keycloak.LdapUserAttributeMapper{}
 
@@ -65,7 +65,7 @@ func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -87,7 +87,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 
 	userAttributeMapperBefore := &keycloak.LdapUserAttributeMapper{
 		Name:                    acctest.RandString(10),

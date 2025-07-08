@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakLdapHardcodedRoleMapper_basic(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	roleMapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -35,7 +35,7 @@ func TestAccKeycloakLdapHardcodedRoleMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapHardcodedRoleMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parallel()
+	//t.Parralel()
 	var mapper = &keycloak.LdapHardcodedRoleMapper{}
 
 	roleName := acctest.RandomWithPrefix("tf-acc")
