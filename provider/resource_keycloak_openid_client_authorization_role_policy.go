@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -45,6 +46,10 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicy() *schema.Resource {
 			},
 			"description": {
 				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"fetch_roles": {
+				Type:     schema.TypeBool,
 				Optional: true,
 			},
 			"role": {
@@ -91,6 +96,7 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 		Type:             "role",
 		Roles:            rolesList,
 		Description:      data.Get("description").(string),
+		FetchRoles:       data.Get("fetch_roles").(string),
 	}
 
 	return &resource
@@ -106,6 +112,7 @@ func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceDat
 	data.Set("logic", policy.Logic)
 	data.Set("type", policy.Type)
 	data.Set("description", policy.Description)
+	data.Set("fetch_roles", policy.FetchRoles)
 
 	var roles []interface{}
 	for _, r := range policy.Roles {
