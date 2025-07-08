@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClient(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -30,7 +30,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClient(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClientScope(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -50,7 +50,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClientScope(t *testing.T) 
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_import(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -87,7 +87,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_update(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper"
 
 	mapperOne := &keycloak.OpenIdFullNameProtocolMapper{
@@ -124,7 +124,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	var mapper = &keycloak.OpenIdFullNameProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -156,7 +156,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_createAfterManualDestroy(t *tes
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_updateMapperNameForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperNameOne := acctest.RandomWithPrefix("tf-acc")
 	mapperNameTwo := acctest.RandomWithPrefix("tf-acc")
@@ -181,7 +181,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_updateMapperNameForceNew(t *tes
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientIdOne := acctest.RandomWithPrefix("tf-acc")
 	clientIdTwo := acctest.RandomWithPrefix("tf-acc")
 
@@ -205,7 +205,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_updateClientIdForceNew(t *testi
 }
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientScopeOne := acctest.RandomWithPrefix("tf-acc")
 	clientScopeTwo := acctest.RandomWithPrefix("tf-acc")
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakHardcodedGroupIdentityProviderMapper_basic(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
@@ -31,7 +31,7 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
@@ -52,7 +52,7 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig(t *test
 }
 
 func TestAccKeycloakHardcodedGroupIdentityProviderMapper_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	var mapper = &keycloak.IdentityProviderMapper{}
 
@@ -84,7 +84,7 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_createAfterManualDestro
 }
 
 func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	var mapper = &keycloak.IdentityProviderMapper{}
 
@@ -117,7 +117,7 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig_createA
 }
 
 func TestAccKeycloakHardcodedGroupIdentityProviderMapper_basicUpdateAll(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	identityProviderAliasName := acctest.RandomWithPrefix("tf-acc")
 

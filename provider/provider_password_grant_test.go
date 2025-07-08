@@ -11,7 +11,7 @@ import (
 func TestAccKeycloakProvider_passwordGrant(t *testing.T) {
 	skipIfEnvNotSet(t, "KEYCLOAK_TEST_PASSWORD_GRANT")
 
-	//t.Parralel()
+	t.Parralel()
 
 	os.Setenv("KEYCLOAK_USER", "keycloak")
 	os.Setenv("KEYCLOAK_PASSWORD", "password")

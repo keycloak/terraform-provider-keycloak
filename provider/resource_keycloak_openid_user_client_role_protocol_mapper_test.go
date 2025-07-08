@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_basicClient(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -32,7 +32,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_basicClient(t *testing.T)
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_basicClientScope(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -52,7 +52,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_basicClientScope(t *testi
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_import(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -89,7 +89,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_update(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -116,7 +116,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	var mapper = &keycloak.OpenIdUserClientRoleProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -148,7 +148,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_createAfterManualDestroy(
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClaimValueType(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
@@ -166,7 +166,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClaimValueType(t 
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	updatedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -192,7 +192,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateClientIdForceNew(t 
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	newClientScopeId := acctest.RandomWithPrefix("tf-acc")
@@ -216,7 +216,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateClientScopeForceNew
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateRealmIdForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -241,7 +241,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_updateRealmIdForceNew(t *
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientAssignment(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	assignedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -265,7 +265,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientAssignment(t *testi
 }
 
 func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientAssignmentRolePrefix(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	assignedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")

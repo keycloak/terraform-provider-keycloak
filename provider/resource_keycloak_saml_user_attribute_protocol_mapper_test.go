@@ -14,7 +14,7 @@ import (
 // because the keycloak_saml_client_scope resource does not exist yet.
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_basicClient(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -34,7 +34,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_basicClient(t *testing.T) {
 }
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_import(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -60,7 +60,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_update(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -86,7 +86,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	var mapper = &keycloak.SamlUserAttributeProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -118,7 +118,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_createAfterManualDestroy(t *
 }
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_validateClaimValueType(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	invalidSamlNameFormat := acctest.RandomWithPrefix("tf-acc")
@@ -142,7 +142,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_validateClaimValueType(t *te
 }
 
 func TestAccKeycloakSamlUserAttributeProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	updatedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -167,7 +167,7 @@ func TestAccKeycloakSamlUserAttributeProtocolMapper_updateClientIdForceNew(t *te
 	})
 }
 func TestAccKeycloakSamlUserAttributeProtocolMapperHasChangingAttributes(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 

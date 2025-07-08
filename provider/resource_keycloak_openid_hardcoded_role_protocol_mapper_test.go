@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicRealmRole_client(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	role := acctest.RandomWithPrefix("tf-acc")
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -31,7 +31,7 @@ func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicRealmRole_client(t *t
 }
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicClientRole_client(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	clientIdForRole := acctest.RandomWithPrefix("tf-acc")
 	role := acctest.RandomWithPrefix("tf-acc")
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -53,7 +53,7 @@ func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicClientRole_client(t *
 }
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicRealmRole_clientScope(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	role := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -74,7 +74,7 @@ func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_basicRealmRole_clientScope
 }
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_import(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	role := acctest.RandomWithPrefix("tf-acc")
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
@@ -112,7 +112,7 @@ func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_update(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	roleOne := acctest.RandomWithPrefix("tf-acc")
 	roleTwo := acctest.RandomWithPrefix("tf-acc")
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -138,7 +138,7 @@ func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdHardcodedRoleProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 	var mapper = &keycloak.OpenIdHardcodedRoleProtocolMapper{}
 
 	role := acctest.RandomWithPrefix("tf-acc")

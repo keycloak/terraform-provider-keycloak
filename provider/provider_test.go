@@ -58,7 +58,7 @@ func init() {
 		}
 	}
 
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 5, "", false, userAgent, false, map[string]string{
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 120, "", false, userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 }
 
 func TestProvider(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	if err := testAccProvider.InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)

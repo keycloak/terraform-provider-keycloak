@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_basic(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	rsaName := acctest.RandomWithPrefix("tf-acc")
 
@@ -36,7 +36,7 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	var rsa = &keycloak.RealmKeystoreRsaGenerated{}
 
@@ -66,7 +66,7 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_createAfterManualDestroy(t *testin
 }
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_keySizeValidation(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	rsaName := acctest.RandomWithPrefix("tf-acc")
 
@@ -89,7 +89,7 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_keySizeValidation(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_algorithmValidation(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	algorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
 
@@ -112,7 +112,7 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_algorithmValidation(t *testing.T) 
 }
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_updateRsaKeystoreGenerated(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	enabled := randomBool()
 	active := randomBool()

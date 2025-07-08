@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakOpenidClientAuthorizationRolePolicy_basic(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
@@ -31,7 +31,7 @@ func TestAccKeycloakOpenidClientAuthorizationRolePolicy_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClientAuthorizationRolePolicy_multiple(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	var roleNames []string

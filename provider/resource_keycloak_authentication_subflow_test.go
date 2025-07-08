@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakAuthenticationSubFlow_basic(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	parentAuthFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
@@ -35,7 +35,7 @@ func TestAccKeycloakAuthenticationSubFlow_basic(t *testing.T) {
 }
 
 func TestAccKeycloakAuthenticationSubFlow_createAfterManualDestroy(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	var authenticationSubFlow = &keycloak.AuthenticationSubFlow{}
 
@@ -69,7 +69,7 @@ func TestAccKeycloakAuthenticationSubFlow_createAfterManualDestroy(t *testing.T)
 }
 
 func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlow(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAliasBefore := acctest.RandomWithPrefix("tf-acc")
@@ -99,7 +99,7 @@ func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlow(t *testing
 }
 
 func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowRequirement(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
@@ -135,7 +135,7 @@ func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowRequirement
 }
 
 func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowPriority(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
 		t.Skip()
@@ -168,7 +168,7 @@ func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowPriority(t 
 }
 
 func TestAccKeycloakAuthenticationSubFlow_createAuthenticationSubFlowPriority(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
 		t.Skip()
@@ -194,7 +194,7 @@ func TestAccKeycloakAuthenticationSubFlow_createAuthenticationSubFlowPriority(t 
 }
 
 func TestAccKeycloakAuthenticationSubFlowNested_updateAuthenticationPriority(t *testing.T) {
-	//t.Parralel()
+	t.Parralel()
 
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
 		t.Skip()
