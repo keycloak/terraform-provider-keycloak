@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceRealmKeys_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	dataSourceName := "data.keycloak_realm_keys.test_keys"
 
 	resource.Test(t, resource.TestCase{
@@ -25,7 +25,7 @@ func TestAccKeycloakDataSourceRealmKeys_basic(t *testing.T) {
 }
 
 func TestAccKeycloakDataSourceRealmKeys_filterByAlgorithms(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	dataSourceName := "data.keycloak_realm_keys.test_keys"
 
 	resource.Test(t, resource.TestCase{

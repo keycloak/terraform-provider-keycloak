@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakRole_basicRealm(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -35,7 +35,7 @@ func TestAccKeycloakRole_basicRealm(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicRealmUrlRoleName(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -58,7 +58,7 @@ func TestAccKeycloakRole_basicRealmUrlRoleName(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicClient(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
@@ -82,7 +82,7 @@ func TestAccKeycloakRole_basicClient(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicSamlClient(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
@@ -106,7 +106,7 @@ func TestAccKeycloakRole_basicSamlClient(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicRealmUpdate(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	descriptionOne := acctest.RandomWithPrefix("tf-acc")
 	descriptionTwo := acctest.RandomWithPrefix("tf-acc")
@@ -144,7 +144,7 @@ func TestAccKeycloakRole_basicRealmUpdate(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicClientUpdate(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	descriptionOne := acctest.RandomWithPrefix("tf-acc")
@@ -172,7 +172,7 @@ func TestAccKeycloakRole_basicClientUpdate(t *testing.T) {
 }
 
 func TestAccKeycloakRole_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var role = &keycloak.Role{}
 
 	roleName := acctest.RandomWithPrefix("tf-acc")
@@ -204,7 +204,7 @@ func TestAccKeycloakRole_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakRole_composites(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientOne := acctest.RandomWithPrefix("tf-acc")
 	clientTwo := acctest.RandomWithPrefix("tf-acc")
 	roleOne := acctest.RandomWithPrefix("tf-acc")
@@ -277,7 +277,7 @@ func TestAccKeycloakRole_composites(t *testing.T) {
 }
 
 func TestAccKeycloakRole_basicWithAttributes(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
@@ -305,7 +305,7 @@ func TestAccKeycloakRole_basicWithAttributes(t *testing.T) {
 }
 
 func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
@@ -341,7 +341,7 @@ func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
 }
 
 func TestAccKeycloakRole_import(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,

@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceOpenidClientScope_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_openid_client_scope.test"
 	resourceName := "keycloak_openid_client_scope.test"

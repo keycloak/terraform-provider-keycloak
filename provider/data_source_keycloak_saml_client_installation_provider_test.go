@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceSamlClientInstallationProvider_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resourceName := "keycloak_saml_client.saml_client"

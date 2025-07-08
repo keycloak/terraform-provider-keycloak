@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakAttributeImporterIdentityProviderMapper_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
 	userAttribute := acctest.RandomWithPrefix("tf-acc")
@@ -31,7 +31,7 @@ func TestAccKeycloakAttributeImporterIdentityProviderMapper_basic(t *testing.T) 
 }
 
 func TestAccKeycloakAttributeImporterIdentityProviderMapper_withExtraConfig(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	alias := acctest.RandomWithPrefix("tf-acc")
 	userAttribute := acctest.RandomWithPrefix("tf-acc")
@@ -52,7 +52,7 @@ func TestAccKeycloakAttributeImporterIdentityProviderMapper_withExtraConfig(t *t
 }
 
 func TestAccKeycloakAttributeImporterIdentityProviderMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var mapper = &keycloak.IdentityProviderMapper{}
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -84,7 +84,7 @@ func TestAccKeycloakAttributeImporterIdentityProviderMapper_createAfterManualDes
 }
 
 func TestAccKeycloakAttributeImporterIdentityProviderMapper_withExtraConfig_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var mapper = &keycloak.IdentityProviderMapper{}
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -117,7 +117,7 @@ func TestAccKeycloakAttributeImporterIdentityProviderMapper_withExtraConfig_crea
 }
 
 func TestAccKeycloakAttributeImporterIdentityProviderMapper_basicUpdateAll(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	identityProviderAliasName := acctest.RandomWithPrefix("tf-acc")
 
 	firstMapper := &keycloak.IdentityProviderMapper{

@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceOpenidClientAuthorizationPolicy_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_openid_client_authorization_policy.test"
 

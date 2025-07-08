@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakGenericRoleMapper_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	parentClientName := acctest.RandomWithPrefix("tf-acc")
 	parentRoleName := acctest.RandomWithPrefix("tf-acc")
@@ -30,7 +30,7 @@ func TestAccKeycloakGenericRoleMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	var role = &keycloak.Role{}
 	var childClient = &keycloak.GenericClient{}
@@ -66,7 +66,7 @@ func TestAccKeycloakGenericRoleMapper_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_import(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	parentClientName := acctest.RandomWithPrefix("tf-acc")
 	parentRoleName := acctest.RandomWithPrefix("tf-acc")
@@ -93,7 +93,7 @@ func TestAccKeycloakGenericRoleMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_basicClientScope(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	clientName := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
@@ -112,7 +112,7 @@ func TestAccKeycloakGenericRoleMapper_basicClientScope(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_importClientScope(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	clientName := acctest.RandomWithPrefix("tf-acc")
 	roleName := acctest.RandomWithPrefix("tf-acc")
@@ -139,7 +139,7 @@ func TestAccKeycloakGenericRoleMapper_importClientScope(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_basicClientScopeRealmRole(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -157,7 +157,7 @@ func TestAccKeycloakGenericRoleMapper_basicClientScopeRealmRole(t *testing.T) {
 }
 
 func TestAccKeycloakGenericRoleMapper_deleteIndividualMappers(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	var someRole = &keycloak.Role{}
 	var someOtherRole = &keycloak.Role{}

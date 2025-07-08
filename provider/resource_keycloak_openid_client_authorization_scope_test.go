@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccKeycloakOpenidClientAuthorizationScope_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	scopeName := acctest.RandomWithPrefix("tf-acc")
 
@@ -28,7 +28,7 @@ func TestAccKeycloakOpenidClientAuthorizationScope_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClientAuthorizationScope_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var authorizationScope = &keycloak.OpenidClientAuthorizationScope{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -58,7 +58,7 @@ func TestAccKeycloakOpenidClientAuthorizationScope_createAfterManualDestroy(t *t
 }
 
 func TestAccKeycloakOpenidClientAuthorizationScope_basicUpdateAll(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	firstAuthorizationScope := &keycloak.OpenidClientAuthorizationScope{

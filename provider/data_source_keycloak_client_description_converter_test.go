@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceClientDescriptionConverter_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_client_description_converter.test"
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_basicClient(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -31,7 +31,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_basicClient(t *testing.T) 
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_basicClientScope(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -51,7 +51,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_basicClientScope(t *testin
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_import(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -88,7 +88,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_update(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -114,7 +114,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_update(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var mapper = &keycloak.OpenIdUserAttributeProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -146,7 +146,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_createAfterManualDestroy(t
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClaimValueType(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
@@ -164,7 +164,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClaimValueType(t *
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	updatedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -190,7 +190,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_updateClientIdForceNew(t *
 }
 
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	newClientScopeId := acctest.RandomWithPrefix("tf-acc")

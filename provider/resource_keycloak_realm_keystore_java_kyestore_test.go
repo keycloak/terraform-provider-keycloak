@@ -13,7 +13,7 @@ import (
 )
 
 func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
@@ -37,7 +37,7 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	var javaKeystore = &keycloak.RealmKeystoreJavaKeystore{}
 
@@ -67,7 +67,7 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
 
@@ -90,7 +90,7 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	enabled := randomBool()
 	active := randomBool()

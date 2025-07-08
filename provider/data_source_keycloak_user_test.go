@@ -34,7 +34,7 @@ func TestAccKeycloakDataSourceUser(t *testing.T) {
 }
 
 func TestAccKeycloakDataSourceUser_gracefulError(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	username := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceAuthenticationFlow_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	alias := acctest.RandomWithPrefix("tf-acc")
 
@@ -56,7 +56,7 @@ func testAccCheckDataKeycloakAuthenticationFlow(resourceName string) resource.Te
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_wrongAlias(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	alias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

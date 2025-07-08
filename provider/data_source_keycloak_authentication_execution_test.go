@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
@@ -37,7 +37,7 @@ func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_errorNoExecutions(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -54,7 +54,7 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorNoExecutions(t *testi
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -72,7 +72,7 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basicWithPriority(t *testing.T) {
 	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
-	t.Parralel()
+	t.Parallel()
 
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 

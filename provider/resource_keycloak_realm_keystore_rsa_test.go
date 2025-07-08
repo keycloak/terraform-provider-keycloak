@@ -21,7 +21,7 @@ import (
 )
 
 func TestAccKeycloakRealmKeystoreRsa_basic(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	rsaName := acctest.RandomWithPrefix("tf-acc")
 	privateKey, certificate := generateKeyAndCert(2048)
@@ -46,7 +46,7 @@ func TestAccKeycloakRealmKeystoreRsa_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreRsa_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	var keystoreRsa = &keycloak.RealmKeystoreRsa{}
 
@@ -77,7 +77,7 @@ func TestAccKeycloakRealmKeystoreRsa_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakRealmKeystoreRsa_algorithmValidation(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 
 	rsaAlgorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
 	rsaEncAlgorithm := randomStringInSlice(keycloakRealmKeystoreRsaEncAlgorithm)

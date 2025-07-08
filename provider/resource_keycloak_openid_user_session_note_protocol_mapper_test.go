@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClient(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -32,7 +32,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClient(t *testing.T
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClientScope(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -52,7 +52,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClientScope(t *test
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_import(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -89,7 +89,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_import(t *testing.T) {
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClaim(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -116,7 +116,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClaim(t *testing.T
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateNote(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
@@ -143,7 +143,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateNote(t *testing.T)
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_createAfterManualDestroy(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	var mapper = &keycloak.OpenIdUserSessionNoteProtocolMapper{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -175,7 +175,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_createAfterManualDestroy
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClaimValueType(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
@@ -193,7 +193,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClaimValueType(t
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientIdForceNew(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	updatedClientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -219,7 +219,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientIdForceNew(t
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientScopeForceNew(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	newClientScopeId := acctest.RandomWithPrefix("tf-acc")
@@ -243,7 +243,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientScopeForceNe
 }
 
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateRealmIdForceNew(t *testing.T) {
-	t.Parralel()
+	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
