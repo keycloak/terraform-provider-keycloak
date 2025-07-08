@@ -131,6 +131,7 @@ resource keycloak_openid_client_role_policy test {
 	decision_strategy = "AFFIRMATIVE"
 	logic = "POSITIVE"
 	type = "role"
+	fetch_roles = true
 	role  {
 		id = keycloak_role.test.id
 		required = false
