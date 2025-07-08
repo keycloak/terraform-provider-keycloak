@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -95,7 +96,7 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 		Type:             "role",
 		Roles:            rolesList,
 		Description:      data.Get("description").(string),
-		FetchRoles:       data.Get("fetch_roles").(string),
+		FetchRoles:       data.Get("fetch_roles").(bool),
 	}
 
 	return &resource
