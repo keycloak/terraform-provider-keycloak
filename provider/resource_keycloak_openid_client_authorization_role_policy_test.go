@@ -104,7 +104,8 @@ func testResourceKeycloakOpenidClientAuthorizationRolePolicyExists(resourceName 
 }
 
 func testResourceKeycloakOpenidClientAuthorizationRolePolicy_basic(roleName, clientId string) string {
-	return fmt.Sprintf(`
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); ok {
+		return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
@@ -138,6 +139,41 @@ resource keycloak_openid_client_role_policy test {
 	}
 }
 	`, testAccRealm.Realm, roleName, clientId)
+	} else {
+		return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource keycloak_openid_client test {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+	authorization {
+		policy_enforcement_mode = "ENFORCING"
+	}
+}
+
+resource "keycloak_role" "test" {
+	realm_id    = data.keycloak_realm.realm.id
+	name        = "%s"
+}
+
+resource keycloak_openid_client_role_policy test {
+	resource_server_id = keycloak_openid_client.test.resource_server_id
+	realm_id = data.keycloak_realm.realm.id
+	name = "keycloak_openid_client_role_policy"
+	decision_strategy = "AFFIRMATIVE"
+	logic = "POSITIVE"
+	type = "role"
+	role  {
+		id = keycloak_role.test.id
+		required = false
+	}
+}
+	`, testAccRealm.Realm, roleName, clientId)
+	}
 }
 
 func testResourceKeycloakOpenidClientAuthorizationRolePolicy_multipleRoles(roleNames []string, clientId string) string {
@@ -160,7 +196,8 @@ resource "keycloak_role" "role_%d" {
 `, i))
 	}
 
-	return fmt.Sprintf(`
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); ok {
+		return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
@@ -190,4 +227,35 @@ resource keycloak_openid_client_role_policy test {
 
 }
 	`, testAccRealm.Realm, clientId, roles.String(), rolePolicies.String())
+	} else {
+		return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource keycloak_openid_client test {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+	authorization {
+		policy_enforcement_mode = "ENFORCING"
+	}
+}
+
+%s
+
+resource keycloak_openid_client_role_policy test {
+	resource_server_id = keycloak_openid_client.test.resource_server_id
+	realm_id = data.keycloak_realm.realm.id
+	name = "keycloak_openid_client_role_policy"
+	decision_strategy = "AFFIRMATIVE"
+	logic = "POSITIVE"
+	type = "role"
+
+%s
+
+}
+	`, testAccRealm.Realm, clientId, roles.String(), rolePolicies.String())
+	}
 }
