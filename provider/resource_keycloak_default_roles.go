@@ -79,6 +79,15 @@ func resourceKeycloakDefaultRolesRead(ctx context.Context, data *schema.Resource
 func resourceKeycloakDefaultRolesReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if ok, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_13); !ok && err == nil {
+		return diag.Diagnostics{{
+			Severity: diag.Error,
+			Summary:  "this resource requires Keycloak v13 or higher",
+		}}
+	} else if err != nil {
+		return diag.FromErr(err)
+	}
+
 	local := getDefaultRolesFromData(data)
 	localDefaultRoles := make(map[string]struct{}, len(local.DefaultRoles))
 	for _, defaultRole := range local.DefaultRoles {
