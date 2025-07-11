@@ -215,39 +215,7 @@ resource "keycloak_role" "role_%d" {
 `, i))
 	}
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); ok {
-		return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource keycloak_openid_client test {
-	client_id                = "%s"
-	realm_id                 = data.keycloak_realm.realm.id
-	access_type              = "CONFIDENTIAL"
-	service_accounts_enabled = true
-	authorization {
-		policy_enforcement_mode = "ENFORCING"
-	}
-}
-
-%s
-
-resource keycloak_openid_client_role_policy test {
-	resource_server_id = keycloak_openid_client.test.resource_server_id
-	realm_id = data.keycloak_realm.realm.id
-	name = "keycloak_openid_client_role_policy"
-	decision_strategy = "AFFIRMATIVE"
-	logic = "POSITIVE"
-	type = "role"
-	fetch_roles = true
-
-%s
-
-}
-	`, testAccRealm.Realm, clientId, roles.String(), rolePolicies.String())
-	} else {
-		return fmt.Sprintf(`
+	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
@@ -276,5 +244,4 @@ resource keycloak_openid_client_role_policy test {
 
 }
 	`, testAccRealm.Realm, clientId, roles.String(), rolePolicies.String())
-	}
 }
