@@ -52,7 +52,7 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicy() *schema.Resource {
 			"fetch_roles": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				// Computed: true,
+				Default:  false,
 			},
 			"role": {
 				Type:     schema.TypeSet,
@@ -98,7 +98,6 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 		Type:             "role",
 		Roles:            rolesList,
 		Description:      data.Get("description").(string),
-		// FetchRoles:       data.Get("fetch_roles").(bool),
 	}
 
 	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
@@ -110,7 +109,7 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 	return &resource
 }
 
-func setOpenidClientAuthorizationRolePolicyResourceData(ctx context.Context, data *schema.ResourceData, policy *keycloak.OpenidClientAuthorizationRolePolicy, keycloakVersion *version.Version) {
+func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceData, policy *keycloak.OpenidClientAuthorizationRolePolicy, keycloakVersion *version.Version) {
 	data.SetId(policy.Id)
 
 	data.Set("resource_server_id", policy.ResourceServerId)
@@ -121,7 +120,7 @@ func setOpenidClientAuthorizationRolePolicyResourceData(ctx context.Context, dat
 	data.Set("type", policy.Type)
 	data.Set("description", policy.Description)
 
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
 		data.Set("fetch_roles", policy.FetchRoles)
 	}
 
@@ -152,7 +151,7 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicyCreate(ctx context.Conte
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(ctx, data, resource, keycloakVersion)
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return resourceKeycloakOpenidClientAuthorizationRolePolicyRead(ctx, data, meta)
 }
@@ -173,7 +172,7 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicyRead(ctx context.Context
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(ctx, data, resource, keycloakVersion)
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return nil
 }
@@ -192,7 +191,7 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicyUpdate(ctx context.Conte
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(ctx, data, resource, keycloakVersion)
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return nil
 }

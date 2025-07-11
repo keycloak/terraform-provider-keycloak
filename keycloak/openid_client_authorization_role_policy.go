@@ -16,7 +16,7 @@ type OpenidClientAuthorizationRolePolicy struct {
 	Type             string                          `json:"type"`
 	Roles            []OpenidClientAuthorizationRole `json:"roles,omitempty"`
 	Description      string                          `json:"description"`
-	// FetchRoles       bool                            `json:"fetchRoles"`
+	FetchRoles       bool                            `json:"fetchRoles"`
 }
 
 type OpenidClientAuthorizationRole struct {
