@@ -1,3 +1,59 @@
+## What's Changed
+
+## 5.3.0 (July 11, 2025)
+
+FEATURES:
+
+* Add support for ephemeral/write-only arguments for keycloak_oidc_identity_provider & keycloak_openid_client by @refucktor in https://github.com/keycloak/terraform-provider-keycloak/pull/1190
+* Update to KC26.2.5 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1214
+* Add support for Standard Token Exchange configuration in OpenID Clients by @sventorben in https://github.com/keycloak/terraform-provider-keycloak/pull/1189
+* Feat: support organization feature by @tuankiettruong in https://github.com/keycloak/terraform-provider-keycloak/pull/1209
+* feat: Enable importing user by username by @viniciusd in https://github.com/keycloak/terraform-provider-keycloak/pull/1113
+* expose EnableStandardTokenExchange  and allow refresh token in standard token exchange in keycloak_openid_client  by @KyriosGN0 in https://github.com/keycloak/terraform-provider-keycloak/pull/1229
+* feat: Add new resources for realm client policy profiles by @laureat-natzka in https://github.com/keycloak/terraform-provider-keycloak/pull/1138
+* Openid client secret rotation by @laureat-natzka in https://github.com/keycloak/terraform-provider-keycloak/pull/1234
+* 1235 update for KC26.3.0 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1236
+* feat: support role IDs in default role resource by @horus in https://github.com/keycloak/terraform-provider-keycloak/pull/764
+
+IMPROVEMENTS:
+
+* feat(protocol-mapper): add "add to token introspection" flag for realm role protocol mapper by @maxjoehnk in https://github.com/keycloak/terraform-provider-keycloak/pull/947
+* Add support for disableTypeClaimCheck by @ybasket in https://github.com/keycloak/terraform-provider-keycloak/pull/1181
+* optimize resolving `ParentId` property with group-by-path API by @kherock in https://github.com/keycloak/terraform-provider-keycloak/pull/1225
+* Use the ID from the user imported via username by @viniciusd in https://github.com/keycloak/terraform-provider-keycloak/pull/1228
+* 1242 update to KC26.3.1 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1243
+* chore(deps): bump dario.cat/mergo from 1.0.1 to 1.0.2 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1196
+* chore(deps): bump golang.org/x/net from 0.39.0 to 0.40.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1197
+* chore(deps): bump org.jetbrains.kotlin.jvm from 2.1.20 to 2.1.21 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1203
+* chore(deps): bump github.com/hashicorp/terraform-plugin-sdk/v2 from 2.36.1 to 2.37.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1202
+* chore(deps): bump gradle/actions from 4.3.1 to 4.4.0 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1204
+* chore(deps): bump golang.org/x/net from 0.40.0 to 0.41.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1216
+* chore(deps): bump github.com/cloudflare/circl from 1.6.0 to 1.6.1 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1219
+* chore(deps): bump gradle/actions from 4.4.0 to 4.4.1 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1220
+* chore(deps): bump org.jetbrains.kotlin.jvm from 2.1.21 to 2.2.0 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1231
+* chore(deps): bump com.gradleup.shadow from 8.3.6 to 8.3.7 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1230
+* chore(deps): bump github.com/hashicorp/go-retryablehttp from 0.7.7 to 0.7.8 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1224
+* chore(deps): bump com.gradleup.shadow from 8.3.7 to 8.3.8 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1237
+
+BUG FIXES:
+
+* Docs: Updated Markdown to format correctly by @bubbletroubles in https://github.com/keycloak/terraform-provider-keycloak/pull/1201
+* Removed feature override so KC_FEATURES environment variable is used … by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1232
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [refucktor](https://github.com/refucktor)
+- [bubbletroubles](https://github.com/bubbletroubles)
+- [sventorben](https://github.com/sventorben)
+- [maxjoehnk](https://github.com/maxjoehnk)
+- [ybasket](https://github.com/ybasket)
+- [kherock](https://github.com/kherock)
+- [tuankiettruong](https://github.com/tuankiettruong)
+- [viniciusd](https://github.com/viniciusd)
+- [KyriosGN0](https://github.com/KyriosGN0)
+- [laureat-natzka](https://github.com/laureat-natzka)
+- [horus](https://github.com/horus)
+
 ## 5.2.0 (April 14, 2025)
 
 FEATURES:
