@@ -2,6 +2,8 @@ package provider
 
 import (
 	"dario.cat/mergo"
+	"errors"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -45,10 +47,27 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Description: "Client ID.",
 		},
 		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			Description:   "Client Secret.",
+			ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version"},
+		},
+		"client_secret_wo": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{"client_secret"},
+			RequiredWith:  []string{"client_secret_wo_version"},
+			Description:   "Client Secret as write-only argument",
+		},
+		"client_secret_wo_version": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			ConflictsWith: []string{"client_secret"},
+			RequiredWith:  []string{"client_secret_wo"},
+			Description:   "Version of the Client secret write-only argument",
 		},
 		"user_info_url": {
 			Type:        schema.TypeString,
@@ -110,12 +129,22 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "The issuer identifier for the issuer of the response. If not provided, no validation will be performed.",
 		},
+		"disable_type_claim_check": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Disables the validation of the `typ` claim of tokens received from the Identity Provider. If this is `off` the type claim is validated (default).",
+		},
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcSchema)
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.ValidateRawResourceConfigFuncs = []schema.ValidateRawResourceConfigFunc{
+		// validate that argument is required if none of the checkExists attributes exist
+		requiredWithoutAll(cty.GetAttrPath("client_secret"), []cty.Path{cty.GetAttrPath("client_secret_wo"), cty.GetAttrPath("client_secret_wo_version")}),
+	}
 	return oidcResource
 }
 
@@ -141,9 +170,19 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		Issuer:                      data.Get("issuer").(string),
+		DisableTypeClaimCheck:       types.KeycloakBoolQuoted(data.Get("disable_type_claim_check").(bool)),
 
 		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
 		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
+	}
+
+	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
+		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
+		if clientSecretWriteOnlyDiags.HasError() {
+			return nil, errors.New("error reading 'client_secret_wo' argument")
+		}
+
+		oidcIdentityProviderConfig.ClientSecret = clientSecretWriteOnly.AsString()
 	}
 
 	if err := mergo.Merge(oidcIdentityProviderConfig, defaultConfig); err != nil {
@@ -169,7 +208,11 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("ui_locales", identityProvider.Config.UILocales)
 	data.Set("issuer", identityProvider.Config.Issuer)
+	data.Set("disable_type_claim_check", identityProvider.Config.DisableTypeClaimCheck)
 
+	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+		data.Set("client_secret_wo_version", v.(int))
+	}
 	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
 		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
 		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)

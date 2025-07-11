@@ -2,14 +2,15 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
-	"regexp"
-	"strconv"
-	"testing"
 )
 
 func TestAccKeycloakOidcIdentityProvider_basic(t *testing.T) {
@@ -130,6 +131,29 @@ func TestAccKeycloakOidcIdentityProvider_keyDefaultScopes(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcIdentityProvider_linkOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_linkOrganization(oidcName, organizationName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					testAccCheckKeycloakOidcIdentityProviderLinkOrganization("keycloak_oidc_identity_provider.oidc"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcIdentityProvider_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -215,6 +239,35 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnly(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWOVersion := 1
+
+	// the keycloak client is obfuscating the client_secret value, therefore we can't assert its value
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// test CREATION of the client_secret via write-only attribute
+				Config: testKeycloakOidcIdentityProvider_clientSecretWriteOnly(oidcName, clientSecretWO, clientSecretWOVersion),
+				Check: resource.ComposeTestCheckFunc(
+					// assert openid client against the Keycloak's API response (value SHOULD be the new one)
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+
+					// assert openid client against the Terraform state (client_secret value SHOULD NOT be stored in state)
+					resource.TestCheckNoResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOidcIdentityProviderExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
@@ -264,6 +317,21 @@ func testAccCheckKeycloakOidcIdentityProviderDefaultScopes(resourceName, value s
 
 		if fetchedOidc.Config.DefaultScope != value {
 			return fmt.Errorf("expected oidc provider to have value %s for key 'defaultScope', but value was %s", value, fetchedOidc.Config.DefaultScope)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOidcIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if fetchedOidc.OrganizationId == "" {
+			return fmt.Errorf("expected oidc provider to be linked with an organization, but it was not")
 		}
 
 		return nil
@@ -385,4 +453,57 @@ resource "keycloak_oidc_identity_provider" "oidc" {
     hide_on_login_page = %t
 }
 	`, testAccRealm.Realm, oidc.Alias, oidc.Enabled, oidc.Config.AuthorizationUrl, oidc.Config.TokenUrl, oidc.Config.ClientId, oidc.Config.ClientSecret, oidc.Config.GuiOrder, oidc.Config.SyncMode, bool(oidc.Config.HideOnLoginPage))
+}
+
+func testKeycloakOidcIdentityProvider_linkOrganization(oidc, organizationName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm   = data.keycloak_realm.realm.id
+	name    = "%s"
+	enabled = true
+
+	domain {
+		name     = "example.com"
+		verified = true
+ 	}
+}
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	issuer = "hello"
+
+	organization_id 				= keycloak_organization.org.id
+	org_domain 						= "example.com"
+	org_redirect_mode_email_matches = true
+}
+	`, testAccRealm.Realm, organizationName, oidc)
+}
+
+func testKeycloakOidcIdentityProvider_clientSecretWriteOnly(oidc, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             		 = data.keycloak_realm.realm.id
+	alias             		 = "%s"
+	authorization_url 		 = "https://example.com/auth"
+	token_url         		 = "https://example.com/token"
+	client_id         		 = "example_id"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = "%d"
+
+	issuer = "hello"
+}
+	`, testAccRealm.Realm, oidc, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }
