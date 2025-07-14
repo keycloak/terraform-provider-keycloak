@@ -52,6 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
+          - '26.3.1'
           - '26.2.5'
           - '26.1.4'
           - '26.0.8'
@@ -77,7 +78,7 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # version v3.1.2
         with:
           terraform_wrapper: false
-          terraform_version: 1.11.1
+          terraform_version: 1.12.2
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # version v4.4.1
@@ -88,23 +89,25 @@ jobs:
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.3.1" || "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           fi
-          if [[ "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.3.1" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
           fi
 
           docker run -d --name keycloak \
           -p 8080:8080 \
           -e KC_DB=dev-mem \
-          -e KC_LOG_LEVEL=INFO \
+          -e KC_LOG_LEVEL=INFO,org.keycloak:debug \
           -e KEYCLOAK_ADMIN=keycloak \
           -e KEYCLOAK_ADMIN_PASSWORD=password \
           -e KC_FEATURES=preview${EXTRA_FEATURES} \
+          -e QUARKUS_HTTP_ACCESS_LOG_ENABLED=true \
+          -e QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true \
           -v $PWD/provider/misc:/opt/keycloak/misc:z \
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
-          quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} start-dev
+          quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev
 
       - name: Initialize Keycloak
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
@@ -131,7 +134,12 @@ jobs:
           KEYCLOAK_TEST_PASSWORD_GRANT: "true"
           KEYCLOAK_VERSION: ${{ steps.keycloak-version.outputs.result }}
         timeout-minutes: 60
+
+      - name: Print container logs
+        if: always()
+        run: docker logs keycloak
       - name: Clean up
+        if: always()
         run: |
           docker stop keycloak
           docker rm keycloak

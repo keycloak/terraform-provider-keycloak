@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"reflect"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
@@ -29,35 +30,26 @@ func resourceKeycloakDefaultRoles() *schema.Resource {
 			"default_roles": {
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Realm level roles assigned to new users.",
+				Description: "Realm level roles (name) assigned to new users.",
 				Required:    true,
 			},
 		},
 	}
 }
 
-func mapFromDataToDefaultRoles(data *schema.ResourceData) *keycloak.DefaultRoles {
-	defaultRolesList := make([]string, 0)
+func getDefaultRolesFromData(data *schema.ResourceData) *keycloak.DefaultRoles {
+	var defaultRolesList []string
 	if v, ok := data.GetOk("default_roles"); ok {
 		for _, defaultRole := range v.(*schema.Set).List() {
 			defaultRolesList = append(defaultRolesList, defaultRole.(string))
 		}
 	}
-
 	defaultRoles := &keycloak.DefaultRoles{
 		Id:           data.Id(),
 		RealmId:      data.Get("realm_id").(string),
 		DefaultRoles: defaultRolesList,
 	}
-
 	return defaultRoles
-}
-
-func mapFromDefaultRolesToData(data *schema.ResourceData, defaultRoles *keycloak.DefaultRoles) {
-	data.SetId(defaultRoles.Id)
-
-	data.Set("realm_id", defaultRoles.RealmId)
-	data.Set("default_roles", defaultRoles.DefaultRoles)
 }
 
 func resourceKeycloakDefaultRolesRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -71,16 +63,16 @@ func resourceKeycloakDefaultRolesRead(ctx context.Context, data *schema.Resource
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	defaultRoleNamesList := getDefaultRoleNames(composites)
-
-	defaultRoles := &keycloak.DefaultRoles{
-		Id:           id,
-		RealmId:      realmId,
-		DefaultRoles: defaultRoleNamesList,
+	var defaultRoleNames []string
+	for _, composite := range composites {
+		name, err := keycloakClient.GetQualifiedRoleName(ctx, realmId, composite)
+		if err != nil {
+			return handleNotFoundError(ctx, err, data)
+		}
+		defaultRoleNames = append(defaultRoleNames, name)
 	}
 
-	mapFromDefaultRolesToData(data, defaultRoles)
-
+	data.Set("default_roles", defaultRoleNames)
 	return nil
 }
 
@@ -96,17 +88,20 @@ func resourceKeycloakDefaultRolesReconcile(ctx context.Context, data *schema.Res
 		return diag.FromErr(err)
 	}
 
-	defaultRoles := mapFromDataToDefaultRoles(data)
+	local := getDefaultRolesFromData(data)
+	localDefaultRoles := make(map[string]struct{}, len(local.DefaultRoles))
+	for _, defaultRole := range local.DefaultRoles {
+		localDefaultRoles[defaultRole] = struct{}{}
+	}
 
-	realm, err := keycloakClient.GetRealm(ctx, defaultRoles.RealmId)
+	realm, err := keycloakClient.GetRealm(ctx, local.RealmId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
 	if realm == nil {
 		return diag.Diagnostics{{
 			Severity: diag.Error,
-			Summary:  "realm not found: " + defaultRoles.RealmId,
+			Summary:  "realm not found: " + local.RealmId,
 		}}
 	}
 	if realm.DefaultRole == nil || realm.DefaultRole.Id == "" {
@@ -114,51 +109,66 @@ func resourceKeycloakDefaultRolesReconcile(ctx context.Context, data *schema.Res
 			Severity: diag.Error,
 			Summary:  "realm does not have a default role",
 		}}
-
 	}
 
 	data.SetId(realm.DefaultRole.Id)
 
-	composites, err := keycloakClient.GetDefaultRoles(ctx, defaultRoles.RealmId, realm.DefaultRole.Id)
+	composites, err := keycloakClient.GetDefaultRoles(ctx, local.RealmId, realm.DefaultRole.Id)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	defaultRoleNamesList := getDefaultRoleNames(composites)
-	rolesList, err := keycloakClient.GetRealmRoles(ctx, defaultRoles.RealmId)
-	if err != nil {
-		return diag.FromErr(err)
+	currentDefaultRoles := make([]string, len(composites))
+	defaultRolesMap := make(map[string]*keycloak.Role, len(composites))
+
+	for i, composite := range composites {
+		name, err := keycloakClient.GetQualifiedRoleName(ctx, local.RealmId, composite)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		currentDefaultRoles[i] = name
+		defaultRolesMap[name] = composite
 	}
 
 	// skip if actual default roles in keycloak same as we want
-	if roleListsEqual(defaultRoleNamesList, defaultRoles.DefaultRoles) {
+	if reflect.DeepEqual(currentDefaultRoles, local.DefaultRoles) {
 		return nil
 	}
 
+	getRole := func(roleName string) (*keycloak.Role, error) {
+		var clientId string
+		if parts := strings.Split(roleName, "/"); len(parts) == 2 {
+			client, err := keycloakClient.GetGenericClientByClientId(ctx, local.RealmId, parts[0])
+			if err != nil {
+				return nil, err
+			}
+			clientId, roleName = client.Id, parts[1]
+		}
+		return keycloakClient.GetRoleByName(ctx, local.RealmId, clientId, roleName)
+	}
+
 	var putList, deleteList []*keycloak.Role
-	for _, roleName := range defaultRoles.DefaultRoles {
-		if !roleListContains(defaultRoleNamesList, roleName) {
-			defaultRoles, err := getRoleByNameFromList(rolesList, roleName)
+
+	for _, roleName := range local.DefaultRoles {
+		if _, ok := defaultRolesMap[roleName]; !ok {
+			role, err := getRole(roleName)
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			putList = append(putList, defaultRoles)
+			putList = append(putList, role)
 		}
 	}
-	for _, roleName := range defaultRoleNamesList {
-		if !roleListContains(defaultRoles.DefaultRoles, roleName) {
-			defaultRoles, err := getRoleByNameFromList(rolesList, roleName)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			deleteList = append(deleteList, defaultRoles)
+
+	for _, roleName := range currentDefaultRoles {
+		if _, ok := localDefaultRoles[roleName]; !ok {
+			deleteList = append(deleteList, defaultRolesMap[roleName])
 		}
 	}
 
 	// apply if not empty
 	if len(putList) > 0 {
 		role := &keycloak.Role{
-			RealmId: defaultRoles.RealmId,
+			RealmId: local.RealmId,
 			Id:      realm.DefaultRole.Id,
 		}
 		err := keycloakClient.AddCompositesToRole(ctx, role, putList)
@@ -166,9 +176,10 @@ func resourceKeycloakDefaultRolesReconcile(ctx context.Context, data *schema.Res
 			return diag.FromErr(err)
 		}
 	}
+
 	if len(deleteList) > 0 {
 		role := &keycloak.Role{
-			RealmId: defaultRoles.RealmId,
+			RealmId: local.RealmId,
 			Id:      realm.DefaultRole.Id,
 		}
 		err := keycloakClient.RemoveCompositesFromRole(ctx, role, deleteList)
@@ -214,7 +225,7 @@ func resourceKeycloakDefaultRolesImport(ctx context.Context, d *schema.ResourceD
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("Invalid import. Supported import format: {{realm}}/{{defaultRoleId}}.")
+		return nil, fmt.Errorf("invalid import, supported import format: {{realm}}/{{defaultRoleId}}")
 	}
 
 	_, err := keycloakClient.GetDefaultRoles(ctx, parts[0], parts[1])
@@ -231,42 +242,4 @@ func resourceKeycloakDefaultRolesImport(ctx context.Context, d *schema.ResourceD
 	}
 
 	return []*schema.ResourceData{d}, nil
-}
-
-func getDefaultRoleNames(roles []*keycloak.Role) []string {
-	var defaultRolesNames []string
-	for _, defaultRoles := range roles {
-		defaultRolesNames = append(defaultRolesNames, defaultRoles.Name)
-	}
-	return defaultRolesNames
-}
-
-func getRoleByNameFromList(defaultRoles []*keycloak.Role, name string) (*keycloak.Role, error) {
-	for _, element := range defaultRoles {
-		if element.Name == name {
-			return element, nil
-		}
-	}
-	return nil, fmt.Errorf("defaultRoles not found by name")
-}
-
-func roleListContains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-func roleListsEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
 }

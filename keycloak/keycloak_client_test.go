@@ -2,10 +2,11 @@ package keycloak
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 )
 
 var requiredEnvironmentVariables = []string{
@@ -48,7 +49,7 @@ func TestAccKeycloakApiClientRefresh(t *testing.T) {
 		t.Fatal("KEYCLOAK_CLIENT_TIMEOUT must be an integer")
 	}
 
-	keycloakClient, err := NewKeycloakClient(ctx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), true, clientTimeout, "", false, "", false, map[string]string{
+	keycloakClient, err := NewKeycloakClient(ctx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), "", "", "", "", true, clientTimeout, "", false, "", false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {
