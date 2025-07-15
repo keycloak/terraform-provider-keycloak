@@ -53,10 +53,13 @@ resource "keycloak_generic_protocol_mapper" "saml_hardcode_attribute_mapper" {
 
 ## Import
 
-Protocol mappers can be imported using the following format: `{{realm_id}}/client/{{client_keycloak_id}}/{{protocol_mapper_id}}`
+Protocol mappers can be imported using the following format:
+- Client: `{{realm_id}}/client/{{client_keycloak_id}}/{{protocol_mapper_id}}`
+- Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/{{protocol_mapper_id}}`
 
 Example:
 
 ```bash
 $ terraform import keycloak_generic_protocol_mapper.saml_hardcode_attribute_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/71602afa-f7d1-4788-8c49-ef8fd00af0f4
+$ terraform import keycloak_generic_protocol_mapper.saml_hardcode_attribute_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/71602afa-f7d1-4788-8c49-ef8fd00af0f4
 ```
