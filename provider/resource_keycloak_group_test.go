@@ -24,7 +24,7 @@ func TestAccKeycloakGroup_basic(t *testing.T) {
 func TestAccKeycloakGroup_basicGroupNameContainsBackSlash(t *testing.T) {
 	t.Parallel()
 
-	groupName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
@@ -56,7 +56,7 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 
 	var group = &keycloak.Group{}
 
-	groupName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
@@ -89,8 +89,8 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 	t.Parallel()
 
-	groupNameBefore := acctest.RandomWithPrefix("tf-acc")
-	groupNameAfter := acctest.RandomWithPrefix("tf-acc")
+	groupNameBefore := acctest.RandomWithPrefix("tf-acc/")
+	groupNameAfter := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
@@ -120,7 +120,7 @@ func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 func TestAccKeycloakGroup_updateRealm(t *testing.T) {
 	t.Parallel()
 
-	group := acctest.RandomWithPrefix("tf-acc")
+	group := acctest.RandomWithPrefix("tf-acc/")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -148,9 +148,9 @@ func TestAccKeycloakGroup_updateRealm(t *testing.T) {
 func TestAccKeycloakGroup_nested(t *testing.T) {
 	t.Parallel()
 
-	parentGroupName := acctest.RandomWithPrefix("tf-acc")
-	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
-	secondChildGroupName := acctest.RandomWithPrefix("tf-acc")
+	parentGroupName := acctest.RandomWithPrefix("tf-acc/")
+	firstChildGroupName := acctest.RandomWithPrefix("tf-acc/")
+	secondChildGroupName := acctest.RandomWithPrefix("tf-acc/")
 
 	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
 }
@@ -158,9 +158,9 @@ func TestAccKeycloakGroup_nested(t *testing.T) {
 func TestAccKeycloakGroup_nestedGroupNameContainsBackSlash(t *testing.T) {
 	t.Parallel()
 
-	parentGroupName := acctest.RandomWithPrefix("tf-acc")
-	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
-	secondChildGroupName := acctest.RandomWithPrefix("tf-acc")
+	parentGroupName := acctest.RandomWithPrefix("tf-acc/")
+	firstChildGroupName := acctest.RandomWithPrefix("tf-acc/")
+	secondChildGroupName := acctest.RandomWithPrefix("tf-acc/")
 
 	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
 }
