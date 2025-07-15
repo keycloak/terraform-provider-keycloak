@@ -41,18 +41,17 @@ type KeycloakClient struct {
 }
 
 type ClientCredentials struct {
-	ClientId            string
-	ClientSecret        string
-	ClientAssertionType string
-	ClientAssertion     string
-	JWTSigningKey       string
-	JWTSigningAlg       string
-	Username            string
-	Password            string
-	GrantType           string
-	AccessToken         string `json:"access_token"`
-	RefreshToken        string `json:"refresh_token"`
-	TokenType           string `json:"token_type"`
+	ClientId        string
+	ClientSecret    string
+	ClientAssertion string
+	JWTSigningKey   string
+	JWTSigningAlg   string
+	Username        string
+	Password        string
+	GrantType       string
+	AccessToken     string `json:"access_token"`
+	RefreshToken    string `json:"refresh_token"`
+	TokenType       string `json:"token_type"`
 }
 
 const (
@@ -67,14 +66,13 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password, clientAssertionType, clientAssertion, jwtSigningAlg, jwtSigningKey string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password, clientAssertion, jwtSigningAlg, jwtSigningKey string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	// TODOs: generate client assertion if key is set and clientAssertion is not provided
 	clientCredentials := &ClientCredentials{
-		ClientId:            clientId,
-		ClientSecret:        clientSecret,
-		ClientAssertionType: clientAssertionType,
-		JWTSigningKey:       jwtSigningKey,
-		JWTSigningAlg:       jwtSigningAlg,
+		ClientId:      clientId,
+		ClientSecret:  clientSecret,
+		JWTSigningKey: jwtSigningKey,
+		JWTSigningAlg: jwtSigningAlg,
 	}
 
 	if clientAssertion != "" {
@@ -295,7 +293,7 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData(kc_url string) (
 
 	} else if keycloakClient.clientCredentials.GrantType == "client_credentials" {
 		if keycloakClient.clientCredentials.ClientAssertion != "" {
-			authenticationFormData.Set("client_assertion_type", keycloakClient.clientCredentials.ClientAssertionType)
+			authenticationFormData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 			authenticationFormData.Set("client_assertion", keycloakClient.clientCredentials.ClientAssertion)
 		} else if keycloakClient.clientCredentials.JWTSigningKey != "" {
 			signedJWT, err := newSignedJWT(
@@ -307,7 +305,7 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData(kc_url string) (
 			if err != nil {
 				return nil, fmt.Errorf("failed to create signed JWT: %v", err)
 			}
-			authenticationFormData.Set("client_assertion_type", keycloakClient.clientCredentials.ClientAssertionType)
+			authenticationFormData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 			authenticationFormData.Set("client_assertion", signedJWT)
 		} else {
 			authenticationFormData.Set("client_secret", keycloakClient.clientCredentials.ClientSecret)

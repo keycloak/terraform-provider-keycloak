@@ -149,11 +149,6 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_PASSWORD", nil),
 			},
-			"client_assertion_type": {
-				Optional: true,
-				Type:     schema.TypeString,
-				Default:  "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-			},
 			"client_assertion": {
 				Optional: true,
 				Type:     schema.TypeString,
@@ -239,7 +234,6 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		clientSecret := data.Get("client_secret").(string)
 		username := data.Get("username").(string)
 		password := data.Get("password").(string)
-		clientAssertiontype := data.Get("client_assertion_type").(string)
 		clientAssertion := data.Get("client_assertion").(string)
 		jwtSigningAlg := data.Get("jwt_signing_alg").(string)
 		jwtSigningKey := data.Get("jwt_signing_key").(string)
@@ -258,7 +252,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
 
-		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, clientId, clientSecret, realm, username, password, clientAssertiontype, clientAssertion, jwtSigningAlg, jwtSigningKey, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
+		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, clientId, clientSecret, realm, username, password, clientAssertion, jwtSigningAlg, jwtSigningKey, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, redHatSSO, additionalHeaders)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
