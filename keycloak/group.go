@@ -3,7 +3,6 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"path"
 	"strings"
 )
 
@@ -23,8 +22,7 @@ type Group struct {
  * Resolve a subgroup's parent ID using the Keycloak group-by-path API
  */
 func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *Group) (string, error) {
-	// Check the path of the group being passed in.
-	var parentPath = path.Dir(group.Path)
+	var parentPath = strings.TrimSuffix(group.Path, group.Name)
 	// If there is only one group in the path, then this is a top-level group with no parentId
 	if parentPath == "/" {
 		return "", nil
