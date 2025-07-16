@@ -16,8 +16,8 @@ build-debug:
 prepare-example:
 	mkdir -p example/.terraform/plugins/terraform.local/keycloak/keycloak/5.3.0/$(GOOS)_$(GOARCH)
 	mkdir -p example/terraform.d/plugins/terraform.local/keycloak/keycloak/5.3.0/$(GOOS)_$(GOARCH)
-	cp terraform-provider-keycloak_* example/.terraform/plugins/terraform.local/keycloak/keycloak/5.2.0/$(GOOS)_$(GOARCH)/
-	cp terraform-provider-keycloak_* example/terraform.d/plugins/terraform.local/keycloak/keycloak/5.2.0/$(GOOS)_$(GOARCH)/
+	cp terraform-provider-keycloak_* example/.terraform/plugins/terraform.local/keycloak/keycloak/5.3.0/$(GOOS)_$(GOARCH)/
+	cp terraform-provider-keycloak_* example/terraform.d/plugins/terraform.local/keycloak/keycloak/5.3.0/$(GOOS)_$(GOARCH)/
 
 build-example: build prepare-example
 
