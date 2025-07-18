@@ -56,24 +56,24 @@ func TestAccKeycloakOpenidClientAuthorizationRolePolicy_multiple(t *testing.T) {
 	})
 }
 
-// func testResourceKeycloakOpenidClientAuthorizationRolePolicy_fetch(t *testing.T) {
-// 	t.Parallel()
+func testResourceKeycloakOpenidClientAuthorizationRolePolicy_fetch(t *testing.T) {
+	t.Parallel()
 
-// 	clientId := acctest.RandomWithPrefix("tf-acc")
-// 	roleName := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	roleName := acctest.RandomWithPrefix("tf-acc")
 
-// 	resource.Test(t, resource.TestCase{
-// 		ProviderFactories: testAccProviderFactories,
-// 		PreCheck:          func() { testAccPreCheck(t) },
-// 		CheckDestroy:      testResourceKeycloakOpenidClientAuthorizationRolePolicyDestroy(),
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testResourceKeycloakOpenidClientAuthorizationRolePolicy_fetchRoles(roleName, clientId),
-// 				Check:  testResourceKeycloakOpenidClientAuthorizationRolePolicyExists("keycloak_openid_client_role_policy.test"),
-// 			},
-// 		},
-// 	})
-// }
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testResourceKeycloakOpenidClientAuthorizationRolePolicyDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceKeycloakOpenidClientAuthorizationRolePolicy_fetchRoles(roleName, clientId),
+				Check:  testResourceKeycloakOpenidClientAuthorizationRolePolicyExists("keycloak_openid_client_role_policy.test"),
+			},
+		},
+	})
+}
 
 func getResourceKeycloakOpenidClientAuthorizationRolePolicyFromState(s *terraform.State, resourceName string) (*keycloak.OpenidClientAuthorizationRolePolicy, error) {
 	rs, ok := s.RootModule().Resources[resourceName]
