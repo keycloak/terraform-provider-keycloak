@@ -45,6 +45,26 @@ resource "keycloak_custom_identity_provider_mapper" "oidc" {
 }
 ```
 
+```hcl
+resource "keycloak_custom_identity_provider_mapper" "groups" {
+  realm                    = keycloak_realm.realm.id
+  name                     = "group-mapper
+  identity_provider_alias  = keycloak_oidc_identity_provider.oidc.alias
+  identity_provider_mapper = "oidc-advanced-group-idp-mapper"
+
+  extra_config = {
+    "are.claim.values.regex" = true
+    syncMode                 = "FORCE"
+    group                    = "/DevOps"
+    claims = jsonencode(
+      [{
+        key = "groups", value = "DevOps"
+      }]
+    )
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
