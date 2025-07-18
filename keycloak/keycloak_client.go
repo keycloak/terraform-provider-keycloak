@@ -16,8 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"golang.org/x/net/publicsuffix"
 
@@ -38,14 +41,17 @@ type KeycloakClient struct {
 }
 
 type ClientCredentials struct {
-	ClientId     string
-	ClientSecret string
-	Username     string
-	Password     string
-	GrantType    string
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
+	ClientId        string
+	ClientSecret    string
+	ClientAssertion string
+	JWTSigningKey   string
+	JWTSigningAlg   string
+	Username        string
+	Password        string
+	GrantType       string
+	AccessToken     string `json:"access_token"`
+	RefreshToken    string `json:"refresh_token"`
+	TokenType       string `json:"token_type"`
 }
 
 const (
@@ -60,20 +66,28 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecret, realm, username, password, clientAssertion, jwtSigningAlg, jwtSigningKey string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+	// TODOs: generate client assertion if key is set and clientAssertion is not provided
 	clientCredentials := &ClientCredentials{
-		ClientId:     clientId,
-		ClientSecret: clientSecret,
+		ClientId:      clientId,
+		ClientSecret:  clientSecret,
+		JWTSigningKey: jwtSigningKey,
+		JWTSigningAlg: jwtSigningAlg,
 	}
+
+	if clientAssertion != "" {
+		clientCredentials.ClientAssertion = clientAssertion
+	}
+
 	if password != "" && username != "" {
 		clientCredentials.Username = username
 		clientCredentials.Password = password
 		clientCredentials.GrantType = "password"
-	} else if clientSecret != "" {
+	} else if clientSecret != "" || clientAssertion != "" || jwtSigningKey != "" {
 		clientCredentials.GrantType = "client_credentials"
 	} else {
 		if initialLogin {
-			return nil, fmt.Errorf("must specify client id, username and password for password grant, or client id and secret for client credentials grant")
+			return nil, fmt.Errorf("must specify client id, username and password for password grant, either client id and client secret or client assertion type and client assertion or JWT Signing Key for client credentials grant")
 		} else {
 			tflog.Warn(ctx, "missing required keycloak credentials, but proceeding anyways as initial_login is false")
 		}
@@ -113,7 +127,10 @@ func NewKeycloakClient(ctx context.Context, url, basePath, clientId, clientSecre
 
 func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
-	accessTokenData := keycloakClient.getAuthenticationFormData()
+	accessTokenData, err := keycloakClient.getAuthenticationFormData(accessTokenUrl)
+	if err != nil {
+		return err
+	}
 
 	tflog.Debug(ctx, "Login request", map[string]interface{}{
 		"request": accessTokenData.Encode(),
@@ -204,7 +221,10 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 
 func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
-	refreshTokenData := keycloakClient.getAuthenticationFormData()
+	refreshTokenData, err := keycloakClient.getAuthenticationFormData(refreshTokenUrl)
+	if err != nil {
+		return err
+	}
 
 	tflog.Debug(ctx, "Refresh request", map[string]interface{}{
 		"request": refreshTokenData.Encode(),
@@ -258,7 +278,7 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (keycloakClient *KeycloakClient) getAuthenticationFormData() url.Values {
+func (keycloakClient *KeycloakClient) getAuthenticationFormData(kc_url string) (url.Values, error) {
 	authenticationFormData := url.Values{}
 	authenticationFormData.Set("client_id", keycloakClient.clientCredentials.ClientId)
 	authenticationFormData.Set("grant_type", keycloakClient.clientCredentials.GrantType)
@@ -272,10 +292,28 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData() url.Values {
 		}
 
 	} else if keycloakClient.clientCredentials.GrantType == "client_credentials" {
-		authenticationFormData.Set("client_secret", keycloakClient.clientCredentials.ClientSecret)
+		if keycloakClient.clientCredentials.ClientAssertion != "" {
+			authenticationFormData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+			authenticationFormData.Set("client_assertion", keycloakClient.clientCredentials.ClientAssertion)
+		} else if keycloakClient.clientCredentials.JWTSigningKey != "" {
+			signedJWT, err := newSignedJWT(
+				kc_url,
+				keycloakClient.clientCredentials.ClientId,
+				keycloakClient.clientCredentials.JWTSigningAlg,
+				keycloakClient.clientCredentials.JWTSigningKey,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create signed JWT: %v", err)
+			}
+			authenticationFormData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+			authenticationFormData.Set("client_assertion", signedJWT)
+		} else {
+			authenticationFormData.Set("client_secret", keycloakClient.clientCredentials.ClientSecret)
+		}
+
 	}
 
-	return authenticationFormData
+	return authenticationFormData, nil
 }
 
 func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
@@ -555,4 +593,36 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string)
 	httpClient.Jar = cookieJar
 
 	return httpClient, nil
+}
+
+func newSignedJWT(url, clientId, alg, jwtSigningKey string) (string, error) {
+	// Create the Claims
+	jti, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate JWT ID: %v", err)
+	}
+	claims := &jwt.RegisteredClaims{
+		ID:        jti,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * 60)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		Issuer:    clientId,
+		Subject:   clientId,
+		Audience:  jwt.ClaimStrings{url},
+	}
+
+	// Create the token
+	token := jwt.NewWithClaims(jwt.GetSigningMethod(alg), claims)
+
+	// Sign the token with our secret
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(jwtSigningKey))
+	if err != nil {
+		return "", err
+	}
+	tokenString, err := token.SignedString(key)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	return tokenString, nil
 }
