@@ -56,7 +56,7 @@ func TestAccKeycloakOpenidClientAuthorizationRolePolicy_multiple(t *testing.T) {
 	})
 }
 
-func testResourceKeycloakOpenidClientAuthorizationRolePolicy_fetch(t *testing.T) {
+func TestAccKeycloakOpenidClientAuthorizationRolePolicy_fetchRoles(t *testing.T) {
 	t.Parallel()
 
 	clientId := acctest.RandomWithPrefix("tf-acc")

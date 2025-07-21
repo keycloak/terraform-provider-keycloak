@@ -52,7 +52,6 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicy() *schema.Resource {
 			"fetch_roles": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
 			},
 			"role": {
 				Type:     schema.TypeSet,
