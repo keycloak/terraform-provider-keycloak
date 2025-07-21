@@ -200,6 +200,12 @@ The following authentication settings can also be configured. Note that these ar
 
 - `password_policy` - (Optional) The password policy for users within the realm.
 
+### Authentication Flow Bindings
+
+The following authentication flow bindings can be configured.
+Note that the authentication flows need to exist when configuring the authentication flows via the realm resource.
+Use the `keycloak_authentication_bindings` resource for more flexibility.
+
 The arguments below can be used to configure authentication flow bindings:
 
 - `browser_flow` - (Optional) The desired flow for browser authentication. Defaults to `browser`.

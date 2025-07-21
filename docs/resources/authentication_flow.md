@@ -6,7 +6,7 @@ page_title: "keycloak_authentication_flow Resource"
 
 Allows for creating and managing an authentication flow within Keycloak.
 
-[Authentication flows](https://www.keycloak.org/docs/11.0/server_admin/index.html#_authentication-flows) describe a sequence
+[Authentication flows](https://www.keycloak.org/docs/latest/server_admin/index.html#_authentication-flows) describe a sequence
 of actions that a user or service must perform in order to be authenticated to Keycloak. The authentication flow itself
 is a container for these actions, which are otherwise known as executions.
 
