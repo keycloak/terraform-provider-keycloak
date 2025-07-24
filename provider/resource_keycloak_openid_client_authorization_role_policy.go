@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -47,6 +49,10 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicy() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"fetch_roles": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 			"role": {
 				Type:     schema.TypeSet,
 				Required: true,
@@ -68,7 +74,7 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicy() *schema.Resource {
 	}
 }
 
-func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.ResourceData) *keycloak.OpenidClientAuthorizationRolePolicy {
+func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.ResourceData, keycloakVersion *version.Version) *keycloak.OpenidClientAuthorizationRolePolicy {
 	var rolesList []keycloak.OpenidClientAuthorizationRole
 	if v, ok := data.Get("role").(*schema.Set); ok {
 		for _, role := range v.List() {
@@ -93,10 +99,16 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 		Description:      data.Get("description").(string),
 	}
 
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
+		if v, ok := data.GetOk("fetch_roles"); ok {
+			resource.FetchRoles = v.(bool)
+		}
+	}
+
 	return &resource
 }
 
-func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceData, policy *keycloak.OpenidClientAuthorizationRolePolicy) {
+func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceData, policy *keycloak.OpenidClientAuthorizationRolePolicy, keycloakVersion *version.Version) {
 	data.SetId(policy.Id)
 
 	data.Set("resource_server_id", policy.ResourceServerId)
@@ -106,6 +118,10 @@ func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceDat
 	data.Set("logic", policy.Logic)
 	data.Set("type", policy.Type)
 	data.Set("description", policy.Description)
+
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
+		data.Set("fetch_roles", policy.FetchRoles)
+	}
 
 	var roles []interface{}
 	for _, r := range policy.Roles {
@@ -122,21 +138,29 @@ func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceDat
 
 func resourceKeycloakOpenidClientAuthorizationRolePolicyCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-
-	resource := getOpenidClientAuthorizationRolePolicyResourceFromData(data)
-
-	err := keycloakClient.NewOpenidClientAuthorizationRolePolicy(ctx, resource)
+	keycloakVersion, err := keycloakClient.Version(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(data, resource)
+	resource := getOpenidClientAuthorizationRolePolicyResourceFromData(data, keycloakVersion)
+
+	err = keycloakClient.NewOpenidClientAuthorizationRolePolicy(ctx, resource)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return resourceKeycloakOpenidClientAuthorizationRolePolicyRead(ctx, data, meta)
 }
 
 func resourceKeycloakOpenidClientAuthorizationRolePolicyRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realmId := data.Get("realm_id").(string)
 	resourceServerId := data.Get("resource_server_id").(string)
@@ -147,22 +171,26 @@ func resourceKeycloakOpenidClientAuthorizationRolePolicyRead(ctx context.Context
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(data, resource)
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return nil
 }
 
 func resourceKeycloakOpenidClientAuthorizationRolePolicyUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-
-	resource := getOpenidClientAuthorizationRolePolicyResourceFromData(data)
-
-	err := keycloakClient.UpdateOpenidClientAuthorizationRolePolicy(ctx, resource)
+	keycloakVersion, err := keycloakClient.Version(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationRolePolicyResourceData(data, resource)
+	resource := getOpenidClientAuthorizationRolePolicyResourceFromData(data, keycloakVersion)
+
+	err = keycloakClient.UpdateOpenidClientAuthorizationRolePolicy(ctx, resource)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	setOpenidClientAuthorizationRolePolicyResourceData(data, resource, keycloakVersion)
 
 	return nil
 }
