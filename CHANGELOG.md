@@ -1,5 +1,36 @@
 ## What's Changed
 
+## 5.4.0 (July 28, 2025)
+
+FEATURES:
+
+* Update to KC26.3.2 (#1259) by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1260
+* Add support for fetchRoles in keycloak_openid_client_role_policy resource by @elshirak in https://github.com/keycloak/terraform-provider-keycloak/pull/1241
+* Support signed jwt client auth type by @tuankiettruong in https://github.com/keycloak/terraform-provider-keycloak/pull/1250
+
+IMPROVEMENTS:
+
+* Rename realm_client_policy_profile_profile.md by @mawenge in https://github.com/keycloak/terraform-provider-keycloak/pull/1249
+* docs: Add mention of keycloak_authentication_bindings to realm authentication settings by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1255
+* docs: add example to keycloak_custom_identity_provider_mapper docs about how use the group mapper  by @KyriosGN0 in https://github.com/keycloak/terraform-provider-keycloak/pull/1251
+* Add import instructions & example for client_scope by @ajoga in https://github.com/keycloak/terraform-provider-keycloak/pull/1248
+* Add RSA_SHAxxx_MGF1 signature algorithms to SAML identity provider config by @yrd in https://github.com/keycloak/terraform-provider-keycloak/pull/1199
+* chore(deps): bump golang.org/x/net from 0.41.0 to 0.42.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1247
+* chore(deps): bump github.com/golang-jwt/jwt/v5 from 5.2.2 to 5.2.3 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1261
+
+BUG FIXES:
+
+* Fix/1246 group names with slash dont work by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1252
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [yrd](https://github.com/yrd)
+- [ajoga](https://github.com/ajoga)
+- [KyriosGN0](https://github.com/KyriosGN0)
+- [elshirak](https://github.com/elshirak)
+- [tuankiettruong](https://github.com/tuankiettruong)
+- [mawenge](https://github.com/mawenge)
+
 ## 5.3.0 (July 11, 2025)
 
 FEATURES:
@@ -38,7 +69,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * Docs: Updated Markdown to format correctly by @bubbletroubles in https://github.com/keycloak/terraform-provider-keycloak/pull/1201
-* Removed feature override so KC_FEATURES environment variable is used … by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1232
+* Removed feature override so KC_FEATURES environment variable is used by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1232
 
 Huge thanks to all the individuals who have contributed towards this release:
 
