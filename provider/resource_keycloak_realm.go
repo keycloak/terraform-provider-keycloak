@@ -303,6 +303,12 @@ func resourceKeycloakRealm() *schema.Resource {
 											return smtpServerPassword == "**********"
 										},
 									},
+									"auth_type": {
+										Type:         schema.TypeString,
+										Optional:     true,
+										Default:      "basic",
+										ValidateFunc: validation.StringInSlice([]string{"basic"}, false), // Only basic is supported by the provider for now
+									},
 								},
 							},
 						},
