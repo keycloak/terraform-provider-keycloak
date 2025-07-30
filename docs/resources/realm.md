@@ -33,6 +33,7 @@ resource "keycloak_realm" "realm" {
     from = "example@example.com"
 
     auth {
+      auth_type = "basic"
       username = "tom"
       password = "password"
     }
@@ -161,6 +162,7 @@ This block supports the following arguments:
 - `auth` - (Optional) Enables authentication to the SMTP server.  This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `password` - (Required) The SMTP server password.
+    - `auth_type` - (Optional) The authentication type. Only `basic` is supported by the provider which is for password based authentication.
 
 ### Internationalization
 
