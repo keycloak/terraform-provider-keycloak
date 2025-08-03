@@ -939,6 +939,9 @@ func testAccCheckKeycloakRealm_default_client_scopes(resourceName string, defaul
 }
 
 func TestAccKeycloakRealm_admin_permissions_enabled(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
