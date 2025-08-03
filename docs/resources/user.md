@@ -69,6 +69,19 @@ resource "keycloak_user" "user_with_initial_password" {
   - `user_name` - (Required) The username of the user defined in the identity provider
 - `import` - (Optional) When `true`, the user with the specified `username` is assumed to already exist, and it will be imported into state instead of being created. This attribute is useful when dealing with users that Keycloak creates automatically during realm creation, such as `admin`. Note, that the user will not be removed during destruction if `import` is `true`.
 
+## Valid Required Actions:
+ "CONFIGURE_TOTP"
+ "TERMS_AND_CONDITIONS"
+ "UPDATE_PASSWORD"
+ "UPDATE_PROFILE"
+ "VERIFY_EMAIL"
+ "delete_account"
+ "webauthn-register"
+ "webauthn-register-passwordless"
+ "VERIFY_PROFILE"
+ "delete_credential"
+ "update_user_locale"
+
 ## Import
 
 Users can be imported using the format `{{realm_id}}/{{user_id}}`, where `user_id` is the unique ID that Keycloak
