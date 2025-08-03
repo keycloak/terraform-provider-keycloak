@@ -974,7 +974,7 @@ func testKeycloakRealm_admin_permission_enabled(realm string) string {
 resource "keycloak_realm" "realm" {
 	realm                          = "%s"
 	enabled                        = true
-	admin_permissions_enabled       = true
+	admin_permissions_enabled      = true
 }
 	`, realm)
 }
