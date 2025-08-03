@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strings"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type Key struct {
@@ -96,6 +97,8 @@ type Realm struct {
 	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
 	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
 	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+
+	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
 
 	PasswordPolicy string `json:"passwordPolicy"`
 

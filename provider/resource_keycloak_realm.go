@@ -632,6 +632,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 			},
 
+			"admin_permissions_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+
 			// default default client scopes
 			"default_default_client_scopes": {
 				Type:     schema.TypeSet,
@@ -1060,6 +1065,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 	}
 	realm.DefaultOptionalClientScopes = defaultOptionalClientScopes
+
+	realm.AdminPermissionsEnabled = data.Get("admin_permissions_enabled").(bool)
 
 	//OTPPolicy
 	if v, ok := data.GetOk("otp_policy"); ok {
