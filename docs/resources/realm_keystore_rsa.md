@@ -36,6 +36,7 @@ resource "keycloak_realm_keystore_rsa" "keystore_rsa" {
 
 - `name` - (Required) Display name of provider when linked in admin console.
 - `realm_id` - (Required) The realm this keystore exists in.
+- `internal_realm_id` - (Optional) The internal id for the realm, if the realm is imported into Terraform. This is not relevant for realms created through Terraform.
 - `private_key` - (Required) Private RSA Key encoded in PEM format.
 - `certificate` - (Required) X509 Certificate encoded in PEM format.
 - `enabled` - (Optional) When `false`, key is not accessible in this realm. Defaults to `true`.
