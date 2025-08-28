@@ -46,17 +46,17 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 
   condition {
     name = "client-type"
-    configuration = {
+    configuration = jsonencode({
       "protocol" = "openid-connect"
-    }
+    })
   }
 
   condition {
     name = "client-attributes"
-    configuration = {
+    configuration = jsonencode({
       is-negative-logic = false
-      attributes        = jsonencode([{ "key" : "test-key", "value" : "test-value" }])
-    }
+      attributes        = [{ "key" : "test-key", "value" : "test-value" }]
+    })
   }
 }
 
