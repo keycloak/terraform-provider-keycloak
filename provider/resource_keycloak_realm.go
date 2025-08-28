@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -680,6 +681,86 @@ func resourceKeycloakRealm() *schema.Resource {
 					Schema: webAuthnSchema,
 				},
 			},
+
+			// Client policies
+			"client_policy": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"description": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "",
+						},
+						"enabled": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"profiles": {
+							Type:     schema.TypeList,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Optional: true,
+						},
+						"condition": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"configuration": {
+										Type:     schema.TypeMap,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"client_profile": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"description": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "",
+						},
+						"executor": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"configuration": {
+										Type:     schema.TypeMap,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -745,7 +826,7 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keyc
 	}
 }
 
-func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.Realm, error) {
+func getRealmFromData(ctx context.Context, data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.Realm, error) {
 	internationalizationEnabled := false
 	supportLocales := make([]string, 0)
 	defaultLocale := ""
@@ -1173,6 +1254,95 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessUserVerificationRequirement = webAuthnPolicyPasswordlessUserVerificationRequirement.(string)
 		}
 	}
+	var UnmarshalledConfigurations = map[string]struct{}{
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientAccessTypeCondition.java#L50
+		"client-access-type": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientRolesCondition.java#L51-L62
+		"client-roles": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientScopesCondition.java#L64
+		"client-scopes": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterContextCondition.java#L52
+		"client-updater-context": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceGroupsCondition.java#L61
+		"client-updater-source-groups": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceHostsCondition.java#L52
+		"client-updater-source-host": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceRolesCondition.java#L64
+		"client-updater-source-roles": {},
+		// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/GrantTypeCondition.java#L49
+		"grant-type": {},
+	}
+
+	// Client policies
+	if policies, ok := data.GetOk("client_policy"); ok {
+		var policy keycloak.ClientPolicy
+		for _, policyData := range policies.(*schema.Set).List() {
+			policy = keycloak.ClientPolicy{
+				Name:        policyData.(map[string]interface{})["name"].(string),
+				Description: policyData.(map[string]interface{})["description"].(string),
+				Enabled:     policyData.(map[string]interface{})["enabled"].(bool),
+			}
+			for _, profile := range policyData.(map[string]interface{})["profiles"].([]interface{}) {
+				policy.Profiles = append(policy.Profiles, profile.(string))
+			}
+
+			for _, conditionData := range policyData.(map[string]interface{})["condition"].([]interface{}) {
+				condition := keycloak.ClientPolicyCondition{
+					Condition: conditionData.(map[string]interface{})["name"].(string),
+				}
+				if v, ok := conditionData.(map[string]interface{})["configuration"]; ok {
+					configurations := make(map[string]interface{})
+					for key, value := range v.(map[string]interface{}) {
+						if _, exists := UnmarshalledConfigurations[conditionData.(map[string]interface{})["name"].(string)]; exists {
+							var encodedValue []string
+							if err := json.Unmarshal([]byte(value.(string)), &encodedValue); err == nil {
+								configurations[key] = encodedValue
+							} else {
+								return nil, err
+							}
+						} else {
+							configurations[key] = value.(string)
+						}
+					}
+					condition.Configuration = configurations
+				}
+
+				policy.Conditions = append(policy.Conditions, condition)
+			}
+			if policy.Name != "" {
+				realm.ClientPolicies.Policies = append(realm.ClientPolicies.Policies, policy)
+			}
+
+		}
+	}
+
+	if profiles, ok := data.GetOk("client_profile"); ok {
+		var profile keycloak.ClientProfile
+		for _, profileData := range profiles.(*schema.Set).List() {
+			profile = keycloak.ClientProfile{
+				Name:        profileData.(map[string]interface{})["name"].(string),
+				Description: profileData.(map[string]interface{})["description"].(string),
+			}
+
+			for _, executorData := range profileData.(map[string]interface{})["executor"].([]interface{}) {
+				executor := keycloak.ClientProfileExecutor{
+					Executor: executorData.(map[string]interface{})["name"].(string),
+				}
+				if configVal, ok := executorData.(map[string]interface{})["configuration"]; ok {
+					configurations := make(map[string]interface{})
+					for key, value := range configVal.(map[string]interface{}) {
+						configurations[key] = value.(string)
+					}
+					executor.Configuration = configurations
+				} else {
+					executor.Configuration = make(map[string]interface{})
+				}
+				profile.Executors = append(profile.Executors, executor)
+			}
+			realm.ClientProfiles.Profiles = append(realm.ClientProfiles.Profiles, profile)
+		}
+
+	}
 
 	return realm, nil
 }
@@ -1201,7 +1371,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
 	realm.MaxDeltaTimeSeconds = 43200
 }
 
-func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
+func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) diag.Diagnostics {
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
@@ -1377,6 +1547,70 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	// default and optional client scope mappings
 	data.Set("default_default_client_scopes", realm.DefaultDefaultClientScopes)
 	data.Set("default_optional_client_scopes", realm.DefaultOptionalClientScopes)
+
+	// Client policies
+	var err error
+	var configuration []byte
+
+	var policy map[string]interface{}
+	var policies []interface{}
+	for _, v := range realm.ClientPolicies.Policies {
+		policy = make(map[string]interface{})
+		policy["name"] = v.Name
+		policy["description"] = v.Description
+		policy["enabled"] = v.Enabled
+		policy["profiles"] = v.Profiles
+
+		var condition map[string]interface{}
+		var conditions []interface{}
+		for _, v2 := range v.Conditions {
+			condition = make(map[string]interface{})
+			condition["name"] = v2.Condition
+			configuration, err = json.Marshal(v2.Configuration)
+			condition["configuration"] = string(configuration)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			conditions = append(conditions, condition)
+		}
+		policy["condition"] = conditions
+
+		policies = append(policies, policy)
+	}
+	data.Set("client_policy", policies)
+
+	var profile map[string]interface{}
+	var profiles []interface{}
+	for _, v := range realm.ClientProfiles.Profiles {
+		profile = make(map[string]interface{})
+		profile["name"] = v.Name
+		profile["description"] = v.Description
+
+		var executor map[string]interface{}
+		var executors []interface{}
+
+		for _, v2 := range v.Executors {
+			executor = make(map[string]interface{})
+			executor["name"] = v2.Executor
+			if configuration != nil {
+				configuration, _ = json.Marshal(v2.Configuration)
+				executor["configuration"] = string(configuration)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				executor["configuration"] = map[string]interface{}{}
+			}
+
+			executors = append(executors, executor)
+		}
+		profile["executor"] = executors
+
+		profiles = append(profiles, profile)
+	}
+	data.Set("client_profile", profiles)
+
+	return nil // No errors while setting realm data
 }
 
 func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{} {
@@ -1411,7 +1645,7 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	realm, err := getRealmFromData(data, keycloakVersion)
+	realm, err := getRealmFromData(ctx, data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1431,7 +1665,10 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	diagError := setRealmData(data, realm, keycloakVersion)
+	if diagError != nil {
+		return diagError
+	}
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
 }
@@ -1453,7 +1690,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		realm.SmtpServer.Password = smtpPassword
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	diagError := setRealmData(data, realm, keycloakVersion)
+	if diagError != nil {
+		return diagError
+	}
 
 	return nil
 }
@@ -1465,7 +1705,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	realm, err := getRealmFromData(data, keycloakVersion)
+	realm, err := getRealmFromData(ctx, data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1480,7 +1720,10 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	diagError := setRealmData(data, realm, keycloakVersion)
+	if diagError != nil {
+		return diagError
+	}
 
 	return nil
 }

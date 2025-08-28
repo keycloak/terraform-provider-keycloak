@@ -99,6 +99,41 @@ resource "keycloak_realm" "test" {
       "RS256"
     ]
   }
+  client_profile {
+    name        = "my profile"
+    description = "My profile"
+    executor {
+      name = "secure-ciba-signed-authn-req"
+      configuration = jsonencode({
+        available-period = "3600"
+      })
+    }
+    executor {
+      name = "pkce-enforcer"
+      configuration = jsonencode({
+        auto-configure = true
+      })
+    }
+  }
+  client_policy {
+    name        = "my policy"
+    description = "My policy"
+    profiles    = ["my profile"]
+    enabled     = false
+    condition {
+        name = "client-attributes"
+        configuration  = {
+            is_negative_logic = false
+            attributes        = jsonencode([{ "key" : "something", "value" : "other3" }])
+        }
+    }
+    condition {
+        name          = "client-roles"
+        configuration = {
+            roles = jsonencode(["role-c", "role-d", "role-e", "role-f", "role-g", "role-a", "role-b"])
+        }
+    }
+  }
 }
 
 resource "keycloak_realm_localization" "test_translation" {
@@ -1189,43 +1224,5 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
   group {
     name = "group2"
-  }
-}
-
-resource "keycloak_realm_client_policy_profile" "profile" {
-  name     = "my-profile"
-  realm_id = keycloak_realm.test.id
-  executor {
-    name = "intent-client-bind-checker"
-    configuration = {
-      auto-configure = true
-    }
-  }
-  executor {
-    name = "secure-session"
-  }
-}
-
-resource "keycloak_realm_client_policy_profile_policy" "policy" {
-  name        = "my-profile-policy"
-  realm_id    = keycloak_realm.test.id
-  description = "Some desc"
-  profiles = [
-    keycloak_realm_client_policy_profile.profile.name
-  ]
-
-  condition {
-    name = "client-type"
-    configuration = {
-      "protocol" = "openid-connect"
-    }
-  }
-
-  condition {
-    name = "client-attributes"
-    configuration = {
-      "is-negative-logic" = false
-      "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
-    }
   }
 }
