@@ -1229,3 +1229,26 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     }
   }
 }
+
+resource "keycloak_realm_client_policy_profile_policy" "list_policy" {
+  name        = "my-list-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.profile.name
+  ]
+
+  condition {
+    name          = "client-access-type"
+    configuration = {
+      access_type = "confidential"
+    }
+  }
+
+ condition {
+    name          = "client-roles"
+    configuration = {
+      roles = jsonencode(["role-a", "role-b"])
+    }
+  }
+}
