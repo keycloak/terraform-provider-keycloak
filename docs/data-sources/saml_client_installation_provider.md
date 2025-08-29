@@ -52,3 +52,4 @@ resource "aws_iam_saml_provider" "default" {
 
 - `id` - (Computed) The hash of the value.
 - `value` - (Computed) The returned document needed for SAML installation.
+- `zip_files` - (Computed) A map of files if the returned document is a zip file. (ex: provider `mod-auth-mellon`)
