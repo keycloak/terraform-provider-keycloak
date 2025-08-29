@@ -106,22 +106,22 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			"standard_flow_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  false,
 			},
 			"implicit_flow_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  false,
 			},
 			"direct_access_grants_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  false,
 			},
 			"service_accounts_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  false,
 			},
 			"frontchannel_logout_enabled": {
 				Type:     schema.TypeBool,
@@ -250,7 +250,7 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			"consent_required": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  false,
 			},
 			"display_on_consent_screen": {
 				Type:     schema.TypeBool,
