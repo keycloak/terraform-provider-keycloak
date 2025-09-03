@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.3.2'
+          - '26.3.3'
           - '26.2.5'
           - '26.1.4'
           - '26.0.8'
@@ -89,10 +89,10 @@ jobs:
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.3.2" || "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.3.3" || "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           fi
-          if [[ "${{ matrix.keycloak-version }}" == "26.3.2" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.3.3" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
           fi
 

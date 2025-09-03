@@ -5,7 +5,7 @@ plugins {
 }
 
 ext {
-	keycloakVersion = '26.3.2'
+	keycloakVersion = '26.3.3'
 }
 
 dependencies {
