@@ -286,9 +286,10 @@ func resourceKeycloakRealm() *schema.Resource {
 							Optional: true,
 						},
 						"auth": {
-							Type:     schema.TypeList,
-							Optional: true,
-							MaxItems: 1,
+							Type:          schema.TypeList,
+							Optional:      true,
+							ConflictsWith: []string{"smtp_server.0.token_auth"},
+							MaxItems:      1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -302,6 +303,40 @@ func resourceKeycloakRealm() *schema.Resource {
 										DiffSuppressFunc: func(_, smtpServerPassword, _ string, _ *schema.ResourceData) bool {
 											return smtpServerPassword == "**********"
 										},
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							ConflictsWith: []string{"smtp_server.0.auth"},
+							MaxItems:      1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"client_id": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"client_secret": {
+										Type:      schema.TypeString,
+										Required:  true,
+										Sensitive: true,
+										DiffSuppressFunc: func(_, authTokenClientSecret, _ string, _ *schema.ResourceData) bool {
+											return authTokenClientSecret == "**********"
+										},
+									},
+									"scope": {
+										Type:     schema.TypeString,
+										Required: true,
 									},
 								},
 							},
@@ -809,12 +844,25 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 
 		authConfig := smtpSettings["auth"].([]interface{})
+		tokenAuthConfig := smtpSettings["token_auth"].([]interface{})
+
 		if len(authConfig) == 1 {
 			auth := authConfig[0].(map[string]interface{})
 
 			smtpServer.Auth = true
+			smtpServer.AuthType = "basic"
 			smtpServer.User = auth["username"].(string)
 			smtpServer.Password = auth["password"].(string)
+		} else if len(tokenAuthConfig) == 1 {
+			tokenAuth := tokenAuthConfig[0].(map[string]interface{})
+
+			smtpServer.Auth = true
+			smtpServer.AuthType = "token"
+			smtpServer.User = tokenAuth["username"].(string)
+			smtpServer.AuthTokenUrl = tokenAuth["url"].(string)
+			smtpServer.AuthTokenClientId = tokenAuth["client_id"].(string)
+			smtpServer.AuthTokenClientSecret = tokenAuth["client_secret"].(string)
+			smtpServer.AuthTokenScope = tokenAuth["scope"].(string)
 		} else {
 			smtpServer.Auth = false
 		}
@@ -1241,12 +1289,24 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["ssl"] = realm.SmtpServer.Ssl
 
 		if realm.SmtpServer.Auth {
-			auth := make(map[string]interface{})
+			if realm.SmtpServer.AuthType == "token" {
+				token_auth := make(map[string]interface{})
 
-			auth["username"] = realm.SmtpServer.User
-			auth["password"] = realm.SmtpServer.Password
+				token_auth["username"] = realm.SmtpServer.User
+				token_auth["url"] = realm.SmtpServer.AuthTokenUrl
+				token_auth["client_id"] = realm.SmtpServer.AuthTokenClientId
+				token_auth["client_secret"] = realm.SmtpServer.AuthTokenClientSecret
+				token_auth["scope"] = realm.SmtpServer.AuthTokenScope
 
-			smtpSettings["auth"] = []interface{}{auth}
+				smtpSettings["token_auth"] = []interface{}{token_auth}
+			} else {
+				auth := make(map[string]interface{})
+
+				auth["username"] = realm.SmtpServer.User
+				auth["password"] = realm.SmtpServer.Password
+
+				smtpSettings["auth"] = []interface{}{auth}
+			}
 		}
 
 		data.Set("smtp_server", []interface{}{smtpSettings})
