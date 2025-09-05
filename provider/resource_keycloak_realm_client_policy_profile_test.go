@@ -122,10 +122,10 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 
   condition {
     name = "%s"
-    configuration = {
+    configuration = jsonencode({
 			is_negative_logic = false
-			attributes        = jsonencode([{"key": "test-key", "value": "test-value"}])
-			}
+			attributes        = [{"key": "test-key", "value": "test-value"}]
+		})
   }
 }
 	`, realm, profileName, profileDescription, policyName, policyDescription, conditionName)

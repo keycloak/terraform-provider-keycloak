@@ -6,8 +6,8 @@ import (
 )
 
 type RealmClientPolicyProfilePolicyCondition struct {
-	Name          string                 `json:"condition"`
-	Configuration map[string]interface{} `json:"configuration"`
+	Name          string `json:"condition"`
+	Configuration string `json:"configuration"`
 }
 
 type RealmClientPolicyProfilePolicy struct {

@@ -1216,16 +1216,39 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 
   condition {
     name = "client-type"
-    configuration = {
+    configuration = jsonencode({
       "protocol" = "openid-connect"
-    }
+    })
   }
 
   condition {
     name = "client-attributes"
-    configuration = {
+    configuration = jsonencode({
       "is-negative-logic" = false
-      "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
-    }
+      "attributes"        = [{ "key" : "something", "value" : "other3" },{ "key" : "something2", "value" : "other4" }]
+    })
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "list_policy" {
+  name        = "my-list-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.profile.name
+  ]
+
+  condition {
+    name          = "client-access-type"
+    configuration = jsonencode({
+      access_type = "confidential"
+    })
+  }
+
+ condition {
+    name          = "client-roles"
+    configuration = jsonencode({
+      roles = ["role-a", "role-b"]
+    })
   }
 }

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -44,7 +45,7 @@ func resourceKeycloakRealmClientPolicyProfilePolicy() *schema.Resource {
 							Required: true,
 						},
 						"configuration": {
-							Type:     schema.TypeMap,
+							Type:     schema.TypeString,
 							Optional: true,
 						},
 					},
@@ -167,11 +168,10 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		}
 
 		if v, ok := conditionMap["configuration"]; ok {
-			configurations := make(map[string]interface{})
-			for key, value := range v.(map[string]interface{}) {
-				configurations[key] = value.(string)
+			var js interface{}
+			if err := json.Unmarshal([]byte(v.(string)), &js); err == nil {
+				cond.Configuration = v.(string)
 			}
-			cond.Configuration = configurations
 		}
 
 		conditions = append(conditions, cond)
@@ -205,12 +205,8 @@ func mapFromRealmClientPolicyProfilePolicyToData(data *schema.ResourceData, poli
 			"name": cond.Name,
 		}
 
-		if cond.Configuration != nil {
-			configurations := make(map[string]interface{})
-			for k, v := range cond.Configuration {
-				configurations[k] = v
-			}
-			conditionMap["configuration"] = configurations
+		if cond.Configuration != "" {
+			conditionMap["configuration"] = cond.Configuration
 		}
 		conditions = append(conditions, conditionMap)
 	}
