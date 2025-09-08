@@ -29,7 +29,7 @@ import (
 
 type KeycloakClient struct {
 	baseUrl           string
-	authnUrl          string
+	authUrl           string
 	realm             string
 	clientCredentials *ClientCredentials
 	httpClient        *http.Client
@@ -93,13 +93,16 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http client: %v", err)
 	}
-	baseUrl := url + basePath
+
+	authUrl := url + basePath
+	baseUrl := authUrl
 	if adminUrl != "" {
 		baseUrl = adminUrl + basePath
 	}
+
 	keycloakClient := KeycloakClient{
 		baseUrl:           baseUrl,
-		authnUrl:          url + basePath,
+		authUrl:           authUrl,
 		clientCredentials: clientCredentials,
 		httpClient:        httpClient,
 		initialLogin:      initialLogin,
@@ -126,7 +129,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 }
 
 func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
-	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authnUrl, keycloakClient.realm)
+	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authUrl, keycloakClient.realm)
 	accessTokenData, err := keycloakClient.getAuthenticationFormData(ctx, accessTokenUrl)
 	if err != nil {
 		return err
@@ -220,7 +223,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 }
 
 func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
-	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authnUrl, keycloakClient.realm)
+	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.authUrl, keycloakClient.realm)
 	refreshTokenData, err := keycloakClient.getAuthenticationFormData(ctx, refreshTokenUrl)
 	if err != nil {
 		return err
