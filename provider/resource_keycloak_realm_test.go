@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"testing"
 )
 
 func TestAccKeycloakRealm_basic(t *testing.T) {
@@ -517,19 +518,33 @@ func TestAccKeycloakRealm_securityDefensesHeaders(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
+				// current keycloak default for xFrameOptions is SAMEORIGIN
 				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
 				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "SAMEORIGIN"),
-				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
-			},
-			{
+				// set explicit non default value for xFrameOptions
 				Config: testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "DENY"),
 				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
 			},
 			{
+				// set explicit default value for xFrameOptions
+				Config: testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "SAMEORIGIN"),
+				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
+			},
+			{
+				// previously set xFrameOptions value should still be set
 				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
+			},
+			{
+				// set explicit empty value for xFrameOptions
+				Config: testKeycloakRealm_securityDefensesHeadersOnlyXFrameOptions(realmName, realmDisplayName, ""),
+				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", ""),
+			},
+			{
+				// set explicit non default value for xFrameOptions again
+				Config: testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "SAMEORIGIN"),
 				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
 			},
 		},
@@ -1598,6 +1613,21 @@ resource "keycloak_realm" "realm" {
 			x_robots_tag = "none"
 			x_xss_protection = "1; mode=block"
 			strict_transport_security = "max-age=31536000; includeSubDomains"
+		}
+	}
+}
+	`, realm, realmDisplayName, xFrameOptions)
+}
+
+func testKeycloakRealm_securityDefensesHeadersOnlyXFrameOptions(realm, realmDisplayName, xFrameOptions string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm        = "%s"
+	enabled      = true
+	display_name = "%s"
+	security_defenses {
+    	headers {
+			x_frame_options = "%s"
 		}
 	}
 }
