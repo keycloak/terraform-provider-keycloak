@@ -6,10 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 /*
@@ -20,9 +21,9 @@ import (
 
 func TestAccKeycloakOidcGithubIdentityProvider_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGithubIdentityProvider_basic(),
@@ -34,9 +35,9 @@ func TestAccKeycloakOidcGithubIdentityProvider_basic(t *testing.T) {
 
 func TestAccKeycloakOidcGithubIdentityProvider_customAlias(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -63,9 +64,9 @@ resource "keycloak_oidc_github_identity_provider" "github" {
 
 func TestAccKeycloakOidcGithubIdentityProvider_customDisplayName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -94,9 +95,9 @@ func TestAccKeycloakOidcGithubIdentityProvider_extraConfig(t *testing.T) {
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGithubIdentityProvider_customConfig("dummyConfig", customConfigValue),
@@ -114,9 +115,9 @@ func TestAccKeycloakOidcGithubIdentityProvider_extraConfigInvalid(t *testing.T) 
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOidcGithubIdentityProvider_customConfig("syncMode", customConfigValue),
@@ -127,13 +128,14 @@ func TestAccKeycloakOidcGithubIdentityProvider_extraConfigInvalid(t *testing.T) 
 }
 
 func TestAccKeycloakOidcGithubIdentityProvider_linkOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGithubIdentityProvider_linkOrganization(organizationName),
@@ -150,9 +152,9 @@ func TestAccKeycloakOidcGithubIdentityProvider_createAfterManualDestroy(t *testi
 	var idp = &keycloak.IdentityProvider{}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGithubIdentityProvider_basic(),
@@ -181,10 +183,11 @@ func TestAccKeycloakOidcGithubIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     firstEnabled,
 		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
-			ClientId:     acctest.RandString(10),
-			ClientSecret: acctest.RandString(10),
-			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:     randomStringInSlice(syncModes),
+			ClientId:        acctest.RandString(10),
+			ClientSecret:    acctest.RandString(10),
+			GuiOrder:        strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:        randomStringInSlice(syncModes),
+			HideOnLoginPage: types.KeycloakBoolQuoted(firstHideOnLogin),
 		},
 	}
 
@@ -193,17 +196,18 @@ func TestAccKeycloakOidcGithubIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     !firstEnabled,
 		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
-			ClientId:     acctest.RandString(10),
-			ClientSecret: acctest.RandString(10),
-			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:     randomStringInSlice(syncModes),
+			ClientId:        acctest.RandString(10),
+			ClientSecret:    acctest.RandString(10),
+			GuiOrder:        strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:        randomStringInSlice(syncModes),
+			HideOnLoginPage: types.KeycloakBoolQuoted(!firstHideOnLogin),
 		},
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcGithubIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGithubIdentityProvider_basicFromInterface(firstOidc),
@@ -359,7 +363,7 @@ resource "keycloak_oidc_github_identity_provider" "github" {
 	sync_mode                               = "%s"
 	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.ApiUrl, idp.Config.BaseUrl, idp.Config.GithubJsonFormat, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.ApiUrl, idp.Config.BaseUrl, idp.Config.GithubJsonFormat, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, bool(idp.Config.HideOnLoginPage))
 }
 
 func testKeycloakOidcGithubIdentityProvider_linkOrganization(organizationName string) string {
