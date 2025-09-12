@@ -170,6 +170,7 @@ type SmtpServer struct {
 	Ssl                types.KeycloakBoolQuoted `json:"ssl,omitempty"`
 	User               string                   `json:"user,omitempty"`
 	Password           string                   `json:"password,omitempty"`
+	AuthType           string                   `json:"authType,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
