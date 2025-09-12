@@ -144,6 +144,10 @@ type Realm struct {
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`
+
+	// Client policies
+	ClientPolicies ClientPolicies `json:"clientPolicies"`
+	ClientProfiles ClientProfiles `json:"clientProfiles"`
 }
 
 type BrowserSecurityHeaders struct {
@@ -170,6 +174,38 @@ type SmtpServer struct {
 	Ssl                types.KeycloakBoolQuoted `json:"ssl,omitempty"`
 	User               string                   `json:"user,omitempty"`
 	Password           string                   `json:"password,omitempty"`
+}
+
+type ClientPolicies struct {
+	Policies []ClientPolicy `json:"policies,omitempty"`
+}
+
+type ClientPolicy struct {
+	Name        string                  `json:"name,omitempty"`
+	Description string                  `json:"description,omitempty"`
+	Enabled     bool                    `json:"enabled,omitempty"`
+	Profiles    []string                `json:"profiles,omitempty"`
+	Conditions  []ClientPolicyCondition `json:"conditions,omitempty"`
+}
+
+type ClientPolicyCondition struct {
+	Condition     string                 `json:"condition,omitempty"`
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
+}
+
+type ClientProfiles struct {
+	Profiles []ClientProfile `json:"profiles,omitempty"`
+}
+
+type ClientProfile struct {
+	Name        string                  `json:"name,omitempty"`
+	Description string                  `json:"description,omitempty"`
+	Executors   []ClientProfileExecutor `json:"executors,omitempty"`
+}
+
+type ClientProfileExecutor struct {
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
+	Executor      string                 `json:"executor,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
