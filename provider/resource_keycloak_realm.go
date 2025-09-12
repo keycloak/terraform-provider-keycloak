@@ -721,15 +721,6 @@ func resourceKeycloakRealm() *schema.Resource {
 									"configuration": {
 										Type:     schema.TypeMap,
 										Optional: true,
-										// Elem: &schema.Resource{
-										// 	Schema: map[string]*schema.Schema{
-										// 		"roles": {
-										// 			Type:     schema.TypeList,
-										// 			Elem:     &schema.Schema{Type: schema.TypeString},
-										// 			Optional: true,
-										// 		},
-										// 	},
-										// },
 									},
 								},
 							},
