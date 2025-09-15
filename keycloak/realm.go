@@ -158,18 +158,23 @@ type BrowserSecurityHeaders struct {
 }
 
 type SmtpServer struct {
-	StartTls           types.KeycloakBoolQuoted `json:"starttls,omitempty"`
-	Auth               types.KeycloakBoolQuoted `json:"auth,omitempty"`
-	Port               string                   `json:"port,omitempty"`
-	Host               string                   `json:"host,omitempty"`
-	ReplyTo            string                   `json:"replyTo,omitempty"`
-	ReplyToDisplayName string                   `json:"replyToDisplayName,omitempty"`
-	From               string                   `json:"from,omitempty"`
-	FromDisplayName    string                   `json:"fromDisplayName,omitempty"`
-	EnvelopeFrom       string                   `json:"envelopeFrom,omitempty"`
-	Ssl                types.KeycloakBoolQuoted `json:"ssl,omitempty"`
-	User               string                   `json:"user,omitempty"`
-	Password           string                   `json:"password,omitempty"`
+	StartTls              types.KeycloakBoolQuoted `json:"starttls,omitempty"`
+	Auth                  types.KeycloakBoolQuoted `json:"auth,omitempty"`
+	Port                  string                   `json:"port,omitempty"`
+	Host                  string                   `json:"host,omitempty"`
+	ReplyTo               string                   `json:"replyTo,omitempty"`
+	ReplyToDisplayName    string                   `json:"replyToDisplayName,omitempty"`
+	From                  string                   `json:"from,omitempty"`
+	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
+	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
+	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
+	User                  string                   `json:"user,omitempty"`
+	Password              string                   `json:"password,omitempty"`
+	AuthType              string                   `json:"authType,omitempty"`
+	AuthTokenUrl          string                   `json:"authTokenUrl,omitempty"`
+	AuthTokenClientId     string                   `json:"authTokenClientId,omitempty"`
+	AuthTokenClientSecret string                   `json:"authTokenClientSecret,omitempty"`
+	AuthTokenScope        string                   `json:"authTokenScope,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
