@@ -303,6 +303,12 @@ func resourceKeycloakRealm() *schema.Resource {
 											return smtpServerPassword == "**********"
 										},
 									},
+									"auth_type": {
+										Type:         schema.TypeString,
+										Optional:     true,
+										Default:      "basic",
+										ValidateFunc: validation.StringInSlice([]string{"basic"}, false), // Only basic is supported by the provider for now
+									},
 								},
 							},
 						},
@@ -815,6 +821,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			smtpServer.Auth = true
 			smtpServer.User = auth["username"].(string)
 			smtpServer.Password = auth["password"].(string)
+			smtpServer.AuthType = auth["auth_type"].(string)
+
 		} else {
 			smtpServer.Auth = false
 		}
@@ -1245,6 +1253,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 
 			auth["username"] = realm.SmtpServer.User
 			auth["password"] = realm.SmtpServer.Password
+			auth["auth_type"] = realm.SmtpServer.AuthType
 
 			smtpSettings["auth"] = []interface{}{auth}
 		}
