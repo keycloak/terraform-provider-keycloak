@@ -50,7 +50,7 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithPolicy(t *testing.T) {
 	profileDescription := "Test profile description"
 	policyName := "test-policy"
 	policyDescription := "Test policy description"
-	conditionName := "client-updater-source-roles"
+	conditionName := "any-client"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -125,7 +125,7 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     configuration = {
 			is_negative_logic = false
 			attributes        = jsonencode([{"key": "test-key", "value": "test-value"}])
-			}
+	}
   }
 }
 	`, realm, profileName, profileDescription, policyName, policyDescription, conditionName)
