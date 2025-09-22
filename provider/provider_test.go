@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/keycloak/terraform-provider-keycloak/helper"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -38,27 +38,9 @@ func init() {
 	// Load environment variables from a json file if it exists
 	// This is useful for running tests locally
 
-	if _, err := os.Stat("../test_env.json"); err == nil {
-		println("Using test_env.json to load environment variables...")
-		file, err := os.Open("../test_env.json")
-		if err != nil {
-			log.Fatalf("Unable to open env.json: %s", err)
-		}
-		defer file.Close()
+	helper.UpdateEnvFromTestEnvIfPresent()
 
-		var envVars map[string]string
-		if err := json.NewDecoder(file).Decode(&envVars); err != nil {
-			log.Fatalf("Unable to decode env.json: %s", err)
-		}
-
-		for key, value := range envVars {
-			if err := os.Setenv(key, value); err != nil {
-				log.Fatalf("Unable to set environment variable %s: %s", key, err)
-			}
-		}
-	}
-
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", "", "", true, 120, "", false, userAgent, false, map[string]string{
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", "", "", true, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {

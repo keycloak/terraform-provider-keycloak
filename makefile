@@ -1,6 +1,9 @@
+.PHONY: mtls-certs clean-mtls-certs
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 GOOS?=darwin
 GOARCH?=arm64
+
+CERTS_TLS_DIR ?= provider/testdata/tls
 
 MAKEFLAGS += --silent
 
@@ -33,6 +36,12 @@ local: deps user-federation-example
 	./scripts/wait-for-local-keycloak.sh
 	./scripts/create-terraform-client.sh
 
+local-mtls: deps user-federation-example
+	echo "Starting local Keycloak environment with mtls"
+	docker compose --file docker-compose.yml --file docker-compose-mtls.yml up --build -d
+	./scripts/wait-for-local-keycloak.sh
+	./scripts/create-terraform-client.sh
+
 local-stop:
 	echo "Stopping local Keycloak environment"
 	docker compose stop
@@ -62,3 +71,9 @@ vet:
 
 user-federation-example:
 	cd custom-user-federation-example && ./gradlew shadowJar
+
+mtls-certs:
+	./mtls-certs.sh create "$(CERTS_TLS_DIR)"
+
+clean-mtls-certs:
+	./mtls-certs.sh clean "$(CERTS_TLS_DIR)"
