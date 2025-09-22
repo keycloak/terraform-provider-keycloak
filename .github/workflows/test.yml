@@ -149,12 +149,12 @@ jobs:
 
         timeout-minutes: 60
 # Only run mtls test for the later versions
-      - name: Test (mtls client auth)
+      - name: Test (auth with mtls client certificate)
         if: matrix.keycloak-version == '26.3.4' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download
-          make testacc
+          make testauth
         env:
           KEYCLOAK_CLIENT_ID: terraform
           KEYCLOAK_CLIENT_SECRET: 884e0f95-0f42-4a63-9b1f-94274655669e
@@ -167,6 +167,23 @@ jobs:
           KEYCLOAK_TLS_CLIENT_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCn73NalgHxN/bO\nEbkvNUX3cF0/W7sK+USwEjXz1uL2Srf4svy/p0vkhl2EEHjEq3mUMLpxbUCReSYc\nVzAuLZYAMiJ9q/ufXPufvQvXGylMqVeDcbVKkoy3sL0xCrNm7trdnGsfe0bVCcz6\nAng/KlYvkpMiQVNJjUe7UUts64djXTzIPbATHNh5lTkmfOsy75+r0ppj/QHn17wO\n/EtwZI9y/n4UX6lqsWCNPI9k3bS6b6787Jydq6mBzj44EhOxhOLWzxrUizUFOM4h\nJgvG7d5naoDFBtZQRuiawaFTFWqh92fOmUK/eMc/VgJiZOuOrF0Wvr0JsethzonB\nawP7/2fFAgMBAAECggEAA0SaSWWokq8fcxHOjr1J/USx1oJ3I1bdH/1au2yvwfyL\nk/ViYcBkWQVxsG45oL94KuAVNhEwM88tugN1q+W13jnGM2KIulMu5QQ4GhmB4Odd\nYptwhwukXWFnwm/jidnqvGvyJwyua4WN+EIwC4VMDrpFeWHYDb2ywFHBVqnxWoef\n1UhhL2w+vVDC+IVW4dd50Z4i8PU9xFUeTaKfr7tWujXGlujn57wWvr5r25WURha6\nWNBVZaoj/WSUbdD1c6a150q0GEF3Fd1ofQ1/PJRUgL5+lhdjUgBv1S2Z9/6DK4Fq\ngA8Saeh1tl85PrAbNPkz3lqoXg0HpOBd4pRYXrA4CQKBgQDo8gZocAMJzoX+6Fym\naBJWB97hcMl0YkGDl8tUaZlO0bCxh5BOGh4ZoP5e7avEXu8FbdmxNdIO5ENO80Bk\ntl2eG1S7ajdzgEoNREgUplChza6bEGAltnaloY9kzY2c/FRdqZFRPwpBB68V1n/E\nFusMJlQ09fN8SGj0GD98nCadpwKBgQC4jk+s2HnbvLCxOE852YNLS18Rlm030/ZP\ndyOVzQuHPpOghOHLVA5L10Q5bjVQGzN+bTbgB/403wAyop3oZtjOCE2qbimZxmfs\nqeJSx5OEpfqo95Eg/9WDjXMtWN8WtbYsxqOdzO+aqK1KX3aBUA/VgthBAnfWbZF1\nfNQ4euT0swKBgQDVv39xxZaEISWDSeP6LfTlTEOPydaRHLfQ8DB7PIqYcIEZ5bLc\nd8q26at/n8bFYfchnDLtEN23HG1GvJ6Ry2UL9zhA4K4RJd7NXaJmkFXcosddMiGH\neW5VfXH+pT8UldU0PKxDSP03vr1B5JlIbV8wvtr13dmWaTslADsBNKeacQKBgCpz\nucoVhXpRHge13yt8aCIStUyTYI4d+KNw0UOtBcDXWRfsWQ/vRtaVLsFTI3pIt4CW\nWLARxpycyyvakh4aQjaqXEseyfzwUYlzznaiJ8G0eEMTp1OC5bc7+0lsDuznYX9N\nNeefc2IM+MeJy/WU1/+R+HKDwdMWIwZ2b06Knk3XAoGAOCedCxVJMIR6xGw6NDDI\njWI39WpIzq7FNJGBJbjXgE0EazFClQrEsKkt4Qvi9mIkHFwLo+LbriWs5oe1V4dC\nNSgNPEtPR70LwRhp1Xr8ChMM5ZP75zYcu09O1IKrbiWGN6jJwnJxg3q4WmuB8g3o\nOValBgrKUp3ueYbmlRqLfcs=\n-----END PRIVATE KEY-----\n"
           KEYCLOAK_TLS_CA_CERT: "-----BEGIN CERTIFICATE-----\n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\n-----END CERTIFICATE-----\n"
           KEYCLOAK_TEST_PASSWORD_GRANT: "true"
+          KEYCLOAK_VERSION: ${{ steps.keycloak-version.outputs.result }}
+
+        timeout-minutes: 60
+
+      - name: Test (auth with provided access token)
+        if: matrix.keycloak-version == '26.3.4' || matrix.keycloak-version == '26.2.5'
+        run: |
+          terraform version
+          go mod download
+          make access-token
+          export KEYCLOAK_ACCESS_TOKEN="$(cat ./keycloak_access_token)"
+          make testauth
+        env:
+          KEYCLOAK_CLIENT_ID: terraform
+          KEYCLOAK_CLIENT_TIMEOUT: 120
+          KEYCLOAK_REALM: master
+          KEYCLOAK_URL: "http://localhost:8080"
           KEYCLOAK_VERSION: ${{ steps.keycloak-version.outputs.result }}
 
         timeout-minutes: 60

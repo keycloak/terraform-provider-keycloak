@@ -24,13 +24,6 @@ var testAccRealmUserFederation *keycloak.Realm
 var testAccRealmOrganization *keycloak.Realm
 var testCtx context.Context
 
-var requiredEnvironmentVariables = []string{
-	"KEYCLOAK_CLIENT_ID",
-	"KEYCLOAK_CLIENT_SECRET",
-	"KEYCLOAK_REALM",
-	"KEYCLOAK_URL",
-}
-
 func init() {
 	testCtx = context.Background()
 	userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", schema.Provider{}.TerraformVersion, meta.SDKVersionString())
@@ -40,7 +33,8 @@ func init() {
 
 	helper.UpdateEnvFromTestEnvIfPresent()
 
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", "", "", true, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
+	initialLogin := os.Getenv("KEYCLOAK_ACCESS_TOKEN") == ""
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -123,9 +117,5 @@ func TestProvider(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	for _, requiredEnvironmentVariable := range requiredEnvironmentVariables {
-		if value := os.Getenv(requiredEnvironmentVariable); value == "" {
-			t.Fatalf("%s must be set before running acceptance tests.", requiredEnvironmentVariable)
-		}
-	}
+	helper.CheckRequiredEnvironmentVariables(t)
 }

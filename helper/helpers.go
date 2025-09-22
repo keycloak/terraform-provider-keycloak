@@ -5,7 +5,33 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"testing"
 )
+
+var requiredEnvironmentVariables = []string{
+	"KEYCLOAK_CLIENT_ID",
+	"KEYCLOAK_URL",
+	"KEYCLOAK_REALM",
+}
+
+var requiredEnvironmentVariablesForTokenAuth = []string{
+	"KEYCLOAK_REALM",
+	"KEYCLOAK_URL",
+}
+
+func CheckRequiredEnvironmentVariables(t *testing.T) {
+
+	requiredEnvVars := requiredEnvironmentVariables
+	if os.Getenv("KEYCLOAK_ACCESS_TOKEN") != "" {
+		requiredEnvVars = requiredEnvironmentVariablesForTokenAuth
+	}
+
+	for _, requiredEnvironmentVariable := range requiredEnvVars {
+		if value := os.Getenv(requiredEnvironmentVariable); value == "" {
+			t.Fatalf("%s must be set before running acceptance tests.", requiredEnvironmentVariable)
+		}
+	}
+}
 
 func UpdateEnvFromTestEnvIfPresent() {
 

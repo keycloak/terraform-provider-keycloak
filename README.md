@@ -145,7 +145,7 @@ KEYCLOAK_TLS_CA_CERT="$(cat provider/testdata/tls/server-cert.pem)" \
 make testacc
 ```
 
-#### Test with HTTPS + mTLS
+#### Test Authenticating with HTTPS + mTLS
 You can also run the same tests on Keycloak's https port with the Keycloak Terraform provider authenticating to the server with a mTLS client certificate.
 For this start the env with `make local-mtls`. After that run the following command:
 
@@ -160,7 +160,24 @@ KEYCLOAK_URL="https://localhost:8443" \
 KEYCLOAK_TLS_CLIENT_CERT="$(cat provider/testdata/tls/client-cert.pem)" \
 KEYCLOAK_TLS_CLIENT_KEY="$(cat provider/testdata/tls/client-key.pem)" \
 KEYCLOAK_TLS_CA_CERT="$(cat provider/testdata/tls/server-cert.pem)" \
-make testacc
+make testauth
+```
+
+#### Test Authenticating with provided Access Token
+You can also run the same test with a provided access token.
+For this start the env with `make local`. To obtain an access token for the admin user via the admin-cli client, run `make access-token` to
+store an acess token in the `./keycloak_access_token` file.
+
+After that run the following command:
+
+```
+make access-token
+KEYCLOAK_CLIENT_ID=terraform \
+KEYCLOAK_CLIENT_TIMEOUT=5 \
+KEYCLOAK_ACCESS_TOKEN="$(cat keycloak_access_token)" \
+KEYCLOAK_REALM=master \
+KEYCLOAK_URL="http://localhost:8080" \
+make testauth
 ```
 
 ### Run examples

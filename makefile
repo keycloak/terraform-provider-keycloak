@@ -59,15 +59,22 @@ fmt:
 test: fmtcheck vet
 	go test $(TEST)
 
-testacc: fmtcheck vet
-	go test -v github.com/keycloak/terraform-provider-keycloak/keycloak
+testacc: fmtcheck vet testauth
 	TF_ACC=1 CHECKPOINT_DISABLE=1 go test -v -timeout 60m -parallel 4 github.com/keycloak/terraform-provider-keycloak/provider $(TESTARGS)
+
+testauth: fmtcheck vet
+	go test -v github.com/keycloak/terraform-provider-keycloak/keycloak
 
 fmtcheck:
 	lineCount=$(shell gofmt -l -s $(GOFMT_FILES) | wc -l | tr -d ' ') && exit $$lineCount
 
 vet:
 	go vet ./...
+
+access-token:
+	echo "Fetching access_token for admin user"
+	curl -s -d "grant_type=password" -d "client_id=admin-cli" -d "username=keycloak" -d "password=password" http://localhost:8080/realms/master/protocol/openid-connect/token | jq -r .access_token | tr -d '\n' > keycloak_access_token && echo "Stored token in ./keycloak_access_token"
+
 
 user-federation-example:
 	cd custom-user-federation-example && ./gradlew shadowJar
