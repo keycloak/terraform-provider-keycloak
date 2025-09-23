@@ -106,7 +106,7 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			"standard_flow_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
+				Default:  true,
 			},
 			"implicit_flow_enabled": {
 				Type:     schema.TypeBool,
