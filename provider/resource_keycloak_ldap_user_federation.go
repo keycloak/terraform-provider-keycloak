@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -550,7 +551,22 @@ func resourceKeycloakLdapUserFederationDelete(ctx context.Context, data *schema.
 func resourceKeycloakLdapUserFederationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	parts := strings.Split(d.Id(), "/")
+	d.Set("delete_default_mappers", false) // The old default value was false, so let's keep it that way
+
+	parts := strings.Split(d.Id(), ":")
+	var idString string
+	switch {
+	case len(parts) == 2:
+		idString = parts[0]
+		deleteDefaultMappers, err := strconv.ParseBool(parts[1])
+		if err != nil {
+		}
+		d.Set("delete_default_mappers", deleteDefaultMappers)
+	default:
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{userFederationId}}, {{realmId}}/{{userFederationId}}:{{delete_default_mappers_flag}}, {{realmId}}/{{userFederationId}}/{{bindCredentials}}, {{realmId}}/{{userFederationId}}/{{bindCredentials}}:{{delete_default_mappers_flag}}")
+	}
+
+	parts = strings.Split(idString, "/")
 
 	var realmId, id string
 	switch {
@@ -562,7 +578,7 @@ func resourceKeycloakLdapUserFederationImport(ctx context.Context, d *schema.Res
 		id = parts[1]
 		d.Set("bind_credential", parts[2])
 	default:
-		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{userFederationId}}, {{realmId}}/{{userFederationId}}/{{bindCredentials}}")
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{userFederationId}}, {{realmId}}/{{userFederationId}}:{{delete_default_mappers_flag}}, {{realmId}}/{{userFederationId}}/{{bindCredentials}}, {{realmId}}/{{userFederationId}}/{{bindCredentials}}:{{delete_default_mappers_flag}}")
 	}
 
 	_, err := keycloakClient.GetLdapUserFederation(ctx, realmId, id)
@@ -571,7 +587,6 @@ func resourceKeycloakLdapUserFederationImport(ctx context.Context, d *schema.Res
 	}
 
 	d.Set("realm_id", realmId)
-	d.Set("delete_default_mappers", false) // this is only valid on create, so we assume this is false
 	d.SetId(id)
 
 	diagnostics := resourceKeycloakLdapUserFederationRead(ctx, d, meta)
