@@ -48,7 +48,7 @@ This provider will officially support the latest three major versions of Keycloa
 
 The following versions are used when running acceptance tests in CI:
 
-- 26.3.3 (latest)
+- 26.3.4 (latest)
 - 26.2.5
 - 26.1.4
 - 26.0.8
@@ -74,7 +74,7 @@ build you can use the `linux_amd64` build as long as `libc6-compat` is installed
 
 ## Development
 
-This project requires Go 1.23 and Terraform 1.12.2.
+This project requires Go 1.24 and Terraform 1.13.3.
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependency management, which allows this project to exist outside an existing GOPATH.
 
 After cloning the repository, you can build the project by running `make build`.
@@ -106,6 +106,8 @@ You can spin up a local developer environment via [Docker Compose](https://docs.
 This will spin up a few containers for Keycloak, PostgreSQL, and OpenLDAP, which can be used for testing the provider.
 This environment and its setup via `make local` is not intended for production use.
 
+You can also use `make local-mtls` to start Keycloak with required client authentication via mTLS certificate.
+
 To stop the environment you can use the `make local-stop`. To remove the local environment use `make local-down`.
 
 Note: The setup scripts require the [jq](https://stedolan.github.io/jq/) command line utility.
@@ -126,6 +128,56 @@ KEYCLOAK_REALM=master \
 KEYCLOAK_TEST_PASSWORD_GRANT=true \
 KEYCLOAK_URL="http://localhost:8080" \
 make testacc
+```
+
+#### Test with HTTPS
+You can also run the same tests on Keycloak's https port.
+For this start the env with `make local`. After that run the following command:
+
+```
+KEYCLOAK_CLIENT_ID=terraform \
+KEYCLOAK_CLIENT_SECRET=884e0f95-0f42-4a63-9b1f-94274655669e \
+KEYCLOAK_CLIENT_TIMEOUT=5 \
+KEYCLOAK_REALM=master \
+KEYCLOAK_TEST_PASSWORD_GRANT=true \
+KEYCLOAK_URL="https://localhost:8443" \
+KEYCLOAK_TLS_CA_CERT="$(cat provider/testdata/tls/server-cert.pem)" \
+make testacc
+```
+
+#### Test Authenticating with HTTPS + mTLS
+You can also run the same tests on Keycloak's https port with the Keycloak Terraform provider authenticating to the server with a mTLS client certificate.
+For this start the env with `make local-mtls`. After that run the following command:
+
+```
+KEYCLOAK_CLIENT_ID=terraform \
+KEYCLOAK_CLIENT_SECRET=884e0f95-0f42-4a63-9b1f-94274655669e \
+KEYCLOAK_CLIENT_TIMEOUT=5 \
+KEYCLOAK_REALM=master \
+KEYCLOAK_TEST_PASSWORD_GRANT=true \
+KEYCLOAK_URL_HTTP="http://localhost:8080" \
+KEYCLOAK_URL="https://localhost:8443" \
+KEYCLOAK_TLS_CLIENT_CERT="$(cat provider/testdata/tls/client-cert.pem)" \
+KEYCLOAK_TLS_CLIENT_KEY="$(cat provider/testdata/tls/client-key.pem)" \
+KEYCLOAK_TLS_CA_CERT="$(cat provider/testdata/tls/server-cert.pem)" \
+make testauth
+```
+
+#### Test Authenticating with provided Access Token
+You can also run the same test with a provided access token.
+For this start the env with `make local`. To obtain an access token for the admin user via the admin-cli client, run `make access-token` to
+store an acess token in the `./keycloak_access_token` file.
+
+After that run the following command:
+
+```
+make access-token
+KEYCLOAK_CLIENT_ID=terraform \
+KEYCLOAK_CLIENT_TIMEOUT=5 \
+KEYCLOAK_ACCESS_TOKEN="$(cat keycloak_access_token)" \
+KEYCLOAK_REALM=master \
+KEYCLOAK_URL="http://localhost:8080" \
+make testauth
 ```
 
 ### Run examples
