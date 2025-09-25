@@ -497,7 +497,9 @@ func testKeycloakRealmUserProfile_userProfileDisabled(realm string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
-
+}
+resource "keycloak_realm_attributes" "attributes" {
+	realm_id = keycloak_realm.realm.id
 	attributes = {
 		userProfileEnabled  = false
 	}
@@ -530,12 +532,13 @@ func testKeycloakRealmUserProfile_template(realm string, realmUserProfile *keycl
 	tmpl, err := template.New("").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(`
 resource "keycloak_realm" "realm" {
 	realm 	   = "{{ .realm }}"
-
+}
+resource "keycloak_realm_attributes" "attributes" {
+	realm_id = keycloak_realm.realm.id
 	attributes = {
 		userProfileEnabled  = true
 	}
 }
-
 resource "keycloak_realm_user_profile" "realm_user_profile" {
 	realm_id = keycloak_realm.realm.id
 
