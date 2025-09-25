@@ -26,23 +26,24 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_openid_client" "openid_client" {
-  realm_id            = keycloak_realm.realm.id
-  client_id           = "test-client"
+	realm_id  = keycloak_realm.realm.id
+	client_id = "test-client"
 
-  name                = "test client"
-  enabled             = true
+	name    = "test client"
+	enabled = true
 
-  access_type         = "CONFIDENTIAL"
-  valid_redirect_uris = [
-    "http://localhost:8080/openid-callback"
-  ]
+	access_type           = "CONFIDENTIAL"
+	standard_flow_enabled = true
+	valid_redirect_uris = [
+		"http://localhost:8080/openid-callback"
+	]
 
-  login_theme = "keycloak"
+	login_theme = "keycloak"
 
-  extra_config = {
-    "key1" = "value1"
-    "key2" = "value2"
-  }
+	extra_config = {
+		"key1" = "value1"
+		"key2" = "value2"
+	}
 }
 ```
 
@@ -60,26 +61,27 @@ ephemeral "random_password" "openid_client_secret" {
 }
 
 resource "keycloak_openid_client" "openid_client" {
-  realm_id            = keycloak_realm.realm.id
-  client_id           = "test-client"
+	realm_id  = keycloak_realm.realm.id
+	client_id = "test-client"
 
-  name                = "test client"
-  enabled             = true
+	name    = "test client"
+	enabled = true
 
-  client_secret_wo         = ephemeral.random_password.openid_client_secret.result
-  client_secret_wo_version = 1
+	client_secret_wo         = ephemeral.random_password.openid_client_secret.result
+	client_secret_wo_version = 1
 
-  access_type         = "CONFIDENTIAL"
-  valid_redirect_uris = [
-    "http://localhost:8080/openid-callback"
-  ]
+	access_type           = "CONFIDENTIAL"
+	standard_flow_enabled = true
+	valid_redirect_uris = [
+		"http://localhost:8080/openid-callback"
+	]
 
-  login_theme = "keycloak"
+	login_theme = "keycloak"
 
-  extra_config = {
-    "key1" = "value1"
-    "key2" = "value2"
-  }
+	extra_config = {
+		"key1" = "value1"
+		"key2" = "value2"
+	}
 }
 ```
 
