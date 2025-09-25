@@ -626,12 +626,6 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed:    true,
 			},
 
-			// misc attributes
-			"attributes": {
-				Type:     schema.TypeMap,
-				Optional: true,
-			},
-
 			// default default client scopes
 			"default_default_client_scopes": {
 				Type:     schema.TypeSet,
