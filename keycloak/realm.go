@@ -3,9 +3,8 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
+	"strings"
 )
 
 type Key struct {
@@ -89,18 +88,14 @@ type Realm struct {
 
 	BrowserSecurityHeaders BrowserSecurityHeaders `json:"browserSecurityHeaders"`
 
-	BruteForceProtected          bool   `json:"bruteForceProtected"`
-	PermanentLockout             bool   `json:"permanentLockout"`
-	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`   // Strategy to increase wait time
-	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
-	FailureFactor                int    `json:"failureFactor"`                  //Max Login Failures
-	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
-	QuickLoginCheckMilliSeconds  int    `json:"quickLoginCheckMilliSeconds"`
-	MinimumQuickLoginWaitSeconds int    `json:"minimumQuickLoginWaitSeconds"`
-	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
-	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
-
-	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
+	BruteForceProtected          bool `json:"bruteForceProtected"`
+	PermanentLockout             bool `json:"permanentLockout"`
+	FailureFactor                int  `json:"failureFactor"` //Max Login Failures
+	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
+	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
+	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
+	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
+	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
 	PasswordPolicy string `json:"passwordPolicy"`
 
@@ -173,7 +168,6 @@ type SmtpServer struct {
 	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
 	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
 	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
-	AllowUtf8             types.KeycloakBoolQuoted `json:"allowutf8,omitempty"`
 	User                  string                   `json:"user,omitempty"`
 	Password              string                   `json:"password,omitempty"`
 	AuthType              string                   `json:"authType,omitempty"`
