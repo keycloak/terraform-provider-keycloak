@@ -32,6 +32,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"keycloak_realm":                                             resourceKeycloakRealm(),
+			"keycloak_realm_attributes":                                  resourceKeycloakRealmAttributes(),
 			"keycloak_realm_events":                                      resourceKeycloakRealmEvents(),
 			"keycloak_realm_default_client_scopes":                       resourceKeycloakRealmDefaultClientScopes(),
 			"keycloak_realm_optional_client_scopes":                      resourceKeycloakRealmOptionalClientScopes(),
