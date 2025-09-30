@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -155,6 +156,25 @@ func resourceKeycloakRealmClientPolicyProfilePolicyRead(ctx context.Context, dat
 	return nil
 }
 
+var UnmarshalledConfigurations = map[string]struct{}{
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientAccessTypeCondition.java#L50
+	"client-access-type": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientRolesCondition.java#L51-L62
+	"client-roles": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientScopesCondition.java#L64
+	"client-scopes": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterContextCondition.java#L52
+	"client-updater-context": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceGroupsCondition.java#L61
+	"client-updater-source-groups": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceHostsCondition.java#L52
+	"client-updater-source-host": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientUpdaterSourceRolesCondition.java#L64
+	"client-updater-source-roles": {},
+	// https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/services/clientpolicy/condition/GrantTypeCondition.java#L49
+	"grant-type": {},
+}
+
 func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *keycloak.RealmClientPolicyProfilePolicy {
 	conditions := []keycloak.RealmClientPolicyProfilePolicyCondition{}
 	profiles := make([]string, 0)
@@ -169,7 +189,14 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		if v, ok := conditionMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
-				configurations[key] = value.(string)
+				if _, exists := UnmarshalledConfigurations[conditionMap["name"].(string)]; exists {
+					var encodedValue map[string]interface{}
+					if err := json.Unmarshal([]byte(value.(string)), &encodedValue); err == nil {
+						configurations[key] = encodedValue
+					}
+				} else {
+					configurations[key] = value.(string)
+				}
 			}
 			cond.Configuration = configurations
 		}
