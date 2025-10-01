@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"testing"
 )
 
 func TestAccKeycloakRealm_basic(t *testing.T) {
@@ -738,29 +739,6 @@ func TestAccKeycloakRealm_browserFlow(t *testing.T) {
 	})
 }
 
-func TestAccKeycloakRealm_customAttribute(t *testing.T) {
-	realmName := acctest.RandomWithPrefix("tf-acc")
-	key := acctest.RandomWithPrefix("tf-acc")
-	value := acctest.RandomWithPrefix("tf-acc")
-	value2 := acctest.RandomWithPrefix("tf-acc")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
-		Steps: []resource.TestStep{
-			{
-				Config: testKeycloakRealm_withCustomAttribute(realmName, key, value),
-				Check:  testAccCheckKeycloakRealmCustomAttribute("keycloak_realm.realm", key, value),
-			},
-			{
-				Config: testKeycloakRealm_withCustomAttribute(realmName, key, value2),
-				Check:  testAccCheckKeycloakRealmCustomAttribute("keycloak_realm.realm", key, value2),
-			},
-		},
-	})
-}
-
 func TestAccKeycloakRealm_passwordPolicyInvalid(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
@@ -1318,21 +1296,6 @@ func testAccCheckKeycloakRealmBrowserFlow(resourceName, browserFlow string) reso
 	}
 }
 
-func testAccCheckKeycloakRealmCustomAttribute(resourceName, key, value string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		realm, err := getRealmFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if realm.Attributes[key] != value {
-			return fmt.Errorf("expected realm %s to have an attribute %s with value %s but was %s", realm.Realm, key, value, realm.Attributes[key])
-		}
-
-		return nil
-	}
-}
-
 func testAccCheckKeycloakRealmWithInternalId(resourceName, id string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
@@ -1744,18 +1707,6 @@ resource "keycloak_realm" "realm" {
 	browser_flow = "%s"
 }
 	`, realm, realmDisplayName, browserFlow)
-}
-
-func testKeycloakRealm_withCustomAttribute(realm, key, value string) string {
-	return fmt.Sprintf(`
-resource "keycloak_realm" "realm" {
-	realm        = "%s"
-	enabled      = true
-	attributes   = {
-		%s = "%s"
-	}
-}
-	`, realm, key, value)
 }
 
 func testKeycloakRealm_webauthn_policy(realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement string, signatureAlgorithms []string, avoidSameAuthenticatorRegister bool) string {

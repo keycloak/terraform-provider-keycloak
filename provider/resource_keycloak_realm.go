@@ -661,12 +661,6 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed:    true,
 			},
 
-			// misc attributes
-			"attributes": {
-				Type:     schema.TypeMap,
-				Optional: true,
-			},
-
 			// default default client scopes
 			"default_default_client_scopes": {
 				Type:     schema.TypeSet,
@@ -1424,15 +1418,6 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
-
-	attributes := map[string]interface{}{}
-	if v, ok := data.GetOk("attributes"); ok {
-		for key := range v.(map[string]interface{}) {
-			attributes[key] = realm.Attributes[key]
-			//We are only interested in attributes managed in terraform (Keycloak returns a lot of doubles values in the attributes...)
-		}
-	}
-	data.Set("attributes", attributes)
 
 	// default and optional client scope mappings
 	data.Set("default_default_client_scopes", realm.DefaultDefaultClientScopes)

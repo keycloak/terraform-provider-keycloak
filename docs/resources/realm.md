@@ -24,9 +24,6 @@ resource "keycloak_realm" "realm" {
 
   ssl_required    = "external"
   password_policy = "upperCase(1) and length(8) and forceExpiredPasswordChange(365) and notUsername"
-  attributes      = {
-    mycustomAttribute = "myCustomValue"
-  }
 
   smtp_server {
     host = "smtp.example.com"
@@ -84,7 +81,7 @@ resource "keycloak_realm" "realm" {
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
-- `attributes` - (Optional) A map of custom attributes to add to the realm.
+- `attributes` - [Moved to its own resource see](./realm_attributes.md)
 - `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
 
 ### Login Settings
