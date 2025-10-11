@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -169,7 +171,14 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		if v, ok := conditionMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
-				configurations[key] = value.(string)
+				// handle json objects and arrays
+				if strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[") {
+					var t interface{}
+					json.Unmarshal([]byte(value.(string)), &t)
+					configurations[key] = t
+					continue
+				}
+				configurations[key] = value
 			}
 			cond.Configuration = configurations
 		}
@@ -208,7 +217,14 @@ func mapFromRealmClientPolicyProfilePolicyToData(data *schema.ResourceData, poli
 		if cond.Configuration != nil {
 			configurations := make(map[string]interface{})
 			for k, v := range cond.Configuration {
-				configurations[k] = v
+				switch v.(type) {
+				// handle json objects and arrays
+				case map[string]interface{}, []interface{}:
+					s, _ := json.Marshal(v)
+					configurations[k] = string(s)
+				default:
+					configurations[k] = v
+				}
 			}
 			conditionMap["configuration"] = configurations
 		}
