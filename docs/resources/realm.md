@@ -158,9 +158,16 @@ This block supports the following arguments:
 - `envelope_from` - (Optional) The email address uses for bounces.
 - `starttls` - (Optional) When `true`, enables StartTLS. Defaults to `false`.
 - `ssl` - (Optional) When `true`, enables SSL. Defaults to `false`.
-- `auth` - (Optional) Enables authentication to the SMTP server.  This block supports the following arguments:
+- `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `password` - (Required) The SMTP server password.
+- `token_auth` - (Optional) Enables authentication to the SMTP server through OAUTH2. Cannot be set alongside `auth`. This block supports the following arguments:
+    - `username` - (Required) The SMTP server username.
+    - `url` - (Required) The auth token URL.
+    - `client_id` - (Required) The auth token client ID.
+    - `client_secret` - (Required) The auth token client secret.
+    - `scope` - (Required) The auth token scope.
+
 
 ### Internationalization
 

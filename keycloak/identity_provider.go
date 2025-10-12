@@ -56,6 +56,9 @@ type IdentityProviderConfig struct {
 	Issuer                          string                    `json:"issuer,omitempty"`
 	OrgRedirectModeEmailMatches     types.KeycloakBoolQuoted  `json:"kc.org.broker.redirect.mode.email-matches,omitempty"`
 	OrgDomain                       string                    `json:"kc.org.domain,omitempty"`
+	ApiUrl                          string                    `json:"apiUrl,omitempty"`
+	BaseUrl                         string                    `json:"baseUrl,omitempty"`
+	GithubJsonFormat                types.KeycloakBoolQuoted  `json:"githubJsonFormat,omitempty"`
 }
 
 type IdentityProvider struct {
