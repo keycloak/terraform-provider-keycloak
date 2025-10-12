@@ -151,6 +151,46 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		},
 	})
 }
+func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+			},
+			{
+				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+			},
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "My Host2", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+			},
+		},
+	})
+}
 
 func TestAccKeycloakRealm_SmtpServerInvalid(t *testing.T) {
 	realm := acctest.RandomWithPrefix("tf-acc")
@@ -1338,6 +1378,34 @@ resource "keycloak_realm" "realm" {
 		auth {
 			username = "%s"
 			password = "tom"
+		}
+	}
+}
+	`, realm, realm, host, from, user)
+}
+
+func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+	enabled = true
+	display_name = "%s"
+	smtp_server {
+		host = "%s"
+		port = 25
+		from_display_name = "Tom"
+		from = "%s"
+		reply_to_display_name = "Tom"
+		reply_to = "tom@myhost.com"
+		ssl = true
+		starttls = true
+		envelope_from = "nottom@myhost.com"
+		token_auth {
+			username      = "%s"
+			url           = "wibble.com"
+			client_id     = "wibble"
+			client_secret = "wobble"
+			scope         = "wiggle"
 		}
 	}
 }
