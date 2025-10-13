@@ -67,8 +67,11 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `bind_credential` - (Optional) Password of LDAP admin. This attribute must be set if `bind_dn` is set.
 - `custom_user_search_filter` - (Optional) Additional LDAP filter for filtering searched users. Must begin with `(` and end with `)`.
 - `search_scope` - (Optional) Can be one of `ONE_LEVEL` or `SUBTREE`:
-    - `ONE_LEVEL`: Only search for users in the DN specified by `user_dn`.
-    - `SUBTREE`: Search entire LDAP subtree.
+	- `ONE_LEVEL`: Only search for users in the DN specified by `user_dn`.
+	- `SUBTREE`: Search entire LDAP subtree.
+- `referral` - (Optional) Specifies if LDAP referrals should be followed or ignored. Can be one of `ignore` or `follow`:
+	- `ignore`: default mode.
+	- `follow`: follow ldaps, even untrusted ones.
 - `start_tls` - (Optional) When `true`, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.
 - `use_password_modify_extended_op` - (Optional) When `true`, use the LDAPv3 Password Modify Extended Operation (RFC-3062).
 - `validate_password_policy` - (Optional) When `true`, Keycloak will validate passwords using the realm policy before updating it.
