@@ -66,7 +66,7 @@ func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.
 
 func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.T) {
 	t.Parallel()
-
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -87,6 +87,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	userAttributeMapperBefore := &keycloak.LdapUserAttributeMapper{
