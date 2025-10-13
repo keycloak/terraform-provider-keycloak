@@ -193,6 +193,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"deletion_protection": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 
 			// Login Config
 			"registration_allowed": {
@@ -1513,6 +1518,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		realm.SmtpServer.Password = smtpPassword
 	}
 
+	if _, ok := data.GetOk("deletion_protection"); !ok {
+		data.Set("deletion_protection", false)
+	}
+
 	setRealmData(data, realm, keycloakVersion)
 
 	return nil
@@ -1546,6 +1555,9 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if data.Get("deletion_protection").(bool) {
+		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
+	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	return diag.FromErr(keycloakClient.DeleteRealm(ctx, data.Id()))
