@@ -181,6 +181,7 @@ func generateRandomLdapKerberos(enabled bool) *keycloak.LdapUserFederation {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
+		Referral:                             "ignore",
 	}
 }
 
