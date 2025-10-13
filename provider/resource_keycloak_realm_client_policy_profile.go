@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -150,8 +152,22 @@ func mapFromDataToRealmClientPolicyProfile(data *schema.ResourceData) *keycloak.
 		executorMap := executor.(map[string]interface{})
 
 		exec := keycloak.RealmClientPolicyProfileExecutor{
-			Name:          executorMap["name"].(string),
-			Configuration: executorMap["configuration"].(map[string]interface{}),
+			Name: executorMap["name"].(string),
+		}
+
+		if v, ok := executorMap["configuration"]; ok {
+			configurations := make(map[string]interface{})
+			for key, value := range v.(map[string]interface{}) {
+				// handle json objects and arrays
+				if strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[") {
+					var t interface{}
+					json.Unmarshal([]byte(value.(string)), &t)
+					configurations[key] = t
+					continue
+				}
+				configurations[key] = value
+			}
+			exec.Configuration = configurations
 		}
 
 		executors = append(executors, exec)
@@ -174,8 +190,22 @@ func mapFromRealmClientPolicyProfileToData(data *schema.ResourceData, profile *k
 	for _, ex := range profile.Executors {
 
 		executorMap := map[string]interface{}{
-			"name":          ex.Name,
-			"configuration": ex.Configuration,
+			"name": ex.Name,
+		}
+
+		if ex.Configuration != nil {
+			configurations := make(map[string]interface{})
+			for k, v := range ex.Configuration {
+				switch v.(type) {
+				// handle json objects and arrays
+				case map[string]interface{}, []interface{}:
+					s, _ := json.Marshal(v)
+					configurations[k] = string(s)
+				default:
+					configurations[k] = v
+				}
+			}
+			executorMap["configuration"] = configurations
 		}
 		executors = append(executors, executorMap)
 	}

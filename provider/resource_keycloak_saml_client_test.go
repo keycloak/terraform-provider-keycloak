@@ -714,8 +714,8 @@ resource "keycloak_saml_client" "saml_client" {
 	encrypt_assertions      = false
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
-	signing_private_key     = file("misc/saml-key.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
+	signing_private_key     = file("testdata/saml-key.pem")
 }
 	`, testAccRealm.Realm, clientId)
 }
@@ -736,7 +736,7 @@ resource "keycloak_saml_client" "saml_client" {
 	encrypt_assertions      = false
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
 }
 	`, testAccRealm.Realm, clientId)
 }
@@ -755,7 +755,7 @@ resource "keycloak_saml_client" "saml_client" {
 	encrypt_assertions      = true
 	include_authn_statement = true
 
-	encryption_certificate     = file("misc/saml-cert.pem")
+	encryption_certificate     = file("testdata/saml-cert.pem")
 }
 	`, testAccRealm.Realm, clientId)
 }

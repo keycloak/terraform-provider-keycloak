@@ -359,8 +359,8 @@ resource "keycloak_saml_client" "client" {
 	sign_assertions         = true
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
-	signing_private_key     = file("misc/saml-key.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
+	signing_private_key     = file("testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_client_scope" "client_scope" {
@@ -395,8 +395,8 @@ resource "keycloak_saml_client" "client" {
 	sign_assertions         = true
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
-	signing_private_key     = file("misc/saml-key.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
+	signing_private_key     = file("testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_client_scope" "client_scope" {
@@ -422,8 +422,8 @@ resource "keycloak_saml_client" "client" {
 	sign_assertions         = true
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
-	signing_private_key     = file("misc/saml-key.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
+	signing_private_key     = file("testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_client_scope" "client_scope" {
@@ -502,8 +502,8 @@ resource "keycloak_saml_client" "client" {
 	sign_assertions         = true
 	include_authn_statement = true
 
-	signing_certificate     = file("misc/saml-cert.pem")
-	signing_private_key     = file("misc/saml-key.pem")
+	signing_certificate     = file("testdata/saml-cert.pem")
+	signing_private_key     = file("testdata/saml-key.pem")
 }
 
 %s
