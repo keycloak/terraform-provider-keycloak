@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -16,6 +17,7 @@ var (
 	keycloakLdapUserFederationEditModes             = []string{"READ_ONLY", "WRITABLE", "UNSYNCED"}
 	keycloakLdapUserFederationVendors               = []string{"OTHER", "EDIRECTORY", "AD", "RHDS", "TIVOLI"}
 	keycloakLdapUserFederationSearchScopes          = []string{"ONE_LEVEL", "SUBTREE"}
+	keycloakLdapUserFederationReferral              = []string{"ignore", "follow"}
 	keycloakLdapUserFederationTruststoreSpiSettings = []string{"ALWAYS", "ONLY_FOR_LDAPS", "NEVER"}
 	keycloakUserFederationCachePolicies             = []string{"DEFAULT", "EVICT_DAILY", "EVICT_WEEKLY", "MAX_LIFESPAN", "NO_CACHE"}
 )
@@ -139,6 +141,13 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Default:      "ONE_LEVEL",
 				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationSearchScopes, false),
 				Description:  "ONE_LEVEL: only search for users in the DN specified by user_dn. SUBTREE: search entire LDAP subtree.",
+			},
+			"referral": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "ignore",
+				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationReferral, false),
+				Description:  "Specifies if LDAP referrals should be followed or ignored. Please note that enabling referrals can slow down authentication as it allows the LDAP server to decide which other LDAP servers to use. This could potentially include untrusted servers.",
 			},
 
 			"start_tls": {
@@ -339,6 +348,7 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		BindCredential:         data.Get("bind_credential").(string),
 		CustomUserSearchFilter: data.Get("custom_user_search_filter").(string),
 		SearchScope:            data.Get("search_scope").(string),
+		Referral:               data.Get("referral").(string),
 
 		StartTls:                    data.Get("start_tls").(bool),
 		UsePasswordModifyExtendedOp: data.Get("use_password_modify_extended_op").(bool),
@@ -410,6 +420,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("bind_credential", ldap.BindCredential)
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)
 	data.Set("search_scope", ldap.SearchScope)
+	data.Set("referral", ldap.Referral)
 
 	data.Set("start_tls", ldap.StartTls)
 	data.Set("use_password_modify_extended_op", ldap.UsePasswordModifyExtendedOp)
