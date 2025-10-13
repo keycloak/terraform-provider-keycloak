@@ -76,6 +76,10 @@ func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
 				Description: "RSA key provider id",
 				ForceNew:    true,
 			},
+			"extra_config": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -95,6 +99,8 @@ func getRealmKeystoreRsaFromData(data *schema.ResourceData) *keycloak.RealmKeyst
 		ProviderId:  data.Get("provider_id").(string),
 	}
 
+	mapper.ExtraConfig = getExtraConfigFromData(data)
+
 	return mapper
 }
 
@@ -113,6 +119,7 @@ func setRealmKeystoreRsaData(data *schema.ResourceData, realmKey *keycloak.Realm
 		data.Set("private_key", realmKey.PrivateKey)
 		data.Set("certificate", realmKey.Certificate)
 	}
+	setExtraConfigData(data, realmKey.ExtraConfig)
 }
 
 func resourceKeycloakRealmKeystoreRsaCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
