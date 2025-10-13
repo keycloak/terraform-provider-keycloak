@@ -1,5 +1,61 @@
 ## What's Changed
 
+## 5.5.0 (October 13, 2025)
+
+FEATURES:
+
+* feat: add admin url variable to separate authn and admin api urls (forked and added reviewer suggestions) by @au-ee in https://github.com/keycloak/terraform-provider-keycloak/pull/1305
+* provider/github: init OIDC provider for GitHub by @RaitoBezarius in https://github.com/keycloak/terraform-provider-keycloak/pull/1281
+* Add support for mtls client cert auth by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1317
+* feat: Add support for authentication with provided Keycloak Access Token (#1319) by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1320
+* Add OAUTH authentication option to SMTP servers by @lucymcphail in https://github.com/keycloak/terraform-provider-keycloak/pull/1293
+* [issue-1328] Add support for sub mapper by @ethan-k in https://github.com/keycloak/terraform-provider-keycloak/pull/1323
+* Update to KC 26.3.3 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1292
+* Update to KC 26.3.4 by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1316
+* Update KC 26.3.5 and KC 26.4.0 by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1340
+
+IMPROVEMENTS:
+
+* Document client roles in default roles by @ingokuba in https://github.com/keycloak/terraform-provider-keycloak/pull/1295
+* docs: add keycloak built-in required actions docs by @Download in https://github.com/keycloak/terraform-provider-keycloak/pull/1308
+* Update gradle version to 9.0.0 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1291
+* feat: update go toolchain to 1.24.4 by @LaughDonor in https://github.com/keycloak/terraform-provider-keycloak/pull/1307
+* chore: added documentation of standard_token_exchange_enabled and allow_refresh_token_in_standard_token_exchange by @eicki in https://github.com/keycloak/terraform-provider-keycloak/pull/1296
+* chore: Update terraform version in CI to 1.13.3 by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1321
+* Update golang to 1.24, golang.org/x/net to v.0.44.0 and terraform-plu… by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1322
+* chore(deps): bump github.com/golang-jwt/jwt/v5 from 5.2.3 to 5.3.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1269
+* chore(deps): bump golang.org/x/net from 0.42.0 to 0.43.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1271
+* chore(deps): bump goreleaser/goreleaser-action from 6.3.0 to 6.4.0 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1275
+* chore(deps): bump actions/checkout from 4 to 5 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1276
+* chore(deps): bump org.jetbrains.kotlin.jvm from 2.2.0 to 2.2.10 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1278
+* chore(deps): bump gradle/actions from 4.4.1 to 4.4.2 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1272
+* chore(deps): bump com.gradleup.shadow from 8.3.8 to 9.1.0 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1288
+* chore(deps): bump actions/github-script from 7 to 8 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1303
+* chore(deps): bump actions/setup-go from 5 to 6 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1302
+* chore(deps): bump org.jetbrains.kotlin.jvm from 2.2.10 to 2.2.20 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1313
+* chore(deps): bump gradle/actions from 4.4.2 to 4.4.3 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1311
+* chore(deps): bump com.gradleup.shadow from 9.1.0 to 9.2.2 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1330
+* chore(deps): bump gradle/actions from 4.4.3 to 5.0.0 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1336
+
+BUG FIXES:
+
+* fix: handles arrays and maps in client policy conditions (#1256) by @remcojansen in https://github.com/keycloak/terraform-provider-keycloak/pull/1338
+* fix: Add missing standard_flow_enabled to OIDC client examples (#1325) by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1326
+* Fix path for realm_localization documentation by @ingokuba in https://github.com/keycloak/terraform-provider-keycloak/pull/1314
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [au-ee](https://github.com/au-ee)
+- [RaitoBezarius](https://github.com/RaitoBezarius)
+- [lucymcphail](https://github.com/lucymcphail)
+- [ethan-k](https://github.com/ethan-k)
+- [ingokuba](https://github.com/ingokuba)
+- [Download](https://github.com/Download)
+- [LaughDonor](https://github.com/LaughDonor)
+- [eicki](https://github.com/eicki)
+- [KyriosGN0](https://github.com/KyriosGN0)
+- [remcojansen](https://github.com/remcojansen)
+
 ## 5.4.0 (July 28, 2025)
 
 FEATURES:
