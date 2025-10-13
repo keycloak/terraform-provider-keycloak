@@ -29,10 +29,8 @@ type LdapUserFederation struct {
 	BindDn                 string
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
-	KrbPrincipalAttribute  string
-	Debug                  string
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
-	Referral               string
+	Referral               string // api expects "1" or "2", but that means "follow" or "ignore"
 
 	StartTls                    bool
 	UsePasswordModifyExtendedOp bool
@@ -42,7 +40,6 @@ type LdapUserFederation struct {
 	ConnectionTimeout           string // duration string (ex: 1h30m)
 	ReadTimeout                 string // duration string (ex: 1h30m)
 	Pagination                  bool
-	ConnectionPooling           bool
 
 	ServerPrincipal                      string
 	UseKerberosForPasswordAuthentication bool
@@ -102,12 +99,6 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		"usersDn": {
 			ldap.UsersDn,
 		},
-		"krbPrincipalAttribute": {
-			ldap.KrbPrincipalAttribute,
-		},
-		"debug": {
-			ldap.Debug,
-		},
 		"searchScope": {
 			ldap.SearchScope,
 		},
@@ -116,9 +107,6 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"startTls": {
 			strconv.FormatBool(ldap.StartTls),
-		},
-		"connectionPooling": {
-			strconv.FormatBool(ldap.ConnectionPooling),
 		},
 		"usePasswordModifyExtendedOp": {
 			strconv.FormatBool(ldap.UsePasswordModifyExtendedOp),
@@ -173,7 +161,6 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 	} else {
 		componentConfig["searchScope"] = []string{"2"}
 	}
-	componentConfig["referral"] = []string{ldap.Referral}
 
 	if ldap.CustomUserSearchFilter != "" {
 		componentConfig["customUserSearchFilter"] = []string{ldap.CustomUserSearchFilter}
@@ -270,11 +257,6 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		return nil, err
 	}
 
-	connectionPooling, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("connectionPooling"))
-	if err != nil {
-		return nil, err
-	}
-
 	usePasswordModifyExtendedOp, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("usePasswordModifyExtendedOp"))
 	if err != nil {
 		return nil, err
@@ -342,13 +324,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		BindDn:                 component.getConfig("bindDn"),
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),
-		KrbPrincipalAttribute:  component.getConfig("krbPrincipalAttribute"),
-		Debug:                  component.getConfig("debug"),
 		SearchScope:            component.getConfig("searchScope"),
 		Referral:               component.getConfig("referral"),
 
 		StartTls:                    startTls,
-		ConnectionPooling:           connectionPooling,
 		UsePasswordModifyExtendedOp: usePasswordModifyExtendedOp,
 		ValidatePasswordPolicy:      validatePasswordPolicy,
 		TrustEmail:                  trustEmail,
@@ -374,8 +353,6 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 
 	if referral := component.getConfig("referral"); referral != "" {
 		ldap.Referral = referral
-	} else {
-		ldap.Referral = "ignore"
 	}
 
 	if bindCredential := component.getConfig("bindCredential"); bindCredential != "" {
