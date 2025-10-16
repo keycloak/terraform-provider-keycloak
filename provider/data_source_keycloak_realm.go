@@ -95,6 +95,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Description: "Either required, preferred or discouraged",
 			Computed:    true,
 		},
+		"passwordless_passkeys_enabled": {
+			Type:     schema.TypeBool,
+			Computed: true,
+		},
 	}
 	return &schema.Resource{
 		ReadContext: dataSourceKeycloakRealmRead,

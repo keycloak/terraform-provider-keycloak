@@ -1781,7 +1781,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, arrayOfStringsForTerraformResource(signatureAlgorithms), attestationConveyancePreference, authenticatorAttachment, avoidSameAuthenticatorRegister, requireResidentKey, userVerificationRequirement)
 }
 
-func testKeycloakRealm_webauthn_passwordless_policy(realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement string, signatureAlgorithms []string, avoidSameAuthenticatorRegister bool) string {
+func testKeycloakRealm_webauthn_passwordless_policy(realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement string, signatureAlgorithms []string, avoidSameAuthenticatorRegister bool, passwordlessPasskeysEnabled bool) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm        		= "%s"
@@ -1799,9 +1799,10 @@ resource "keycloak_realm" "realm" {
 		avoid_same_authenticator_register = %t
 		require_resident_key              = "%s"
 		user_verification_requirement     = "%s"
+		passwordless_passkeys_enabled     = %t
 	}
 }
-	`, realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, arrayOfStringsForTerraformResource(signatureAlgorithms), attestationConveyancePreference, authenticatorAttachment, avoidSameAuthenticatorRegister, requireResidentKey, userVerificationRequirement)
+	`, realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, arrayOfStringsForTerraformResource(signatureAlgorithms), attestationConveyancePreference, authenticatorAttachment, avoidSameAuthenticatorRegister, requireResidentKey, userVerificationRequirement, passwordlessPasskeysEnabled)
 }
 
 func testKeycloakRealm_basicInternalId(realm, internalId string) string {
