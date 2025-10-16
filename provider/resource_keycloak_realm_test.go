@@ -989,6 +989,7 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
 	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
 	avoidSameAuthenticatorRegister := randomBool()
+	passwordlessPasskeysEnabled := randomBool()
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -1000,7 +1001,7 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 			},
 			{
-				Config: testKeycloakRealm_webauthn_passwordless_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister),
+				Config: testKeycloakRealm_webauthn_passwordless_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister, passwordlessPasskeysEnabled),
 				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 			},
 			{
