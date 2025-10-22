@@ -342,8 +342,6 @@ func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
 }
 
 func TestAccKeycloakRole_import(t *testing.T) {
-	t.Parallel()
-
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -911,22 +909,24 @@ resource "keycloak_role" "%s" {
 
 			importedRoles += fmt.Sprintf(`
 import {
-	id = "${data.keycloak_realm.realm.id}/%s" # 1 ClientId
-	to = keycloak_openid_client.%s # 2 importedClientIdRef
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.%s
 }
-resource "keycloak_openid_client" "%s" { # 3 importedClientIdRef
-	realm_id    = data.keycloak_realm.realm.id
-	client_id   = "%s" # 4 ClientId
+resource "keycloak_openid_client" "%s" {
+	realm_id	= data.keycloak_realm.realm.id
+	client_id   = "%s"
 	access_type = "PUBLIC"
-}
+}`, *nestedRole.ClientId, importedClientIdRef, importedClientIdRef, *nestedRole.ClientId)
 
-resource "keycloak_role" "%s" { # 5 importedRoleRef
+			importedRoles += fmt.Sprintf(`
+
+resource "keycloak_role" "%s" {
 	realm_id 	= data.keycloak_realm.realm.id
-	client_id 	= keycloak_openid_client.%s.id # 6 importedClientIdRef
-	name     	= "%s" # 7 nestedRole.Name
+	client_id 	= keycloak_openid_client.%s.id
+	name	 	= "%s"
 	import 		= true
 }
-`, *nestedRole.ClientId, importedClientIdRef, importedClientIdRef, *nestedRole.ClientId, importedRoleRef, importedClientIdRef, nestedRole.Name)
+`, importedRoleRef, importedClientIdRef, nestedRole.Name)
 		}
 
 		if i != 0 {
