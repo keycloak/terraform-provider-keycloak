@@ -45,7 +45,7 @@ func init() {
 
 	testAccProvider.ResourcesMap["keycloak_openid_client"].DeleteContext = func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 		if data.State().Attributes["client_id"] == "account" {
-			return diag.Diagnostics{}
+			return nil
 		} else {
 			return resourceKeycloakOpenidClientDelete(ctx, data, i)
 		}
