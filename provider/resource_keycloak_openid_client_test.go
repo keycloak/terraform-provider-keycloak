@@ -753,8 +753,6 @@ func TestAccKeycloakOpenidClient_loginTheme(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_import(t *testing.T) {
-	t.Parallel()
-
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
