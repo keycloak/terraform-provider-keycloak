@@ -653,7 +653,17 @@ func resourceKeycloakOpenidClientDelete(ctx context.Context, data *schema.Resour
 	realmId := data.Get("realm_id").(string)
 	id := data.Id()
 
-	return diag.FromErr(keycloakClient.DeleteOpenidClient(ctx, realmId, id))
+	err := keycloakClient.DeleteOpenidClient(ctx, realmId, id)
+	if err != nil {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("cannot delete openid client '%s'", data.Get("client_id")),
+				Detail:   err.Error(),
+			},
+		}
+	}
+	return nil
 }
 
 func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
