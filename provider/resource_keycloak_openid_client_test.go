@@ -793,6 +793,20 @@ func TestAccKeycloakOpenidClient_import(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_import_postcondition(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientNotDestroyed(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_import_postcondition("account", false),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.example", false),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_useRefreshTokens(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -2142,4 +2156,38 @@ resource "keycloak_openid_client" "client" {
 	enabled     = %t
 }
 	`, testAccRealm.Realm, clientId, clientId, enabled)
+}
+
+func testKeycloakOpenidClient_import_postcondition(clientId string, enabled bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+locals {
+	client_id = "%s"
+	enabled = %t
+}
+import {
+	id = "${data.keycloak_realm.realm.id}/${local.client_id}"
+	to = keycloak_openid_client.example
+}
+resource "keycloak_openid_client" "example" {
+  realm_id    = data.keycloak_realm.realm.id
+  client_id   = "${local.client_id}"
+  enabled     = local.enabled
+  access_type = "PUBLIC"
+
+  lifecycle {
+    postcondition {
+      condition = self.enabled == local.enabled
+      error_message = <<-EOT
+        There is a bug with the keycloak provider that causes some fields to be set to unexpected values when 'import = true'.
+        See https://github.com/mrparkers/terraform-provider-keycloak/issues/1007
+
+        This bug has just occurred. You must perform another terraform apply for the expected values to be applied.
+        EOT
+    }
+  }
+}
+`, testAccRealm.Realm, clientId, enabled)
 }
