@@ -339,6 +339,29 @@ func TestAccKeycloakOpenidClient_AccessToken_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_AccessToken_removed(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	accessTokenLifespan := "1801"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_AccessToken_basic(clientId, accessTokenLifespan),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", accessTokenLifespan),
+			},
+			{
+				Config: testKeycloakOpenidClient_AccessToken_removed(clientId),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -1573,6 +1596,20 @@ resource "keycloak_openid_client" "client" {
 	access_token_lifespan = "%s"
 }
 	`, testAccRealm.Realm, clientId, accessTokenLifespan)
+}
+
+func testKeycloakOpenidClient_AccessToken_removed(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   		  = "%s"
+	realm_id    		  = data.keycloak_realm.realm.id
+	access_type 		  = "CONFIDENTIAL"
+}
+	`, testAccRealm.Realm, clientId)
 }
 
 func testKeycloakOpenidClient_ClientTimeouts(clientId,
