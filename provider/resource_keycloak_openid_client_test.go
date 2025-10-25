@@ -2102,7 +2102,6 @@ resource "keycloak_openid_client" "client" {
 	access_type = "PUBLIC"
 	root_url    = ""
 	enabled     = %t
-	import      = true
 }
 	`, testAccRealm.Realm, clientId, enabled)
 }

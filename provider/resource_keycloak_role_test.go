@@ -846,7 +846,6 @@ data "keycloak_realm" "realm" {
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = "%s"
-	import		= true
 	access_type = "PUBLIC"
 }
 resource "keycloak_role" "imported-client-role" {
@@ -866,7 +865,6 @@ data "keycloak_realm" "realm" {
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = "%s"
-	import		= true
 	access_type = "PUBLIC"
 }
 resource "keycloak_role" "imported-client-role" {
