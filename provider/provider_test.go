@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
@@ -41,6 +42,15 @@ func init() {
 		panic(err)
 	}
 	testAccProvider = KeycloakProvider(keycloakClient)
+
+	testAccProvider.ResourcesMap["keycloak_openid_client"].DeleteContext = func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
+		if data.State().Attributes["client_id"] == "account" {
+			return diag.Diagnostics{}
+		} else {
+			return resourceKeycloakOpenidClientDelete(ctx, data, i)
+		}
+	}
+
 	testAccProviderFactories = map[string]func() (*schema.Provider, error){
 		"keycloak": func() (*schema.Provider, error) {
 			return testAccProvider, nil
