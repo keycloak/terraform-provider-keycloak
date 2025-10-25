@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 
-	"dario.cat/mergo"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -661,17 +661,27 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{openidClientId}}")
+		return nil, fmt.Errorf("invalid import. Supported import formats: {{realmId}}/{{openidClientId}} or {{realmId}}/{{clientUuid}}")
 	}
-
-	_, err := keycloakClient.GetOpenidClient(ctx, parts[0], parts[1])
+	if _, err := uuid.Parse(parts[1]); err == nil {
+		// {{realmId}}/{{clientUuid}}
+		_, err := keycloakClient.GetOpenidClient(ctx, parts[0], parts[1])
+		if err != nil {
+			return nil, err
+		}
+		d.SetId(parts[1])
+	} else {
+		// {{realmId}}/{{openidClientId}}
+		c, err := keycloakClient.SearchOpenidClientExact(ctx, parts[0], parts[1])
+		if err != nil {
+			return nil, err
+		}
+		d.SetId(c.Id)
+	}
+	err := d.Set("realm_id", parts[0])
 	if err != nil {
 		return nil, err
 	}
-
-	d.Set("realm_id", parts[0])
-	d.Set("import", false)
-	d.SetId(parts[1])
 
 	diagnostics := resourceKeycloakOpenidClientRead(ctx, d, meta)
 	if diagnostics.HasError() {
