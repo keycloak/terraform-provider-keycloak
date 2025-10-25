@@ -2,13 +2,14 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"strings"
-	"testing"
 )
 
 func TestAccKeycloakRole_basicRealm(t *testing.T) {
@@ -354,7 +355,7 @@ func TestAccKeycloakRole_import(t *testing.T) {
 			},
 			{
 				Config:      testKeycloakRole_importClientRole("view-profile", "non-existing-client"),
-				ExpectError: regexp.MustCompile("openid client with name non-existing-client does not exist"),
+				ExpectError: regexp.MustCompile("openid clientId non-existing-client does not exist in realm"),
 			},
 			{
 				Config:      testKeycloakRole_importClientRole("non-existing-role", "account"),
@@ -843,6 +844,10 @@ func testKeycloakRole_importClientRole(name, clientId string) string {
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
+import {
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.imported-client
+}
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = "%s"
@@ -854,13 +859,17 @@ resource "keycloak_role" "imported-client-role" {
 	name     	= "%s"
 	import 		= true
 }
-	`, testAccRealm.Realm, clientId, name)
+	`, testAccRealm.Realm, clientId, clientId, name)
 }
 
 func testKeycloakRole_importAndModifyClientRole(name, clientId, newDescription string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
+}
+import {
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.imported-client
 }
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
@@ -874,7 +883,7 @@ resource "keycloak_role" "imported-client-role" {
 	import 		= true
 	description = "%s"
 }
-	`, testAccRealm.Realm, clientId, name, newDescription)
+	`, testAccRealm.Realm, clientId, clientId, name, newDescription)
 }
 
 type NestedRole struct {
@@ -901,20 +910,23 @@ resource "keycloak_role" "%s" {
 			importedClientIdRef := fmt.Sprintf("imported-client-%d", i)
 
 			importedRoles += fmt.Sprintf(`
-resource "keycloak_openid_client" "%s" {
+import {
+	id = "${data.keycloak_realm.realm.id}/%s" # 1 ClientId
+	to = keycloak_openid_client.%s # 2 importedClientIdRef
+}
+resource "keycloak_openid_client" "%s" { # 3 importedClientIdRef
 	realm_id    = data.keycloak_realm.realm.id
-	client_id   = "%s"
-	import		= true
+	client_id   = "%s" # 4 ClientId
 	access_type = "PUBLIC"
 }
 
-resource "keycloak_role" "%s" {
+resource "keycloak_role" "%s" { # 5 importedRoleRef
 	realm_id 	= data.keycloak_realm.realm.id
-	client_id 	= keycloak_openid_client.%s.id
-	name     	= "%s"
+	client_id 	= keycloak_openid_client.%s.id # 6 importedClientIdRef
+	name     	= "%s" # 7 nestedRole.Name
 	import 		= true
 }
-`, importedClientIdRef, *nestedRole.ClientId, importedRoleRef, importedClientIdRef, nestedRole.Name)
+`, *nestedRole.ClientId, importedClientIdRef, importedClientIdRef, *nestedRole.ClientId, importedRoleRef, importedClientIdRef, nestedRole.Name)
 		}
 
 		if i != 0 {

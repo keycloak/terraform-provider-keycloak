@@ -761,12 +761,12 @@ func TestAccKeycloakOpenidClient_import(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakOpenidClientNotDestroyed(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakOpenidClient_import("non-existing-client", true),
-				ExpectError: regexp.MustCompile("Error: openid client with name non-existing-client does not exist"),
-			},
-			{
-				Config: testKeycloakOpenidClient_import("account", true),
-				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.client", true),
+				ResourceName:  "keycloak_openid_client.client",
+				ImportState:   true,
+				ImportStateId: testAccRealm.Realm + "/account",
+
+				Config: testKeycloakOpenidClient_import("account", false),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.client", false),
 			},
 		},
 	})
@@ -2095,7 +2095,6 @@ func testKeycloakOpenidClient_import(clientId string, enabled bool) string {
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
-
 resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
