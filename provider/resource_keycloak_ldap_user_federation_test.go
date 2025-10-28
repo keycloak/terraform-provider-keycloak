@@ -65,6 +65,7 @@ func TestAccKeycloakLdapUserFederation_import(t *testing.T) {
 }
 
 func TestAccKeycloakLdapUserFederation_createAfterManualDestroy(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 	var ldap = &keycloak.LdapUserFederation{}
 
@@ -121,6 +122,7 @@ func TestAccKeycloakLdapUserFederation_basicUpdateRealm(t *testing.T) {
 }
 
 func TestAccKeycloakLdapUserFederation_deleteDefaultMappers(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
@@ -209,6 +211,7 @@ func checkMatchingNestedKey(resourcePath string, blockName string, fieldInBlock 
 }
 
 func TestAccKeycloakLdapUserFederation_basicUpdateKerberosSettings(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 	firstLdap := generateRandomLdapKerberos(true)
 	secondLdap := generateRandomLdapKerberos(false)
@@ -245,6 +248,7 @@ func TestAccKeycloakLdapUserFederation_basicUpdateKerberosSettings(t *testing.T)
 }
 
 func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 	firstEnabled := randomBool()
 	firstStartTls := randomBool()
