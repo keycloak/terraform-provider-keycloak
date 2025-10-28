@@ -13,6 +13,7 @@ import (
 )
 
 func TestAccKeycloakLdapUserFederation_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
@@ -30,6 +31,7 @@ func TestAccKeycloakLdapUserFederation_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapUserFederation_import(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
@@ -95,6 +97,7 @@ func TestAccKeycloakLdapUserFederation_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakLdapUserFederation_basicUpdateRealm(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
