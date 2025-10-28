@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"testing"
 )
 
 func TestAccKeycloakLdapFullNameMapper_basic(t *testing.T) {
@@ -110,6 +111,7 @@ func TestAccKeycloakLdapFullNameMapper_writableValidation(t *testing.T) {
 }
 
 func TestAccKeycloakLdapFullNameMapper_updateLdapUserFederation(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
