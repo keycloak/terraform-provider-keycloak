@@ -152,6 +152,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral				= "ignore"
 }
 
 resource "keycloak_hardcoded_attribute_mapper" "hardcoded_attribute_mapper" {
