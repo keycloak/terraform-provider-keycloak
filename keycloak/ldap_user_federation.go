@@ -351,6 +351,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		ldap.BindDn = bindDn
 	}
 
+	if referral := component.getConfig("referral"); referral != "" {
+		ldap.Referral = referral
+	}
+
 	if bindCredential := component.getConfig("bindCredential"); bindCredential != "" {
 		ldap.BindCredential = bindCredential
 	}
