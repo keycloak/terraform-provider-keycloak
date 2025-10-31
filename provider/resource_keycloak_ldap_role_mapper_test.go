@@ -2,15 +2,17 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"testing"
 )
 
 func TestAccKeycloakLdapRoleMapper_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	roleMapperName := acctest.RandomWithPrefix("tf-acc")

@@ -30,6 +30,7 @@ type LdapUserFederation struct {
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
+	Referral               string // api expects "1" or "2", but that means "follow" or "ignore"
 
 	StartTls                    bool
 	UsePasswordModifyExtendedOp bool
@@ -100,6 +101,9 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"searchScope": {
 			ldap.SearchScope,
+		},
+		"referral": {
+			ldap.Referral,
 		},
 		"startTls": {
 			strconv.FormatBool(ldap.StartTls),
@@ -321,6 +325,7 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),
 		SearchScope:            component.getConfig("searchScope"),
+		Referral:               component.getConfig("referral"),
 
 		StartTls:                    startTls,
 		UsePasswordModifyExtendedOp: usePasswordModifyExtendedOp,
@@ -344,6 +349,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 
 	if bindDn := component.getConfig("bindDn"); bindDn != "" {
 		ldap.BindDn = bindDn
+	}
+
+	if referral := component.getConfig("referral"); referral != "" {
+		ldap.Referral = referral
 	}
 
 	if bindCredential := component.getConfig("bindCredential"); bindCredential != "" {
