@@ -10,7 +10,7 @@ services:
     volumes:
     - postgres:/var/lib/postgresql
   openldap:
-    image: bitnami/openldap:2.6
+    image: bitnamilegacy/openldap:2.6
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
