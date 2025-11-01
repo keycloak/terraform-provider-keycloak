@@ -37,6 +37,16 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			"dynamic": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether this is a dynamic scope that supports parameterized values",
+			},
+			"dynamic_scope_regexp": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Regular expression pattern for dynamic scope validation",
+			},
 		},
 	}
 }
