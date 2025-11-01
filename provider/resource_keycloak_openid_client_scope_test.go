@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -388,4 +389,102 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	realm_id  = data.keycloak_realm.realm_2.id
 }
 	`, testAccRealm.Realm, testAccRealmTwo.Realm, clientScopeName)
+}
+
+// Unit tests for validateDynamicScope function
+func TestValidateDynamicScope(t *testing.T) {
+	tests := []struct {
+		name        string
+		scope       *keycloak.OpenidClientScope
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "static scope - always valid",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "profile",
+				Dynamic:            false,
+				DynamicScopeRegexp: "",
+			},
+			expectError: false,
+		},
+		{
+			name: "dynamic scope with valid default pattern",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "resource:read",
+				Dynamic:            true,
+				DynamicScopeRegexp: "",
+			},
+			expectError: false,
+		},
+		{
+			name: "dynamic scope with valid custom pattern",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "group:admin",
+				Dynamic:            true,
+				DynamicScopeRegexp: "group:.*",
+			},
+			expectError: false,
+		},
+		{
+			name: "dynamic scope with invalid default pattern",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "invalidscope",
+				Dynamic:            true,
+				DynamicScopeRegexp: "",
+			},
+			expectError: true,
+			errorMsg:    "must follow the pattern 'scope:parameter'",
+		},
+		{
+			name: "dynamic scope with invalid custom pattern",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "resource:read",
+				Dynamic:            true,
+				DynamicScopeRegexp: "group:.*",
+			},
+			expectError: true,
+			errorMsg:    "does not match the specified pattern",
+		},
+		{
+			name: "dynamic scope by regexp only - valid",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "api:write",
+				Dynamic:            false,
+				DynamicScopeRegexp: "api:.*",
+			},
+			expectError: false,
+		},
+		{
+			name: "dynamic scope by regexp only - invalid",
+			scope: &keycloak.OpenidClientScope{
+				Name:               "resource:read",
+				Dynamic:            false,
+				DynamicScopeRegexp: "api:.*",
+			},
+			expectError: true,
+			errorMsg:    "does not match the specified pattern",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDynamicScope(tt.scope)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("validateDynamicScope() expected error but got none")
+				} else if tt.errorMsg != "" {
+					// Check if error message contains expected substring
+					if !strings.Contains(err.Error(), tt.errorMsg) {
+						t.Errorf("validateDynamicScope() error = %v, want error containing %q", err, tt.errorMsg)
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("validateDynamicScope() unexpected error = %v", err)
+				}
+			}
+		})
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
+	"regexp"
 )
 
 type OpenidClientScope struct {
@@ -18,6 +19,8 @@ type OpenidClientScope struct {
 		GuiOrder               string                   `json:"gui.order"`
 		IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
 	} `json:"attributes"`
+	Dynamic            bool   `json:"dynamic,omitempty"`
+	DynamicScopeRegexp string `json:"dynamicScopeRegexp,omitempty"`
 }
 
 type OpenidClientScopeFilterFunc func(*OpenidClientScope) bool
@@ -121,4 +124,25 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 
 		return false
 	}
+}
+
+// IsDynamicScope Helper function to determine if a scope name is dynamic
+func (scope *OpenidClientScope) IsDynamicScope() bool {
+	return scope.Dynamic || scope.DynamicScopeRegexp != ""
+}
+
+// ValidateDynamicScopeName Helper function to validate dynamic scope pattern
+func (scope *OpenidClientScope) ValidateDynamicScopeName(name string) bool {
+	if !scope.IsDynamicScope() {
+		return true // Static scopes don't need pattern validation
+	}
+
+	if scope.DynamicScopeRegexp == "" {
+		// Default pattern for dynamic scopes: "scope:parameter"
+		matched, _ := regexp.MatchString(`^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$`, name)
+		return matched
+	}
+
+	matched, err := regexp.MatchString(scope.DynamicScopeRegexp, name)
+	return err == nil && matched
 }

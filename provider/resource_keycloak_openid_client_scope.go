@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strconv"
 	"strings"
@@ -49,16 +50,30 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"dynamic": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether this is a dynamic scope that supports parameterized values",
+			},
+			"dynamic_scope_regexp": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "Regular expression pattern for dynamic scope validation (e.g., 'group:.*' for group scopes)",
+				ValidateFunc: validation.StringIsValidRegExp,
+			},
 		},
 	}
 }
 
 func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
 	clientScope := &keycloak.OpenidClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:                 data.Id(),
+		RealmId:            data.Get("realm_id").(string),
+		Name:               data.Get("name").(string),
+		Description:        data.Get("description").(string),
+		Dynamic:            data.Get("dynamic").(bool),
+		DynamicScopeRegexp: data.Get("dynamic_scope_regexp").(string),
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
@@ -93,12 +108,20 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	data.Set("dynamic", clientScope.Dynamic)
+	data.Set("dynamic_scope_regexp", clientScope.DynamicScopeRegexp)
 }
 
 func resourceKeycloakOpenidClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	clientScope := getOpenidClientScopeFromData(data)
+
+	// Validate dynamic scope configuration
+	if err := validateDynamicScope(clientScope); err != nil {
+		return diag.FromErr(err)
+	}
 
 	err := keycloakClient.NewOpenidClientScope(ctx, clientScope)
 	if err != nil {
@@ -160,4 +183,21 @@ func resourceKeycloakOpenidClientScopeImport(_ context.Context, d *schema.Resour
 	d.SetId(parts[1])
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func validateDynamicScope(scope *keycloak.OpenidClientScope) error {
+	if !scope.IsDynamicScope() {
+		return nil // No validation needed for static scopes
+	}
+
+	// Validate that dynamic scope name follows the expected pattern
+	if !scope.ValidateDynamicScopeName(scope.Name) {
+		if scope.DynamicScopeRegexp != "" {
+			return fmt.Errorf("dynamic scope name '%s' does not match the specified pattern '%s'",
+				scope.Name, scope.DynamicScopeRegexp)
+		}
+		return fmt.Errorf("dynamic scope name '%s' must follow the pattern 'scope:parameter'", scope.Name)
+	}
+
+	return nil
 }
