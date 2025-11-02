@@ -32,16 +32,23 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 
 Dynamic scopes allow parameterized scope values that follow a pattern. This is useful for fine-grained authorization scenarios.
 
+**Note:** Dynamic scopes require Keycloak to be started with the `dynamic-scopes` feature enabled. Add the feature flag when starting Keycloak:
+```
+KC_FEATURES=dynamic-scopes:v1
+```
+
 ```hcl
 resource "keycloak_openid_client_scope" "dynamic_resource_scope" {
   realm_id               = keycloak_realm.realm.id
-  name                   = "resource:read"
+  name                   = "resource"
   description            = "Dynamic scope for resource-level permissions"
   dynamic                = true
-  dynamic_scope_regexp   = "^resource:(read|write|delete)$"
+  dynamic_scope_regexp   = "resource:.*"
   include_in_token_scope = true
 }
 ```
+
+This allows clients to request scopes like `resource:read`, `resource:write`, `resource:123`, etc.
 
 ## Argument Reference
 
