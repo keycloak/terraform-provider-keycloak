@@ -437,33 +437,31 @@ func TestValidateDynamicScope(t *testing.T) {
 			errorMsg:    "must follow the pattern 'scope:parameter'",
 		},
 		{
-			name: "dynamic scope with invalid custom pattern",
+			name: "dynamic scope with custom pattern - base name",
 			scope: &keycloak.OpenidClientScope{
-				Name:               "resource:read",
+				Name:               "resource",
 				Dynamic:            true,
 				DynamicScopeRegexp: "group:.*",
 			},
-			expectError: true,
-			errorMsg:    "does not match the specified pattern",
+			expectError: false,
 		},
 		{
-			name: "dynamic scope by regexp only - valid",
+			name: "dynamic scope by regexp only - base name",
 			scope: &keycloak.OpenidClientScope{
-				Name:               "api:write",
+				Name:               "api",
 				Dynamic:            false,
 				DynamicScopeRegexp: "api:.*",
 			},
 			expectError: false,
 		},
 		{
-			name: "dynamic scope by regexp only - invalid",
+			name: "dynamic scope by regexp only - different base name",
 			scope: &keycloak.OpenidClientScope{
-				Name:               "resource:read",
+				Name:               "resource",
 				Dynamic:            false,
 				DynamicScopeRegexp: "api:.*",
 			},
-			expectError: true,
-			errorMsg:    "does not match the specified pattern",
+			expectError: false,
 		},
 	}
 

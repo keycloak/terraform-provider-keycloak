@@ -190,12 +190,14 @@ func validateDynamicScope(scope *keycloak.OpenidClientScope) error {
 		return nil // No validation needed for static scopes
 	}
 
-	// Validate that dynamic scope name follows the expected pattern
+	// For dynamic scopes with custom regexp, the name is just the base
+	// and doesn't need to match the pattern (the pattern is for client requests)
+	if scope.DynamicScopeRegexp != "" {
+		return nil // Custom pattern scopes don't validate the base name
+	}
+
+	// For dynamic scopes without custom regexp, validate the default pattern
 	if !scope.ValidateDynamicScopeName(scope.Name) {
-		if scope.DynamicScopeRegexp != "" {
-			return fmt.Errorf("dynamic scope name '%s' does not match the specified pattern '%s'",
-				scope.Name, scope.DynamicScopeRegexp)
-		}
 		return fmt.Errorf("dynamic scope name '%s' must follow the pattern 'scope:parameter'", scope.Name)
 	}
 
