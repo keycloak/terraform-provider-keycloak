@@ -322,6 +322,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_role_mapper" "role_mapper" {
@@ -364,6 +365,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_role_mapper" "role_mapper" {
@@ -408,6 +410,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_role_mapper" "role_mapper" {
@@ -458,6 +461,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -477,6 +481,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_role_mapper" "role_mapper" {
@@ -524,6 +529,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -543,6 +549,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_role_mapper" "role_mapper" {

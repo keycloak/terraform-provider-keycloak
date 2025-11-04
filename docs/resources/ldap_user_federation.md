@@ -35,6 +35,7 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
   users_dn                = "dc=example,dc=org"
   bind_dn                 = "cn=admin,dc=example,dc=org"
   bind_credential         = "admin"
+    referral                     = "ignore"
 
   connection_timeout = "5s"
   read_timeout       = "10s"
