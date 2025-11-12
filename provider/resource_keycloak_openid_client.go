@@ -7,13 +7,13 @@ import (
 	"reflect"
 	"strings"
 
-	"dario.cat/mergo"
 	"github.com/hashicorp/go-cty/cty"
+
+	"dario.cat/mergo"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -56,9 +56,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Default:  true,
 			},
 			"description": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
 			},
 			"access_type": {
 				Type:         schema.TypeString,
@@ -172,11 +172,6 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(keycloakOpenidClientPkceCodeChallengeMethod, false),
-			},
-			"require_dpop_bound_tokens": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
 			},
 			"access_token_lifespan": {
 				Type:     schema.TypeString,
@@ -378,7 +373,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 	validRedirectUrisData, validRedirectUrisOk := data.GetOk("valid_redirect_uris")
 	webOriginsData, webOriginsOk := data.GetOk("web_origins")
 	validPostLogoutRedirectUrisData, validPostLogoutRedirectUrisOk := data.GetOk("valid_post_logout_redirect_uris")
-	description, descriptionOk := data.GetOkExists("description")
 
 	rootUrlString := rootUrlData.(string)
 
@@ -406,6 +400,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		RealmId:                   data.Get("realm_id").(string),
 		Name:                      data.Get("name").(string),
 		Enabled:                   data.Get("enabled").(bool),
+		Description:               data.Get("description").(string),
 		ClientSecret:              data.Get("client_secret").(string),
 		ClientAuthenticatorType:   data.Get("client_authenticator_type").(string),
 		StandardFlowEnabled:       data.Get("standard_flow_enabled").(bool),
@@ -416,7 +411,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		FullScopeAllowed:          data.Get("full_scope_allowed").(bool),
 		Attributes: keycloak.OpenidClientAttributes{
 			PkceCodeChallengeMethod:                  data.Get("pkce_code_challenge_method").(string),
-			RequireDPoPBoundTokens:                   types.KeycloakBoolQuoted(data.Get("require_dpop_bound_tokens").(bool)),
 			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
 			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
 			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
@@ -504,11 +498,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		}
 	}
 
-	// description, preserve empty string for update
-	if descriptionOk {
-		openidClient.Description = description.(string) // will be "" if user set empty string
-	}
-
 	return openidClient, nil
 }
 
@@ -544,7 +533,6 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
 	data.Set("pkce_code_challenge_method", client.Attributes.PkceCodeChallengeMethod)
-	data.Set("require_dpop_bound_tokens", client.Attributes.RequireDPoPBoundTokens)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)
@@ -568,23 +556,6 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 
 	if client.AuthorizationServicesEnabled {
 		data.Set("resource_server_id", client.Id)
-
-		if client.AuthorizationSettings != nil {
-			authorizationSettings := make(map[string]interface{})
-			authorizationSettings["policy_enforcement_mode"] = client.AuthorizationSettings.PolicyEnforcementMode
-			authorizationSettings["decision_strategy"] = client.AuthorizationSettings.DecisionStrategy
-			authorizationSettings["allow_remote_resource_management"] = client.AuthorizationSettings.AllowRemoteResourceManagement
-			// keep_defaults is not returned by API (json:"-"), preserve config value or default to false
-			keepDefaults := false
-			if v, ok := data.GetOk("authorization"); ok {
-				existingAuth := v.(*schema.Set).List()
-				if len(existingAuth) > 0 {
-					keepDefaults = existingAuth[0].(map[string]interface{})["keep_defaults"].(bool)
-				}
-			}
-			authorizationSettings["keep_defaults"] = keepDefaults
-			data.Set("authorization", []interface{}{authorizationSettings})
-		}
 	}
 
 	if client.ServiceAccountsEnabled {
