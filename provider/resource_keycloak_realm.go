@@ -285,6 +285,10 @@ func resourceKeycloakRealm() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
+						"allow_utf8": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 						"auth": {
 							Type:          schema.TypeList,
 							Optional:      true,
@@ -846,6 +850,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			FromDisplayName:    smtpSettings["from_display_name"].(string),
 			EnvelopeFrom:       smtpSettings["envelope_from"].(string),
 			Ssl:                types.KeycloakBoolQuoted(smtpSettings["ssl"].(bool)),
+			AllowUtf8:          types.KeycloakBoolQuoted(smtpSettings["allow_utf8"].(bool)),
 		}
 
 		authConfig := smtpSettings["auth"].([]interface{})
@@ -1295,6 +1300,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
 		smtpSettings["ssl"] = realm.SmtpServer.Ssl
+		smtpSettings["allow_utf8"] = realm.SmtpServer.AllowUtf8
 
 		if realm.SmtpServer.Auth {
 			if realm.SmtpServer.AuthType == "token" {
