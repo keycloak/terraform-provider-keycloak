@@ -181,6 +181,7 @@ func generateRandomLdapKerberos(enabled bool) *keycloak.LdapUserFederation {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
+		//Referral:                             "ignore",
 	}
 }
 
@@ -666,6 +667,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap)
 }
@@ -749,6 +751,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap, attr, val)
 }
@@ -766,6 +769,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	enabled                 = true
 
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	username_ldap_attribute = "cn"
 	rdn_ldap_attribute      = "cn"
@@ -830,6 +834,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	full_sync_period        = %d
 	changed_sync_period     = %d
@@ -860,6 +865,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	connection_timeout      = "10s"
 	read_timeout            = "5s"
@@ -942,6 +948,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	delete_default_mappers = true
 }
