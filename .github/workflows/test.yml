@@ -106,7 +106,8 @@ jobs:
           -p 8080:8080 \
           -p 8443:8443 \
           -e KC_DB=dev-mem \
-          -e KC_LOG_LEVEL=INFO,org.keycloak:debug \
+          -e KC_LOG_LEVEL=INFO \
+          -e KC_HTTP_ACCESS_LOG_ENABLED=true \
           -e KEYCLOAK_ADMIN=keycloak \
           -e KEYCLOAK_ADMIN_PASSWORD=password \
           -e KC_BOOTSTRAP_ADMIN_USERNAME=keycloak \
@@ -116,8 +117,6 @@ jobs:
           ${EXTRA_HTTPS_KEY} \
           ${EXTRA_MTLS_CERTS} \
           -e KC_FEATURES=preview${EXTRA_FEATURES} \
-          -e QUARKUS_HTTP_ACCESS_LOG_ENABLED=true \
-          -e QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true \
           -v $PWD/provider/testdata:/opt/keycloak/testdata:z \
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev

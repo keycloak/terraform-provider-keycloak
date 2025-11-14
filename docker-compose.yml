@@ -32,8 +32,6 @@ services:
     - KC_DB_PASSWORD=password
     - KC_LOG_CONSOLE_COLOR=true
     - KC_FEATURES=preview,admin-fine-grained-authz:v1
-    - QUARKUS_HTTP_ACCESS_LOG_ENABLED=true
-    - QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true
     - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/testdata/tls/server-cert.pem
     - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem
 # Enable for remote java debugging
