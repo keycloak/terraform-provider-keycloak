@@ -154,3 +154,33 @@ func (keycloakClient *KeycloakClient) LowerAuthenticationSubFlowPriority(ctx con
 
 	return keycloakClient.LowerAuthenticationExecutionPriority(ctx, authenticationSubFlow.RealmId, executionId)
 }
+
+func (keycloakClient *KeycloakClient) GetAuthenticationSubFlowFromAlias(ctx context.Context, realmId, parentFlowAlias, alias string) (*AuthenticationSubFlow, error) {
+	var subflowId string
+	var matchCount int
+
+	executions, err := keycloakClient.ListAuthenticationExecutions(ctx, realmId, parentFlowAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, execution := range executions {
+		if execution.FlowId != "" {
+			subflow, err := keycloakClient.GetAuthenticationFlow(ctx, realmId, execution.FlowId)
+			if err == nil && subflow.Alias == alias {
+				subflowId = execution.FlowId
+				matchCount++
+			}
+		}
+	}
+
+	if subflowId == "" {
+		return nil, fmt.Errorf("no authentication subflow found for alias %s", alias)
+	}
+
+	if matchCount > 1 {
+		return nil, fmt.Errorf("found %d authentication subflows with alias %s in parent flow %s (expected exactly 1)", matchCount, alias, parentFlowAlias)
+	}
+
+	return keycloakClient.GetAuthenticationSubFlow(ctx, realmId, parentFlowAlias, subflowId)
+}
