@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
+	"regexp"
 )
 
 type OpenidClientScope struct {
@@ -17,13 +18,20 @@ type OpenidClientScope struct {
 		ConsentScreenText      string                   `json:"consent.screen.text"`
 		GuiOrder               string                   `json:"gui.order"`
 		IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
+		IsDynamic              types.KeycloakBoolQuoted `json:"is.dynamic"`             // boolean in string form
+		DynamicScopeRegexp     string                   `json:"dynamic.scope.regexp,omitempty"`
 	} `json:"attributes"`
+
+	// Helper fields for easier access (not sent to API)
+	Dynamic            bool   `json:"-"`
+	DynamicScopeRegexp string `json:"-"`
 }
 
 type OpenidClientScopeFilterFunc func(*OpenidClientScope) bool
 
 func (keycloakClient *KeycloakClient) NewOpenidClientScope(ctx context.Context, clientScope *OpenidClientScope) error {
 	clientScope.Protocol = "openid-connect"
+	clientScope.syncToAttributes()
 
 	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/client-scopes", clientScope.RealmId), clientScope)
 	if err != nil {
@@ -44,6 +52,7 @@ func (keycloakClient *KeycloakClient) GetOpenidClientScope(ctx context.Context, 
 	}
 
 	clientScope.RealmId = realmId
+	clientScope.syncFromAttributes()
 
 	return &clientScope, nil
 }
@@ -80,6 +89,7 @@ func (keycloakClient *KeycloakClient) GetOpenidOptionalClientScopes(ctx context.
 
 func (keycloakClient *KeycloakClient) UpdateOpenidClientScope(ctx context.Context, clientScope *OpenidClientScope) error {
 	clientScope.Protocol = "openid-connect"
+	clientScope.syncToAttributes()
 
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/client-scopes/%s", clientScope.RealmId, clientScope.Id), clientScope)
 }
@@ -103,6 +113,7 @@ func (keycloakClient *KeycloakClient) ListOpenidClientScopesWithFilter(ctx conte
 			*scope = clientScope
 
 			scope.RealmId = realmId
+			scope.syncFromAttributes()
 
 			openidClientScopes = append(openidClientScopes, scope)
 		}
@@ -121,4 +132,37 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 
 		return false
 	}
+}
+
+// syncToAttributes copies helper fields to attributes before sending to API
+func (scope *OpenidClientScope) syncToAttributes() {
+	scope.Attributes.IsDynamic = types.KeycloakBoolQuoted(scope.Dynamic)
+	scope.Attributes.DynamicScopeRegexp = scope.DynamicScopeRegexp
+}
+
+// syncFromAttributes copies attributes to helper fields after receiving from API
+func (scope *OpenidClientScope) syncFromAttributes() {
+	scope.Dynamic = bool(scope.Attributes.IsDynamic)
+	scope.DynamicScopeRegexp = scope.Attributes.DynamicScopeRegexp
+}
+
+// IsDynamicScope Helper function to determine if a scope name is dynamic
+func (scope *OpenidClientScope) IsDynamicScope() bool {
+	return scope.Dynamic || scope.DynamicScopeRegexp != ""
+}
+
+// ValidateDynamicScopeName Helper function to validate dynamic scope pattern
+func (scope *OpenidClientScope) ValidateDynamicScopeName(name string) bool {
+	if !scope.IsDynamicScope() {
+		return true // Static scopes don't need pattern validation
+	}
+
+	if scope.DynamicScopeRegexp == "" {
+		// Default pattern for dynamic scopes: "scope:parameter"
+		matched, _ := regexp.MatchString(`^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$`, name)
+		return matched
+	}
+
+	matched, err := regexp.MatchString(scope.DynamicScopeRegexp, name)
+	return err == nil && matched
 }
