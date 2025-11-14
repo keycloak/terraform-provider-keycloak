@@ -3,6 +3,7 @@ module github.com/keycloak/terraform-provider-keycloak
 require (
 	dario.cat/mergo v1.0.2
 	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
