@@ -22,7 +22,8 @@ services:
     environment:
     - KC_BOOTSTRAP_ADMIN_USERNAME=keycloak
     - KC_BOOTSTRAP_ADMIN_PASSWORD=password
-    - KC_LOG_LEVEL=INFO,org.keycloak:debug
+    - KC_LOG_LEVEL=INFO
+    - KC_HTTP_ACCESS_LOG_ENABLED=true
     - KC_DB=postgres
     - KC_DB_URL_HOST=postgres
     - KC_DB_URL_PORT=5432
