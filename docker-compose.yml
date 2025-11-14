@@ -14,7 +14,7 @@ services:
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.0
+    image: quay.io/keycloak/keycloak:26.4.5
     command: --verbose start-dev
     depends_on:
     - postgres
@@ -22,7 +22,8 @@ services:
     environment:
     - KC_BOOTSTRAP_ADMIN_USERNAME=keycloak
     - KC_BOOTSTRAP_ADMIN_PASSWORD=password
-    - KC_LOG_LEVEL=INFO,org.keycloak:debug
+    - KC_LOG_LEVEL=INFO
+    - KC_HTTP_ACCESS_LOG_ENABLED=true
     - KC_DB=postgres
     - KC_DB_URL_HOST=postgres
     - KC_DB_URL_PORT=5432
@@ -31,8 +32,6 @@ services:
     - KC_DB_PASSWORD=password
     - KC_LOG_CONSOLE_COLOR=true
     - KC_FEATURES=preview,admin-fine-grained-authz:v1
-    - QUARKUS_HTTP_ACCESS_LOG_ENABLED=true
-    - QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true
     - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/testdata/tls/server-cert.pem
     - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem
 # Enable for remote java debugging
