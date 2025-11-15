@@ -697,6 +697,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 
 	edit_mode                       = "%s"
 	start_tls                       = %t
+	connection_pooling              = %t
 	use_password_modify_extended_op = %t
 	validate_password_policy        = %t
 	trust_email                     = %t
@@ -724,7 +725,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 		eviction_minute      = %d
 	}
 }
-	`, testAccRealmUserFederation.Realm, ldap.Name, ldap.Enabled, ldap.UsernameLDAPAttribute, ldap.RdnLDAPAttribute, ldap.UuidLDAPAttribute, arrayOfStringsForTerraformResource(ldap.UserObjectClasses), ldap.ConnectionUrl, ldap.UsersDn, ldap.BindDn, ldap.BindCredential, ldap.SearchScope, ldap.EditMode, ldap.StartTls, ldap.UsePasswordModifyExtendedOp, ldap.ValidatePasswordPolicy, ldap.TrustEmail, ldap.UseTruststoreSpi, ldap.ConnectionTimeout, ldap.ReadTimeout, ldap.Pagination, ldap.BatchSizeForSync, ldap.FullSyncPeriod, ldap.ChangedSyncPeriod, ldap.ServerPrincipal, ldap.UseKerberosForPasswordAuthentication, ldap.KeyTab, ldap.KerberosRealm, ldap.CachePolicy, ldap.MaxLifespan, *ldap.EvictionDay, *ldap.EvictionHour, *ldap.EvictionMinute)
+	`, testAccRealmUserFederation.Realm, ldap.Name, ldap.Enabled, ldap.UsernameLDAPAttribute, ldap.RdnLDAPAttribute, ldap.UuidLDAPAttribute, arrayOfStringsForTerraformResource(ldap.UserObjectClasses), ldap.ConnectionUrl, ldap.UsersDn, ldap.BindDn, ldap.BindCredential, ldap.SearchScope, ldap.EditMode, ldap.StartTls, ldap.connectionPooling, ldap.UsePasswordModifyExtendedOp, ldap.ValidatePasswordPolicy, ldap.TrustEmail, ldap.UseTruststoreSpi, ldap.ConnectionTimeout, ldap.ReadTimeout, ldap.Pagination, ldap.BatchSizeForSync, ldap.FullSyncPeriod, ldap.ChangedSyncPeriod, ldap.ServerPrincipal, ldap.UseKerberosForPasswordAuthentication, ldap.KeyTab, ldap.KerberosRealm, ldap.CachePolicy, ldap.MaxLifespan, *ldap.EvictionDay, *ldap.EvictionHour, *ldap.EvictionMinute)
 }
 
 func testKeycloakLdapUserFederation_basicWithAttrValidation(attr, ldap, val string) string {
