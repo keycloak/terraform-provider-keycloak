@@ -1229,3 +1229,41 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     }
   }
 }
+
+resource "keycloak_realm_client_policy_profile" "additional_profile" {
+  name     = "additional-profile"
+  realm_id = keycloak_realm.test.id
+  executor {
+    name = "intent-client-bind-checker"
+    configuration = {
+      auto-configure = true
+    }
+  }
+  executor {
+    name = "secure-session"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "additional_policy" {
+  name        = "additional-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some additional desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.additional_profile.name
+  ]
+
+  condition {
+    name = "client-type"
+    configuration = {
+      "protocol" = "openid-connect"
+    }
+  }
+
+  condition {
+    name = "client-roles"
+    configuration = {
+      "is-negative-logic" = false
+      "roles"        = jsonencode(["Role_A"])
+    }
+  }
+}
