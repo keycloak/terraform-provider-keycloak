@@ -30,7 +30,7 @@ func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *
 
 	var parentGroup Group
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, parentPath), &parentGroup, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, strings.TrimPrefix(parentPath, "/")), &parentGroup, nil)
 	if err != nil {
 		return "", err
 	}

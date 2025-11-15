@@ -48,7 +48,7 @@ This provider will officially support the latest three major versions of Keycloa
 
 The following versions are used when running acceptance tests in CI:
 
-- 26.4.0 (latest)
+- 26.4.5 (latest)
 - 26.3.5
 - 26.2.5
 - 26.1.4
@@ -75,7 +75,7 @@ build you can use the `linux_amd64` build as long as `libc6-compat` is installed
 
 ## Development
 
-This project requires Go 1.24 and Terraform 1.13.3.
+This project requires Go 1.25 and Terraform 1.13.5.
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependency management, which allows this project to exist outside an existing GOPATH.
 
 After cloning the repository, you can build the project by running `make build`.

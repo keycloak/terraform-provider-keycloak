@@ -532,6 +532,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("consent_required", client.ConsentRequired)
 	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
+	data.Set("pkce_code_challenge_method", client.Attributes.PkceCodeChallengeMethod)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)
