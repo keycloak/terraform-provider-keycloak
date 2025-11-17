@@ -285,6 +285,10 @@ func resourceKeycloakRealm() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
+						"allow_utf8": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 						"auth": {
 							Type:          schema.TypeList,
 							Optional:      true,
@@ -667,6 +671,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 			},
 
+			"admin_permissions_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+
 			// default default client scopes
 			"default_default_client_scopes": {
 				Type:     schema.TypeSet,
@@ -841,6 +850,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			FromDisplayName:    smtpSettings["from_display_name"].(string),
 			EnvelopeFrom:       smtpSettings["envelope_from"].(string),
 			Ssl:                types.KeycloakBoolQuoted(smtpSettings["ssl"].(bool)),
+			AllowUtf8:          types.KeycloakBoolQuoted(smtpSettings["allow_utf8"].(bool)),
 		}
 
 		authConfig := smtpSettings["auth"].([]interface{})
@@ -1109,6 +1119,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 	realm.DefaultOptionalClientScopes = defaultOptionalClientScopes
 
+	realm.AdminPermissionsEnabled = data.Get("admin_permissions_enabled").(bool)
+
 	//OTPPolicy
 	if v, ok := data.GetOk("otp_policy"); ok {
 		otpPolicy := v.([]interface{})[0].(map[string]interface{})
@@ -1259,6 +1271,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
 	data.Set("organizations_enabled", realm.OrganizationsEnabled)
+	data.Set("admin_permissions_enabled", realm.AdminPermissionsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)
@@ -1287,6 +1300,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
 		smtpSettings["ssl"] = realm.SmtpServer.Ssl
+		smtpSettings["allow_utf8"] = realm.SmtpServer.AllowUtf8
 
 		if realm.SmtpServer.Auth {
 			if realm.SmtpServer.AuthType == "token" {

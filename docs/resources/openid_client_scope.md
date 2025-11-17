@@ -32,7 +32,7 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 - `name` - (Required) The display name of this client scope in the GUI.
 - `description` - (Optional) The description of this client scope in the GUI.
 - `consent_screen_text` - (Optional) When set, a consent screen will be displayed to users authenticating to clients with this scope attached. The consent screen will display the string value of this attribute.
-- `include_in_token_scope` - (Optional) When `true`, the name of this client scope will be added to the access token property 'scope' as well as to the Token Introspection Endpoint response.
+- `include_in_token_scope` - (Optional) When `true`, the name of this client scope will be added to the access token property 'scope' as well as to the Token Introspection Endpoint response. When `false`, this scope will be omitted from the token and from the Token Introspection Endpoint response. Defaults to `true`.
 - `gui_order` - (Optional) Specify order of the client scope in GUI (such as in Consent page) as integer.
 
 ## Import
