@@ -150,7 +150,7 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 			"connection_pooling": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
+				Default:     false,
 				Description: "When true, Keycloak will use connection pooling when connecting to LDAP.",
 			},
 			"use_password_modify_extended_op": {
