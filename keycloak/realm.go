@@ -171,6 +171,7 @@ type SmtpServer struct {
 	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
 	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
 	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
+	AllowUtf8             types.KeycloakBoolQuoted `json:"allowutf8,omitempty"`
 	User                  string                   `json:"user,omitempty"`
 	Password              string                   `json:"password,omitempty"`
 	AuthType              string                   `json:"authType,omitempty"`
