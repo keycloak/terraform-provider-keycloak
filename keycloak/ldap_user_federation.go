@@ -40,6 +40,7 @@ type LdapUserFederation struct {
 	ConnectionTimeout           string // duration string (ex: 1h30m)
 	ReadTimeout                 string // duration string (ex: 1h30m)
 	Pagination                  bool
+	ConnectionPooling           bool
 
 	ServerPrincipal                      string
 	UseKerberosForPasswordAuthentication bool
@@ -107,6 +108,9 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"startTls": {
 			strconv.FormatBool(ldap.StartTls),
+		},
+		"connectionPooling": {
+			strconv.FormatBool(ldap.ConnectionPooling),
 		},
 		"usePasswordModifyExtendedOp": {
 			strconv.FormatBool(ldap.UsePasswordModifyExtendedOp),
@@ -258,6 +262,11 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		return nil, err
 	}
 
+	connectionPooling, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("connectionPooling"))
+	if err != nil {
+		return nil, err
+	}
+
 	usePasswordModifyExtendedOp, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("usePasswordModifyExtendedOp"))
 	if err != nil {
 		return nil, err
@@ -329,6 +338,7 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		Referral:               component.getConfig("referral"),
 
 		StartTls:                    startTls,
+		ConnectionPooling:           connectionPooling,
 		UsePasswordModifyExtendedOp: usePasswordModifyExtendedOp,
 		ValidatePasswordPolicy:      validatePasswordPolicy,
 		TrustEmail:                  trustEmail,
