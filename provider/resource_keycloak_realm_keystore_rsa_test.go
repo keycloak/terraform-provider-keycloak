@@ -112,6 +112,30 @@ func TestAccKeycloakRealmKeystoreRsa_algorithmValidation(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmKeystoreRsa_extraConfigKid(t *testing.T) {
+	t.Parallel()
+
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+	kid := acctest.RandomWithPrefix("tf-acc")
+	privateKey, certificate := generateKeyAndCert(2048)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmKeystoreRsa_withKidExtraConfig(rsaName, privateKey, certificate, kid),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+					testAccCheckRealmKeystoreRsaKidInRealmKeys("keycloak_realm_keystore_rsa.realm_rsa", kid),
+				),
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 func testAccCheckRealmKeystoreRsaExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
@@ -120,6 +144,36 @@ func testAccCheckRealmKeystoreRsaExists(resourceName string) resource.TestCheckF
 		}
 
 		return nil
+	}
+}
+
+func testAccCheckRealmKeystoreRsaKidInRealmKeys(resourceName, expectedKid string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedKeystore, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		keys, err := keycloakClient.GetRealmKeys(testCtx, fetchedKeystore.RealmId)
+		if err != nil {
+			return fmt.Errorf("error fetching realm keys: %w", err)
+		}
+
+		var candidates []keycloak.Key
+		for _, k := range keys.Keys {
+			if k.Algorithm != nil && *k.Algorithm == fetchedKeystore.Algorithm &&
+				k.Certificate != nil && *k.Certificate == fetchedKeystore.Certificate {
+				candidates = append(candidates, k)
+			}
+		}
+
+		for _, c := range candidates {
+			if c.Kid != nil && *c.Kid == expectedKid {
+				return nil
+			}
+		}
+
+		return fmt.Errorf("could not find expected kid in realm keys. expected kid=%s", expectedKid)
 	}
 }
 
@@ -257,4 +311,27 @@ resource "keycloak_realm_keystore_rsa" "realm_rsa" {
 	provider_id = "%s"
 }
 	`, testAccRealmUserFederation.Realm, rsaName, attr, val, privateKey, certificate, provider)
+}
+
+func testKeycloakRealmKeystoreRsa_withKidExtraConfig(rsaName, privateKey, certificate, kid string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+    realm = "%s"
+}
+
+resource "keycloak_realm_keystore_rsa" "realm_rsa" {
+    name      = "%s"
+    realm_id  = data.keycloak_realm.realm.id
+
+    priority    = 100
+    algorithm   = "RS256"
+    private_key = "%s"
+    certificate = "%s"
+    provider_id = "rsa"
+
+    extra_config = {
+        "kid"   = "%s"
+    }
+}
+    `, testAccRealmUserFederation.Realm, rsaName, privateKey, certificate, kid)
 }

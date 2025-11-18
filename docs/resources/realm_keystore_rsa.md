@@ -29,6 +29,10 @@ resource "keycloak_realm_keystore_rsa" "keystore_rsa" {
 	algorithm = "RS256"
 	keystore_size  = 2048
 	provider_id = "rsa"
+
+    extra_config = {
+      kid = "my-key-id"
+    }
 }
 ```
 
@@ -44,6 +48,7 @@ resource "keycloak_realm_keystore_rsa" "keystore_rsa" {
 - `algorithm` - (Optional) Intended algorithm for the key. Defaults to `RS256`. Use `RSA-OAEP` for encryption keys
 - `keystore_size` - (Optional) Size for the generated keys. Defaults to `2048`.
 - `provider_id` - (Optional) Use `rsa` for signing keys, `rsa-enc` for encryption keys
+- `extra_config` - (Optional) Map of additional provider configuration options passed through to the Keycloak component config. For RSA keystores this can include keys like `kid`.
 
 ## Import
 
