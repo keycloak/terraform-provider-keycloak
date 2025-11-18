@@ -499,8 +499,8 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 
 	// description, preserve empty string for update
 	if descriptionOk {
-        openidClient.Description = description.(string) // will be "" if user set empty string
-    }
+		openidClient.Description = description.(string) // will be "" if user set empty string
+	}
 
 	return openidClient, nil
 }
