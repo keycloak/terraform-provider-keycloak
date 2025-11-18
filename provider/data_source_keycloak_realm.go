@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -124,6 +125,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 			},
 			"organizations_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"admin_permissions_enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},

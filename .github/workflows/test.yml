@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.4.0'
+          - '26.4.5'
           - '26.3.5'
           - '26.2.5'
           - '26.1.4'
@@ -79,7 +79,7 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # version v3.1.2
         with:
           terraform_wrapper: false
-          terraform_version: 1.13.3
+          terraform_version: 1.13.5
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # version v5.0.0
@@ -90,10 +90,10 @@ jobs:
         run: |
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
-          if [[ "${{ matrix.keycloak-version }}" == "26.4.0" || "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.4.5" || "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" || "${{ matrix.keycloak-version }}" == "26.1.4" || "${{ matrix.keycloak-version }}" == "26.0.8" || "${{ matrix.keycloak-version }}" == "25.0.6" ]]; then
             MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           fi
-          if [[ "${{ matrix.keycloak-version }}" == "26.4.0" || "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.4.5" || "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
 
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
@@ -106,7 +106,8 @@ jobs:
           -p 8080:8080 \
           -p 8443:8443 \
           -e KC_DB=dev-mem \
-          -e KC_LOG_LEVEL=INFO,org.keycloak:debug \
+          -e KC_LOG_LEVEL=INFO \
+          -e KC_HTTP_ACCESS_LOG_ENABLED=true \
           -e KEYCLOAK_ADMIN=keycloak \
           -e KEYCLOAK_ADMIN_PASSWORD=password \
           -e KC_BOOTSTRAP_ADMIN_USERNAME=keycloak \
@@ -116,8 +117,6 @@ jobs:
           ${EXTRA_HTTPS_KEY} \
           ${EXTRA_MTLS_CERTS} \
           -e KC_FEATURES=preview${EXTRA_FEATURES} \
-          -e QUARKUS_HTTP_ACCESS_LOG_ENABLED=true \
-          -e QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true \
           -v $PWD/provider/testdata:/opt/keycloak/testdata:z \
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev
@@ -151,7 +150,7 @@ jobs:
         timeout-minutes: 60
 # Only run mtls test for the later versions
       - name: Test (auth with mtls client certificate)
-        if: matrix.keycloak-version == '26.4.0' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.4.5' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download
@@ -173,7 +172,7 @@ jobs:
         timeout-minutes: 60
 
       - name: Test (auth with provided access token)
-        if: matrix.keycloak-version == '26.4.0' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.4.5' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download

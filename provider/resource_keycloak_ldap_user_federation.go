@@ -147,6 +147,12 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Default:     false,
 				Description: "When true, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.",
 			},
+			"connection_pooling": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, Keycloak will use connection pooling when connecting to LDAP.",
+			},
 			"use_password_modify_extended_op": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -341,6 +347,7 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		SearchScope:            data.Get("search_scope").(string),
 
 		StartTls:                    data.Get("start_tls").(bool),
+		ConnectionPooling:           data.Get("connection_pooling").(bool),
 		UsePasswordModifyExtendedOp: data.Get("use_password_modify_extended_op").(bool),
 		ValidatePasswordPolicy:      data.Get("validate_password_policy").(bool),
 		TrustEmail:                  data.Get("trust_email").(bool),
@@ -412,6 +419,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("search_scope", ldap.SearchScope)
 
 	data.Set("start_tls", ldap.StartTls)
+	data.Set("connection_pooling", ldap.ConnectionPooling)
 	data.Set("use_password_modify_extended_op", ldap.UsePasswordModifyExtendedOp)
 	data.Set("validate_password_policy", ldap.ValidatePasswordPolicy)
 	data.Set("trust_email", ldap.TrustEmail)
