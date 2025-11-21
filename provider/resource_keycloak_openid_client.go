@@ -58,7 +58,6 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 			},
 			"access_type": {
 				Type:         schema.TypeString,
@@ -373,6 +372,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 	validRedirectUrisData, validRedirectUrisOk := data.GetOk("valid_redirect_uris")
 	webOriginsData, webOriginsOk := data.GetOk("web_origins")
 	validPostLogoutRedirectUrisData, validPostLogoutRedirectUrisOk := data.GetOk("valid_post_logout_redirect_uris")
+	description, descriptionOk := data.GetOkExists("description")
 
 	rootUrlString := rootUrlData.(string)
 
@@ -400,7 +400,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		RealmId:                   data.Get("realm_id").(string),
 		Name:                      data.Get("name").(string),
 		Enabled:                   data.Get("enabled").(bool),
-		Description:               data.Get("description").(string),
 		ClientSecret:              data.Get("client_secret").(string),
 		ClientAuthenticatorType:   data.Get("client_authenticator_type").(string),
 		StandardFlowEnabled:       data.Get("standard_flow_enabled").(bool),
@@ -498,6 +497,11 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		}
 	}
 
+	// description, preserve empty string for update
+	if descriptionOk {
+		openidClient.Description = description.(string) // will be "" if user set empty string
+	}
+
 	return openidClient, nil
 }
 
@@ -532,6 +536,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("consent_required", client.ConsentRequired)
 	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
+	data.Set("pkce_code_challenge_method", client.Attributes.PkceCodeChallengeMethod)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)

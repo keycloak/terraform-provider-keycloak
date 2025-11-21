@@ -3,10 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"strings"
 )
 
 func resourceKeycloakOpenidClientServiceAccountRealmRole() *schema.Resource {
@@ -60,7 +61,11 @@ func getOpenidClientServiceAccountRealmRoleFromData(ctx context.Context, data *s
 }
 
 func setOpenidClientServiceAccountRealmRoleData(data *schema.ResourceData, serviceAccountRole *keycloak.OpenidClientServiceAccountRealmRole) {
-	data.SetId(fmt.Sprintf("%s/%s", serviceAccountRole.ServiceAccountUserId, serviceAccountRole.Id))
+	if serviceAccountRole.Id == "" || serviceAccountRole.ServiceAccountUserId == "" {
+		data.SetId("")
+	} else {
+		data.SetId(fmt.Sprintf("%s/%s", serviceAccountRole.ServiceAccountUserId, serviceAccountRole.Id))
+	}
 	data.Set("realm_id", serviceAccountRole.RealmId)
 	data.Set("service_account_user_id", serviceAccountRole.ServiceAccountUserId)
 	data.Set("role", serviceAccountRole.Name)
