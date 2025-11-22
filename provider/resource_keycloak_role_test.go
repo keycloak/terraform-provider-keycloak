@@ -2,13 +2,15 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+	"testing"
+	"text/template"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"regexp"
-	"strings"
-	"testing"
 )
 
 func TestAccKeycloakRole_basicRealm(t *testing.T) {
@@ -341,8 +343,6 @@ func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
 }
 
 func TestAccKeycloakRole_import(t *testing.T) {
-	t.Parallel()
-
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -354,7 +354,7 @@ func TestAccKeycloakRole_import(t *testing.T) {
 			},
 			{
 				Config:      testKeycloakRole_importClientRole("view-profile", "non-existing-client"),
-				ExpectError: regexp.MustCompile("openid client with name non-existing-client does not exist"),
+				ExpectError: regexp.MustCompile("openid clientId non-existing-client does not exist in realm"),
 			},
 			{
 				Config:      testKeycloakRole_importClientRole("non-existing-role", "account"),
@@ -843,10 +843,13 @@ func testKeycloakRole_importClientRole(name, clientId string) string {
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
+import {
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.imported-client
+}
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = "%s"
-	import		= true
 	access_type = "PUBLIC"
 }
 resource "keycloak_role" "imported-client-role" {
@@ -855,7 +858,7 @@ resource "keycloak_role" "imported-client-role" {
 	name     	= "%s"
 	import 		= true
 }
-	`, testAccRealm.Realm, clientId, name)
+	`, testAccRealm.Realm, clientId, clientId, name)
 }
 
 func testKeycloakRole_importAndModifyClientRole(name, clientId, newDescription string) string {
@@ -863,10 +866,13 @@ func testKeycloakRole_importAndModifyClientRole(name, clientId, newDescription s
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
+import {
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.imported-client
+}
 resource "keycloak_openid_client" "imported-client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = "%s"
-	import		= true
 	access_type = "PUBLIC"
 }
 resource "keycloak_role" "imported-client-role" {
@@ -876,7 +882,7 @@ resource "keycloak_role" "imported-client-role" {
 	import 		= true
 	description = "%s"
 }
-	`, testAccRealm.Realm, clientId, name, newDescription)
+	`, testAccRealm.Realm, clientId, clientId, name, newDescription)
 }
 
 type NestedRole struct {
@@ -885,60 +891,86 @@ type NestedRole struct {
 }
 
 func testKeycloakRole_importAndModifyCompositeRole(name string, nestedRoles []NestedRole) string {
-	importedRoles := ""
-	importedRoleRefs := ""
-
-	for i, nestedRole := range nestedRoles {
-		importedRoleRef := fmt.Sprintf("imported-noncomposite-role-%d", i)
-		if nestedRole.ClientId == nil {
-			importedRoles += fmt.Sprintf(`
-resource "keycloak_role" "%s" {
-	name     	= "%s"
-	realm_id 	= data.keycloak_realm.realm.id
-	import		= true
-}
-`, importedRoleRef, nestedRole.Name)
-		} else {
-
-			importedClientIdRef := fmt.Sprintf("imported-client-%d", i)
-
-			importedRoles += fmt.Sprintf(`
-resource "keycloak_openid_client" "%s" {
-	realm_id    = data.keycloak_realm.realm.id
-	client_id   = "%s"
-	import		= true
-	access_type = "PUBLIC"
-}
-
-resource "keycloak_role" "%s" {
-	realm_id 	= data.keycloak_realm.realm.id
-	client_id 	= keycloak_openid_client.%s.id
-	name     	= "%s"
-	import 		= true
-}
-`, importedClientIdRef, *nestedRole.ClientId, importedRoleRef, importedClientIdRef, nestedRole.Name)
-		}
-
-		if i != 0 {
-			importedRoleRefs += ", "
-		}
-		importedRoleRefs += fmt.Sprintf("keycloak_role.%s.id", importedRoleRef)
+	type nestedRoleData struct {
+		Index               int
+		Name                string
+		ClientId            string
+		HasClientId         bool
+		ImportedRoleRef     string
+		ImportedClientIdRef string
 	}
 
-	return fmt.Sprintf(`
+	type templateData struct {
+		Realm       string
+		Name        string
+		NestedRoles []nestedRoleData
+	}
+
+	// Prepare nested roles data
+	rolesData := make([]nestedRoleData, len(nestedRoles))
+	for i, nestedRole := range nestedRoles {
+		roleData := nestedRoleData{
+			Index:               i,
+			Name:                nestedRole.Name,
+			ImportedRoleRef:     fmt.Sprintf("imported-noncomposite-role-%d", i),
+			ImportedClientIdRef: fmt.Sprintf("imported-client-%d", i),
+			HasClientId:         nestedRole.ClientId != nil,
+		}
+		if nestedRole.ClientId != nil {
+			roleData.ClientId = *nestedRole.ClientId
+		}
+		rolesData[i] = roleData
+	}
+
+	data := templateData{
+		Realm:       testAccRealm.Realm,
+		Name:        name,
+		NestedRoles: rolesData,
+	}
+
+	tmpl := template.Must(template.New("compositeRole").Parse(`
 data "keycloak_realm" "realm" {
-	realm = "%s"
+	realm = "{{.Realm}}"
 }
-
-%s
-
 resource "keycloak_role" "imported-composite-role" {
-	name     	= "%s"
-	realm_id 	= data.keycloak_realm.realm.id
-	import 		= true
-	composite_roles = [%s]
+    name     	= "{{.Name}}"
+    realm_id 	= data.keycloak_realm.realm.id
+    import 		= true
+    composite_roles = [
+		{{range $idx, $role := .NestedRoles}}
+			keycloak_role.{{$role.ImportedRoleRef}}.id,
+		{{end}}
+	]
 }
-	`, testAccRealm.Realm, importedRoles, name, importedRoleRefs)
+{{range $idx, $role := .NestedRoles}}
+    {{if $role.HasClientId}}
+        import {
+            id = "${data.keycloak_realm.realm.id}/{{$role.ClientId}}"
+            to = keycloak_openid_client.{{$role.ImportedClientIdRef}}
+        }
+        resource "keycloak_openid_client" "{{$role.ImportedClientIdRef}}" {
+            realm_id	= data.keycloak_realm.realm.id
+            client_id   = "{{$role.ClientId}}"
+            access_type = "PUBLIC"
+        }
+    {{end}}
+    resource "keycloak_role" "{{$role.ImportedRoleRef}}" {
+        name     	= "{{$role.Name}}"
+        import 		= true
+        realm_id 	= data.keycloak_realm.realm.id
+        {{- if $role.HasClientId}}
+            client_id 	= keycloak_openid_client.{{$role.ImportedClientIdRef}}.id
+        {{- end}}
+    }
+{{end}}
+	`))
+
+	var result strings.Builder
+	if err := tmpl.Execute(&result, data); err != nil {
+		panic(fmt.Sprintf("template execution error: %v", err))
+	}
+
+	return result.String()
 }
 
 func testKeycloakRole_importCompositeRole(name string) string {
