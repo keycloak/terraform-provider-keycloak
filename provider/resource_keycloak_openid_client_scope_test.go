@@ -392,6 +392,7 @@ resource "keycloak_openid_client_scope" "client_scope" {
 }
 
 // Unit tests for validateDynamicScope function
+// Most validation logic is tested in keycloak package, these tests verify the provider integration
 func TestValidateDynamicScope(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -400,7 +401,7 @@ func TestValidateDynamicScope(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name: "static scope - always valid",
+			name: "static scope - valid",
 			scope: &keycloak.OpenidClientScope{
 				Name:               "profile",
 				Dynamic:            false,
@@ -409,59 +410,33 @@ func TestValidateDynamicScope(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "dynamic scope with valid default pattern",
+			name: "dynamic scope with valid wildcard - valid",
 			scope: &keycloak.OpenidClientScope{
-				Name:               "resource:read",
+				Name:               "resource",
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource:*",
 			},
 			expectError: false,
 		},
 		{
-			name: "dynamic scope with valid custom pattern",
+			name: "dynamic scope without wildcard - invalid",
 			scope: &keycloak.OpenidClientScope{
-				Name:               "group:admin",
-				Dynamic:            true,
-				DynamicScopeRegexp: "group:.*",
-			},
-			expectError: false,
-		},
-		{
-			name: "dynamic scope with invalid default pattern",
-			scope: &keycloak.OpenidClientScope{
-				Name:               "invalidscope",
+				Name:               "resource",
 				Dynamic:            true,
 				DynamicScopeRegexp: "",
 			},
 			expectError: true,
-			errorMsg:    "must follow the pattern 'scope:parameter'",
+			errorMsg:    "requires a wildcard pattern",
 		},
 		{
-			name: "dynamic scope with custom pattern - base name",
+			name: "dynamic scope with multiple asterisks - invalid",
 			scope: &keycloak.OpenidClientScope{
 				Name:               "resource",
 				Dynamic:            true,
-				DynamicScopeRegexp: "group:.*",
+				DynamicScopeRegexp: "resource:*:*",
 			},
-			expectError: false,
-		},
-		{
-			name: "dynamic scope by regexp only - base name",
-			scope: &keycloak.OpenidClientScope{
-				Name:               "api",
-				Dynamic:            false,
-				DynamicScopeRegexp: "api:.*",
-			},
-			expectError: false,
-		},
-		{
-			name: "dynamic scope by regexp only - different base name",
-			scope: &keycloak.OpenidClientScope{
-				Name:               "resource",
-				Dynamic:            false,
-				DynamicScopeRegexp: "api:.*",
-			},
-			expectError: false,
+			expectError: true,
+			errorMsg:    "exactly one asterisk",
 		},
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strconv"
 	"strings"
@@ -57,10 +56,9 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Description: "Whether this is a dynamic scope that supports parameterized values",
 			},
 			"dynamic_scope_regexp": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "Regular expression pattern for dynamic scope validation (e.g., 'group:.*' for group scopes)",
-				ValidateFunc: validation.StringIsValidRegExp,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Wildcard pattern for dynamic scope. Must contain exactly one asterisk (*) and is required when dynamic=true (e.g., 'resource:*', 'api:read:*')",
 			},
 		},
 	}
@@ -186,20 +184,5 @@ func resourceKeycloakOpenidClientScopeImport(_ context.Context, d *schema.Resour
 }
 
 func validateDynamicScope(scope *keycloak.OpenidClientScope) error {
-	if !scope.IsDynamicScope() {
-		return nil // No validation needed for static scopes
-	}
-
-	// For dynamic scopes with custom regexp, the name is just the base
-	// and doesn't need to match the pattern (the pattern is for client requests)
-	if scope.DynamicScopeRegexp != "" {
-		return nil // Custom pattern scopes don't validate the base name
-	}
-
-	// For dynamic scopes without custom regexp, validate the default pattern
-	if !scope.ValidateDynamicScopeName(scope.Name) {
-		return fmt.Errorf("dynamic scope name '%s' must follow the pattern 'scope:parameter'", scope.Name)
-	}
-
-	return nil
+	return scope.ValidateWildcardPattern()
 }

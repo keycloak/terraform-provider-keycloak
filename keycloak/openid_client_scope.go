@@ -18,7 +18,7 @@ type OpenidClientScope struct {
 		ConsentScreenText      string                   `json:"consent.screen.text"`
 		GuiOrder               string                   `json:"gui.order"`
 		IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
-		IsDynamic              types.KeycloakBoolQuoted `json:"is.dynamic"`             // boolean in string form
+		IsDynamicScope         types.KeycloakBoolQuoted `json:"is.dynamic.scope"`       // boolean in string form
 		DynamicScopeRegexp     string                   `json:"dynamic.scope.regexp,omitempty"`
 	} `json:"attributes"`
 
@@ -136,33 +136,46 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 
 // syncToAttributes copies helper fields to attributes before sending to API
 func (scope *OpenidClientScope) syncToAttributes() {
-	scope.Attributes.IsDynamic = types.KeycloakBoolQuoted(scope.Dynamic)
+	scope.Attributes.IsDynamicScope = types.KeycloakBoolQuoted(scope.Dynamic)
 	scope.Attributes.DynamicScopeRegexp = scope.DynamicScopeRegexp
 }
 
 // syncFromAttributes copies attributes to helper fields after receiving from API
 func (scope *OpenidClientScope) syncFromAttributes() {
-	scope.Dynamic = bool(scope.Attributes.IsDynamic)
+	scope.Dynamic = bool(scope.Attributes.IsDynamicScope)
 	scope.DynamicScopeRegexp = scope.Attributes.DynamicScopeRegexp
 }
 
 // IsDynamicScope Helper function to determine if a scope name is dynamic
 func (scope *OpenidClientScope) IsDynamicScope() bool {
-	return scope.Dynamic || scope.DynamicScopeRegexp != ""
+	return scope.Dynamic
 }
 
-// ValidateDynamicScopeName Helper function to validate dynamic scope pattern
-func (scope *OpenidClientScope) ValidateDynamicScopeName(name string) bool {
-	if !scope.IsDynamicScope() {
-		return true // Static scopes don't need pattern validation
+// ValidateWildcardPattern validates that the wildcard pattern contains exactly one asterisk
+// Keycloak validation: [^\s\*]*\*{1}[^\s\*]* (exactly one asterisk, no whitespace)
+// Keycloak converts: "resource:*" -> "resource:(.*)" at runtime for regex matching
+// We enforce stricter validation to prevent confusing patterns like "resource:.*" which won't work as expected
+func (scope *OpenidClientScope) ValidateWildcardPattern() error {
+	// If dynamic is true, regexp is required
+	if scope.IsDynamicScope() && scope.DynamicScopeRegexp == "" {
+		return fmt.Errorf("dynamic scope requires a wildcard pattern (e.g., 'resource:*', 'api:read:*')")
 	}
 
-	if scope.DynamicScopeRegexp == "" {
-		// Default pattern for dynamic scopes: "scope:parameter"
-		matched, _ := regexp.MatchString(`^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$`, name)
-		return matched
+	// Always validate the regexp pattern if provided (even if isDynamic is false)
+	if scope.DynamicScopeRegexp != "" {
+		// First check Keycloak's basic validation: exactly one asterisk, no whitespace
+		matched, _ := regexp.MatchString(`^[^\s\*]*\*{1}[^\s\*]*$`, scope.DynamicScopeRegexp)
+		if !matched {
+			return fmt.Errorf("wildcard pattern must contain exactly one asterisk (*) and no whitespace")
+		}
+
+		// Additional validation: warn about regex metacharacters that won't work as expected
+		// Keycloak replaces "*" with "(.*)" at runtime, so "resource:.*" would become "resource:.*" (no replacement)
+		// which matches "resource:" + single char, not what users expect
+		if regexp.MustCompile(`[.?+\[\](){}^$|\\]`).MatchString(scope.DynamicScopeRegexp) {
+			return fmt.Errorf("wildcard pattern should not contain regex metacharacters (., ?, +, etc.). Use * as the only wildcard")
+		}
 	}
 
-	matched, err := regexp.MatchString(scope.DynamicScopeRegexp, name)
-	return err == nil && matched
+	return nil
 }

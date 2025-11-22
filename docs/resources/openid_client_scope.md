@@ -30,7 +30,7 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 
 ### Dynamic Client Scope
 
-Dynamic scopes allow parameterized scope values that follow a pattern. This is useful for fine-grained authorization scenarios.
+Dynamic scopes allow parameterized scope values using wildcard patterns. This is useful for fine-grained authorization scenarios where clients can request specific scope values at runtime.
 
 **Note:** Dynamic scopes require Keycloak to be started with the `dynamic-scopes` feature enabled. Add the feature flag when starting Keycloak:
 ```
@@ -43,12 +43,12 @@ resource "keycloak_openid_client_scope" "dynamic_resource_scope" {
   name                   = "resource"
   description            = "Dynamic scope for resource-level permissions"
   dynamic                = true
-  dynamic_scope_regexp   = "resource:.*"
+  dynamic_scope_regexp   = "resource:*"
   include_in_token_scope = true
 }
 ```
 
-This allows clients to request scopes like `resource:read`, `resource:write`, `resource:123`, etc.
+With this configuration, clients can request scopes like `resource:read`, `resource:write`, `resource:123`, etc. The wildcard pattern `resource:*` matches any value after the colon.
 
 ## Argument Reference
 
@@ -58,8 +58,8 @@ This allows clients to request scopes like `resource:read`, `resource:write`, `r
 - `consent_screen_text` - (Optional) When set, a consent screen will be displayed to users authenticating to clients with this scope attached. The consent screen will display the string value of this attribute.
 - `include_in_token_scope` - (Optional) When `true`, the name of this client scope will be added to the access token property 'scope' as well as to the Token Introspection Endpoint response. When `false`, this scope will be omitted from the token and from the Token Introspection Endpoint response. Defaults to `true`.
 - `gui_order` - (Optional) Specify order of the client scope in GUI (such as in Consent page) as integer.
-- `dynamic` - (Optional) When `true`, this client scope is a dynamic scope that supports parameterized values. Dynamic scopes are useful for fine-grained authorization. Defaults to `false`.
-- `dynamic_scope_regexp` - (Optional) A regular expression pattern to validate dynamic scope names. When specified, scope names must match this pattern. If not specified for dynamic scopes, the default pattern `scope:parameter` is used (e.g., `resource:read`, `group:admin`).
+- `dynamic` - (Optional) When `true`, this client scope is a dynamic scope that supports parameterized values. Dynamic scopes are useful for fine-grained authorization. Defaults to `false`. **Note:** When set to `true`, `dynamic_scope_regexp` is required.
+- `dynamic_scope_regexp` - (Optional) Wildcard pattern for dynamic scope matching. Must contain exactly one asterisk (`*`) and no whitespace. Examples: `resource:*` (matches `resource:read`, `resource:write`), `api:*:read` (matches `api:users:read`, `api:posts:read`), `*` (matches any value). **Required when `dynamic = true`**.
 
 ## Import
 
