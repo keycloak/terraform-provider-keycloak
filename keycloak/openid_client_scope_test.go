@@ -7,50 +7,17 @@ import (
 func TestIsDynamicScope(t *testing.T) {
 	tests := []struct {
 		name     string
-		scope    *OpenidClientScope
+		dynamic  bool
 		expected bool
 	}{
-		{
-			name: "static scope",
-			scope: &OpenidClientScope{
-				Name:               "profile",
-				Dynamic:            false,
-				DynamicScopeRegexp: "",
-			},
-			expected: false,
-		},
-		{
-			name: "dynamic scope with flag",
-			scope: &OpenidClientScope{
-				Name:               "resource:read",
-				Dynamic:            true,
-				DynamicScopeRegexp: "",
-			},
-			expected: true,
-		},
-		{
-			name: "dynamic scope with regexp only",
-			scope: &OpenidClientScope{
-				Name:               "group:admin",
-				Dynamic:            false,
-				DynamicScopeRegexp: "group:.*",
-			},
-			expected: true,
-		},
-		{
-			name: "dynamic scope with both flag and regexp",
-			scope: &OpenidClientScope{
-				Name:               "custom:scope",
-				Dynamic:            true,
-				DynamicScopeRegexp: "custom:.*",
-			},
-			expected: true,
-		},
+		{"static scope", false, false},
+		{"dynamic scope", true, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.scope.IsDynamicScope()
+			scope := &OpenidClientScope{Dynamic: tt.dynamic}
+			result := scope.IsDynamicScope()
 			if result != tt.expected {
 				t.Errorf("IsDynamicScope() = %v, want %v", result, tt.expected)
 			}
@@ -58,192 +25,152 @@ func TestIsDynamicScope(t *testing.T) {
 	}
 }
 
-func TestValidateDynamicScopeName(t *testing.T) {
+func TestValidateWildcardPattern(t *testing.T) {
 	tests := []struct {
-		name      string
-		scope     *OpenidClientScope
-		scopeName string
-		expected  bool
+		name        string
+		scope       *OpenidClientScope
+		expectError bool
+		errorMsg    string
 	}{
+		// Valid cases
 		{
-			name: "static scope always valid",
+			name: "static scope - no validation",
 			scope: &OpenidClientScope{
 				Dynamic:            false,
 				DynamicScopeRegexp: "",
 			},
-			scopeName: "any-name",
-			expected:  true,
+			expectError: false,
 		},
 		{
-			name: "dynamic scope with default pattern - valid",
+			name: "dynamic scope with wildcard at end",
+			scope: &OpenidClientScope{
+				Dynamic:            true,
+				DynamicScopeRegexp: "resource:*",
+			},
+			expectError: false,
+		},
+		{
+			name: "dynamic scope with wildcard in middle",
+			scope: &OpenidClientScope{
+				Dynamic:            true,
+				DynamicScopeRegexp: "api:*:read",
+			},
+			expectError: false,
+		},
+		{
+			name: "just asterisk",
+			scope: &OpenidClientScope{
+				Dynamic:            true,
+				DynamicScopeRegexp: "*",
+			},
+			expectError: false,
+		},
+		{
+			name: "static scope with valid pattern",
+			scope: &OpenidClientScope{
+				Dynamic:            false,
+				DynamicScopeRegexp: "resource:*",
+			},
+			expectError: false,
+		},
+		// Error cases
+		{
+			name: "dynamic without pattern - required",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
 				DynamicScopeRegexp: "",
 			},
-			scopeName: "resource:read",
-			expected:  true,
+			expectError: true,
+			errorMsg:    "requires a wildcard pattern",
 		},
 		{
-			name: "dynamic scope with default pattern - valid with underscores",
+			name: "no asterisk",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource:read",
 			},
-			scopeName: "user_profile:read",
-			expected:  true,
+			expectError: true,
+			errorMsg:    "exactly one asterisk",
 		},
 		{
-			name: "dynamic scope with default pattern - valid with dashes",
+			name: "multiple asterisks",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource:*:*",
 			},
-			scopeName: "api-resource:write",
-			expected:  true,
+			expectError: true,
+			errorMsg:    "exactly one asterisk",
 		},
 		{
-			name: "dynamic scope with default pattern - invalid (no colon)",
+			name: "whitespace not allowed",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource: *",
 			},
-			scopeName: "resource",
-			expected:  false,
+			expectError: true,
+			errorMsg:    "no whitespace",
 		},
 		{
-			name: "dynamic scope with default pattern - invalid (empty after colon)",
+			name: "pattern with dot and asterisk - invalid (regex metacharacter)",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource:.*",
 			},
-			scopeName: "resource:",
-			expected:  false,
+			expectError: true,
+			errorMsg:    "regex metacharacters",
 		},
 		{
-			name: "dynamic scope with default pattern - invalid (special chars)",
+			name: "pattern with question mark - invalid (regex metacharacter)",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "",
+				DynamicScopeRegexp: "resource:?*",
 			},
-			scopeName: "resource:read@write",
-			expected:  false,
+			expectError: true,
+			errorMsg:    "regex metacharacters",
 		},
 		{
-			name: "dynamic scope with custom pattern - valid",
+			name: "pattern with only question mark - invalid",
 			scope: &OpenidClientScope{
 				Dynamic:            true,
-				DynamicScopeRegexp: "group:.*",
+				DynamicScopeRegexp: "resource:?",
 			},
-			scopeName: "group:admin",
-			expected:  true,
+			expectError: true,
+			errorMsg:    "exactly one asterisk",
 		},
 		{
-			name: "dynamic scope with custom pattern - valid (wildcard)",
+			name: "static with regex metacharacter pattern - invalid",
 			scope: &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: "group:.*",
+				Dynamic:            false,
+				DynamicScopeRegexp: "resource:.*",
 			},
-			scopeName: "group:users",
-			expected:  true,
-		},
-		{
-			name: "dynamic scope with custom pattern - invalid",
-			scope: &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: "group:.*",
-			},
-			scopeName: "resource:read",
-			expected:  false,
-		},
-		{
-			name: "dynamic scope with complex pattern - valid",
-			scope: &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: "^[a-z]+:[0-9]+$",
-			},
-			scopeName: "resource:123",
-			expected:  true,
-		},
-		{
-			name: "dynamic scope with complex pattern - invalid",
-			scope: &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: "^[a-z]+:[0-9]+$",
-			},
-			scopeName: "resource:abc",
-			expected:  false,
-		},
-		{
-			name: "dynamic scope with invalid regex pattern - returns false",
-			scope: &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: "[invalid(",
-			},
-			scopeName: "anything",
-			expected:  false,
+			expectError: true,
+			errorMsg:    "regex metacharacters",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.scope.ValidateDynamicScopeName(tt.scopeName)
-			if result != tt.expected {
-				t.Errorf("ValidateDynamicScopeName(%q) = %v, want %v", tt.scopeName, result, tt.expected)
+			err := tt.scope.ValidateWildcardPattern()
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("ValidateWildcardPattern() expected error but got none")
+				} else if tt.errorMsg != "" && !stringContains(err.Error(), tt.errorMsg) {
+					t.Errorf("ValidateWildcardPattern() error = %v, want error containing %q", err, tt.errorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ValidateWildcardPattern() unexpected error: %v", err)
+				}
 			}
 		})
 	}
 }
 
-func TestValidateDynamicScopeName_CustomPatterns(t *testing.T) {
-	tests := []struct {
-		name      string
-		regexp    string
-		scopeName string
-		expected  bool
-	}{
-		{
-			name:      "OAuth2 resource scopes",
-			regexp:    "^(read|write|delete):[a-z-]+$",
-			scopeName: "read:users",
-			expected:  true,
-		},
-		{
-			name:      "OAuth2 resource scopes - invalid verb",
-			regexp:    "^(read|write|delete):[a-z-]+$",
-			scopeName: "execute:users",
-			expected:  false,
-		},
-		{
-			name:      "Hierarchical permissions",
-			regexp:    "^[a-z0-9]+(/[a-z0-9]+)*:[a-z]+$",
-			scopeName: "api/v1/users:read",
-			expected:  true,
-		},
-		{
-			name:      "Tenant-based scopes",
-			regexp:    "^tenant:[a-zA-Z0-9-]+:[a-z]+$",
-			scopeName: "tenant:acme-corp:admin",
-			expected:  true,
-		},
-		{
-			name:      "Tenant-based scopes - invalid format",
-			regexp:    "^tenant:[a-zA-Z0-9-]+:[a-z]+$",
-			scopeName: "tenant:admin",
-			expected:  false,
-		},
+func stringContains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scope := &OpenidClientScope{
-				Dynamic:            true,
-				DynamicScopeRegexp: tt.regexp,
-			}
-			result := scope.ValidateDynamicScopeName(tt.scopeName)
-			if result != tt.expected {
-				t.Errorf("ValidateDynamicScopeName(%q) with pattern %q = %v, want %v",
-					tt.scopeName, tt.regexp, result, tt.expected)
-			}
-		})
-	}
+	return false
 }
