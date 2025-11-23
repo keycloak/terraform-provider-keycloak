@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,4 +119,30 @@ func TestProvider(t *testing.T) {
 
 func testAccPreCheck(t *testing.T) {
 	helper.CheckRequiredEnvironmentVariables(t)
+}
+
+func testAccPreCheckDynamicScopes(t *testing.T) {
+	testAccPreCheck(t)
+
+	// Try to create a test dynamic scope to check if the feature is enabled
+	testScope := &keycloak.OpenidClientScope{
+		RealmId:            testAccRealm.Realm,
+		Name:               "test-dynamic-feature-check",
+		Dynamic:            true,
+		DynamicScopeRegexp: "test:*",
+	}
+
+	err := keycloakClient.NewOpenidClientScope(testCtx, testScope)
+	if err != nil {
+		errMsg := err.Error()
+		if errMsg == "400 Bad Request" ||
+			(errMsg != "" && (strings.Contains(errMsg, "Unexpected value") || strings.Contains(errMsg, "dynamic.scope.regexp"))) {
+			t.Skip("Skipping test: Keycloak dynamic scopes feature is not enabled. Enable with KC_FEATURES=dynamic-scopes:v1")
+		}
+		// Other errors should fail the test
+		t.Fatalf("Unexpected error checking dynamic scopes support: %v", err)
+	}
+
+	// Clean up the test scope
+	_ = keycloakClient.DeleteOpenidClientScope(testCtx, testScope.RealmId, testScope.Id)
 }
