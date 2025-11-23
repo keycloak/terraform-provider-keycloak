@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceKeycloakOpenidClientScope() *schema.Resource {
@@ -67,10 +66,10 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 
 func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
 	clientScope := &keycloak.OpenidClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:                 data.Id(),
+		RealmId:            data.Get("realm_id").(string),
+		Name:               data.Get("name").(string),
+		Description:        data.Get("description").(string),
 		Dynamic:            data.Get("dynamic").(bool),
 		DynamicScopeRegexp: data.Get("dynamic_scope_regexp").(string),
 	}

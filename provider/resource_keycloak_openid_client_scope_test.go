@@ -398,7 +398,7 @@ func TestAccKeycloakClientScope_dynamicScope(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -426,7 +426,7 @@ func TestAccKeycloakClientScope_dynamicScopeUpdate(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -467,7 +467,7 @@ func TestAccKeycloakClientScope_dynamicScopeInvalidPattern(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -492,7 +492,7 @@ func TestAccKeycloakClientScope_dynamicScopePatternVariations(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
