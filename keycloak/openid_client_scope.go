@@ -19,7 +19,7 @@ type OpenidClientScope struct {
 		GuiOrder               string                   `json:"gui.order"`
 		IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
 		IsDynamicScope         types.KeycloakBoolQuoted `json:"is.dynamic.scope"`       // boolean in string form
-		DynamicScopeRegexp     string                   `json:"dynamic.scope.regexp,omitempty"`
+		DynamicScopeRegexp     string                   `json:"dynamic.scope.regexp"`
 	} `json:"attributes"`
 
 	// Helper fields for easier access (not sent to API)

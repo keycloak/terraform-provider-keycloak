@@ -2,7 +2,7 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakClientScope_basic(t *testing.T) {
@@ -389,6 +390,194 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	realm_id  = data.keycloak_realm.realm_2.id
 }
 	`, testAccRealm.Realm, testAccRealmTwo.Realm, clientScopeName)
+}
+
+func TestAccKeycloakClientScope_dynamicScope(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "resource:*"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "resource:*"),
+					resource.TestCheckResourceAttr("keycloak_openid_client_scope.client_scope", "dynamic", "true"),
+					resource.TestCheckResourceAttr("keycloak_openid_client_scope.client_scope", "dynamic_scope_regexp", "resource:*"),
+				),
+			},
+			{
+				ResourceName:        "keycloak_openid_client_scope.client_scope",
+				ImportState:         true,
+				ImportStateVerify:   true,
+				ImportStateIdPrefix: testAccRealm.Realm + "/",
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_dynamicScopeUpdate(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_staticScope(clientScopeName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", false, ""),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "resource:*"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "resource:*"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "api:*:read"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "api:*:read"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_staticScope(clientScopeName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", false, ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_dynamicScopeInvalidPattern(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakClientScope_dynamicScope(clientScopeName, "resource:.*"),
+				ExpectError: regexp.MustCompile("regex metacharacters"),
+			},
+			{
+				Config:      testKeycloakClientScope_dynamicScope(clientScopeName, "resource:*:*"),
+				ExpectError: regexp.MustCompile("exactly one asterisk"),
+			},
+			{
+				Config:      testKeycloakClientScope_dynamicScope(clientScopeName, "resource: *"),
+				ExpectError: regexp.MustCompile("no whitespace"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_dynamicScopePatternVariations(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "*"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "*"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "org:*:user:read"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "org:*:user:read"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_dynamicScope(clientScopeName, "prefix_*_suffix"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeDynamic("keycloak_openid_client_scope.client_scope", true, "prefix_*_suffix"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakClientScopeDynamic(resourceName string, expectedDynamic bool, expectedPattern string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if clientScope.Dynamic != expectedDynamic {
+			return fmt.Errorf("expected client scope dynamic to be %t, but got %t", expectedDynamic, clientScope.Dynamic)
+		}
+
+		if clientScope.DynamicScopeRegexp != expectedPattern {
+			return fmt.Errorf("expected client scope dynamic_scope_regexp to be %q, but got %q", expectedPattern, clientScope.DynamicScopeRegexp)
+		}
+
+		// Also verify attributes are correctly synced
+		if bool(clientScope.Attributes.IsDynamicScope) != expectedDynamic {
+			return fmt.Errorf("expected client scope attributes.is.dynamic.scope to be %t, but got %t", expectedDynamic, clientScope.Attributes.IsDynamicScope)
+		}
+
+		if clientScope.Attributes.DynamicScopeRegexp != expectedPattern {
+			return fmt.Errorf("expected client scope attributes.dynamic.scope.regexp to be %q, but got %q", expectedPattern, clientScope.Attributes.DynamicScopeRegexp)
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakClientScope_dynamicScope(clientScopeName, pattern string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                  = "%s"
+	realm_id              = data.keycloak_realm.realm.id
+	description           = "test dynamic scope"
+	dynamic               = true
+	dynamic_scope_regexp  = "%s"
+}
+	`, testAccRealm.Realm, clientScopeName, pattern)
+}
+
+func testKeycloakClientScope_staticScope(clientScopeName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                  = "%s"
+	realm_id              = data.keycloak_realm.realm.id
+	description           = "test static scope"
+	dynamic               = false
+	dynamic_scope_regexp  = ""
+}
+	`, testAccRealm.Realm, clientScopeName)
 }
 
 // Unit tests for validateDynamicScope function
