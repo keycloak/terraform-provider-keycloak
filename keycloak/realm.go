@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strings"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type Key struct {
@@ -97,6 +98,8 @@ type Realm struct {
 	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
 	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
+	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
+
 	PasswordPolicy string `json:"passwordPolicy"`
 
 	//flow bindings
@@ -168,6 +171,7 @@ type SmtpServer struct {
 	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
 	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
 	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
+	AllowUtf8             types.KeycloakBoolQuoted `json:"allowutf8,omitempty"`
 	User                  string                   `json:"user,omitempty"`
 	Password              string                   `json:"password,omitempty"`
 	AuthType              string                   `json:"authType,omitempty"`

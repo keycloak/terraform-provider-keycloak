@@ -19,6 +19,7 @@ type RealmKeystoreRsa struct {
 	PrivateKey  string
 	Certificate string
 	ProviderId  string
+	ExtraConfig map[string]interface{}
 }
 
 func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *component {
@@ -41,6 +42,13 @@ func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *compone
 		"certificate": {
 			realmKey.Certificate,
 		},
+	}
+
+	// merge extra config
+	if realmKey.ExtraConfig != nil {
+		for k, v := range realmKey.ExtraConfig {
+			componentConfig[k] = []string{fmt.Sprint(v)}
+		}
 	}
 
 	return &component{
@@ -85,6 +93,21 @@ func convertFromComponentToRealmKeystoreRsa(component *component, realmId string
 		Certificate: component.getConfig("certificate"),
 		ProviderId:  component.ProviderId,
 	}
+
+	// capture extra config (anything not in the known keys)
+	known := map[string]struct{}{
+		"active": {}, "enabled": {}, "priority": {}, "algorithm": {}, "privateKey": {}, "certificate": {},
+	}
+	extra := map[string]interface{}{}
+	for k, vals := range component.Config {
+		if _, ok := known[k]; ok {
+			continue
+		}
+		if len(vals) > 0 {
+			extra[k] = vals[0]
+		}
+	}
+	realmKey.ExtraConfig = extra
 
 	return realmKey, nil
 }
