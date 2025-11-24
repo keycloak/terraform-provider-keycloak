@@ -974,6 +974,43 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_descriptionCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	configWithDescription := testAccKeycloakOpenidClientWithDescription(realmName, clientId, "initial")
+	configWithEmptyDescription := testAccKeycloakOpenidClientWithDescription(realmName, clientId, "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: configWithDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "client_id", clientId),
+					resource.TestCheckResourceAttr(resourceName, "description", "initial"),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -2105,4 +2142,21 @@ resource "keycloak_openid_client" "client" {
 	import      = true
 }
 	`, testAccRealm.Realm, clientId, enabled)
+}
+
+func testAccKeycloakOpenidClientWithDescription(realm, clientId, description string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "test" {
+  realm   = "%s"
+  enabled = true
+}
+
+resource "keycloak_openid_client" "client" {
+  realm_id    = keycloak_realm.test.id
+  client_id   = "%s"
+  access_type = "CONFIDENTIAL"
+
+  description = "%s"
+}
+`, realm, clientId, description)
 }
