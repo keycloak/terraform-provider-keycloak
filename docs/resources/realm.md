@@ -86,7 +86,7 @@ resource "keycloak_realm" "realm" {
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm.
 - `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
-- `deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
+- `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 
 ### Login Settings
 

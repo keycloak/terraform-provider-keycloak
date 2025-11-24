@@ -193,7 +193,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
-			"deletion_protection": {
+			"terraform_deletion_protection": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -1518,8 +1518,8 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		realm.SmtpServer.Password = smtpPassword
 	}
 
-	if _, ok := data.GetOk("deletion_protection"); !ok {
-		data.Set("deletion_protection", false)
+	if _, ok := data.GetOk("terraform_deletion_protection"); !ok {
+		data.Set("terraform_deletion_protection", false)
 	}
 
 	setRealmData(data, realm, keycloakVersion)
@@ -1555,8 +1555,8 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if data.Get("deletion_protection").(bool) {
-		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
+	if data.Get("terraform_deletion_protection").(bool) {
+		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `terraform_deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
 	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
