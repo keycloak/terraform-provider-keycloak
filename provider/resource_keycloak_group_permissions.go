@@ -135,34 +135,44 @@ func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.Reso
 	data.Set("enabled", groupPermissions.Enabled)
 	data.Set("authorization_resource_server_id", realmManagementClient.Id)
 
-	if viewScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view"]); err == nil && viewScope != nil {
-		data.Set("view_scope", []interface{}{viewScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["view"]; scopeId != "" {
+		if viewScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && viewScope != nil {
+			data.Set("view_scope", []interface{}{viewScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage"]); err == nil && manageScope != nil {
-		data.Set("manage_scope", []interface{}{manageScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage"]; scopeId != "" {
+		if manageScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageScope != nil {
+			data.Set("manage_scope", []interface{}{manageScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if viewMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view-members"]); err == nil && viewMembersScope != nil {
-		data.Set("view_members_scope", []interface{}{viewMembersScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["view-members"]; scopeId != "" {
+		if viewMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && viewMembersScope != nil {
+			data.Set("view_members_scope", []interface{}{viewMembersScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-members"]); err == nil && manageMembersScope != nil {
-		data.Set("manage_members_scope", []interface{}{manageMembersScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage-members"]; scopeId != "" {
+		if manageMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageMembersScope != nil {
+			data.Set("manage_members_scope", []interface{}{manageMembersScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageMembershipScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-membership"]); err == nil && manageMembershipScope != nil {
-		data.Set("manage_membership_scope", []interface{}{manageMembershipScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage-membership"]; scopeId != "" {
+		if manageMembershipScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageMembershipScope != nil {
+			data.Set("manage_membership_scope", []interface{}{manageMembershipScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
