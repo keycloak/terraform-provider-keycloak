@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/keycloak/terraform-provider-keycloak/mutex"
 
 	"github.com/golang-jwt/jwt/v5"
 
@@ -40,6 +41,7 @@ type KeycloakClient struct {
 	debug               bool
 	redHatSSO           bool
 	accessTokenProvided bool
+	Mutex               *mutex.KeyValue
 }
 
 type ClientCredentials struct {
@@ -115,6 +117,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 		redHatSSO:           redHatSSO,
 		additionalHeaders:   additionalHeaders,
 		accessTokenProvided: accessToken != "",
+		Mutex:               mutex.New(),
 	}
 
 	if accessToken == "" && keycloakClient.initialLogin {
