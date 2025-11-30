@@ -87,7 +87,7 @@ type Realm struct {
 	DefaultDefaultClientScopes  []string `json:"defaultDefaultClientScopes,omitempty"`
 	DefaultOptionalClientScopes []string `json:"defaultOptionalClientScopes,omitempty"`
 
-	BrowserSecurityHeaders BrowserSecurityHeaders `json:"browserSecurityHeaders"`
+	BrowserSecurityHeaders *BrowserSecurityHeaders `json:"browserSecurityHeaders,omitempty"`
 
 	BruteForceProtected          bool `json:"bruteForceProtected"`
 	PermanentLockout             bool `json:"permanentLockout"`
