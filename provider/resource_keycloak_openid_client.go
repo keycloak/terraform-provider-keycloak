@@ -7,13 +7,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hashicorp/go-cty/cty"
-
 	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -560,6 +560,23 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 
 	if client.AuthorizationServicesEnabled {
 		data.Set("resource_server_id", client.Id)
+
+		if client.AuthorizationSettings != nil {
+			authorizationSettings := make(map[string]interface{})
+			authorizationSettings["policy_enforcement_mode"] = client.AuthorizationSettings.PolicyEnforcementMode
+			authorizationSettings["decision_strategy"] = client.AuthorizationSettings.DecisionStrategy
+			authorizationSettings["allow_remote_resource_management"] = client.AuthorizationSettings.AllowRemoteResourceManagement
+			// keep_defaults is not returned by API (json:"-"), preserve config value or default to false
+			keepDefaults := false
+			if v, ok := data.GetOk("authorization"); ok {
+				existingAuth := v.(*schema.Set).List()
+				if len(existingAuth) > 0 {
+					keepDefaults = existingAuth[0].(map[string]interface{})["keep_defaults"].(bool)
+				}
+			}
+			authorizationSettings["keep_defaults"] = keepDefaults
+			data.Set("authorization", []interface{}{authorizationSettings})
+		}
 	}
 
 	if client.ServiceAccountsEnabled {
