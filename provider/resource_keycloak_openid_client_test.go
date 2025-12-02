@@ -1011,6 +1011,29 @@ func TestAccKeycloakOpenidClient_descriptionCanBeCleared(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_withAuthorization(clientId),
+			},
+			{
+				ResourceName:            "keycloak_openid_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateIdPrefix:     testAccRealm.Realm + "/",
+				ImportStateVerifyIgnore: []string{"exclude_session_state_from_auth_response", "exclude_issuer_from_auth_response"},
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -1562,6 +1585,28 @@ resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "CONFIDENTIAL"
+}
+	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_withAuthorization(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+
+	authorization {
+		policy_enforcement_mode         = "ENFORCING"
+		decision_strategy               = "UNANIMOUS"
+		allow_remote_resource_management = false
+		keep_defaults                   = false
+	}
 }
 	`, testAccRealm.Realm, clientId)
 }
