@@ -10,11 +10,11 @@ type GroupPermissionsInput struct {
 }
 
 type GroupPermissions struct {
-	RealmId          string                 `json:"-"`
-	GroupId          string                 `json:"-"`
-	Enabled          bool                   `json:"enabled"`
-	Resource         string                 `json:"resource"`
-	ScopePermissions map[string]interface{} `json:"scopePermissions"`
+	RealmId          string            `json:"-"`
+	GroupId          string            `json:"-"`
+	Enabled          bool              `json:"enabled"`
+	Resource         string            `json:"resource"`
+	ScopePermissions map[string]string `json:"scopePermissions"`
 }
 
 func (keycloakClient *KeycloakClient) EnableGroupPermissions(ctx context.Context, realmId, groupId string) error {
