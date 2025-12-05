@@ -26,7 +26,7 @@ type OpenidClientSecret struct {
 type OpenidClientAuthorizationSettings struct {
 	PolicyEnforcementMode         string `json:"policyEnforcementMode,omitempty"`
 	DecisionStrategy              string `json:"decisionStrategy,omitempty"`
-	AllowRemoteResourceManagement bool   `json:"allowRemoteResourceManagement,omitempty"`
+	AllowRemoteResourceManagement bool   `json:"allowRemoteResourceManagement"`
 	KeepDefaults                  bool   `json:"-"`
 }
 
@@ -203,6 +203,15 @@ func (keycloakClient *KeycloakClient) GetOpenidClient(ctx context.Context, realm
 
 	client.RealmId = realmId
 	client.ClientSecret = clientSecret.Value
+
+	if client.AuthorizationServicesEnabled {
+		var authSettings OpenidClientAuthorizationSettings
+		err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server", realmId, id), &authSettings, nil)
+		if err != nil {
+			return nil, err
+		}
+		client.AuthorizationSettings = &authSettings
+	}
 
 	return &client, nil
 }
