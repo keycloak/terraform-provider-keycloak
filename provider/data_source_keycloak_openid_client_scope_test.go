@@ -26,6 +26,8 @@ func TestAccKeycloakDataSourceOpenidClientScope_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(dataSourceName, "description", resourceName, "description"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "consent_screen_text", resourceName, "consent_screen_text"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "include_in_token_scope", resourceName, "include_in_token_scope"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "dynamic", resourceName, "dynamic"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "dynamic_scope_regexp", resourceName, "dynamic_scope_regexp"),
 				),
 			},
 		},
