@@ -172,6 +172,11 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(keycloakOpenidClientPkceCodeChallengeMethod, false),
 			},
+			"require_dpop_bound_tokens": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"access_token_lifespan": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -410,6 +415,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		FullScopeAllowed:          data.Get("full_scope_allowed").(bool),
 		Attributes: keycloak.OpenidClientAttributes{
 			PkceCodeChallengeMethod:                  data.Get("pkce_code_challenge_method").(string),
+			RequireDPoPBoundTokens:                   types.KeycloakBoolQuoted(data.Get("require_dpop_bound_tokens").(bool)),
 			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
 			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
 			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
@@ -537,6 +543,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
 	data.Set("pkce_code_challenge_method", client.Attributes.PkceCodeChallengeMethod)
+	data.Set("require_dpop_bound_tokens", client.Attributes.RequireDPoPBoundTokens)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)
