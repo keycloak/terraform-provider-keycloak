@@ -195,6 +195,7 @@ The `headers` block supports the following arguments:
 The `brute_force_detection` block supports the following arguments:
 
 - `permanent_lockout` - (Optional) When `true`, this will lock the user permanently when the user exceeds the maximum login failures.
+- `max_temporary_lockouts` - (Optional) How many temporary lockouts are permitted before a user is permanently locked out. `permanent_lockout` needs to be `true`. Defaults to `0`
 - `max_login_failures` - (Optional) How many failures before wait is triggered.
 - `wait_increment_seconds` - (Optional) This represents the amount of time a user should be locked out when the login failure threshold has been met.
 - `quick_login_check_milli_seconds` - (Optional) Configures the amount of time, in milliseconds, for consecutive failures to lock a user out.
