@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -243,7 +244,19 @@ func testAccCheckKeycloakRealmClientPolicyProfileWithExecutorMatches(realm strin
 		for k, got := range profile.Executors[0].Configuration {
 			want := configuration[k]
 
-			if !equalsIgnoreType(got, want) {
+			// For JSON-encoded values (arrays/objects), ensure they are stored as strings in Keycloak
+			// This is critical because Keycloak expects string types for complex configuration values
+			wantStr, wantIsString := want.(string)
+			if wantIsString && (strings.HasPrefix(wantStr, "[") || strings.HasPrefix(wantStr, "{")) {
+				// This should be a JSON string in Keycloak, not an array/object
+				gotStr, gotIsString := got.(string)
+				if !gotIsString {
+					return fmt.Errorf("Configuration value %s must be a JSON string, got %T: %v", k, got, got)
+				}
+				if gotStr != wantStr {
+					return fmt.Errorf("Configuration value %s does not match: want %v, got %v", k, want, got)
+				}
+			} else if !equalsIgnoreType(got, want) {
 				return fmt.Errorf("Client policy profile executor configuration does not match: want %v, got %v", want, got)
 			}
 		}
@@ -277,7 +290,19 @@ func testAccCheckKeycloakRealmClientPolicyProfilePolicyMatches(realm string, pol
 		for k, got := range policy.Conditions[0].Configuration {
 			want := configuration[k]
 
-			if !equalsIgnoreType(got, want) {
+			// For JSON-encoded values (arrays/objects), ensure they are stored as strings in Keycloak
+			// This is critical because Keycloak expects string types for complex configuration values
+			wantStr, wantIsString := want.(string)
+			if wantIsString && (strings.HasPrefix(wantStr, "[") || strings.HasPrefix(wantStr, "{")) {
+				// This should be a JSON string in Keycloak, not an array/object
+				gotStr, gotIsString := got.(string)
+				if !gotIsString {
+					return fmt.Errorf("Configuration value %s must be a JSON string, got %T: %v", k, got, got)
+				}
+				if gotStr != wantStr {
+					return fmt.Errorf("Configuration value %s does not match: want %v, got %v", k, want, got)
+				}
+			} else if !equalsIgnoreType(got, want) {
 				return fmt.Errorf("Client policy profile policy condition configuration does not match: want %v, got %v", want, got)
 			}
 		}

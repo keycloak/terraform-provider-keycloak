@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -158,13 +157,8 @@ func mapFromDataToRealmClientPolicyProfile(data *schema.ResourceData) *keycloak.
 		if v, ok := executorMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
-				// handle json objects and arrays
-				if strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[") {
-					var t interface{}
-					json.Unmarshal([]byte(value.(string)), &t)
-					configurations[key] = t
-					continue
-				}
+				// Keep JSON strings as strings for Keycloak API
+				// jsonencode() produces strings like "[{...}]" which must remain strings
 				configurations[key] = value
 			}
 			exec.Configuration = configurations
