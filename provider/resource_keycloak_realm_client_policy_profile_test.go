@@ -244,8 +244,19 @@ func testAccCheckKeycloakRealmClientPolicyProfileWithExecutorMatches(realm strin
 		for k, got := range profile.Executors[0].Configuration {
 			want := configuration[k]
 
-			// For JSON-encoded values (arrays/objects), ensure they are stored as strings in Keycloak
+			// For JSON-encoded values (arrays/objects), convert Go types to JSON strings for comparison
 			// This is critical because Keycloak expects string types for complex configuration values
+			switch v := want.(type) {
+			case []string, []interface{}, map[string]interface{}:
+				// Convert Go slice/map to JSON string to match what Keycloak stores
+				jsonBytes, err := json.Marshal(v)
+				if err != nil {
+					return fmt.Errorf("Failed to marshal configuration value %s: %v", k, err)
+				}
+				want = string(jsonBytes)
+			}
+
+			// Now check if want is a JSON string (either originally or after conversion)
 			wantStr, wantIsString := want.(string)
 			if wantIsString && (strings.HasPrefix(wantStr, "[") || strings.HasPrefix(wantStr, "{")) {
 				// This should be a JSON string in Keycloak, not an array/object
@@ -290,8 +301,19 @@ func testAccCheckKeycloakRealmClientPolicyProfilePolicyMatches(realm string, pol
 		for k, got := range policy.Conditions[0].Configuration {
 			want := configuration[k]
 
-			// For JSON-encoded values (arrays/objects), ensure they are stored as strings in Keycloak
+			// For JSON-encoded values (arrays/objects), convert Go types to JSON strings for comparison
 			// This is critical because Keycloak expects string types for complex configuration values
+			switch v := want.(type) {
+			case []string, []interface{}, map[string]interface{}:
+				// Convert Go slice/map to JSON string to match what Keycloak stores
+				jsonBytes, err := json.Marshal(v)
+				if err != nil {
+					return fmt.Errorf("Failed to marshal configuration value %s: %v", k, err)
+				}
+				want = string(jsonBytes)
+			}
+
+			// Now check if want is a JSON string (either originally or after conversion)
 			wantStr, wantIsString := want.(string)
 			if wantIsString && (strings.HasPrefix(wantStr, "[") || strings.HasPrefix(wantStr, "{")) {
 				// This should be a JSON string in Keycloak, not an array/object
