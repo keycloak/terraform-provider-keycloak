@@ -339,6 +339,29 @@ func TestAccKeycloakOpenidClient_AccessToken_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_AccessToken_removed(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	accessTokenLifespan := "1801"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_AccessToken_basic(clientId, accessTokenLifespan),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", accessTokenLifespan),
+			},
+			{
+				Config: testKeycloakOpenidClient_AccessToken_removed(clientId),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -753,8 +776,6 @@ func TestAccKeycloakOpenidClient_loginTheme(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_import(t *testing.T) {
-	t.Parallel()
-
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -762,11 +783,25 @@ func TestAccKeycloakOpenidClient_import(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_import("non-existing-client", true),
-				ExpectError: regexp.MustCompile("Error: openid client with name non-existing-client does not exist"),
+				ExpectError: regexp.MustCompile("Error: openid clientId non-existing-client does not exist in"),
 			},
 			{
-				Config: testKeycloakOpenidClient_import("account", true),
-				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.client", true),
+				Config: testKeycloakOpenidClient_import("account", false),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.client", false),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_import_postcondition(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientNotDestroyed(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_import_postcondition("account", false),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithEnabledStatus("keycloak_openid_client.example", false),
 			},
 		},
 	})
@@ -1614,6 +1649,20 @@ resource "keycloak_openid_client" "client" {
 	`, testAccRealm.Realm, clientId, accessTokenLifespan)
 }
 
+func testKeycloakOpenidClient_AccessToken_removed(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   		  = "%s"
+	realm_id    		  = data.keycloak_realm.realm.id
+	access_type 		  = "CONFIDENTIAL"
+}
+	`, testAccRealm.Realm, clientId)
+}
+
 func testKeycloakOpenidClient_ClientTimeouts(clientId,
 	offlineSessionIdleTimeout string, offlineSessionMaxLifespan string,
 	sessionIdleTimeout string, sessionMaxLifespan string) string {
@@ -2132,16 +2181,52 @@ func testKeycloakOpenidClient_import(clientId string, enabled bool) string {
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
-
+import {
+	id = "${data.keycloak_realm.realm.id}/%s"
+	to = keycloak_openid_client.client
+}
 resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "PUBLIC"
 	root_url    = ""
 	enabled     = %t
-	import      = true
 }
-	`, testAccRealm.Realm, clientId, enabled)
+	`, testAccRealm.Realm, clientId, clientId, enabled)
+}
+
+func testKeycloakOpenidClient_import_postcondition(clientId string, enabled bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+locals {
+	client_id = "%s"
+	enabled = %t
+}
+import {
+	id = "${data.keycloak_realm.realm.id}/${local.client_id}"
+	to = keycloak_openid_client.example
+}
+resource "keycloak_openid_client" "example" {
+  realm_id    = data.keycloak_realm.realm.id
+  client_id   = "${local.client_id}"
+  enabled     = local.enabled
+  access_type = "PUBLIC"
+
+  lifecycle {
+    postcondition {
+      condition = self.enabled == local.enabled
+      error_message = <<-EOT
+        There is a bug with the keycloak provider that causes some fields to be set to unexpected values when 'import = true'.
+        See https://github.com/mrparkers/terraform-provider-keycloak/issues/1007
+
+        This bug has just occurred. You must perform another terraform apply for the expected values to be applied.
+        EOT
+    }
+  }
+}
+`, testAccRealm.Realm, clientId, enabled)
 }
 
 func testAccKeycloakOpenidClientWithDescription(realm, clientId, description string) string {

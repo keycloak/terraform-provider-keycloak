@@ -161,6 +161,28 @@ func (keycloakClient *KeycloakClient) NewOpenidClient(ctx context.Context, clien
 	return nil
 }
 
+func (keycloakClient *KeycloakClient) SearchOpenidClientExact(ctx context.Context, realmId string, clientId string) (*OpenidClient, error) {
+	var clients []*OpenidClient
+
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients", realmId), &clients, map[string]string{
+		"first":    "0",
+		"max":      "101",
+		"clientId": clientId,
+		"search":   "true",
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, client := range clients {
+		client.RealmId = realmId
+		if client.ClientId == clientId {
+			return client, nil
+		}
+	}
+
+	return nil, fmt.Errorf("openid clientId %s does not exist in realm %s", clientId, realmId)
+}
+
 func (keycloakClient *KeycloakClient) GetOpenidClients(ctx context.Context, realmId string, withSecrets bool) ([]*OpenidClient, error) {
 	var clients []*OpenidClient
 	var clientSecret OpenidClientSecret
