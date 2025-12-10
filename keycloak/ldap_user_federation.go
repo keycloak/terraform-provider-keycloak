@@ -29,6 +29,8 @@ type LdapUserFederation struct {
 	BindDn                 string
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
+	KrbPrincipalAttribute  string
+	Debug                  string
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
 
 	StartTls                    bool
@@ -98,6 +100,12 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"usersDn": {
 			ldap.UsersDn,
+		},
+		"krbPrincipalAttribute": {
+			ldap.KrbPrincipalAttribute,
+		},
+		"debug": {
+			ldap.Debug,
 		},
 		"searchScope": {
 			ldap.SearchScope,
@@ -329,6 +337,8 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		BindDn:                 component.getConfig("bindDn"),
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),
+		KrbPrincipalAttribute:  component.getConfig("krbPrincipalAttribute"),
+		Debug:                  component.getConfig("debug"),
 		SearchScope:            component.getConfig("searchScope"),
 
 		StartTls:                    startTls,
