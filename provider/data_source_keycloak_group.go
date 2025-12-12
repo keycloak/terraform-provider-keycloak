@@ -19,6 +19,10 @@ func dataSourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"parent_id": {
 				Type:     schema.TypeString,
 				Computed: true,
