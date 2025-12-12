@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -36,6 +37,10 @@ func resourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"path": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -57,11 +62,12 @@ func mapFromDataToGroup(data *schema.ResourceData) *keycloak.Group {
 	}
 
 	group := &keycloak.Group{
-		Id:         data.Id(),
-		RealmId:    data.Get("realm_id").(string),
-		ParentId:   data.Get("parent_id").(string),
-		Name:       data.Get("name").(string),
-		Attributes: attributes,
+		Id:          data.Id(),
+		RealmId:     data.Get("realm_id").(string),
+		ParentId:    data.Get("parent_id").(string),
+		Name:        data.Get("name").(string),
+		Description: data.Get("description").(string),
+		Attributes:  attributes,
 	}
 
 	return group
@@ -75,6 +81,7 @@ func mapFromGroupToData(data *schema.ResourceData, group *keycloak.Group) {
 	data.SetId(group.Id)
 	data.Set("realm_id", group.RealmId)
 	data.Set("name", group.Name)
+	data.Set("description", group.Description)
 	data.Set("path", group.Path)
 	data.Set("attributes", attributes)
 	if group.ParentId != "" {
