@@ -17,6 +17,7 @@ FEATURES:
 IMPROVEMENTS:
 
 * Document client roles in default roles by @ingokuba in https://github.com/keycloak/terraform-provider-keycloak/pull/1295
+* Allow configuring SAML encryption algorithm on `keycloak_saml_client` resource
 * docs: add keycloak built-in required actions docs by @Download in https://github.com/keycloak/terraform-provider-keycloak/pull/1308
 * Update gradle version to 9.0.0 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1291
 * feat: update go toolchain to 1.24.4 by @LaughDonor in https://github.com/keycloak/terraform-provider-keycloak/pull/1307

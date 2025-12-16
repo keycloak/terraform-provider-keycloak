@@ -43,6 +43,7 @@ resource "keycloak_saml_client" "saml_client" {
 - `sign_documents` - (Optional) When `true`, the SAML document will be signed by Keycloak using the realm's private key. Defaults to `true`.
 - `sign_assertions` - (Optional) When `true`, the SAML assertions will be signed by Keycloak using the realm's private key, and embedded within the SAML XML Auth response. Defaults to `false`.
 - `encrypt_assertions` - (Optional) When `true`, the SAML assertions will be encrypted by Keycloak using the client's public key. Defaults to `false`.
+- `encryption_algorithm` - (Optional) Algorithm used to encrypt SAML assertions. Allowed values: `http://www.w3.org/2009/xmlenc11#aes256-gcm`, `http://www.w3.org/2009/xmlenc11#aes192-gcm`, `http://www.w3.org/2009/xmlenc11#aes128-gcm`, `http://www.w3.org/2001/04/xmlenc#aes256-cbc`, `http://www.w3.org/2001/04/xmlenc#aes192-cbc`, or `http://www.w3.org/2001/04/xmlenc#aes128-cbc`.
 - `client_signature_required` - (Optional) When `true`, Keycloak will expect that documents originating from a client will be signed using the certificate and/or key configured via `signing_certificate` and `signing_private_key`. Defaults to `true`.
 - `force_post_binding` - (Optional) When `true`, Keycloak will always respond to an authentication request via the SAML POST Binding. Defaults to `true`.
 - `front_channel_logout` - (Optional) When `true`, this client will require a browser redirect in order to perform a logout. Defaults to `true`.

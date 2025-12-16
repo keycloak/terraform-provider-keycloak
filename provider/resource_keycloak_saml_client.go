@@ -20,8 +20,16 @@ import (
 )
 
 var (
-	keycloakSamlClientNameIdFormats           = []string{"username", "email", "transient", "persistent"}
-	keycloakSamlClientSignatureAlgorithms     = []string{"RSA_SHA1", "RSA_SHA256", "RSA_SHA256_MGF1", "RSA_SHA512", "RSA_SHA512_MGF1", "DSA_SHA1"}
+	keycloakSamlClientNameIdFormats        = []string{"username", "email", "transient", "persistent"}
+	keycloakSamlClientSignatureAlgorithms  = []string{"RSA_SHA1", "RSA_SHA256", "RSA_SHA256_MGF1", "RSA_SHA512", "RSA_SHA512_MGF1", "DSA_SHA1"}
+	keycloakSamlClientEncryptionAlgorithms = []string{
+		"http://www.w3.org/2009/xmlenc11#aes256-gcm",
+		"http://www.w3.org/2009/xmlenc11#aes192-gcm",
+		"http://www.w3.org/2009/xmlenc11#aes128-gcm",
+		"http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+		"http://www.w3.org/2001/04/xmlenc#aes192-cbc",
+		"http://www.w3.org/2001/04/xmlenc#aes128-cbc",
+	}
 	keycloakSamlClientSignatureKeyNames       = []string{"NONE", "KEY_ID", "CERT_SUBJECT"}
 	keycloakSamlClientCanonicalizationMethods = map[string]string{
 		"EXCLUSIVE":               "http://www.w3.org/2001/10/xml-exc-c14n#",
@@ -83,6 +91,12 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
+			},
+			"encryption_algorithm": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice(keycloakSamlClientEncryptionAlgorithms, false),
 			},
 			"client_signature_required": {
 				Type:     schema.TypeBool,
@@ -285,6 +299,7 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		SignDocuments:                   types.KeycloakBoolQuoted(data.Get("sign_documents").(bool)),
 		SignAssertions:                  types.KeycloakBoolQuoted(data.Get("sign_assertions").(bool)),
 		EncryptAssertions:               types.KeycloakBoolQuoted(data.Get("encrypt_assertions").(bool)),
+		EncryptionAlgorithm:             data.Get("encryption_algorithm").(string),
 		ClientSignatureRequired:         types.KeycloakBoolQuoted(data.Get("client_signature_required").(bool)),
 		ForcePostBinding:                types.KeycloakBoolQuoted(data.Get("force_post_binding").(bool)),
 		SignatureAlgorithm:              data.Get("signature_algorithm").(string),
@@ -351,6 +366,7 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 	data.Set("sign_documents", client.Attributes.SignDocuments)
 	data.Set("sign_assertions", client.Attributes.SignAssertions)
 	data.Set("encrypt_assertions", client.Attributes.EncryptAssertions)
+	data.Set("encryption_algorithm", client.Attributes.EncryptionAlgorithm)
 	data.Set("client_signature_required", client.Attributes.ClientSignatureRequired)
 	data.Set("force_post_binding", client.Attributes.ForcePostBinding)
 

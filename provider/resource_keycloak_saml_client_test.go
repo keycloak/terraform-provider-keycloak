@@ -2,10 +2,11 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -156,6 +157,7 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 			SignDocuments:                   types.KeycloakBoolQuoted(randomBool()),
 			SignAssertions:                  types.KeycloakBoolQuoted(randomBool()),
 			EncryptAssertions:               types.KeycloakBoolQuoted(randomBool()),
+			EncryptionAlgorithm:             "http://www.w3.org/2001/04/xmlenc#aes128-cbc",
 			ClientSignatureRequired:         true,
 			ForcePostBinding:                types.KeycloakBoolQuoted(randomBool()),
 			ForceNameIdFormat:               types.KeycloakBoolQuoted(randomBool()),
@@ -197,6 +199,7 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 			SignDocuments:                   types.KeycloakBoolQuoted(randomBool()),
 			SignAssertions:                  types.KeycloakBoolQuoted(randomBool()),
 			EncryptAssertions:               types.KeycloakBoolQuoted(randomBool()),
+			EncryptionAlgorithm:             "http://www.w3.org/2009/xmlenc11#aes256-gcm",
 			ClientSignatureRequired:         true,
 			ForcePostBinding:                types.KeycloakBoolQuoted(randomBool()),
 			ForceNameIdFormat:               types.KeycloakBoolQuoted(randomBool()),
@@ -223,11 +226,19 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_fromInterface(samlClientBefore),
-				Check:  testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
+					resource.TestCheckResourceAttr("keycloak_saml_client.saml_client", "encryption_algorithm", samlClientBefore.Attributes.EncryptionAlgorithm),
+					testAccCheckKeycloakSamlClientEncryptionAlgorithm("keycloak_saml_client.saml_client", samlClientBefore.Attributes.EncryptionAlgorithm),
+				),
 			},
 			{
 				Config: testKeycloakSamlClient_fromInterface(samlClientAfter),
-				Check:  testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
+					resource.TestCheckResourceAttr("keycloak_saml_client.saml_client", "encryption_algorithm", samlClientAfter.Attributes.EncryptionAlgorithm),
+					testAccCheckKeycloakSamlClientEncryptionAlgorithm("keycloak_saml_client.saml_client", samlClientAfter.Attributes.EncryptionAlgorithm),
+				),
 			},
 		},
 	})
@@ -382,6 +393,21 @@ func testAccCheckKeycloakSamlClientHasEncryptionCertificate(resourceName string)
 
 		if strings.ContainsAny(client.Attributes.EncryptionCertificate, "\n\r ") {
 			return fmt.Errorf("expected saml client encryption certificate to not contain whitespace")
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakSamlClientEncryptionAlgorithm(resourceName, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getSamlClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.EncryptionAlgorithm != expected {
+			return fmt.Errorf("expected saml client encryption algorithm to be %s, got %s", expected, client.Attributes.EncryptionAlgorithm)
 		}
 
 		return nil
@@ -642,6 +668,7 @@ resource "keycloak_saml_client" "saml_client" {
 	sign_documents             = %t
 	sign_assertions            = %t
 	encrypt_assertions         = %t
+	encryption_algorithm       = "%s"
 	client_signature_required  = %t
 	force_post_binding         = %t
 	force_name_id_format       = %t
@@ -676,6 +703,7 @@ resource "keycloak_saml_client" "saml_client" {
 		client.Attributes.SignDocuments,
 		client.Attributes.SignAssertions,
 		client.Attributes.EncryptAssertions,
+		client.Attributes.EncryptionAlgorithm,
 		client.Attributes.ClientSignatureRequired,
 		client.Attributes.ForcePostBinding,
 		client.Attributes.ForceNameIdFormat,
