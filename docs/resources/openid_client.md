@@ -107,6 +107,27 @@ resource "keycloak_openid_client" "openid_client" {
 }
 ```
 
+## Example Usage with Existing default Client
+
+```hcl
+resource "keycloak_realm" "realm" {
+	realm   = "my-realm"
+	enabled = true
+}
+import {
+	id = "${keycloak_realm.realm.id}/account"
+	to = keycloak_openid_client.account
+}
+resource "keycloak_openid_client" "account" {
+	realm_id  = keycloak_realm.realm.id
+	client_id = "account"
+	enabled   = false # disable account intentionally
+	lifecycle {
+		prevent_destroy = true
+	}
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this client is attached to.
@@ -183,8 +204,6 @@ is set to `true`.
   	}
 	```
 
-- `import` - (Optional) When `true`, the client with the specified `client_id` is assumed to already exist, and it will be imported into state instead of being created. This attribute is useful when dealing with clients that Keycloak creates automatically during realm creation, such as `account` and `admin-cli`. Note, that the client will not be removed during destruction if `import` is `true`.
-
 ## Attributes Reference
 
 - `service_account_user_id` - (Computed) When service accounts are enabled for this client, this attribute is the unique ID for the Keycloak user that represents this service account.
@@ -192,11 +211,29 @@ is set to `true`.
 
 ## Import
 
-Clients can be imported using the format `{{realm_id}}/{{client_keycloak_id}}`, where `client_keycloak_id` is the unique ID that Keycloak
-assigns to the client upon creation. This value can be found in the URI when editing this client in the GUI, and is typically a GUID.
+Clients can be imported using the two formats:
+
+1. `{{realm_id}}/{{client_uuid}}`, where `client_uuid` is the UUID that KeyCloak assigns to the client upon creation.
+   This value can be found in the URL when editing the client in an admin console.
+2. `{{realm_id}}/{{client_id}}`, where `client_id` is the human-readable client ID that KeyCloak requires when creating
+   a client.
 
 Example:
 
 ```bash
 terraform import keycloak_openid_client.openid_client my-realm/dcbc4c73-e478-4928-ae2e-d5e420223352
+terraform import keycloak_openid_client.account my-realm/account
+```
+
+Or in HCL:
+```hcl
+import {
+	id = "my-realm/dcbc4c73-e478-4928-ae2e-d5e420223352"
+	to = keycloak_openid_client.openid_client
+}
+
+import {
+	id = "my-realm/account"
+	to = keycloak_openid_client.account
+}
 ```
