@@ -59,6 +59,7 @@ type IdentityProviderConfig struct {
 	ApiUrl                          string                    `json:"apiUrl,omitempty"`
 	BaseUrl                         string                    `json:"baseUrl,omitempty"`
 	GithubJsonFormat                types.KeycloakBoolQuoted  `json:"githubJsonFormat,omitempty"`
+	FetchedFields                   string                    `json:"fetchedFields,omitempty"`
 }
 
 type IdentityProvider struct {
