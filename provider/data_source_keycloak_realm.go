@@ -453,6 +453,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 										Type:     schema.TypeBool,
 										Computed: true,
 									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
 									"max_login_failures": { //failureFactor
 										Type:     schema.TypeInt,
 										Computed: true,

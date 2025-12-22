@@ -63,6 +63,7 @@ type OpenidClient struct {
 
 type OpenidClientAttributes struct {
 	PkceCodeChallengeMethod                  string                           `json:"pkce.code.challenge.method"`
+	RequireDPoPBoundTokens                   types.KeycloakBoolQuoted         `json:"dpop.bound.access.tokens,omitempty"`
 	ExcludeSessionStateFromAuthResponse      types.KeycloakBoolQuoted         `json:"exclude.session.state.from.auth.response"`
 	ExcludeIssuerFromAuthResponse            types.KeycloakBoolQuoted         `json:"exclude.issuer.from.auth.response"`
 	AccessTokenLifespan                      string                           `json:"access.token.lifespan"`

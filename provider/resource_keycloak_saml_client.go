@@ -20,10 +20,19 @@ import (
 )
 
 var (
-	keycloakSamlClientNameIdFormats           = []string{"username", "email", "transient", "persistent"}
-	keycloakSamlClientSignatureAlgorithms     = []string{"RSA_SHA1", "RSA_SHA256", "RSA_SHA256_MGF1", "RSA_SHA512", "RSA_SHA512_MGF1", "DSA_SHA1"}
-	keycloakSamlClientSignatureKeyNames       = []string{"NONE", "KEY_ID", "CERT_SUBJECT"}
-	keycloakSamlClientCanonicalizationMethods = map[string]string{
+	keycloakSamlClientNameIdFormats                    = []string{"username", "email", "transient", "persistent"}
+	keycloakSamlClientSignatureAlgorithms              = []string{"RSA_SHA1", "RSA_SHA256", "RSA_SHA256_MGF1", "RSA_SHA512", "RSA_SHA512_MGF1", "DSA_SHA1"}
+	keycloakSamlClientEncryptionAlgorithmFriendlyToURI = map[string]string{
+		"AES_256_GCM": "http://www.w3.org/2009/xmlenc11#aes256-gcm",
+		"AES_192_GCM": "http://www.w3.org/2009/xmlenc11#aes192-gcm",
+		"AES_128_GCM": "http://www.w3.org/2009/xmlenc11#aes128-gcm",
+		"AES_256_CBC": "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+		"AES_192_CBC": "http://www.w3.org/2001/04/xmlenc#aes192-cbc",
+		"AES_128_CBC": "http://www.w3.org/2001/04/xmlenc#aes128-cbc",
+	}
+	keycloakSamlClientEncryptionAlgorithmURIToFriendly = reverseStringMap(keycloakSamlClientEncryptionAlgorithmFriendlyToURI)
+	keycloakSamlClientSignatureKeyNames                = []string{"NONE", "KEY_ID", "CERT_SUBJECT"}
+	keycloakSamlClientCanonicalizationMethods          = map[string]string{
 		"EXCLUSIVE":               "http://www.w3.org/2001/10/xml-exc-c14n#",
 		"EXCLUSIVE_WITH_COMMENTS": "http://www.w3.org/2001/10/xml-exc-c14n#WithComments",
 		"INCLUSIVE":               "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
@@ -83,6 +92,11 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
+			},
+			"encryption_algorithm": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validateSamlEncryptionAlgorithm,
 			},
 			"client_signature_required": {
 				Type:     schema.TypeBool,
@@ -270,6 +284,40 @@ func formatSigningPrivateKey(signingPrivateKey string) string {
 	return r.Replace(signingPrivateKey)
 }
 
+func validateSamlEncryptionAlgorithm(v interface{}, _ string) (ws []string, es []error) {
+	value := v.(string)
+	if value == "" {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionAlgorithmFriendlyToURI[value]; ok {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionAlgorithmURIToFriendly[value]; ok {
+		return
+	}
+
+	es = append(es, fmt.Errorf(`Invalid encryption_algorithm: value must be one of %s`, strings.Join(keys(keycloakSamlClientEncryptionAlgorithmFriendlyToURI), ", ")))
+	return
+}
+
+func convertSamlEncryptionAlgorithmToAPI(value string) string {
+	if uri, ok := keycloakSamlClientEncryptionAlgorithmFriendlyToURI[value]; ok {
+		return uri
+	}
+
+	return value
+}
+
+func convertSamlEncryptionAlgorithmToState(value string) string {
+	if friendly, ok := keycloakSamlClientEncryptionAlgorithmURIToFriendly[value]; ok {
+		return friendly
+	}
+
+	return value
+}
+
 func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 	var validRedirectUris []string
 
@@ -285,6 +333,7 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		SignDocuments:                   types.KeycloakBoolQuoted(data.Get("sign_documents").(bool)),
 		SignAssertions:                  types.KeycloakBoolQuoted(data.Get("sign_assertions").(bool)),
 		EncryptAssertions:               types.KeycloakBoolQuoted(data.Get("encrypt_assertions").(bool)),
+		EncryptionAlgorithm:             convertSamlEncryptionAlgorithmToAPI(data.Get("encryption_algorithm").(string)),
 		ClientSignatureRequired:         types.KeycloakBoolQuoted(data.Get("client_signature_required").(bool)),
 		ForcePostBinding:                types.KeycloakBoolQuoted(data.Get("force_post_binding").(bool)),
 		SignatureAlgorithm:              data.Get("signature_algorithm").(string),
@@ -351,6 +400,7 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 	data.Set("sign_documents", client.Attributes.SignDocuments)
 	data.Set("sign_assertions", client.Attributes.SignAssertions)
 	data.Set("encrypt_assertions", client.Attributes.EncryptAssertions)
+	data.Set("encryption_algorithm", convertSamlEncryptionAlgorithmToState(client.Attributes.EncryptionAlgorithm))
 	data.Set("client_signature_required", client.Attributes.ClientSignatureRequired)
 	data.Set("force_post_binding", client.Attributes.ForcePostBinding)
 

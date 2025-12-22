@@ -714,6 +714,17 @@ resource "keycloak_oidc_identity_provider" "oidc" {
   gui_order         = 1
 }
 
+resource "keycloak_oidc_facebook_identity_provider" "facebook" {
+  realm                                   = keycloak_realm.test.id
+  client_id                               = "myclientid.apps.facebookusercontent.com"
+  client_secret                           = "myclientsecret"
+  fetched_fields                          = "picture"
+  default_scopes                          = "openid random profile"
+  accepts_prompt_none_forward_from_client = false
+  sync_mode                               = "FORCE"
+  gui_order                               = 2
+}
+
 resource "keycloak_oidc_google_identity_provider" "google" {
   realm                                   = keycloak_realm.test.id
   client_id                               = "myclientid.apps.googleusercontent.com"
