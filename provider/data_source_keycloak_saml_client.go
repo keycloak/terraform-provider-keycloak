@@ -49,6 +49,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"encryption_algorithm": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"client_signature_required": {
 				Type:     schema.TypeBool,
 				Computed: true,

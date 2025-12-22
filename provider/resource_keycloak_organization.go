@@ -56,8 +56,8 @@ func resourceKeycloakOrganization() *schema.Resource {
 			},
 			"domain": {
 				Type:     schema.TypeSet,
-				Required: true,
-				MinItems: 1,
+				Optional: true,
+				MinItems: 0,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -104,9 +104,6 @@ func getOrganizationFromData(data *schema.ResourceData) (*keycloak.Organization,
 		}
 	}
 
-	if len(domains) == 0 {
-		return nil, fmt.Errorf("at least one domain is required")
-	}
 	organization.Domains = domains
 
 	attributes := map[string][]string{}

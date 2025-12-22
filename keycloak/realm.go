@@ -3,8 +3,9 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strings"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type Key struct {
@@ -90,12 +91,15 @@ type Realm struct {
 
 	BruteForceProtected          bool `json:"bruteForceProtected"`
 	PermanentLockout             bool `json:"permanentLockout"`
-	FailureFactor                int  `json:"failureFactor"` //Max Login Failures
+	MaxTemporaryLockouts         int  `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
+	FailureFactor                int  `json:"failureFactor"`                  //Max Login Failures
 	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
 	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
 	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
 	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
 	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+
+	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
 
 	PasswordPolicy string `json:"passwordPolicy"`
 
@@ -168,6 +172,7 @@ type SmtpServer struct {
 	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
 	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
 	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
+	AllowUtf8             types.KeycloakBoolQuoted `json:"allowutf8,omitempty"`
 	User                  string                   `json:"user,omitempty"`
 	Password              string                   `json:"password,omitempty"`
 	AuthType              string                   `json:"authType,omitempty"`

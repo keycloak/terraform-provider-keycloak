@@ -1,11 +1,11 @@
 plugins {
-	id 'org.jetbrains.kotlin.jvm' version '2.2.20'
-	id 'com.gradleup.shadow' version '9.2.2'
+	id 'org.jetbrains.kotlin.jvm' version '2.3.0'
+	id 'com.gradleup.shadow' version '9.3.0'
 	id 'java-library'
 }
 
 ext {
-	keycloakVersion = '26.4.0'
+	keycloakVersion = '26.4.7'
 }
 
 dependencies {
