@@ -91,7 +91,8 @@ type Realm struct {
 
 	BruteForceProtected          bool `json:"bruteForceProtected"`
 	PermanentLockout             bool `json:"permanentLockout"`
-	FailureFactor                int  `json:"failureFactor"` //Max Login Failures
+	MaxTemporaryLockouts         int  `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
+	FailureFactor                int  `json:"failureFactor"`                  //Max Login Failures
 	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
 	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
 	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
