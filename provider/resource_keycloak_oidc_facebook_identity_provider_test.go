@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 /*
@@ -126,6 +127,7 @@ func TestAccKeycloakOidcFacebookIdentityProvider_extraConfigInvalid(t *testing.T
 }
 
 func TestAccKeycloakOidcFacebookIdentityProvider_linkOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
@@ -186,6 +188,7 @@ func TestAccKeycloakOidcFacebookIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:                acctest.RandString(10),
 			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:                    randomStringInSlice(syncModes),
+			HideOnLoginPage:             types.KeycloakBoolQuoted(firstHideOnLogin),
 		},
 	}
 
@@ -200,6 +203,7 @@ func TestAccKeycloakOidcFacebookIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:                acctest.RandString(10),
 			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:                    randomStringInSlice(syncModes),
+			HideOnLoginPage:             types.KeycloakBoolQuoted(!firstHideOnLogin),
 		},
 	}
 
@@ -361,7 +365,7 @@ resource "keycloak_oidc_facebook_identity_provider" "facebook" {
 	sync_mode                               = "%s"
 	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.FetchedFields, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.FetchedFields, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, bool(idp.Config.HideOnLoginPage))
 }
 
 func testKeycloakOidcFacebookIdentityProvider_linkOrganization(organizationName string) string {
