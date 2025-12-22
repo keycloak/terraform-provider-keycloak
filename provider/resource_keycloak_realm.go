@@ -582,6 +582,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  false,
 									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
 									"max_login_failures": { //failureFactor
 										Type:     schema.TypeInt,
 										Optional: true,
@@ -1076,6 +1081,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 
 		bruteForceDetectionConfig := securityDefensesSettings["brute_force_detection"].([]interface{})
+		versionOk := keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion())
 		if len(bruteForceDetectionConfig) == 1 {
 			bruteForceDetectionSettings := bruteForceDetectionConfig[0].(map[string]interface{})
 			realm.BruteForceProtected = true
@@ -1086,12 +1092,16 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
 			realm.MaxFailureWaitSeconds = bruteForceDetectionSettings["max_failure_wait_seconds"].(int)
 			realm.MaxDeltaTimeSeconds = bruteForceDetectionSettings["failure_reset_time_seconds"].(int)
+
+			if versionOk {
+				realm.MaxTemporaryLockouts = bruteForceDetectionSettings["max_temporary_lockouts"].(int)
+			}
 		} else {
-			setDefaultSecuritySettingsBruteForceDetection(realm)
+			setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 		}
 	} else {
 		setDefaultSecuritySettingHeaders(realm)
-		setDefaultSecuritySettingsBruteForceDetection(realm)
+		setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 	}
 
 	if passwordPolicy, ok := data.GetOk("password_policy"); ok {
@@ -1255,7 +1265,7 @@ func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
 	}
 }
 
-func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
+func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keycloakVersion *version.Version) {
 	realm.BruteForceProtected = false
 	realm.PermanentLockout = false
 	realm.FailureFactor = 30
@@ -1264,6 +1274,10 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
 	realm.MinimumQuickLoginWaitSeconds = 60
 	realm.MaxFailureWaitSeconds = 900
 	realm.MaxDeltaTimeSeconds = 43200
+
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
+		realm.MaxTemporaryLockouts = 0
+	}
 }
 
 func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
@@ -1377,7 +1391,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		} else if len(oldHeadersConfig) == 1 && realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
 			securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if len(oldHeadersConfig) == 1 {
 			securityDefensesSettings := make(map[string]interface{})
@@ -1385,7 +1399,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		}
 	}
@@ -1458,7 +1472,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("default_optional_client_scopes", realm.DefaultOptionalClientScopes)
 }
 
-func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{} {
+func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *version.Version) map[string]interface{} {
 	bruteForceDetectionSettings := make(map[string]interface{})
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
@@ -1467,6 +1481,10 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
 	bruteForceDetectionSettings["max_failure_wait_seconds"] = realm.MaxFailureWaitSeconds
 	bruteForceDetectionSettings["failure_reset_time_seconds"] = realm.MaxDeltaTimeSeconds
+
+	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
+		bruteForceDetectionSettings["max_temporary_lockouts"] = realm.MaxTemporaryLockouts
+	}
 	return bruteForceDetectionSettings
 }
 
