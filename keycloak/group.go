@@ -11,6 +11,7 @@ type Group struct {
 	RealmId     string              `json:"-"`
 	ParentId    string              `json:"-"`
 	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
 	Path        string              `json:"path,omitempty"`
 	SubGroups   []*Group            `json:"subGroups,omitempty"`
 	RealmRoles  []string            `json:"realmRoles,omitempty"`
