@@ -60,7 +60,7 @@ func testAccCheckKeycloakGroupPermissionExists(resourceName string) resource.Tes
 		manageMembersScopeDescription := rs.Primary.Attributes["manage_members_scope.0.description"]
 		manageMembersScopeDecisionStrategy := rs.Primary.Attributes["manage_members_scope.0.decision_strategy"]
 
-		authzClientManageMembersScope, err := keycloakClient.GetOpenidClientAuthorizationPermission(testCtx, permissions.RealmId, realmManagementId, permissions.ScopePermissions["manage-members"].(string))
+		authzClientManageMembersScope, err := keycloakClient.GetOpenidClientAuthorizationPermission(testCtx, permissions.RealmId, realmManagementId, permissions.ScopePermissions["manage-members"])
 		if err != nil {
 			return err
 		}
