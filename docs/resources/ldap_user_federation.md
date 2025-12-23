@@ -66,10 +66,15 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `bind_dn` - (Optional) DN of LDAP admin, which will be used by Keycloak to access LDAP server. This attribute must be set if `bind_credential` is set.
 - `bind_credential` - (Optional) Password of LDAP admin. This attribute must be set if `bind_dn` is set.
 - `custom_user_search_filter` - (Optional) Additional LDAP filter for filtering searched users. Must begin with `(` and end with `)`.
+- `krb_principal_attribute` - (Optional) Name of the LDAP attribute, which refers to Kerberos principal. This is used to lookup appropriate LDAP user after successful Kerberos/SPNEGO authentication in Keycloak. When this is empty, the LDAP user will be looked based on LDAP username corresponding to the first part of his Kerberos principal. For instance, for principal 'john@KEYCLOAK.ORG', it will assume that LDAP username is 'john'.
+- `debug` - (Optional) Can be one of `true` or `false`. Will enable/disable logging for Kerberos Authentication. Defaults to `false`:
+	- `true`: Will enable logging for Krb5LoginModule.
+	- `false`: Will disable logging for Krb5LoginModule.
 - `search_scope` - (Optional) Can be one of `ONE_LEVEL` or `SUBTREE`:
     - `ONE_LEVEL`: Only search for users in the DN specified by `user_dn`.
     - `SUBTREE`: Search entire LDAP subtree.
 - `start_tls` - (Optional) When `true`, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.
+- `connection_pooling` - (Optional) When `true`, LDAP connection pooling is enabled. Defaults to `false`.
 - `use_password_modify_extended_op` - (Optional) When `true`, use the LDAPv3 Password Modify Extended Operation (RFC-3062).
 - `validate_password_policy` - (Optional) When `true`, Keycloak will validate passwords using the realm policy before updating it.
 - `trust_email` - (Optional) If enabled, email provided by this provider is not verified even if verification is enabled for the realm.

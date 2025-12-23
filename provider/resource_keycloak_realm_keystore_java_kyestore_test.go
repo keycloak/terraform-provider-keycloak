@@ -204,7 +204,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"
@@ -225,7 +225,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"
@@ -245,7 +245,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"

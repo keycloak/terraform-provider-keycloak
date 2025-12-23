@@ -11,6 +11,7 @@ type Group struct {
 	RealmId     string              `json:"-"`
 	ParentId    string              `json:"-"`
 	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
 	Path        string              `json:"path,omitempty"`
 	SubGroups   []*Group            `json:"subGroups,omitempty"`
 	RealmRoles  []string            `json:"realmRoles,omitempty"`
@@ -30,7 +31,7 @@ func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *
 
 	var parentGroup Group
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, parentPath), &parentGroup, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, strings.TrimPrefix(parentPath, "/")), &parentGroup, nil)
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +120,7 @@ func (keycloakClient *KeycloakClient) GetGroupByName(ctx context.Context, realmI
 	}
 
 	if len(groups) == 0 {
-		return nil, fmt.Errorf("no group with name " + name + " found")
+		return nil, fmt.Errorf("no group with name %s found", name)
 	}
 
 	// The search may return more than 1 result even if there is a group exactly matching the search string
@@ -141,7 +142,7 @@ func (keycloakClient *KeycloakClient) GetGroupByName(ctx context.Context, realmI
 		return group, nil
 	}
 
-	return nil, fmt.Errorf("no group with name " + name + " found")
+	return nil, fmt.Errorf("no group with name %s found", name)
 }
 
 /*

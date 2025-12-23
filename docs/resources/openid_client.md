@@ -26,23 +26,24 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_openid_client" "openid_client" {
-  realm_id            = keycloak_realm.realm.id
-  client_id           = "test-client"
+	realm_id  = keycloak_realm.realm.id
+	client_id = "test-client"
 
-  name                = "test client"
-  enabled             = true
+	name    = "test client"
+	enabled = true
 
-  access_type         = "CONFIDENTIAL"
-  valid_redirect_uris = [
-    "http://localhost:8080/openid-callback"
-  ]
+	access_type           = "CONFIDENTIAL"
+	standard_flow_enabled = true
+	valid_redirect_uris = [
+		"http://localhost:8080/openid-callback"
+	]
 
-  login_theme = "keycloak"
+	login_theme = "keycloak"
 
-  extra_config = {
-    "key1" = "value1"
-    "key2" = "value2"
-  }
+	extra_config = {
+		"key1" = "value1"
+		"key2" = "value2"
+	}
 }
 ```
 
@@ -60,26 +61,27 @@ ephemeral "random_password" "openid_client_secret" {
 }
 
 resource "keycloak_openid_client" "openid_client" {
-  realm_id            = keycloak_realm.realm.id
-  client_id           = "test-client"
+	realm_id  = keycloak_realm.realm.id
+	client_id = "test-client"
 
-  name                = "test client"
-  enabled             = true
+	name    = "test client"
+	enabled = true
 
-  client_secret_wo         = ephemeral.random_password.openid_client_secret.result
-  client_secret_wo_version = 1
+	client_secret_wo         = ephemeral.random_password.openid_client_secret.result
+	client_secret_wo_version = 1
 
-  access_type         = "CONFIDENTIAL"
-  valid_redirect_uris = [
-    "http://localhost:8080/openid-callback"
-  ]
+	access_type           = "CONFIDENTIAL"
+	standard_flow_enabled = true
+	valid_redirect_uris = [
+		"http://localhost:8080/openid-callback"
+	]
 
-  login_theme = "keycloak"
+	login_theme = "keycloak"
 
-  extra_config = {
-    "key1" = "value1"
-    "key2" = "value2"
-  }
+	extra_config = {
+		"key1" = "value1"
+		"key2" = "value2"
+	}
 }
 ```
 
@@ -142,6 +144,7 @@ is set to `true`.
 - `admin_url` - (Optional) URL to the admin interface of the client.
 - `base_url` - (Optional) Default URL to use when the auth server needs to redirect or link back to the client.
 - `pkce_code_challenge_method` - (Optional) The challenge method to use for Proof Key for Code Exchange. Can be either `plain` or `S256` or set to empty value ``.
+- `require_dpop_bound_tokens` - (Optional) Enable support for Demonstrating Proof-of-Possession (DPoP) bound tokens.
 - `full_scope_allowed` - (Optional) Allow to include all roles mappings in the access token.
 - `access_token_lifespan` - (Optional) The amount of time in seconds before an access token expires. This will override the default for the realm.
 - `client_offline_session_idle_timeout` - (Optional) Time a client session is allowed to be idle before it expires. Tokens are invalidated when a client session is expired. If not set it uses the standard SSO Session Idle value.

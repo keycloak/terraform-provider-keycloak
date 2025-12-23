@@ -63,7 +63,17 @@ account within the `foo` realm.
 the realm clients to a user or service account within the `master` realm. For example, given a Keycloak instance with realms
 `master`, `foo`, and `bar`, assign the `create-client` client role from the clients `master-realm`, `foo-realm`, and `bar-realm`.
 
-## Example Usage (client credentials grant - client secret)
+## Authentication
+
+The Terraform Provider currently supports the following authentication methods:
+- Client-Credentials Grant (client_id + client_secret)
+- Password Grant (client_id (+client_secret), username, password)
+- Signed JWT (Private Key JWT)
+- Provided Access Token (pre-provisioned Keycloak Access Token)
+
+Additionally, the Terraform Provider also supports using an mTLS client certificate to access Keycloak.
+
+### Example Usage (client credentials grant - client secret)
 
 ```hcl
 provider "keycloak" {
@@ -73,7 +83,7 @@ provider "keycloak" {
 }
 ```
 
-## Example Usage (client credentials grant - private key signed JWT)
+### Example Usage (client credentials grant - private key signed JWT)
 
 ```hcl
 provider "keycloak" {
@@ -83,7 +93,7 @@ provider "keycloak" {
 }
 ```
 
-## Example Usage (password grant)
+### Example Usage (password grant)
 
 ```hcl
 provider "keycloak" {
@@ -91,6 +101,29 @@ provider "keycloak" {
 	username      = "keycloak"
 	password      = "password"
 	url           = "http://localhost:8080"
+}
+```
+
+### Example Usage (provided Token)
+
+```hcl
+provider "keycloak" {
+	client_id     = "admin-cli"
+	access_token  = "<encoded-access-token-here>"
+	url           = "http://localhost:8080"
+}
+```
+
+### Example Usage (mTLS Certificate)
+```hcl
+provider "keycloak" {
+	client_id     = "terraform"
+	client_secret = "884e0f95-0f42-4a63-9b1f-94274655669e"
+	jwt_signing_key = "<pem-formatted-private-key>"
+	tls_client_certificate = "<pem-formatted-client-certificate>"
+	tls_client_private_key = "<pem-formatted-client-key>"
+	root_ca_certificate = "<pem-formatted-server-certificate>"
+	url             = "https://localhost:8443"
 }
 ```
 
@@ -104,6 +137,7 @@ The following arguments are supported:
 - `client_secret` - (Optional) The secret for the client used by the provider for authentication via the client credentials grant. This can be found or changed using the "Credentials" tab in the client settings. Defaults to the environment variable `KEYCLOAK_CLIENT_SECRET`. This attribute is required when using the client credentials grant, and cannot be set when using the password grant.
 - `username` - (Optional) The username of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_USER`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `password` - (Optional) The password of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_PASSWORD`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
+- `access_token` - (Optional) The access token that should be used by the provider for authentication via token. Defaults to the environment variable `KEYCLOAK_ACCESS_TOKEN`.
 - `jwt_signing_key` - (Optional) The PEM-formatted private key used by provider to generate a signed JWT for authentication.
 - `jwt_signing_alg` - (Optional) The signing algorithm used by provider to generate a signed JWT for authentication. Defaults to `RS256`.
 - `realm` - (Optional) The realm used by the provider for authentication. Defaults to the environment variable `KEYCLOAK_REALM`, or `master` if the environment variable is not specified.
@@ -111,5 +145,7 @@ The following arguments are supported:
 - `client_timeout` - (Optional) Sets the timeout of the client when addressing Keycloak, in seconds. Defaults to the environment variable `KEYCLOAK_CLIENT_TIMEOUT`, or `15` if the environment variable is not specified.
 - `tls_insecure_skip_verify` - (Optional) Allows ignoring insecure certificates when set to `true`. Defaults to `false`. Disabling this security check is dangerous and should only be done in local or test environments.
 - `root_ca_certificate` - (Optional) Allows x509 calls using an unknown CA certificate (for development purposes)
+- `tls_client_certificate` - (Optional) The TLS client certificate in PEM format when the keycloak server is configured with TLS mutual authentication.
+- `tls_client_private_key` - (Optional) The TLS client pkcs1 private key in PEM format when the keycloak server is configured with TLS mutual authentication.
 - `base_path` - (Optional) The base path used for accessing the Keycloak REST API.  Defaults to the environment variable `KEYCLOAK_BASE_PATH`, or an empty string if the environment variable is not specified. Note that users of the legacy distribution of Keycloak will need to set this attribute to `/auth`.
 - `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API.

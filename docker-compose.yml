@@ -10,11 +10,11 @@ services:
     volumes:
     - postgres:/var/lib/postgresql
   openldap:
-    image: bitnami/openldap:2.6
+    image: bitnamilegacy/openldap:2.6
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3.3
+    image: quay.io/keycloak/keycloak:26.4.7
     command: --verbose start-dev
     depends_on:
     - postgres
@@ -22,7 +22,8 @@ services:
     environment:
     - KC_BOOTSTRAP_ADMIN_USERNAME=keycloak
     - KC_BOOTSTRAP_ADMIN_PASSWORD=password
-    - KC_LOG_LEVEL=INFO,org.keycloak:debug
+    - KC_LOG_LEVEL=INFO
+    - KC_HTTP_ACCESS_LOG_ENABLED=true
     - KC_DB=postgres
     - KC_DB_URL_HOST=postgres
     - KC_DB_URL_PORT=5432
@@ -31,16 +32,18 @@ services:
     - KC_DB_PASSWORD=password
     - KC_LOG_CONSOLE_COLOR=true
     - KC_FEATURES=preview,admin-fine-grained-authz:v1
-    - QUARKUS_HTTP_ACCESS_LOG_ENABLED=true
-    - QUARKUS_HTTP_RECORD_REQUEST_START_TIME=true
+    - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/testdata/tls/server-cert.pem
+    - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem
 # Enable for remote java debugging
 #    - DEBUG=true
 #    - DEBUG_PORT=*:8787
+#    - DEBUG_SUSPEND=y
     ports:
     - "8080:8080"
+    - "8443:8443"
 # Enable for remote java debugging
 #    - "8787:8787"
     volumes:
 # Make the custom-user-federation-example extension available to Keycloak. The :z option is required and tells Docker that the volume content will be shared between containers.
     - ./custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z
-    - ./provider/misc:/opt/keycloak/misc:z
+    - ./provider/testdata:/opt/keycloak/testdata:z

@@ -13,6 +13,7 @@ type SamlClientAttributes struct {
 	SignDocuments                   types.KeycloakBoolQuoted `json:"saml.server.signature"`
 	SignAssertions                  types.KeycloakBoolQuoted `json:"saml.assertion.signature"`
 	EncryptAssertions               types.KeycloakBoolQuoted `json:"saml.encrypt"`
+	EncryptionAlgorithm             string                   `json:"saml.encryption.algorithm"`
 	ClientSignatureRequired         types.KeycloakBoolQuoted `json:"saml.client.signature"`
 	ForcePostBinding                types.KeycloakBoolQuoted `json:"saml.force.post.binding"`
 	ForceNameIdFormat               types.KeycloakBoolQuoted `json:"saml_force_name_id_format"`

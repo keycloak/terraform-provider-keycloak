@@ -152,6 +152,46 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		},
 	})
 }
+func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+			},
+			{
+				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+			},
+			{
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "My Host2", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+			},
+		},
+	})
+}
 
 func TestAccKeycloakRealm_SmtpServerInvalid(t *testing.T) {
 	realm := acctest.RandomWithPrefix("tf-acc")
@@ -938,6 +978,65 @@ func testAccCheckKeycloakRealm_default_client_scopes(resourceName string, defaul
 	}
 }
 
+func TestAccKeycloakRealm_admin_permissions_enabled(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
+		t.Skip()
+	}
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	realm := &keycloak.Realm{
+		Realm: realmName,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				ResourceName:  "keycloak_realm.realm",
+				ImportStateId: realmName,
+				ImportState:   true,
+				Config:        testKeycloakRealm_admin_permission_enabled(realmName),
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, realm)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Check: testAccCheckKeycloakRealm_admin_permissions_enabled(realmName),
+			},
+		},
+	})
+}
+
+func testKeycloakRealm_admin_permission_enabled(realm string) string {
+
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm                          = "%s"
+	enabled                        = true
+	admin_permissions_enabled      = true
+}
+	`, realm)
+}
+
+func testAccCheckKeycloakRealm_admin_permissions_enabled(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if !realm.AdminPermissionsEnabled {
+			return fmt.Errorf("expected realm %s to have admin permissions enabled but was %t", realm.Realm, realm.AdminPermissionsEnabled)
+		}
+
+		return nil
+	}
+}
+
 func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
@@ -1339,6 +1438,34 @@ resource "keycloak_realm" "realm" {
 		auth {
 			username = "%s"
 			password = "tom"
+		}
+	}
+}
+	`, realm, realm, host, from, user)
+}
+
+func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+	enabled = true
+	display_name = "%s"
+	smtp_server {
+		host = "%s"
+		port = 25
+		from_display_name = "Tom"
+		from = "%s"
+		reply_to_display_name = "Tom"
+		reply_to = "tom@myhost.com"
+		ssl = true
+		starttls = true
+		envelope_from = "nottom@myhost.com"
+		token_auth {
+			username      = "%s"
+			url           = "wibble.com"
+			client_id     = "wibble"
+			client_secret = "wobble"
+			scope         = "wiggle"
 		}
 	}
 }

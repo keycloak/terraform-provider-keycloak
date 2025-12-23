@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/keycloak/terraform-provider-keycloak/helper"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -24,13 +24,6 @@ var testAccRealmUserFederation *keycloak.Realm
 var testAccRealmOrganization *keycloak.Realm
 var testCtx context.Context
 
-var requiredEnvironmentVariables = []string{
-	"KEYCLOAK_CLIENT_ID",
-	"KEYCLOAK_CLIENT_SECRET",
-	"KEYCLOAK_REALM",
-	"KEYCLOAK_URL",
-}
-
 func init() {
 	testCtx = context.Background()
 	userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", schema.Provider{}.TerraformVersion, meta.SDKVersionString())
@@ -38,27 +31,10 @@ func init() {
 	// Load environment variables from a json file if it exists
 	// This is useful for running tests locally
 
-	if _, err := os.Stat("../test_env.json"); err == nil {
-		println("Using test_env.json to load environment variables...")
-		file, err := os.Open("../test_env.json")
-		if err != nil {
-			log.Fatalf("Unable to open env.json: %s", err)
-		}
-		defer file.Close()
+	helper.UpdateEnvFromTestEnvIfPresent()
 
-		var envVars map[string]string
-		if err := json.NewDecoder(file).Decode(&envVars); err != nil {
-			log.Fatalf("Unable to decode env.json: %s", err)
-		}
-
-		for key, value := range envVars {
-			if err := os.Setenv(key, value); err != nil {
-				log.Fatalf("Unable to set environment variable %s: %s", key, err)
-			}
-		}
-	}
-
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", "", "", true, 120, "", false, userAgent, false, map[string]string{
+	initialLogin := os.Getenv("KEYCLOAK_ACCESS_TOKEN") == ""
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {
@@ -141,9 +117,5 @@ func TestProvider(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	for _, requiredEnvironmentVariable := range requiredEnvironmentVariables {
-		if value := os.Getenv(requiredEnvironmentVariable); value == "" {
-			t.Fatalf("%s must be set before running acceptance tests.", requiredEnvironmentVariable)
-		}
-	}
+	helper.CheckRequiredEnvironmentVariables(t)
 }

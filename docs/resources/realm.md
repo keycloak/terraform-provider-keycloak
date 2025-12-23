@@ -86,6 +86,7 @@ resource "keycloak_realm" "realm" {
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm. [Also available as mutually exlusive resource](./realm_attributes.md)
 - `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
+- `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 
 ### Login Settings
 
@@ -158,9 +159,16 @@ This block supports the following arguments:
 - `envelope_from` - (Optional) The email address uses for bounces.
 - `starttls` - (Optional) When `true`, enables StartTLS. Defaults to `false`.
 - `ssl` - (Optional) When `true`, enables SSL. Defaults to `false`.
-- `auth` - (Optional) Enables authentication to the SMTP server.  This block supports the following arguments:
+- `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `password` - (Required) The SMTP server password.
+- `token_auth` - (Optional) Enables authentication to the SMTP server through OAUTH2. Cannot be set alongside `auth`. This block supports the following arguments:
+    - `username` - (Required) The SMTP server username.
+    - `url` - (Required) The auth token URL.
+    - `client_id` - (Required) The auth token client ID.
+    - `client_secret` - (Required) The auth token client secret.
+    - `scope` - (Required) The auth token scope.
+
 
 ### Internationalization
 
@@ -187,6 +195,7 @@ The `headers` block supports the following arguments:
 The `brute_force_detection` block supports the following arguments:
 
 - `permanent_lockout` - (Optional) When `true`, this will lock the user permanently when the user exceeds the maximum login failures.
+- `max_temporary_lockouts` - (Optional) How many temporary lockouts are permitted before a user is permanently locked out. `permanent_lockout` needs to be `true`. Defaults to `0`
 - `max_login_failures` - (Optional) How many failures before wait is triggered.
 - `wait_increment_seconds` - (Optional) This represents the amount of time a user should be locked out when the login failure threshold has been met.
 - `quick_login_check_milli_seconds` - (Optional) Configures the amount of time, in milliseconds, for consecutive failures to lock a user out.
