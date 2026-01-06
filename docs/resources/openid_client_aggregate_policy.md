@@ -1,10 +1,10 @@
 ---
-page_title: "keycloak_openid_client_authorization_aggregate_policy Resource"
+page_title: "keycloak_openid_client_aggregate_policy Resource"
 ---
 
-# keycloak\_openid\_client\_authorization\_aggregate\_policy Resource
+# keycloak\_openid\_client\_aggregate\_policy Resource
 
-Allows you to manage openid Client Authorization Aggregate type Policies.
+Allows you to manage aggregate policies.
 
 Aggregate policies combine multiple policies into a single policy, allowing you to reuse existing policies to build more complex authorization logic.
 
@@ -26,7 +26,7 @@ resource "keycloak_openid_client" "test" {
   }
 }
 
-resource "keycloak_openid_client_authorization_role_policy" "role_policy" {
+resource "keycloak_openid_client_role_policy" "role_policy" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "role_policy"
@@ -39,7 +39,7 @@ resource "keycloak_openid_client_authorization_role_policy" "role_policy" {
   }
 }
 
-resource "keycloak_openid_client_authorization_user_policy" "user_policy" {
+resource "keycloak_openid_client_user_policy" "user_policy" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "user_policy"
@@ -48,7 +48,7 @@ resource "keycloak_openid_client_authorization_user_policy" "user_policy" {
   users              = [keycloak_user.test.id]
 }
 
-resource "keycloak_openid_client_authorization_aggregate_policy" "test" {
+resource "keycloak_openid_client_aggregate_policy" "test" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "aggregate_policy"
@@ -56,8 +56,8 @@ resource "keycloak_openid_client_authorization_aggregate_policy" "test" {
   logic              = "POSITIVE"
 
   policies = [
-    keycloak_openid_client_authorization_role_policy.role_policy.id,
-    keycloak_openid_client_authorization_user_policy.user_policy.id,
+    keycloak_openid_client_role_policy.role_policy.id,
+    keycloak_openid_client_user_policy.user_policy.id,
   ]
 }
 ```
@@ -82,10 +82,10 @@ In addition to the arguments listed above, the following computed attributes are
 
 ## Import
 
-Client authorization aggregate policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
+Aggregate policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
 
 Example:
 
 ```bash
-$ terraform import keycloak_openid_client_authorization_aggregate_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
+$ terraform import keycloak_openid_client_aggregate_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
 ```
