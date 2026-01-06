@@ -1,10 +1,10 @@
 ---
-page_title: "keycloak_openid_client_authorization_time_policy Resource"
+page_title: "keycloak_openid_client_time_policy Resource"
 ---
 
-# keycloak\_openid\_client\_authorization\_time\_policy Resource
+# keycloak\_openid\_client\_time\_policy Resource
 
-Allows you to manage openid Client Authorization Time type Policies.
+Allows you to manage time policies.
 
 Time policies allow you to define conditions based on time ranges. You can specify when access should be granted using various time constraints including date, month, year, hour, and minute ranges.
 
@@ -27,7 +27,7 @@ resource "keycloak_openid_client" "test" {
 }
 
 # Policy for business hours only (9 AM - 5 PM)
-resource "keycloak_openid_client_authorization_time_policy" "business_hours" {
+resource "keycloak_openid_client_time_policy" "business_hours" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "business_hours_policy"
@@ -39,7 +39,7 @@ resource "keycloak_openid_client_authorization_time_policy" "business_hours" {
 }
 
 # Policy for specific date range
-resource "keycloak_openid_client_authorization_time_policy" "date_range" {
+resource "keycloak_openid_client_time_policy" "date_range" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "date_range_policy"
@@ -51,7 +51,7 @@ resource "keycloak_openid_client_authorization_time_policy" "date_range" {
 }
 
 # Policy for specific months (January to March)
-resource "keycloak_openid_client_authorization_time_policy" "quarter1" {
+resource "keycloak_openid_client_time_policy" "quarter1" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "q1_policy"
@@ -94,10 +94,10 @@ In addition to the arguments listed above, the following computed attributes are
 
 ## Import
 
-Client authorization time policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
+Time policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
 
 Example:
 
 ```bash
-$ terraform import keycloak_openid_client_authorization_time_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
+$ terraform import keycloak_openid_client_time_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
 ```
