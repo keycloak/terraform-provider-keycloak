@@ -1,10 +1,10 @@
 ---
-page_title: "keycloak_openid_client_authorization_group_policy Resource"
+page_title: "keycloak_openid_client_group_policy Resource"
 ---
 
-# keycloak\_openid\_client\_authorization\_group\_policy Resource
+# keycloak\_openid\_client\_group\_policy Resource
 
-Allows you to manage openid Client Authorization Group type Policies.
+Allows you to manage group policies.
 
 Group policies allow you to define conditions based on group membership. You can specify whether child groups should be included in the evaluation.
 
@@ -36,7 +36,7 @@ resource "keycloak_group" "group2" {
   name     = "group2"
 }
 
-resource "keycloak_openid_client_authorization_group_policy" "test" {
+resource "keycloak_openid_client_group_policy" "test" {
   resource_server_id = keycloak_openid_client.test.resource_server_id
   realm_id           = keycloak_realm.realm.id
   name               = "group_policy"
@@ -84,10 +84,10 @@ In addition to the arguments listed above, the following computed attributes are
 
 ## Import
 
-Client authorization group policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
+Group policies can be imported using the format: `{{realmId}}/{{resourceServerId}}/{{policyId}}`.
 
 Example:
 
 ```bash
-$ terraform import keycloak_openid_client_authorization_group_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
+$ terraform import keycloak_openid_client_group_policy.test my-realm/3bd4a686-1062-4b59-97b8-e4e3f10b99da/63b3cde8-987d-4cd9-9306-1955579281d9
 ```
