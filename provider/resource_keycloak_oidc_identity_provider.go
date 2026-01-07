@@ -1,8 +1,9 @@
 package provider
 
 import (
-	"dario.cat/mergo"
 	"errors"
+
+	"dario.cat/mergo"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
