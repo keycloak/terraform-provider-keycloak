@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strconv"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakClientScope_basic(t *testing.T) {

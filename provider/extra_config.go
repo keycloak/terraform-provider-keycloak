@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"reflect"
-	"strings"
 )
 
 func getExtraConfigFromData(data *schema.ResourceData) map[string]interface{} {
