@@ -3,25 +3,21 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type SamlClientScope struct {
-	Id          string                    `json:"id,omitempty"`
-	RealmId     string                    `json:"-"`
-	Name        string                    `json:"name"`
-	Description string                    `json:"description"`
-	Protocol    string                    `json:"protocol"`
-	Attributes  SamlClientScopeAttributes `json:"attributes"`
-}
-
-type SamlClientScopeAttributes struct {
-	DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
-	ConsentScreenText      string                   `json:"consent.screen.text"`
-	GuiOrder               string                   `json:"gui.order"`
-	ExtraConfig            map[string]interface{}   `json:"-"`
+	Id          string `json:"id,omitempty"`
+	RealmId     string `json:"-"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Protocol    string `json:"protocol"`
+	Attributes  struct {
+		DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
+		ConsentScreenText      string                   `json:"consent.screen.text"`
+		GuiOrder               string                   `json:"gui.order"`
+	} `json:"attributes"`
 }
 
 type SamlClientScopeFilterFunc func(*SamlClientScope) bool
@@ -91,8 +87,6 @@ func (keycloakClient *KeycloakClient) ListSamlClientScopesWithFilter(ctx context
 			scope := new(SamlClientScope)
 			*scope = clientScope
 
-			scope.RealmId = realmId
-
 			samlClientScopes = append(samlClientScopes, scope)
 		}
 	}
@@ -100,7 +94,7 @@ func (keycloakClient *KeycloakClient) ListSamlClientScopesWithFilter(ctx context
 	return samlClientScopes, nil
 }
 
-func IncludeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFilterFunc {
+func includeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFilterFunc {
 	return func(scope *SamlClientScope) bool {
 		for _, scopeName := range scopeNames {
 			if scopeName == scope.Name {
@@ -110,12 +104,4 @@ func IncludeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFi
 
 		return false
 	}
-}
-
-func (f *SamlClientScopeAttributes) UnmarshalJSON(data []byte) error {
-	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
-}
-
-func (f *SamlClientScopeAttributes) MarshalJSON() ([]byte, error) {
-	return marshalExtraConfig(reflect.ValueOf(f).Elem(), f.ExtraConfig)
 }

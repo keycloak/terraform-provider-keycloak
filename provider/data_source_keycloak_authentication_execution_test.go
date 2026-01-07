@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
@@ -16,9 +17,9 @@ func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias, nil),
@@ -40,9 +41,9 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorNoExecutions(t *testi
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSourceKeycloakAuthenticationExecution_errorNoExecutions(parentFlowAlias),
@@ -57,9 +58,9 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSourceKeycloakAuthenticationExecution_errorWrongProviderId(parentFlowAlias, acctest.RandString(10)),
@@ -70,14 +71,15 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basicWithPriority(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias, nil),

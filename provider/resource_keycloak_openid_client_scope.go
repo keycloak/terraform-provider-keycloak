@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -34,9 +33,8 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
@@ -51,27 +49,16 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"extra_config": {
-				Type:             schema.TypeMap,
-				Optional:         true,
-				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.OpenidClientScopeAttributes{}).Elem()),
-			},
 		},
 	}
 }
 
 func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
-
-	description, descriptionOk := data.GetOkExists("description")
-
 	clientScope := &keycloak.OpenidClientScope{
-		Id:      data.Id(),
-		RealmId: data.Get("realm_id").(string),
-		Name:    data.Get("name").(string),
-	}
-
-	if descriptionOk {
-		clientScope.Description = description.(string)
+		Id:          data.Id(),
+		RealmId:     data.Get("realm_id").(string),
+		Name:        data.Get("name").(string),
+		Description: data.Get("description").(string),
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
@@ -87,8 +74,6 @@ func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidCli
 	if guiOrder := data.Get("gui_order").(int); guiOrder != 0 {
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
 	}
-
-	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
 
 	return clientScope
 }
@@ -108,8 +93,6 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
-
-	setExtraConfigData(data, clientScope.Attributes.ExtraConfig)
 }
 
 func resourceKeycloakOpenidClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
