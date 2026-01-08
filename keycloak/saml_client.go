@@ -9,28 +9,31 @@ import (
 )
 
 type SamlClientAttributes struct {
-	IncludeAuthnStatement           types.KeycloakBoolQuoted `json:"saml.authnstatement"`
-	SignDocuments                   types.KeycloakBoolQuoted `json:"saml.server.signature"`
-	SignAssertions                  types.KeycloakBoolQuoted `json:"saml.assertion.signature"`
-	EncryptAssertions               types.KeycloakBoolQuoted `json:"saml.encrypt"`
-	EncryptionAlgorithm             string                   `json:"saml.encryption.algorithm"`
-	ClientSignatureRequired         types.KeycloakBoolQuoted `json:"saml.client.signature"`
-	ForcePostBinding                types.KeycloakBoolQuoted `json:"saml.force.post.binding"`
-	ForceNameIdFormat               types.KeycloakBoolQuoted `json:"saml_force_name_id_format"`
-	SignatureAlgorithm              string                   `json:"saml.signature.algorithm"`
-	SignatureKeyName                string                   `json:"saml.server.signature.keyinfo.xmlSigKeyInfoKeyNameTransformer"`
-	CanonicalizationMethod          string                   `json:"saml_signature_canonicalization_method"`
-	NameIdFormat                    string                   `json:"saml_name_id_format"`
-	SigningCertificate              string                   `json:"saml.signing.certificate,omitempty"`
-	SigningPrivateKey               string                   `json:"saml.signing.private.key"`
-	EncryptionCertificate           string                   `json:"saml.encryption.certificate"`
-	IDPInitiatedSSOURLName          string                   `json:"saml_idp_initiated_sso_url_name"`
-	IDPInitiatedSSORelayState       string                   `json:"saml_idp_initiated_sso_relay_state"`
-	AssertionConsumerPostURL        string                   `json:"saml_assertion_consumer_url_post"`
-	AssertionConsumerRedirectURL    string                   `json:"saml_assertion_consumer_url_redirect"`
-	LogoutServicePostBindingURL     string                   `json:"saml_single_logout_service_url_post"`
-	LogoutServiceRedirectBindingURL string                   `json:"saml_single_logout_service_url_redirect"`
-	LoginTheme                      string                   `json:"login_theme"`
+	IncludeAuthnStatement            types.KeycloakBoolQuoted `json:"saml.authnstatement"`
+	SignDocuments                    types.KeycloakBoolQuoted `json:"saml.server.signature"`
+	SignAssertions                   types.KeycloakBoolQuoted `json:"saml.assertion.signature"`
+	EncryptAssertions                types.KeycloakBoolQuoted `json:"saml.encrypt"`
+	EncryptionAlgorithm              string                   `json:"saml.encryption.algorithm"`
+	EncryptionKeyAlgorithm           string                   `json:"saml.encryption.keyAlgorithm"`
+	EncryptionDigestMethod           string                   `json:"saml.encryption.digestMethod"`
+	EncryptionMaskGenerationFunction string                   `json:"saml.encryption.maskGenerationFunction"`
+	ClientSignatureRequired          types.KeycloakBoolQuoted `json:"saml.client.signature"`
+	ForcePostBinding                 types.KeycloakBoolQuoted `json:"saml.force.post.binding"`
+	ForceNameIdFormat                types.KeycloakBoolQuoted `json:"saml_force_name_id_format"`
+	SignatureAlgorithm               string                   `json:"saml.signature.algorithm"`
+	SignatureKeyName                 string                   `json:"saml.server.signature.keyinfo.xmlSigKeyInfoKeyNameTransformer"`
+	CanonicalizationMethod           string                   `json:"saml_signature_canonicalization_method"`
+	NameIdFormat                     string                   `json:"saml_name_id_format"`
+	SigningCertificate               string                   `json:"saml.signing.certificate,omitempty"`
+	SigningPrivateKey                string                   `json:"saml.signing.private.key"`
+	EncryptionCertificate            string                   `json:"saml.encryption.certificate"`
+	IDPInitiatedSSOURLName           string                   `json:"saml_idp_initiated_sso_url_name"`
+	IDPInitiatedSSORelayState        string                   `json:"saml_idp_initiated_sso_relay_state"`
+	AssertionConsumerPostURL         string                   `json:"saml_assertion_consumer_url_post"`
+	AssertionConsumerRedirectURL     string                   `json:"saml_assertion_consumer_url_redirect"`
+	LogoutServicePostBindingURL      string                   `json:"saml_single_logout_service_url_post"`
+	LogoutServiceRedirectBindingURL  string                   `json:"saml_single_logout_service_url_redirect"`
+	LoginTheme                       string                   `json:"login_theme"`
 
 	ExtraConfig map[string]interface{} `json:"-"`
 }
