@@ -121,16 +121,19 @@ func resourceKeycloakSamlClient() *schema.Resource {
 			"encryption_key_algorithm": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				ValidateFunc: validateSamlEncryptionKeyAlgorithm,
 			},
 			"encryption_digest_method": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				ValidateFunc: validateSamlEncryptionDigestMethod,
 			},
 			"encryption_mask_generation_function": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				ValidateFunc: validateSamlEncryptionMaskGenerationFunction,
 			},
 			"client_signature_required": {
@@ -472,9 +475,27 @@ func convertSamlEncryptionMaskGenerationFunctionToState(value string) string {
 
 func validateKeycloakSamlClientEncryptionSettings() schema.CustomizeDiffFunc {
 	return func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-		keyAlgorithm := d.Get("encryption_key_algorithm").(string)
-		digestMethod := d.Get("encryption_digest_method").(string)
-		maskGenerationFunction := d.Get("encryption_mask_generation_function").(string)
+		keyAlgorithmRaw, keyAlgorithmOk := d.GetOkExists("encryption_key_algorithm")
+		digestMethodRaw, digestMethodOk := d.GetOkExists("encryption_digest_method")
+		maskGenerationFunctionRaw, maskGenerationFunctionOk := d.GetOkExists("encryption_mask_generation_function")
+
+		if !digestMethodOk && !maskGenerationFunctionOk {
+			return nil
+		}
+
+		if !keyAlgorithmOk {
+			return fmt.Errorf("encryption_key_algorithm must be set when encryption_digest_method or encryption_mask_generation_function is set")
+		}
+
+		keyAlgorithm := keyAlgorithmRaw.(string)
+		digestMethod := ""
+		if digestMethodOk {
+			digestMethod = digestMethodRaw.(string)
+		}
+		maskGenerationFunction := ""
+		if maskGenerationFunctionOk {
+			maskGenerationFunction = maskGenerationFunctionRaw.(string)
+		}
 
 		return validateSamlClientEncryptionKeySettings(keyAlgorithm, digestMethod, maskGenerationFunction)
 	}
@@ -501,18 +522,24 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		}
 	}
 
-	keyAlgorithm := data.Get("encryption_key_algorithm").(string)
-	if keyAlgorithm == "" {
+	keyAlgorithm := ""
+	if value, ok := data.GetOkExists("encryption_key_algorithm"); ok {
+		keyAlgorithm = value.(string)
+	} else if data.Id() == "" {
 		keyAlgorithm = "RSA-OAEP-11"
 	}
 
-	digestMethod := data.Get("encryption_digest_method").(string)
-	if digestMethod == "" && (keyAlgorithm == "RSA-OAEP-11" || keyAlgorithm == "RSA-OAEP-MGF1P") {
+	digestMethod := ""
+	if value, ok := data.GetOkExists("encryption_digest_method"); ok {
+		digestMethod = value.(string)
+	} else if data.Id() == "" && (keyAlgorithm == "RSA-OAEP-11" || keyAlgorithm == "RSA-OAEP-MGF1P") {
 		digestMethod = "SHA-256"
 	}
 
-	maskGenerationFunction := data.Get("encryption_mask_generation_function").(string)
-	if maskGenerationFunction == "" && keyAlgorithm == "RSA-OAEP-11" {
+	maskGenerationFunction := ""
+	if value, ok := data.GetOkExists("encryption_mask_generation_function"); ok {
+		maskGenerationFunction = value.(string)
+	} else if data.Id() == "" && keyAlgorithm == "RSA-OAEP-11" {
 		maskGenerationFunction = "mgf1sha256"
 	}
 

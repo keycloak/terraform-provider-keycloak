@@ -14,9 +14,9 @@ type SamlClientAttributes struct {
 	SignAssertions                   types.KeycloakBoolQuoted `json:"saml.assertion.signature"`
 	EncryptAssertions                types.KeycloakBoolQuoted `json:"saml.encrypt"`
 	EncryptionAlgorithm              string                   `json:"saml.encryption.algorithm"`
-	EncryptionKeyAlgorithm           string                   `json:"saml.encryption.keyAlgorithm"`
-	EncryptionDigestMethod           string                   `json:"saml.encryption.digestMethod"`
-	EncryptionMaskGenerationFunction string                   `json:"saml.encryption.maskGenerationFunction"`
+	EncryptionKeyAlgorithm           string                   `json:"saml.encryption.keyAlgorithm,omitempty"`
+	EncryptionDigestMethod           string                   `json:"saml.encryption.digestMethod,omitempty"`
+	EncryptionMaskGenerationFunction string                   `json:"saml.encryption.maskGenerationFunction,omitempty"`
 	ClientSignatureRequired          types.KeycloakBoolQuoted `json:"saml.client.signature"`
 	ForcePostBinding                 types.KeycloakBoolQuoted `json:"saml.force.post.binding"`
 	ForceNameIdFormat                types.KeycloakBoolQuoted `json:"saml_force_name_id_format"`
