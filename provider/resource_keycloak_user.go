@@ -45,8 +45,9 @@ func resourceKeycloakUser() *schema.Resource {
 				},
 			},
 			"email": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("email"),
 			},
 			"email_verified": {
 				Type:     schema.TypeBool,
@@ -54,12 +55,14 @@ func resourceKeycloakUser() *schema.Resource {
 				Default:  false,
 			},
 			"first_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("first_name"),
 			},
 			"last_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("last_name"),
 			},
 			"attributes": {
 				Type:     schema.TypeMap,

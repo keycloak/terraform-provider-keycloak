@@ -56,16 +56,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Default:  true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					// Only suppress diff if the field is not explicitly set in the config.
-					// This allows clearing the field with an empty string while avoiding
-					// unwanted diffs when the field is not in the config.
-					rawConfig := d.GetRawConfig()
-					configValue := rawConfig.GetAttr("description")
-					return configValue.IsNull()
-				},
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"access_type": {
 				Type:         schema.TypeString,

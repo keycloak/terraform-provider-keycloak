@@ -176,12 +176,14 @@ func resourceKeycloakRealm() *schema.Resource {
 				Default:  true,
 			},
 			"display_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name"),
 			},
 			"display_name_html": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name_html"),
 			},
 			"user_managed_access": {
 				Type:     schema.TypeBool,
