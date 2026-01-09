@@ -61,13 +61,20 @@ func mapFromDataToGroup(data *schema.ResourceData) *keycloak.Group {
 		}
 	}
 
+	// Use GetOkExists to preserve empty strings
+	description, descriptionOk := data.GetOkExists("description")
+
 	group := &keycloak.Group{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		ParentId:    data.Get("parent_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
-		Attributes:  attributes,
+		Id:         data.Id(),
+		RealmId:    data.Get("realm_id").(string),
+		ParentId:   data.Get("parent_id").(string),
+		Name:       data.Get("name").(string),
+		Attributes: attributes,
+	}
+
+	// Set description only if explicitly provided, preserving empty strings
+	if descriptionOk {
+		group.Description = description.(string)
 	}
 
 	return group
