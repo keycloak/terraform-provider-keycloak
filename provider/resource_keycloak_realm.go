@@ -825,7 +825,6 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	// Use GetOkExists for string fields to preserve empty strings
 	displayName, displayNameOk := data.GetOkExists("display_name")
 	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
-	sslRequired, sslRequiredOk := data.GetOkExists("ssl_required")
 
 	realm := &keycloak.Realm{
 		Id:                   realmId.(string),
@@ -843,6 +842,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		VerifyEmail:                 data.Get("verify_email").(bool),
 		LoginWithEmailAllowed:       data.Get("login_with_email_allowed").(bool),
 		DuplicateEmailsAllowed:      data.Get("duplicate_emails_allowed").(bool),
+		SslRequired:                 data.Get("ssl_required").(string),
 
 		//internationalization
 		InternationalizationEnabled: internationalizationEnabled,
@@ -856,9 +856,6 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 	if displayNameHtmlOk {
 		realm.DisplayNameHtml = displayNameHtml.(string)
-	}
-	if sslRequiredOk {
-		realm.SslRequired = sslRequired.(string)
 	}
 
 	//smtp
