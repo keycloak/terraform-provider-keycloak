@@ -820,12 +820,15 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		realmId = internalId
 	}
 
+	// Use GetOkExists for string fields to preserve empty strings
+	displayName, displayNameOk := data.GetOkExists("display_name")
+	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
+	sslRequired, sslRequiredOk := data.GetOkExists("ssl_required")
+
 	realm := &keycloak.Realm{
 		Id:                   realmId.(string),
 		Realm:                data.Get("realm").(string),
 		Enabled:              data.Get("enabled").(bool),
-		DisplayName:          data.Get("display_name").(string),
-		DisplayNameHtml:      data.Get("display_name_html").(string),
 		UserManagedAccess:    data.Get("user_managed_access").(bool),
 		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
@@ -838,12 +841,22 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		VerifyEmail:                 data.Get("verify_email").(bool),
 		LoginWithEmailAllowed:       data.Get("login_with_email_allowed").(bool),
 		DuplicateEmailsAllowed:      data.Get("duplicate_emails_allowed").(bool),
-		SslRequired:                 data.Get("ssl_required").(string),
 
 		//internationalization
 		InternationalizationEnabled: internationalizationEnabled,
 		SupportLocales:              supportLocales,
 		DefaultLocale:               defaultLocale,
+	}
+
+	// Set string fields only if explicitly provided, preserving empty strings
+	if displayNameOk {
+		realm.DisplayName = displayName.(string)
+	}
+	if displayNameHtmlOk {
+		realm.DisplayNameHtml = displayNameHtml.(string)
+	}
+	if sslRequiredOk {
+		realm.SslRequired = sslRequired.(string)
 	}
 
 	//smtp

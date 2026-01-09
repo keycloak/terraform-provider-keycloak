@@ -1874,3 +1874,54 @@ resource "keycloak_realm" "realm" {
 }
 	`, realm, internalId)
 }
+
+func TestAccKeycloakRealm_displayNameCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_realm.realm"
+
+	configWithValues := testAccKeycloakRealmWithClearableFields(realmName, "My Realm", "<b>My Realm</b>")
+	configWithEmptyValues := testAccKeycloakRealmWithClearableFields(realmName, "", "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: configWithValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "realm", realmName),
+					resource.TestCheckResourceAttr(resourceName, "display_name", "My Realm"),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", "<b>My Realm</b>"),
+				),
+			},
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_name", ""),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_name", ""),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakRealmWithClearableFields(realm, displayName, displayNameHtml string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+  realm             = "%s"
+  enabled           = true
+  display_name      = "%s"
+  display_name_html = "%s"
+}
+`, realm, displayName, displayNameHtml)
+}
