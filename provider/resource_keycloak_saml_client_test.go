@@ -1024,3 +1024,63 @@ resource "keycloak_saml_client" "saml_client" {
 }
 	`, testAccRealm.Realm, clientId, sb.String())
 }
+
+func TestAccKeycloakSamlClient_fieldsCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_saml_client.saml_client"
+
+	configWithValues := testAccKeycloakSamlClientWithClearableFields(clientId, "Test Client", "Test description", "https://example.com")
+	configWithEmptyValues := testAccKeycloakSamlClientWithClearableFields(clientId, "", "", "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "client_id", clientId),
+					resource.TestCheckResourceAttr(resourceName, "name", "Test Client"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test description"),
+					resource.TestCheckResourceAttr(resourceName, "root_url", "https://example.com"),
+				),
+			},
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakSamlClientWithClearableFields(clientId, name, description, rootUrl string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+  realm = "%s"
+}
+
+resource "keycloak_saml_client" "saml_client" {
+  client_id   = "%s"
+  realm_id    = data.keycloak_realm.realm.id
+  name        = "%s"
+  description = "%s"
+  root_url    = "%s"
+}
+`, testAccRealm.Realm, clientId, name, description, rootUrl)
+}
