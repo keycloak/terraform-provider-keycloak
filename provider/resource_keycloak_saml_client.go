@@ -81,8 +81,9 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				ForceNew: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("name"),
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
@@ -201,8 +202,9 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Optional: true,
 			},
 			"login_theme": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("login_theme"),
 			},
 			"master_saml_processing_url": {
 				Type:     schema.TypeString,
@@ -245,28 +247,34 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"idp_initiated_sso_url_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("idp_initiated_sso_url_name"),
 			},
 			"idp_initiated_sso_relay_state": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("idp_initiated_sso_relay_state"),
 			},
 			"assertion_consumer_post_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("assertion_consumer_post_url"),
 			},
 			"assertion_consumer_redirect_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("assertion_consumer_redirect_url"),
 			},
 			"logout_service_post_binding_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("logout_service_post_binding_url"),
 			},
 			"logout_service_redirect_binding_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("logout_service_redirect_binding_url"),
 			},
 			"full_scope_allowed": {
 				Type:     schema.TypeBool,
