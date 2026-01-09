@@ -30,9 +30,29 @@ var (
 		"AES_192_CBC": "http://www.w3.org/2001/04/xmlenc#aes192-cbc",
 		"AES_128_CBC": "http://www.w3.org/2001/04/xmlenc#aes128-cbc",
 	}
-	keycloakSamlClientEncryptionAlgorithmURIToFriendly = reverseStringMap(keycloakSamlClientEncryptionAlgorithmFriendlyToURI)
-	keycloakSamlClientSignatureKeyNames                = []string{"NONE", "KEY_ID", "CERT_SUBJECT"}
-	keycloakSamlClientCanonicalizationMethods          = map[string]string{
+	keycloakSamlClientEncryptionAlgorithmURIToFriendly    = reverseStringMap(keycloakSamlClientEncryptionAlgorithmFriendlyToURI)
+	keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI = map[string]string{
+		"RSA-OAEP-11":    "http://www.w3.org/2009/xmlenc11#rsa-oaep",
+		"RSA-OAEP-MGF1P": "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p",
+		"RSA1_5":         "http://www.w3.org/2001/04/xmlenc#rsa-1_5",
+	}
+	keycloakSamlClientEncryptionKeyAlgorithmURIToFriendly = reverseStringMap(keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI)
+	keycloakSamlClientEncryptionDigestMethodFriendlyToURI = map[string]string{
+		"SHA-512": "http://www.w3.org/2001/04/xmlenc#sha512",
+		"SHA-256": "http://www.w3.org/2001/04/xmlenc#sha256",
+		"SHA-1":   "http://www.w3.org/2000/09/xmldsig#sha1",
+	}
+	keycloakSamlClientEncryptionDigestMethodURIToFriendly           = reverseStringMap(keycloakSamlClientEncryptionDigestMethodFriendlyToURI)
+	keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI = map[string]string{
+		"mgf1sha1":   "http://www.w3.org/2009/xmlenc11#mgf1sha1",
+		"mgf1sha224": "http://www.w3.org/2009/xmlenc11#mgf1sha224",
+		"mgf1sha256": "http://www.w3.org/2009/xmlenc11#mgf1sha256",
+		"mgf1sha384": "http://www.w3.org/2009/xmlenc11#mgf1sha384",
+		"mgf1sha512": "http://www.w3.org/2009/xmlenc11#mgf1sha512",
+	}
+	keycloakSamlClientEncryptionMaskGenerationFunctionURIToFriendly = reverseStringMap(keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI)
+	keycloakSamlClientSignatureKeyNames                             = []string{"NONE", "KEY_ID", "CERT_SUBJECT"}
+	keycloakSamlClientCanonicalizationMethods                       = map[string]string{
 		"EXCLUSIVE":               "http://www.w3.org/2001/10/xml-exc-c14n#",
 		"EXCLUSIVE_WITH_COMMENTS": "http://www.w3.org/2001/10/xml-exc-c14n#WithComments",
 		"INCLUSIVE":               "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
@@ -97,6 +117,24 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validateSamlEncryptionAlgorithm,
+			},
+			"encryption_key_algorithm": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validateSamlEncryptionKeyAlgorithm,
+			},
+			"encryption_digest_method": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validateSamlEncryptionDigestMethod,
+			},
+			"encryption_mask_generation_function": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validateSamlEncryptionMaskGenerationFunction,
 			},
 			"client_signature_required": {
 				Type:     schema.TypeBool,
@@ -261,6 +299,7 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Default:  false,
 			},
 		},
+		CustomizeDiff: validateKeycloakSamlClientEncryptionSettings(),
 	}
 }
 
@@ -302,8 +341,100 @@ func validateSamlEncryptionAlgorithm(v interface{}, _ string) (ws []string, es [
 	return
 }
 
+func validateSamlEncryptionKeyAlgorithm(v interface{}, _ string) (ws []string, es []error) {
+	value := v.(string)
+	if value == "" {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI[value]; ok {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionKeyAlgorithmURIToFriendly[value]; ok {
+		return
+	}
+
+	es = append(es, fmt.Errorf(`Invalid encryption_key_algorithm: value must be one of %s`, strings.Join(keys(keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI), ", ")))
+	return
+}
+
+func validateSamlEncryptionDigestMethod(v interface{}, _ string) (ws []string, es []error) {
+	value := v.(string)
+	if value == "" {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionDigestMethodFriendlyToURI[value]; ok {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionDigestMethodURIToFriendly[value]; ok {
+		return
+	}
+
+	es = append(es, fmt.Errorf(`Invalid encryption_digest_method: value must be one of %s`, strings.Join(keys(keycloakSamlClientEncryptionDigestMethodFriendlyToURI), ", ")))
+	return
+}
+
+func validateSamlEncryptionMaskGenerationFunction(v interface{}, _ string) (ws []string, es []error) {
+	value := v.(string)
+	if value == "" {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI[value]; ok {
+		return
+	}
+
+	normalized := normalizeSamlEncryptionMaskGenerationFunction(value)
+	if _, ok := keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI[normalized]; ok {
+		return
+	}
+
+	if _, ok := keycloakSamlClientEncryptionMaskGenerationFunctionURIToFriendly[value]; ok {
+		return
+	}
+
+	es = append(es, fmt.Errorf(`Invalid encryption_mask_generation_function: value must be one of %s`, strings.Join(keys(keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI), ", ")))
+	return
+}
+
 func convertSamlEncryptionAlgorithmToAPI(value string) string {
 	if uri, ok := keycloakSamlClientEncryptionAlgorithmFriendlyToURI[value]; ok {
+		return uri
+	}
+
+	return value
+}
+
+func convertSamlEncryptionKeyAlgorithmToAPI(value string) string {
+	if uri, ok := keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI[value]; ok {
+		return uri
+	}
+
+	return value
+}
+
+func convertSamlEncryptionDigestMethodToAPI(value string) string {
+	if uri, ok := keycloakSamlClientEncryptionDigestMethodFriendlyToURI[value]; ok {
+		return uri
+	}
+
+	return value
+}
+
+func normalizeSamlEncryptionMaskGenerationFunction(value string) string {
+	normalized := strings.ReplaceAll(value, "_", "")
+	return strings.ToLower(normalized)
+}
+
+func convertSamlEncryptionMaskGenerationFunctionToAPI(value string) string {
+	if uri, ok := keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI[value]; ok {
+		return uri
+	}
+
+	if uri, ok := keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI[normalizeSamlEncryptionMaskGenerationFunction(value)]; ok {
 		return uri
 	}
 
@@ -318,6 +449,70 @@ func convertSamlEncryptionAlgorithmToState(value string) string {
 	return value
 }
 
+func convertSamlEncryptionKeyAlgorithmToState(value string) string {
+	if friendly, ok := keycloakSamlClientEncryptionKeyAlgorithmURIToFriendly[value]; ok {
+		return friendly
+	}
+
+	return value
+}
+
+func convertSamlEncryptionDigestMethodToState(value string) string {
+	if friendly, ok := keycloakSamlClientEncryptionDigestMethodURIToFriendly[value]; ok {
+		return friendly
+	}
+
+	return value
+}
+
+func convertSamlEncryptionMaskGenerationFunctionToState(value string) string {
+	if friendly, ok := keycloakSamlClientEncryptionMaskGenerationFunctionURIToFriendly[value]; ok {
+		return friendly
+	}
+
+	return value
+}
+
+func validateKeycloakSamlClientEncryptionSettings() schema.CustomizeDiffFunc {
+	return func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+		keyAlgorithmRaw, keyAlgorithmOk := d.GetOkExists("encryption_key_algorithm")
+		digestMethodRaw, digestMethodOk := d.GetOkExists("encryption_digest_method")
+		maskGenerationFunctionRaw, maskGenerationFunctionOk := d.GetOkExists("encryption_mask_generation_function")
+
+		if !digestMethodOk && !maskGenerationFunctionOk {
+			return nil
+		}
+
+		if !keyAlgorithmOk {
+			return fmt.Errorf("encryption_key_algorithm must be set when encryption_digest_method or encryption_mask_generation_function is set")
+		}
+
+		keyAlgorithm := keyAlgorithmRaw.(string)
+		digestMethod := ""
+		if digestMethodOk {
+			digestMethod = digestMethodRaw.(string)
+		}
+		maskGenerationFunction := ""
+		if maskGenerationFunctionOk {
+			maskGenerationFunction = maskGenerationFunctionRaw.(string)
+		}
+
+		return validateSamlClientEncryptionKeySettings(keyAlgorithm, digestMethod, maskGenerationFunction)
+	}
+}
+
+func validateSamlClientEncryptionKeySettings(keyAlgorithm, digestMethod, maskGenerationFunction string) error {
+	if digestMethod != "" && keyAlgorithm != "RSA-OAEP-MGF1P" && keyAlgorithm != "RSA-OAEP-11" {
+		return fmt.Errorf("encryption_digest_method is only valid when encryption_key_algorithm is RSA-OAEP-11 or RSA-OAEP-MGF1P")
+	}
+
+	if maskGenerationFunction != "" && keyAlgorithm != "RSA-OAEP-11" {
+		return fmt.Errorf("encryption_mask_generation_function is only valid when encryption_key_algorithm is RSA-OAEP-11")
+	}
+
+	return nil
+}
+
 func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 	var validRedirectUris []string
 
@@ -327,27 +522,51 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		}
 	}
 
+	keyAlgorithm := ""
+	if value, ok := data.GetOkExists("encryption_key_algorithm"); ok {
+		keyAlgorithm = value.(string)
+	} else if data.Id() == "" {
+		keyAlgorithm = "RSA-OAEP-11"
+	}
+
+	digestMethod := ""
+	if value, ok := data.GetOkExists("encryption_digest_method"); ok {
+		digestMethod = value.(string)
+	} else if data.Id() == "" && (keyAlgorithm == "RSA-OAEP-11" || keyAlgorithm == "RSA-OAEP-MGF1P") {
+		digestMethod = "SHA-256"
+	}
+
+	maskGenerationFunction := ""
+	if value, ok := data.GetOkExists("encryption_mask_generation_function"); ok {
+		maskGenerationFunction = value.(string)
+	} else if data.Id() == "" && keyAlgorithm == "RSA-OAEP-11" {
+		maskGenerationFunction = "mgf1sha256"
+	}
+
 	samlAttributes := &keycloak.SamlClientAttributes{
-		IncludeAuthnStatement:           types.KeycloakBoolQuoted(data.Get("include_authn_statement").(bool)),
-		ForceNameIdFormat:               types.KeycloakBoolQuoted(data.Get("force_name_id_format").(bool)),
-		SignDocuments:                   types.KeycloakBoolQuoted(data.Get("sign_documents").(bool)),
-		SignAssertions:                  types.KeycloakBoolQuoted(data.Get("sign_assertions").(bool)),
-		EncryptAssertions:               types.KeycloakBoolQuoted(data.Get("encrypt_assertions").(bool)),
-		EncryptionAlgorithm:             convertSamlEncryptionAlgorithmToAPI(data.Get("encryption_algorithm").(string)),
-		ClientSignatureRequired:         types.KeycloakBoolQuoted(data.Get("client_signature_required").(bool)),
-		ForcePostBinding:                types.KeycloakBoolQuoted(data.Get("force_post_binding").(bool)),
-		SignatureAlgorithm:              data.Get("signature_algorithm").(string),
-		SignatureKeyName:                data.Get("signature_key_name").(string),
-		CanonicalizationMethod:          keycloakSamlClientCanonicalizationMethods[data.Get("canonicalization_method").(string)],
-		NameIdFormat:                    data.Get("name_id_format").(string),
-		IDPInitiatedSSOURLName:          data.Get("idp_initiated_sso_url_name").(string),
-		IDPInitiatedSSORelayState:       data.Get("idp_initiated_sso_relay_state").(string),
-		AssertionConsumerPostURL:        data.Get("assertion_consumer_post_url").(string),
-		AssertionConsumerRedirectURL:    data.Get("assertion_consumer_redirect_url").(string),
-		LogoutServicePostBindingURL:     data.Get("logout_service_post_binding_url").(string),
-		LogoutServiceRedirectBindingURL: data.Get("logout_service_redirect_binding_url").(string),
-		LoginTheme:                      data.Get("login_theme").(string),
-		ExtraConfig:                     getExtraConfigFromData(data),
+		IncludeAuthnStatement:            types.KeycloakBoolQuoted(data.Get("include_authn_statement").(bool)),
+		ForceNameIdFormat:                types.KeycloakBoolQuoted(data.Get("force_name_id_format").(bool)),
+		SignDocuments:                    types.KeycloakBoolQuoted(data.Get("sign_documents").(bool)),
+		SignAssertions:                   types.KeycloakBoolQuoted(data.Get("sign_assertions").(bool)),
+		EncryptAssertions:                types.KeycloakBoolQuoted(data.Get("encrypt_assertions").(bool)),
+		EncryptionAlgorithm:              convertSamlEncryptionAlgorithmToAPI(data.Get("encryption_algorithm").(string)),
+		EncryptionKeyAlgorithm:           convertSamlEncryptionKeyAlgorithmToAPI(keyAlgorithm),
+		EncryptionDigestMethod:           convertSamlEncryptionDigestMethodToAPI(digestMethod),
+		EncryptionMaskGenerationFunction: convertSamlEncryptionMaskGenerationFunctionToAPI(maskGenerationFunction),
+		ClientSignatureRequired:          types.KeycloakBoolQuoted(data.Get("client_signature_required").(bool)),
+		ForcePostBinding:                 types.KeycloakBoolQuoted(data.Get("force_post_binding").(bool)),
+		SignatureAlgorithm:               data.Get("signature_algorithm").(string),
+		SignatureKeyName:                 data.Get("signature_key_name").(string),
+		CanonicalizationMethod:           keycloakSamlClientCanonicalizationMethods[data.Get("canonicalization_method").(string)],
+		NameIdFormat:                     data.Get("name_id_format").(string),
+		IDPInitiatedSSOURLName:           data.Get("idp_initiated_sso_url_name").(string),
+		IDPInitiatedSSORelayState:        data.Get("idp_initiated_sso_relay_state").(string),
+		AssertionConsumerPostURL:         data.Get("assertion_consumer_post_url").(string),
+		AssertionConsumerRedirectURL:     data.Get("assertion_consumer_redirect_url").(string),
+		LogoutServicePostBindingURL:      data.Get("logout_service_post_binding_url").(string),
+		LogoutServiceRedirectBindingURL:  data.Get("logout_service_redirect_binding_url").(string),
+		LoginTheme:                       data.Get("login_theme").(string),
+		ExtraConfig:                      getExtraConfigFromData(data),
 	}
 
 	if encryptionCertificate, ok := data.GetOk("encryption_certificate"); ok {
@@ -401,6 +620,9 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 	data.Set("sign_assertions", client.Attributes.SignAssertions)
 	data.Set("encrypt_assertions", client.Attributes.EncryptAssertions)
 	data.Set("encryption_algorithm", convertSamlEncryptionAlgorithmToState(client.Attributes.EncryptionAlgorithm))
+	data.Set("encryption_key_algorithm", convertSamlEncryptionKeyAlgorithmToState(client.Attributes.EncryptionKeyAlgorithm))
+	data.Set("encryption_digest_method", convertSamlEncryptionDigestMethodToState(client.Attributes.EncryptionDigestMethod))
+	data.Set("encryption_mask_generation_function", convertSamlEncryptionMaskGenerationFunctionToState(client.Attributes.EncryptionMaskGenerationFunction))
 	data.Set("client_signature_required", client.Attributes.ClientSignatureRequired)
 	data.Set("force_post_binding", client.Attributes.ForcePostBinding)
 
