@@ -394,11 +394,12 @@ resource "keycloak_openid_client_scope" "client_scope" {
 
 func TestAccKeycloakClientScope_dynamicScope(t *testing.T) {
 	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_22)
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
+		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -422,11 +423,12 @@ func TestAccKeycloakClientScope_dynamicScope(t *testing.T) {
 
 func TestAccKeycloakClientScope_dynamicScopeUpdate(t *testing.T) {
 	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_22)
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
+		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -463,11 +465,12 @@ func TestAccKeycloakClientScope_dynamicScopeUpdate(t *testing.T) {
 
 func TestAccKeycloakClientScope_dynamicScopeInvalidPattern(t *testing.T) {
 	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_22)
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
+		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
@@ -488,11 +491,12 @@ func TestAccKeycloakClientScope_dynamicScopeInvalidPattern(t *testing.T) {
 
 func TestAccKeycloakClientScope_dynamicScopePatternVariations(t *testing.T) {
 	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_22)
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheckDynamicScopes(t) },
+		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
