@@ -442,6 +442,8 @@ resource "keycloak_group" "group" {
 }
 
 func TestAccKeycloakGroup_descriptionCanBeCleared(t *testing.T) {
+
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_3)
 	t.Parallel()
 
 	groupName := acctest.RandomWithPrefix("tf-acc")
