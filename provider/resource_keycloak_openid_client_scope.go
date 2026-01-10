@@ -49,16 +49,29 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"dynamic": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether this is a dynamic scope that supports parameterized values",
+			},
+			"dynamic_scope_regexp": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Wildcard pattern for dynamic scope. Must contain exactly one asterisk (*) and is required when dynamic=true (e.g., 'resource:*', 'api:read:*')",
+			},
 		},
 	}
 }
 
 func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
 	clientScope := &keycloak.OpenidClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:                 data.Id(),
+		RealmId:            data.Get("realm_id").(string),
+		Name:               data.Get("name").(string),
+		Description:        data.Get("description").(string),
+		Dynamic:            data.Get("dynamic").(bool),
+		DynamicScopeRegexp: data.Get("dynamic_scope_regexp").(string),
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
@@ -93,12 +106,20 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	data.Set("dynamic", clientScope.Dynamic)
+	data.Set("dynamic_scope_regexp", clientScope.DynamicScopeRegexp)
 }
 
 func resourceKeycloakOpenidClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	clientScope := getOpenidClientScopeFromData(data)
+
+	// Validate dynamic scope configuration
+	if err := validateDynamicScope(clientScope); err != nil {
+		return diag.FromErr(err)
+	}
 
 	err := keycloakClient.NewOpenidClientScope(ctx, clientScope)
 	if err != nil {
@@ -160,4 +181,8 @@ func resourceKeycloakOpenidClientScopeImport(_ context.Context, d *schema.Resour
 	d.SetId(parts[1])
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func validateDynamicScope(scope *keycloak.OpenidClientScope) error {
+	return scope.ValidateWildcardPattern()
 }

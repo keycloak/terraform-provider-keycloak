@@ -101,6 +101,9 @@ jobs:
             EXTRA_HTTPS_KEY="-e KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem"
             EXTRA_MTLS_CERTS="-e KC_TRUSTSTORE_PATHS=/opt/keycloak/testdata/tls/ca-cert.pem,/opt/keycloak/testdata/tls/client-cert.pem"
           fi
+          # Dynamic scopes feature introduced in Keycloak 17.0.0 (Feb 2022)
+          # All tested versions (22+) support it, so always enable
+          EXTRA_FEATURES="${EXTRA_FEATURES},dynamic-scopes:v1"
 
           docker run -d --name keycloak \
           -p 8080:8080 \
