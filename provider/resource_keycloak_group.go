@@ -101,6 +101,10 @@ func resourceKeycloakGroupCreate(ctx context.Context, data *schema.ResourceData,
 
 	group := mapFromDataToGroup(data)
 
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
+
 	err := keycloakClient.NewGroup(ctx, group)
 	if err != nil {
 		return diag.FromErr(err)
@@ -131,6 +135,10 @@ func resourceKeycloakGroupUpdate(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	group := mapFromDataToGroup(data)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
 
 	err := keycloakClient.UpdateGroup(ctx, group)
 	if err != nil {
