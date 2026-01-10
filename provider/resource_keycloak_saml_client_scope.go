@@ -33,8 +33,9 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
@@ -49,11 +50,16 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 }
 
 func getSamlClientScopeFromData(data *schema.ResourceData) *keycloak.SamlClientScope {
+
 	clientScope := &keycloak.SamlClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:      data.Id(),
+		RealmId: data.Get("realm_id").(string),
+		Name:    data.Get("name").(string),
+	}
+
+	description, descriptionOk := data.GetOkExists("description")
+	if descriptionOk {
+		clientScope.Description = description.(string)
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
@@ -38,8 +37,9 @@ func resourceKeycloakGroup() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"path": {
 				Type:     schema.TypeString,
@@ -61,13 +61,20 @@ func mapFromDataToGroup(data *schema.ResourceData) *keycloak.Group {
 		}
 	}
 
+	// Use GetOkExists to preserve empty strings
+	description, descriptionOk := data.GetOkExists("description")
+
 	group := &keycloak.Group{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		ParentId:    data.Get("parent_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
-		Attributes:  attributes,
+		Id:         data.Id(),
+		RealmId:    data.Get("realm_id").(string),
+		ParentId:   data.Get("parent_id").(string),
+		Name:       data.Get("name").(string),
+		Attributes: attributes,
+	}
+
+	// Set description only if explicitly provided, preserving empty strings
+	if descriptionOk {
+		group.Description = description.(string)
 	}
 
 	return group
@@ -93,6 +100,10 @@ func resourceKeycloakGroupCreate(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	group := mapFromDataToGroup(data)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
 
 	err := keycloakClient.NewGroup(ctx, group)
 	if err != nil {
@@ -124,6 +135,10 @@ func resourceKeycloakGroupUpdate(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	group := mapFromDataToGroup(data)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
 
 	err := keycloakClient.UpdateGroup(ctx, group)
 	if err != nil {

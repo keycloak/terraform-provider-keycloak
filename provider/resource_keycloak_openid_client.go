@@ -56,8 +56,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Default:  true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"access_type": {
 				Type:         schema.TypeString,

@@ -176,12 +176,14 @@ func resourceKeycloakRealm() *schema.Resource {
 				Default:  true,
 			},
 			"display_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name"),
 			},
 			"display_name_html": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name_html"),
 			},
 			"user_managed_access": {
 				Type:     schema.TypeBool,
@@ -820,12 +822,14 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		realmId = internalId
 	}
 
+	// Use GetOkExists for string fields to preserve empty strings
+	displayName, displayNameOk := data.GetOkExists("display_name")
+	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
+
 	realm := &keycloak.Realm{
 		Id:                   realmId.(string),
 		Realm:                data.Get("realm").(string),
 		Enabled:              data.Get("enabled").(bool),
-		DisplayName:          data.Get("display_name").(string),
-		DisplayNameHtml:      data.Get("display_name_html").(string),
 		UserManagedAccess:    data.Get("user_managed_access").(bool),
 		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
@@ -844,6 +848,14 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		InternationalizationEnabled: internationalizationEnabled,
 		SupportLocales:              supportLocales,
 		DefaultLocale:               defaultLocale,
+	}
+
+	// Set string fields only if explicitly provided, preserving empty strings
+	if displayNameOk {
+		realm.DisplayName = displayName.(string)
+	}
+	if displayNameHtmlOk {
+		realm.DisplayNameHtml = displayNameHtml.(string)
 	}
 
 	//smtp
