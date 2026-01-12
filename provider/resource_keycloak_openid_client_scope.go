@@ -33,8 +33,9 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
@@ -54,11 +55,17 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 }
 
 func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
+
+	description, descriptionOk := data.GetOkExists("description")
+
 	clientScope := &keycloak.OpenidClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:      data.Id(),
+		RealmId: data.Get("realm_id").(string),
+		Name:    data.Get("name").(string),
+	}
+
+	if descriptionOk {
+		clientScope.Description = description.(string)
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {

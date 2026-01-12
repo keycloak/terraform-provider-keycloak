@@ -81,8 +81,9 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				ForceNew: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("name"),
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
@@ -90,8 +91,9 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Default:  true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"include_authn_statement": {
 				Type:     schema.TypeBool,
@@ -164,6 +166,7 @@ func resourceKeycloakSamlClient() *schema.Resource {
 			"signature_algorithm": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				ValidateFunc: validation.StringInSlice(keycloakSamlClientSignatureAlgorithms, false),
 			},
 			"signature_key_name": {
@@ -199,8 +202,9 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Optional: true,
 			},
 			"login_theme": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("login_theme"),
 			},
 			"master_saml_processing_url": {
 				Type:     schema.TypeString,
@@ -243,28 +247,34 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"idp_initiated_sso_url_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("idp_initiated_sso_url_name"),
 			},
 			"idp_initiated_sso_relay_state": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("idp_initiated_sso_relay_state"),
 			},
 			"assertion_consumer_post_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("assertion_consumer_post_url"),
 			},
 			"assertion_consumer_redirect_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("assertion_consumer_redirect_url"),
 			},
 			"logout_service_post_binding_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("logout_service_post_binding_url"),
 			},
 			"logout_service_redirect_binding_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("logout_service_redirect_binding_url"),
 			},
 			"full_scope_allowed": {
 				Type:     schema.TypeBool,
@@ -543,6 +553,15 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		maskGenerationFunction = "mgf1sha256"
 	}
 
+	// Use GetOkExists for string fields to preserve empty strings
+	idpInitiatedSSOURLName, idpInitiatedSSOURLNameOk := data.GetOkExists("idp_initiated_sso_url_name")
+	idpInitiatedSSORelayState, idpInitiatedSSORelayStateOk := data.GetOkExists("idp_initiated_sso_relay_state")
+	assertionConsumerPostURL, assertionConsumerPostURLOk := data.GetOkExists("assertion_consumer_post_url")
+	assertionConsumerRedirectURL, assertionConsumerRedirectURLOk := data.GetOkExists("assertion_consumer_redirect_url")
+	logoutServicePostBindingURL, logoutServicePostBindingURLOk := data.GetOkExists("logout_service_post_binding_url")
+	logoutServiceRedirectBindingURL, logoutServiceRedirectBindingURLOk := data.GetOkExists("logout_service_redirect_binding_url")
+	loginTheme, loginThemeOk := data.GetOkExists("login_theme")
+
 	samlAttributes := &keycloak.SamlClientAttributes{
 		IncludeAuthnStatement:            types.KeycloakBoolQuoted(data.Get("include_authn_statement").(bool)),
 		ForceNameIdFormat:                types.KeycloakBoolQuoted(data.Get("force_name_id_format").(bool)),
@@ -559,14 +578,30 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		SignatureKeyName:                 data.Get("signature_key_name").(string),
 		CanonicalizationMethod:           keycloakSamlClientCanonicalizationMethods[data.Get("canonicalization_method").(string)],
 		NameIdFormat:                     data.Get("name_id_format").(string),
-		IDPInitiatedSSOURLName:           data.Get("idp_initiated_sso_url_name").(string),
-		IDPInitiatedSSORelayState:        data.Get("idp_initiated_sso_relay_state").(string),
-		AssertionConsumerPostURL:         data.Get("assertion_consumer_post_url").(string),
-		AssertionConsumerRedirectURL:     data.Get("assertion_consumer_redirect_url").(string),
-		LogoutServicePostBindingURL:      data.Get("logout_service_post_binding_url").(string),
-		LogoutServiceRedirectBindingURL:  data.Get("logout_service_redirect_binding_url").(string),
-		LoginTheme:                       data.Get("login_theme").(string),
 		ExtraConfig:                      getExtraConfigFromData(data),
+	}
+
+	// Set string fields only if explicitly provided, preserving empty strings
+	if idpInitiatedSSOURLNameOk {
+		samlAttributes.IDPInitiatedSSOURLName = idpInitiatedSSOURLName.(string)
+	}
+	if idpInitiatedSSORelayStateOk {
+		samlAttributes.IDPInitiatedSSORelayState = idpInitiatedSSORelayState.(string)
+	}
+	if assertionConsumerPostURLOk {
+		samlAttributes.AssertionConsumerPostURL = assertionConsumerPostURL.(string)
+	}
+	if assertionConsumerRedirectURLOk {
+		samlAttributes.AssertionConsumerRedirectURL = assertionConsumerRedirectURL.(string)
+	}
+	if logoutServicePostBindingURLOk {
+		samlAttributes.LogoutServicePostBindingURL = logoutServicePostBindingURL.(string)
+	}
+	if logoutServiceRedirectBindingURLOk {
+		samlAttributes.LogoutServiceRedirectBindingURL = logoutServiceRedirectBindingURL.(string)
+	}
+	if loginThemeOk {
+		samlAttributes.LoginTheme = loginTheme.(string)
 	}
 
 	if encryptionCertificate, ok := data.GetOk("encryption_certificate"); ok {
@@ -581,22 +616,41 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 		samlAttributes.SigningPrivateKey = formatSigningPrivateKey(signingPrivateKey.(string))
 	}
 
+	// Use GetOkExists for client-level string fields to preserve empty strings
+	name, nameOk := data.GetOkExists("name")
+	description, descriptionOk := data.GetOkExists("description")
+	rootUrl, rootUrlOk := data.GetOkExists("root_url")
+	baseUrl, baseUrlOk := data.GetOkExists("base_url")
+	masterSamlProcessingUrl, masterSamlProcessingUrlOk := data.GetOkExists("master_saml_processing_url")
+
 	samlClient := &keycloak.SamlClient{
-		Id:                      data.Id(),
-		ClientId:                data.Get("client_id").(string),
-		RealmId:                 data.Get("realm_id").(string),
-		Name:                    data.Get("name").(string),
-		Enabled:                 data.Get("enabled").(bool),
-		Description:             data.Get("description").(string),
-		FrontChannelLogout:      data.Get("front_channel_logout").(bool),
-		RootUrl:                 data.Get("root_url").(string),
-		ValidRedirectUris:       validRedirectUris,
-		BaseUrl:                 data.Get("base_url").(string),
-		MasterSamlProcessingUrl: data.Get("master_saml_processing_url").(string),
-		FullScopeAllowed:        data.Get("full_scope_allowed").(bool),
-		ConsentRequired:         data.Get("consent_required").(bool),
-		AlwaysDisplayInConsole:  data.Get("always_display_in_console").(bool),
-		Attributes:              samlAttributes,
+		Id:                     data.Id(),
+		ClientId:               data.Get("client_id").(string),
+		RealmId:                data.Get("realm_id").(string),
+		Enabled:                data.Get("enabled").(bool),
+		FrontChannelLogout:     data.Get("front_channel_logout").(bool),
+		ValidRedirectUris:      validRedirectUris,
+		FullScopeAllowed:       data.Get("full_scope_allowed").(bool),
+		ConsentRequired:        data.Get("consent_required").(bool),
+		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
+		Attributes:             samlAttributes,
+	}
+
+	// Set client-level string fields only if explicitly provided, preserving empty strings
+	if nameOk {
+		samlClient.Name = name.(string)
+	}
+	if descriptionOk {
+		samlClient.Description = description.(string)
+	}
+	if rootUrlOk {
+		samlClient.RootUrl = rootUrl.(string)
+	}
+	if baseUrlOk {
+		samlClient.BaseUrl = baseUrl.(string)
+	}
+	if masterSamlProcessingUrlOk {
+		samlClient.MasterSamlProcessingUrl = masterSamlProcessingUrl.(string)
 	}
 
 	if v, ok := data.GetOk("authentication_flow_binding_overrides"); ok {
