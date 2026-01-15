@@ -207,6 +207,7 @@ The `brute_force_detection` block supports the following arguments:
 
 The following authentication settings can also be configured. Note that these are top level arguments for the `keycloak_realm` resource.
 
+- `admin_permissions_enabled` - (Optional) Enables the use of fine grained permissions v2
 - `password_policy` - (Optional) The password policy for users within the realm.
 
 ### Authentication Flow Bindings
