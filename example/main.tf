@@ -677,8 +677,8 @@ resource "keycloak_saml_client" "saml_client" {
   sign_assertions         = true
   include_authn_statement = true
 
-  signing_certificate = file("../provider/testdata/saml-cert.pem")
-  signing_private_key = file("../provider/testdata/saml-key.pem")
+  signing_certificate = file("../provider/misc/saml-cert.pem")
+  signing_private_key = file("../provider/misc/saml-key.pem")
 }
 
 resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_mapper" {
@@ -934,6 +934,12 @@ data "keycloak_openid_client" "broker" {
   client_id = "broker"
 }
 
+data "keycloak_openid_client_authorization_policy" "default" {
+  realm_id           = keycloak_realm.test.id
+  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
+  name               = "default"
+}
+
 resource "keycloak_openid_client" "test_client_auth" {
   client_id   = "test-client-auth"
   name        = "test-client-auth"
@@ -990,14 +996,6 @@ resource "keycloak_openid_client" "test_open_id_client_with_consent_text" {
   consent_screen_text       = "some consent screen text"
 }
 
-resource "keycloak_openid_client_client_policy" "testpolicy" {
-  realm_id           = keycloak_realm.test.id
-  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
-  name               = "test-policy"
-  logic = "POSITIVE"
-  decision_strategy = "AFFIRMATIVE"
-  clients = ["${keycloak_openid_client.test_client_auth.resource_server_id}"]
-}
 
 resource "keycloak_openid_client_authorization_permission" "resource" {
   resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
@@ -1005,7 +1003,7 @@ resource "keycloak_openid_client_authorization_permission" "resource" {
   name               = "test"
 
   policies = [
-    keycloak_openid_client_client_policy.testpolicy.id,
+    data.keycloak_openid_client_authorization_policy.default.id,
   ]
 
   resources = [
