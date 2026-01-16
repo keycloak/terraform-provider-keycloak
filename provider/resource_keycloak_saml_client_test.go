@@ -37,6 +37,158 @@ func TestAccKeycloakSamlClient_basic(t *testing.T) {
 	})
 }
 
+func TestValidateSamlClientEncryptionKeySettings(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		keyAlgorithm           string
+		digestMethod           string
+		maskGenerationFunction string
+		expectErr              bool
+	}{
+		{
+			name:      "empty values are valid",
+			expectErr: false,
+		},
+		{
+			name:         "digest with rsa-oaep-11 is valid",
+			keyAlgorithm: "RSA-OAEP-11",
+			digestMethod: "SHA-256",
+			expectErr:    false,
+		},
+		{
+			name:         "digest with rsa-oaep-mgf1p is valid",
+			keyAlgorithm: "RSA-OAEP-MGF1P",
+			digestMethod: "SHA-512",
+			expectErr:    false,
+		},
+		{
+			name:                   "mask generation function with rsa-oaep-11 is valid",
+			keyAlgorithm:           "RSA-OAEP-11",
+			maskGenerationFunction: "MGF1",
+			expectErr:              false,
+		},
+		{
+			name:         "digest with rsa1_5 is invalid",
+			keyAlgorithm: "RSA1_5",
+			digestMethod: "SHA-1",
+			expectErr:    true,
+		},
+		{
+			name:                   "mask generation function with rsa-oaep-mgf1p is invalid",
+			keyAlgorithm:           "RSA-OAEP-MGF1P",
+			maskGenerationFunction: "MGF1",
+			expectErr:              true,
+		},
+		{
+			name:                   "mask generation function with rsa1_5 is invalid",
+			keyAlgorithm:           "RSA1_5",
+			maskGenerationFunction: "MGF1",
+			expectErr:              true,
+		},
+		{
+			name:         "digest without key algorithm is invalid",
+			digestMethod: "SHA-256",
+			expectErr:    true,
+		},
+		{
+			name:                   "mask generation function without key algorithm is invalid",
+			maskGenerationFunction: "MGF1",
+			expectErr:              true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateSamlClientEncryptionKeySettings(testCase.keyAlgorithm, testCase.digestMethod, testCase.maskGenerationFunction)
+			if testCase.expectErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !testCase.expectErr && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestSamlClientEncryptionKeyAlgorithmConversions(t *testing.T) {
+	t.Parallel()
+
+	for friendly, uri := range keycloakSamlClientEncryptionKeyAlgorithmFriendlyToURI {
+		if got := convertSamlEncryptionKeyAlgorithmToAPI(friendly); got != uri {
+			t.Fatalf("expected %s to map to %s, got %s", friendly, uri, got)
+		}
+		if got := convertSamlEncryptionKeyAlgorithmToState(uri); got != friendly {
+			t.Fatalf("expected %s to map to %s, got %s", uri, friendly, got)
+		}
+	}
+
+	unknown := "custom-value"
+	if got := convertSamlEncryptionKeyAlgorithmToAPI(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+	if got := convertSamlEncryptionKeyAlgorithmToState(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+}
+
+func TestSamlClientEncryptionDigestMethodConversions(t *testing.T) {
+	t.Parallel()
+
+	for friendly, uri := range keycloakSamlClientEncryptionDigestMethodFriendlyToURI {
+		if got := convertSamlEncryptionDigestMethodToAPI(friendly); got != uri {
+			t.Fatalf("expected %s to map to %s, got %s", friendly, uri, got)
+		}
+		if got := convertSamlEncryptionDigestMethodToState(uri); got != friendly {
+			t.Fatalf("expected %s to map to %s, got %s", uri, friendly, got)
+		}
+	}
+
+	unknown := "custom-value"
+	if got := convertSamlEncryptionDigestMethodToAPI(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+	if got := convertSamlEncryptionDigestMethodToState(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+}
+
+func TestSamlClientEncryptionMaskGenerationFunctionConversions(t *testing.T) {
+	t.Parallel()
+
+	for friendly, uri := range keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI {
+		if got := convertSamlEncryptionMaskGenerationFunctionToAPI(friendly); got != uri {
+			t.Fatalf("expected %s to map to %s, got %s", friendly, uri, got)
+		}
+		if got := convertSamlEncryptionMaskGenerationFunctionToState(uri); got != friendly {
+			t.Fatalf("expected %s to map to %s, got %s", uri, friendly, got)
+		}
+	}
+
+	alias := "MGF1_SHA256"
+	expectedAlias := keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI["mgf1sha256"]
+	if got := convertSamlEncryptionMaskGenerationFunctionToAPI(alias); got != expectedAlias {
+		t.Fatalf("expected %s to map to %s, got %s", alias, expectedAlias, got)
+	}
+
+	alias = "mgf1_sha384"
+	expectedAlias = keycloakSamlClientEncryptionMaskGenerationFunctionFriendlyToURI["mgf1sha384"]
+	if got := convertSamlEncryptionMaskGenerationFunctionToAPI(alias); got != expectedAlias {
+		t.Fatalf("expected %s to map to %s, got %s", alias, expectedAlias, got)
+	}
+
+	unknown := "custom-value"
+	if got := convertSamlEncryptionMaskGenerationFunctionToAPI(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+	if got := convertSamlEncryptionMaskGenerationFunctionToState(unknown); got != unknown {
+		t.Fatalf("expected %s to pass through, got %s", unknown, got)
+	}
+}
+
 func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -871,4 +1023,64 @@ resource "keycloak_saml_client" "saml_client" {
 	extra_config = %s
 }
 	`, testAccRealm.Realm, clientId, sb.String())
+}
+
+func TestAccKeycloakSamlClient_fieldsCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_saml_client.saml_client"
+
+	configWithValues := testAccKeycloakSamlClientWithClearableFields(clientId, "Test Client", "Test description", "https://example.com")
+	configWithEmptyValues := testAccKeycloakSamlClientWithClearableFields(clientId, "", "", "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "client_id", clientId),
+					resource.TestCheckResourceAttr(resourceName, "name", "Test Client"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test description"),
+					resource.TestCheckResourceAttr(resourceName, "root_url", "https://example.com"),
+				),
+			},
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakSamlClientWithClearableFields(clientId, name, description, rootUrl string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+  realm = "%s"
+}
+
+resource "keycloak_saml_client" "saml_client" {
+  client_id   = "%s"
+  realm_id    = data.keycloak_realm.realm.id
+  name        = "%s"
+  description = "%s"
+  root_url    = "%s"
+}
+`, testAccRealm.Realm, clientId, name, description, rootUrl)
 }

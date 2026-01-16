@@ -440,3 +440,57 @@ resource "keycloak_group" "group" {
 }
 	`, testAccRealm.Realm, strings.ReplaceAll(group.Name, "\\", "\\\\"))
 }
+
+func TestAccKeycloakGroup_descriptionCanBeCleared(t *testing.T) {
+
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_3)
+	t.Parallel()
+
+	groupName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_group.group"
+
+	configWithDescription := testAccKeycloakGroupWithDescription(groupName, "Test description")
+	configWithEmptyDescription := testAccKeycloakGroupWithDescription(groupName, "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", groupName),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test description"),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakGroupWithDescription(name, description string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+  realm = "%s"
+}
+
+resource "keycloak_group" "group" {
+  realm_id    = data.keycloak_realm.realm.id
+  name        = "%s"
+  description = "%s"
+}
+`, testAccRealm.Realm, name, description)
+}
