@@ -49,6 +49,8 @@ type ClientCredentials struct {
 	ClientSecret  string
 	JWTSigningKey string
 	JWTSigningAlg string
+	JWTToken      string
+	JWTTokenFile  string
 	Username      string
 	Password      string
 	GrantType     string
@@ -70,19 +72,21 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, tlsClientCert string, tlsClientPrivateKey string, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, tlsClientCert string, tlsClientPrivateKey string, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	clientCredentials := &ClientCredentials{
 		ClientId:      clientId,
 		ClientSecret:  clientSecret,
 		JWTSigningKey: jwtSigningKey,
 		JWTSigningAlg: jwtSigningAlg,
+		JWTToken:      jwtToken,
+		JWTTokenFile:  jwtTokenFile,
 	}
 
 	if password != "" && username != "" {
 		clientCredentials.Username = username
 		clientCredentials.Password = password
 		clientCredentials.GrantType = "password"
-	} else if clientSecret != "" || jwtSigningKey != "" {
+	} else if clientSecret != "" || jwtSigningKey != "" || jwtToken != "" || jwtTokenFile != "" {
 		clientCredentials.GrantType = "client_credentials"
 	} else if accessToken != "" {
 		clientCredentials.AccessToken = accessToken
@@ -314,23 +318,37 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Cont
 		}
 
 	} else if keycloakClient.clientCredentials.GrantType == "client_credentials" {
-		if keycloakClient.clientCredentials.JWTSigningKey != "" {
-			signedJWT, err := newSignedJWT(
-				ctx,
-				fmt.Sprintf(issuerUrl, keycloakClient.baseUrl, keycloakClient.realm),
-				keycloakClient.clientCredentials.ClientId,
-				keycloakClient.clientCredentials.JWTSigningAlg,
-				keycloakClient.clientCredentials.JWTSigningKey,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create signed JWT: %v", err)
+		if len(keycloakClient.clientCredentials.JWTToken) > 0 || len(keycloakClient.clientCredentials.JWTTokenFile) > 0 || len(keycloakClient.clientCredentials.JWTSigningKey) > 0 {
+			var signedJWT string
+			var err error
+			signedJWT, err = keycloakClient.clientCredentials.JWTToken, nil
+			if len(signedJWT) == 0 && len(keycloakClient.clientCredentials.JWTTokenFile) > 0 {
+				var content []byte
+				content, err = os.ReadFile(keycloakClient.clientCredentials.JWTTokenFile)
+				if err != nil {
+					return nil, fmt.Errorf("failed to read JWT token from file: %v", err)
+				}
+				signedJWT = strings.TrimSpace(string(content))
 			}
+
+			if len(signedJWT) == 0 {
+				signedJWT, err = NewSignedJWT(
+					ctx,
+					fmt.Sprintf(issuerUrl, keycloakClient.baseUrl, keycloakClient.realm),
+					keycloakClient.clientCredentials.ClientId,
+					keycloakClient.clientCredentials.JWTSigningAlg,
+					keycloakClient.clientCredentials.JWTSigningKey,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create signed JWT: %v", err)
+				}
+			}
+
 			authenticationFormData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 			authenticationFormData.Set("client_assertion", signedJWT)
 		} else {
 			authenticationFormData.Set("client_secret", keycloakClient.clientCredentials.ClientSecret)
 		}
-
 	}
 
 	return authenticationFormData, nil
@@ -623,7 +641,7 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	return httpClient, nil
 }
 
-func newSignedJWT(ctx context.Context, url, clientId, alg, jwtSigningKey string) (string, error) {
+func NewSignedJWT(ctx context.Context, url, clientId, alg, jwtSigningKey string) (string, error) {
 	// Create the Claims
 	jti, err := uuid.GenerateUUID()
 	if err != nil {
