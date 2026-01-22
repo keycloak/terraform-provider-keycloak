@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -31,7 +30,9 @@ func TestAccKeycloakProvider_signedJWT_provided(t *testing.T) {
 		jwtSigningAlg,
 		jwtSigningKey,
 	)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal("err should be nil")
+	}
 
 	os.Setenv("KEYCLOAK_CLIENT_ID", jwtClientId)
 	os.Setenv("KEYCLOAK_JWT_TOKEN", jwtToken)
@@ -95,13 +96,16 @@ func TestAccKeycloakProvider_signedJWT_file_provided(t *testing.T) {
 		jwtSigningAlg,
 		jwtSigningKey,
 	)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal("err should be nil")
+	}
 
 	tmpDir := t.TempDir()
 	jwtFile := filepath.Join(tmpDir, "jwt-token")
 	err = os.WriteFile(jwtFile, []byte(jwtToken), 0644)
-	assert.NoError(t, err)
-
+	if err != nil {
+		t.Fatal("err should be nil")
+	}
 	os.Setenv("KEYCLOAK_CLIENT_ID", jwtClientId)
 	os.Setenv("KEYCLOAK_JWT_TOKEN_FILE", jwtFile)
 
