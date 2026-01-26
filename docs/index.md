@@ -69,6 +69,7 @@ The Terraform Provider currently supports the following authentication methods:
 - Client-Credentials Grant (client_id + client_secret)
 - Password Grant (client_id (+client_secret), username, password)
 - Signed JWT (Private Key JWT)
+- Signed JWT provided (Private Key JWT provided as a token)
 - Provided Access Token (pre-provisioned Keycloak Access Token)
 
 Additionally, the Terraform Provider also supports using an mTLS client certificate to access Keycloak.
@@ -83,7 +84,28 @@ provider "keycloak" {
 }
 ```
 
-### Example Usage (client credentials grant - private key signed JWT)
+### Example Usage (client credentials grant - signed JWT token)
+
+There are three ways of providing a signed JWT token:
+- As a string literal (using `jwt_token`)
+- As a path to a file containing the token (using `jwt_token_file`)
+- As a dynamically generated token (using `jwt_signing_alg` and `jwt_signing_key`)
+
+```hcl
+provider "keycloak" {
+	client_id       = "terraform"
+	jwt_token       = "<signed-jwt-token>"
+	url             = "http://localhost:8080"
+}
+```
+
+```hcl
+provider "keycloak" {
+	client_id       = "terraform"
+	jwt_token_file  = "/path/to/signed-jwt-token"
+	url             = "http://localhost:8080"
+}
+```
 
 ```hcl
 provider "keycloak" {
@@ -92,6 +114,10 @@ provider "keycloak" {
 	url             = "http://localhost:8080"
 }
 ```
+
+This type of configuration can be either used with the "Signed JWT" or with "Signed JWT - Federated" Client Authenticators, such as [Kubernetes Service Accounts Tokens](https://www.keycloak.org/docs/latest/server_admin/index.html#_identity_broker_kubernetes). Check the [Confidential client credentials](https://www.keycloak.org/docs/latest/server_admin/index.html#_client-credentials) Keycloak Admin Guide for more details.
+
+Note: If a Signed JWT Token is provided, it will be used for authentication even if a client_secret or private_key is also configured.
 
 ### Example Usage (password grant)
 
@@ -138,6 +164,8 @@ The following arguments are supported:
 - `username` - (Optional) The username of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_USER`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `password` - (Optional) The password of the user used by the provider for authentication via the password grant. Defaults to the environment variable `KEYCLOAK_PASSWORD`. This attribute is required when using the password grant, and cannot be set when using the client credentials grant.
 - `access_token` - (Optional) The access token that should be used by the provider for authentication via token. Defaults to the environment variable `KEYCLOAK_ACCESS_TOKEN`.
+- `jwt_token` - (Optional) A signed JWT token used for client authentication. Defaults to the environment variable `KEYCLOAK_JWT_TOKEN`.
+- `jwt_token_file` - (Optional) A path to a file containing a signed JWT token used for client authentication. Defaults to the environment variable `KEYCLOAK_JWT_TOKEN_FILE`.
 - `jwt_signing_key` - (Optional) The PEM-formatted private key used by provider to generate a signed JWT for authentication.
 - `jwt_signing_alg` - (Optional) The signing algorithm used by provider to generate a signed JWT for authentication. Defaults to `RS256`.
 - `realm` - (Optional) The realm used by the provider for authentication. Defaults to the environment variable `KEYCLOAK_REALM`, or `master` if the environment variable is not specified.

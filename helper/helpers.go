@@ -24,6 +24,8 @@ func CheckRequiredEnvironmentVariables(t *testing.T) {
 	requiredEnvVars := requiredEnvironmentVariables
 	if os.Getenv("KEYCLOAK_ACCESS_TOKEN") != "" {
 		requiredEnvVars = requiredEnvironmentVariablesForTokenAuth
+	} else if os.Getenv("KEYCLOAK_JWT_TOKEN") != "" {
+		requiredEnvVars = requiredEnvironmentVariables
 	}
 
 	for _, requiredEnvironmentVariable := range requiredEnvVars {

@@ -171,6 +171,19 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_JWT_SIGNING_KEY", nil),
 			},
+			"jwt_token": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "A signed JWT token used for client authentication.",
+				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_JWT_TOKEN", nil),
+			},
+			"jwt_token_file": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "A path to a file containing a signed JWT token used for client authentication.",
+				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_JWT_TOKEN_FILE", nil),
+			},
 			"realm": {
 				Optional:    true,
 				Type:        schema.TypeString,
@@ -260,6 +273,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		accessToken := data.Get("access_token").(string)
 		jwtSigningAlg := data.Get("jwt_signing_alg").(string)
 		jwtSigningKey := data.Get("jwt_signing_key").(string)
+		jwtToken := data.Get("jwt_token").(string)
+		jwtTokenFile := data.Get("jwt_token_file").(string)
 		realm := data.Get("realm").(string)
 		initialLogin := data.Get("initial_login").(bool)
 		clientTimeout := data.Get("client_timeout").(int)
@@ -276,8 +291,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		var diags diag.Diagnostics
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
-
-		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, tlsClientCertificate, tlsClientPrivateKey, userAgent, redHatSSO, additionalHeaders)
+		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, tlsClientCertificate, tlsClientPrivateKey, userAgent, redHatSSO, additionalHeaders)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
