@@ -1,5 +1,36 @@
 ## What's Changed
 
+## 5.7.0 (January 27, 2026)
+
+FEATURES:
+
+* Signed JWT authentication by @slaskawi in https://github.com/keycloak/terraform-provider-keycloak/pull/1441
+* Complete support for SAML encryption details by @christopher-svensson-stegra in https://github.com/keycloak/terraform-provider-keycloak/pull/1430
+
+IMPROVEMENTS:
+
+* Add shared mutex to Keycloak Client and enforce locking for Realm Client Policy and Profiles by @rhigdon in https://github.com/keycloak/terraform-provider-keycloak/pull/1378
+* docs(realm): add missing documentation for admin_permissions_enabled by @mattef92 in https://github.com/keycloak/terraform-provider-keycloak/pull/1437
+* 1426 fixed wrong authorization resource names in documentation by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1427
+* chore: execute goimports to format the code by @promalert in https://github.com/keycloak/terraform-provider-keycloak/pull/1429
+* chore(deps): bump golang.org/x/net from 0.48.0 to 0.49.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1439
+* chore(deps): bump com.gradleup.shadow in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1434
+* chore(deps): bump gradle-wrapper in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1448
+
+BUG FIXES:
+
+* fix: Improve handling of empty strings for description like fields by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1432
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [slaskawi](https://github.com/slaskawi)
+- [rhigdon](https://github.com/rhigdon)
+- [christopher-svensson-stegra](https://github.com/christopher-svensson-stegra)
+- [thomasdarimont](https://github.com/thomasdarimont)
+- [mattef92](https://github.com/mattef92)
+- [sschu](https://github.com/sschu)
+- [promalert](https://github.com/promalert)
+
 ## 5.6.0 (December 23, 2025)
 
 FEATURES:
