@@ -52,6 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
+          - '26.5.2'
           - '26.4.7'
           - '26.3.5'
           - '26.2.5'
