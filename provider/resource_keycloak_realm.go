@@ -1470,9 +1470,11 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
-	attributes := map[string]interface{}{}
+	var attributes map[string]interface{}
 	if v, ok := data.GetOk("attributes"); ok {
-		for key := range v.(map[string]interface{}) {
+		existingAttributes := v.(map[string]interface{})
+		attributes = existingAttributes
+		for key := range existingAttributes {
 			attributes[key] = realm.Attributes[key]
 			//We are only interested in attributes managed in terraform (Keycloak returns a lot of doubles values in the attributes...)
 		}
