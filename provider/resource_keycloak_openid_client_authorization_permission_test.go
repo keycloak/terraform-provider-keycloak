@@ -12,6 +12,11 @@ import (
 
 func TestAccKeycloakOpenidClientAuthorizationPermission_basic(t *testing.T) {
 	t.Parallel()
+	// Skip this test on Keycloak 26+ as the default policy is no longer created automatically
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
+		t.Skip()
+	}
+
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resourceName := acctest.RandomWithPrefix("tf-acc")
 	permissionName := acctest.RandomWithPrefix("tf-acc")
@@ -32,6 +37,11 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_basic(t *testing.T) {
 
 func TestAccKeycloakOpenidClientAuthorizationPermission_resourceType(t *testing.T) {
 	t.Parallel()
+	// Skip this test on Keycloak 26+ as the default policy is no longer created automatically
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
+		t.Skip()
+	}
+
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resourceName := acctest.RandomWithPrefix("tf-acc")
 	resourceType := acctest.RandomWithPrefix("tf-acc")
@@ -53,6 +63,11 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_resourceType(t *testing.
 
 func TestAccKeycloakOpenidClientAuthorizationPermission_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
+	// Skip this test on Keycloak 26+ as the default policy is no longer created automatically
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
+		t.Skip()
+	}
+
 	var authorizationPermission = &keycloak.OpenidClientAuthorizationPermission{}
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -85,6 +100,11 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_createAfterManualDestroy
 
 func TestAccKeycloakOpenidClientAuthorizationPermission_basicUpdateAll(t *testing.T) {
 	t.Parallel()
+	// Skip this test on Keycloak 26+ as the default policy is no longer created automatically
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
+		t.Skip()
+	}
+
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	scopeName := acctest.RandomWithPrefix("tf-acc")
 

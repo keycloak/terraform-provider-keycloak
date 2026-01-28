@@ -345,8 +345,9 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 
 	offlineSessionIdleTimeout := "1800"
 	offlineSessionMaxLifespan := "1900"
-	sessionIdleTimeout := "2000"
-	sessionMaxLifespan := "2100"
+	// Keep session timeouts low enough to not exceed default realm timeouts (Keycloak 25+)
+	sessionIdleTimeout := "1800"
+	sessionMaxLifespan := "1800"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
