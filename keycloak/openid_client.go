@@ -152,9 +152,13 @@ func (keycloakClient *KeycloakClient) NewOpenidClient(ctx context.Context, clien
 			if err != nil {
 				return err
 			}
-			err = keycloakClient.DeleteOpenidClientAuthorizationResource(ctx, resource.RealmId, resource.ResourceServerId, resource.Id)
-			if err != nil {
-				return err
+			// Only attempt to delete if the default resource exists
+			// (Keycloak 26.5+ doesn't create default resources automatically)
+			if resource != nil {
+				err = keycloakClient.DeleteOpenidClientAuthorizationResource(ctx, resource.RealmId, resource.ResourceServerId, resource.Id)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
