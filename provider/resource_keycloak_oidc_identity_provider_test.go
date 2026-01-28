@@ -507,3 +507,55 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 }
 	`, testAccRealm.Realm, oidc, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }
+
+func testKeycloakOidcIdentityProvider_clientSecretWoVersionWithVariable(oidc, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int) string {
+	return fmt.Sprintf(`
+variable "client_secret_version" {
+    type    = number
+    default = %d
+}
+
+data "keycloak_realm" "realm" {
+    realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+    realm                     = data.keycloak_realm.realm.id
+    alias                     = "%s"
+    authorization_url          = "https://example.com/auth"
+    token_url                  = "https://example.com/token"
+    client_id                  = "example_id"
+    client_secret_wo           = "%s"
+    client_secret_wo_version   = var.client_secret_version
+
+    issuer = "hello"
+}
+    `, clientSecretWriteOnlyVersion, testAccRealm.Realm, oidc, clientSecretWriteOnly)
+}
+
+// Test that demonstrates the validation bug with variables for client_secret_wo_version
+// This test should FAIL with the current broken validation logic, demonstrating the bug
+func TestAccKeycloakOidcIdentityProvider_clientSecretWoVersionWithVariable(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWOVersion := 1
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// This should work but currently will fail due to the bug when using variables for client_secret_wo_version
+				Config: testKeycloakOidcIdentityProvider_clientSecretWoVersionWithVariable(oidcName, clientSecretWO, clientSecretWOVersion),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					resource.TestCheckNoResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+				),
+			},
+		},
+	})
+}
