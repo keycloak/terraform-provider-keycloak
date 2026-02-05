@@ -146,6 +146,11 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "Want Assertions Encrypted.",
 		},
+		"want_authn_requests_signed": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Want Authn Requests Signed.",
+		},
 		"principal_type": {
 			Type:         schema.TypeString,
 			Optional:     true,
@@ -216,6 +221,7 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		ForceAuthn:                      types.KeycloakBoolQuoted(data.Get("force_authn").(bool)),
 		WantAssertionsSigned:            types.KeycloakBoolQuoted(data.Get("want_assertions_signed").(bool)),
 		WantAssertionsEncrypted:         types.KeycloakBoolQuoted(data.Get("want_assertions_encrypted").(bool)),
+		WantAuthnRequestsSigned:         types.KeycloakBoolQuoted(data.Get("want_authn_requests_signed").(bool)),
 		LoginHint:                       data.Get("login_hint").(string),
 		PrincipalType:                   data.Get("principal_type").(string),
 		PrincipalAttribute:              data.Get("principal_attribute").(string),
@@ -226,9 +232,11 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
 		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
-
-	if _, ok := data.GetOk("signature_algorithm"); ok {
-		samlIdentityProviderConfig.WantAuthnRequestsSigned = true
+	
+	if _, explicitlySet := data.getOkExists("want_authn_requests_signed"); !explicitlySet {
+		if _, ok := data.GetOk("signature_algorithm"); ok {
+			samlIdentityProviderConfig.WantAuthnRequestsSigned = true
+		}
 	}
 
 	if err := mergo.Merge(samlIdentityProviderConfig, defaultConfig); err != nil {
@@ -266,6 +274,7 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("force_authn", identityProvider.Config.ForceAuthn)
 	data.Set("want_assertions_signed", identityProvider.Config.WantAssertionsSigned)
 	data.Set("want_assertions_encrypted", identityProvider.Config.WantAssertionsEncrypted)
+	data.Set("want_authn_requests_signed", identityProvider.Config.WantAuthnRequestsSigned)
 	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("principal_type", identityProvider.Config.PrincipalType)
 	data.Set("principal_attribute", identityProvider.Config.PrincipalAttribute)
