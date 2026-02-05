@@ -232,8 +232,8 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
 		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
-	
-	if _, explicitlySet := data.getOkExists("want_authn_requests_signed"); !explicitlySet {
+
+	if _, explicitlySet := data.GetOkExists("want_authn_requests_signed"); !explicitlySet {
 		if _, ok := data.GetOk("signature_algorithm"); ok {
 			samlIdentityProviderConfig.WantAuthnRequestsSigned = true
 		}
