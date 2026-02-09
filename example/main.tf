@@ -677,8 +677,8 @@ resource "keycloak_saml_client" "saml_client" {
   sign_assertions         = true
   include_authn_statement = true
 
-  signing_certificate = file("../provider/misc/saml-cert.pem")
-  signing_private_key = file("../provider/misc/saml-key.pem")
+  signing_certificate = file("../provider/testdata/saml-cert.pem")
+  signing_private_key = file("../provider/testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_mapper" {

@@ -51,6 +51,10 @@ func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationResourceByName
 	if err != nil {
 		return nil, err
 	}
+	// Keycloak 26.5+ no longer creates default resources automatically
+	if len(resources) == 0 {
+		return nil, nil
+	}
 	resource := resources[0]
 	resource.RealmId = realmId
 	resource.ResourceServerId = resourceServerId
