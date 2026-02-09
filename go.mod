@@ -2,14 +2,14 @@ module github.com/keycloak/terraform-provider-keycloak
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.2
 	golang.org/x/net v0.49.0
 )
 
