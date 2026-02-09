@@ -702,6 +702,7 @@ func TestAccKeycloakOpenidClient_excludeIssuerFromAuthResponse(t *testing.T) {
 func TestAccKeycloakOpenidClient_authenticationFlowBindingOverrides(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
+	flowAlias := acctest.RandomWithPrefix("tf-acc-flow")
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -709,12 +710,52 @@ func TestAccKeycloakOpenidClient_authenticationFlowBindingOverrides(t *testing.T
 		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakOpenidClient_authenticationFlowBindingOverrides(clientId),
+				Config: testKeycloakOpenidClient_authenticationFlowBindingOverrides(clientId, flowAlias),
 				Check:  testAccCheckKeycloakOpenidClientAuthenticationFlowBindingOverrides("keycloak_openid_client.client", "keycloak_authentication_flow.another_flow"),
 			},
 			{
-				Config: testKeycloakOpenidClient_withoutAuthenticationFlowBindingOverrides(clientId),
+				Config: testKeycloakOpenidClient_withoutAuthenticationFlowBindingOverridesWithAlias(clientId, flowAlias),
 				Check:  testAccCheckKeycloakOpenidClientAuthenticationFlowBindingOverrides("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authenticationFlowBindingOverridesWithAlias(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	flowAlias := acctest.RandomWithPrefix("tf-acc-flow")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_authenticationFlowBindingOverridesWithAlias(clientId, flowAlias),
+				Check:  testAccCheckKeycloakOpenidClientAuthenticationFlowBindingOverrides("keycloak_openid_client.client", "keycloak_authentication_flow.another_flow"),
+			},
+			{
+				Config: testKeycloakOpenidClient_withoutAuthenticationFlowBindingOverridesWithAlias(clientId, flowAlias),
+				Check:  testAccCheckKeycloakOpenidClientAuthenticationFlowBindingOverrides("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authenticationFlowBindingOverridesConflict(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	flowAlias := acctest.RandomWithPrefix("tf-acc-flow")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakOpenidClient_authenticationFlowBindingOverridesConflict(clientId, flowAlias),
+				ExpectError: regexp.MustCompile("browser_id and browser_alias are mutually exclusive"),
 			},
 		},
 	})
@@ -1993,14 +2034,14 @@ resource "keycloak_openid_client" "client" {
 	`, testAccRealm.Realm, clientId, standardFlowEnabled, implicitFlowEnabled, directAccessGrantsEnabled, serviceAccountsEnabled)
 }
 
-func testKeycloakOpenidClient_authenticationFlowBindingOverrides(clientId string) string {
+func testKeycloakOpenidClient_authenticationFlowBindingOverrides(clientId, flowAlias string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
 resource "keycloak_authentication_flow" "another_flow" {
-  alias    = "anotherFlow"
+  alias    = "%s"
   realm_id = data.keycloak_realm.realm.id
   description = "this is another flow"
 }
@@ -2014,17 +2055,66 @@ resource "keycloak_openid_client" "client" {
 		direct_grant_id = "${keycloak_authentication_flow.another_flow.id}"
 	}
 }
-	`, testAccRealm.Realm, clientId)
+	`, testAccRealm.Realm, flowAlias, clientId)
 }
 
-func testKeycloakOpenidClient_withoutAuthenticationFlowBindingOverrides(clientId string) string {
+func testKeycloakOpenidClient_authenticationFlowBindingOverridesWithAlias(clientId, flowAlias string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
 resource "keycloak_authentication_flow" "another_flow" {
-  alias    = "anotherFlow"
+  alias    = "%s"
+  realm_id = data.keycloak_realm.realm.id
+  description = "this is another flow"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "PUBLIC"
+	authentication_flow_binding_overrides {
+		browser_alias      = keycloak_authentication_flow.another_flow.alias
+		direct_grant_alias = keycloak_authentication_flow.another_flow.alias
+	}
+}
+	`, testAccRealm.Realm, flowAlias, clientId)
+}
+
+func testKeycloakOpenidClient_authenticationFlowBindingOverridesConflict(clientId, flowAlias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "another_flow" {
+  alias    = "%s"
+  realm_id = data.keycloak_realm.realm.id
+  description = "this is another flow"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "PUBLIC"
+	authentication_flow_binding_overrides {
+		browser_id         = keycloak_authentication_flow.another_flow.id
+		browser_alias      = keycloak_authentication_flow.another_flow.alias
+		direct_grant_id    = keycloak_authentication_flow.another_flow.id
+	}
+}
+	`, testAccRealm.Realm, flowAlias, clientId)
+}
+
+func testKeycloakOpenidClient_withoutAuthenticationFlowBindingOverridesWithAlias(clientId, flowAlias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "another_flow" {
+  alias    = "%s"
   realm_id = data.keycloak_realm.realm.id
   description = "this is another flow"
 }
@@ -2034,7 +2124,7 @@ resource "keycloak_openid_client" "client" {
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "PUBLIC"
 }
-	`, testAccRealm.Realm, clientId)
+	`, testAccRealm.Realm, flowAlias, clientId)
 }
 
 func testKeycloakOpenidClient_loginTheme(clientId, loginTheme string) string {
