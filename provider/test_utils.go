@@ -53,6 +53,24 @@ func randomDurationString() string {
 	return (time.Duration(acctest.RandIntRange(1, 604800)) * time.Second).String()
 }
 
+// Returns a random duration string that is less than or equal to the provided duration string
+// This is used to ensure client_session_idle_timeout <= sso_session_idle_timeout (Keycloak 25+)
+func randomDurationStringLessThanOrEqual(maxDurationStr string) string {
+	maxDuration, err := time.ParseDuration(maxDurationStr)
+	if err != nil {
+		// If parsing fails, return a safe default
+		return "1h"
+	}
+
+	maxSeconds := int(maxDuration.Seconds())
+	if maxSeconds <= 1 {
+		maxSeconds = 1
+	}
+
+	randomSeconds := acctest.RandIntRange(1, maxSeconds)
+	return (time.Duration(randomSeconds) * time.Second).String()
+}
+
 func skipIfEnvSet(t *testing.T, envs ...string) {
 	for _, k := range envs {
 		if os.Getenv(k) != "" {
