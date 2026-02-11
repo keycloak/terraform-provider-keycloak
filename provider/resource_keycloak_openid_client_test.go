@@ -1034,6 +1034,104 @@ func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiff(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	config := testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+			},
+			{
+				Config: config,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authorizationUpdateRemoteResourceManagement(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationRemoteResourceManagement(clientId, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "authorization.0.allow_remote_resource_management", "true"),
+				),
+			},
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationRemoteResourceManagement(clientId, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "authorization.0.allow_remote_resource_management", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authorizationCreateWithExplicitFalse(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	config := testKeycloakOpenidClient_withAuthorizationRemoteResourceManagement(clientId, false)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "authorization.0.allow_remote_resource_management", "false"),
+				),
+			},
+			{
+				Config: config,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authorizationRemoveExplicitFieldNoPerpetualDiff(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationRemoteResourceManagement(clientId, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "authorization.0.allow_remote_resource_management", "true"),
+				),
+			},
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId),
+			},
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -1609,6 +1707,45 @@ resource "keycloak_openid_client" "client" {
 	}
 }
 	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+
+	authorization {
+		policy_enforcement_mode = "ENFORCING"
+	}
+}
+	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_withAuthorizationRemoteResourceManagement(clientId string, allowRemote bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+
+	authorization {
+		policy_enforcement_mode          = "ENFORCING"
+		allow_remote_resource_management = %t
+	}
+}
+	`, testAccRealm.Realm, clientId, allowRemote)
 }
 
 func testKeycloakOpenidClient_basicWithSecretRegenerate(clientId string, regenerateValue string) string {

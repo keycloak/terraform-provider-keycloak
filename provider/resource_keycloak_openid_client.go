@@ -237,7 +237,7 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 						"allow_remote_resource_management": {
 							Type:     schema.TypeBool,
 							Optional: true,
-							Default:  false,
+							Computed: true,
 						},
 						"keep_defaults": {
 							Type:     schema.TypeBool,
@@ -706,6 +706,13 @@ func resourceKeycloakOpenidClientUpdate(ctx context.Context, data *schema.Resour
 	err = keycloakClient.UpdateOpenidClient(ctx, client)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if client.AuthorizationSettings != nil {
+		err = keycloakClient.UpdateOpenidClientAuthorizationSettings(ctx, client)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	err = setOpenidClientData(ctx, keycloakClient, data, client)
