@@ -253,6 +253,13 @@ func (keycloakClient *KeycloakClient) UpdateOpenidClient(ctx context.Context, cl
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s", client.RealmId, client.Id), client)
 }
 
+func (keycloakClient *KeycloakClient) UpdateOpenidClientAuthorizationSettings(ctx context.Context, client *OpenidClient) error {
+	if client.AuthorizationSettings == nil {
+		return nil
+	}
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server", client.RealmId, client.Id), client.AuthorizationSettings)
+}
+
 func (keycloakClient *KeycloakClient) DeleteOpenidClient(ctx context.Context, realmId, id string) error {
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s", realmId, id), nil)
 }
