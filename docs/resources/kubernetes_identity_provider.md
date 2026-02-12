@@ -145,3 +145,13 @@ curl -k https://example.com:8443/realms/<realm>/protocol/openid-connect/token \
 - `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
 - `issuer` - (Required) The Kubernetes issuer URL of service account tokens. The URL <ISSUER>.well-known/openid-configuration must be available to Keycloak.
 - `hide_on_login_page` - (Optional) When `true`, this provider will be hidden on the login page, and is only accessible when requested explicitly. Defaults to `true`.
+
+## Import
+
+Identity providers can be imported using the format `{{realm_id}}/{{idp_alias}}`, where `idp_alias` is the identity provider alias.
+
+Example:
+
+```bash
+$ terraform import keycloak_kubernetes_identity_provider.realm_identity_provider my-realm/my-idp
+```
