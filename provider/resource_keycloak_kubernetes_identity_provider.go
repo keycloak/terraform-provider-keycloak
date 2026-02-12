@@ -24,7 +24,7 @@ func resourceKeycloakKubernetesIdentityProvider() *schema.Resource {
 		"hide_on_login_page": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Default: 			true,
+			Default:     true,
 			Description: "Hide On Login Page.",
 		},
 	}
