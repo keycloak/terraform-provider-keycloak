@@ -56,7 +56,6 @@ func getKubernetesProviderFromData(data *schema.ResourceData, keycloakVersion *v
 	return idp, nil
 }
 
-
 func setKubernetesIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
 	setIdentityProviderData(data, identityProvider, keycloakVersion)
 
