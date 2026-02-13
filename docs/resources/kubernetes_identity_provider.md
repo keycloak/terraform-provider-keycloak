@@ -55,7 +55,7 @@ resource "keycloak_kubernetes_identity_provider" "kubernetes" {
 }
 
 resource "keycloak_openid_client" "k8s_client" {
-  realm     = keycloak_realm.realm.id
+  realm_id  = keycloak_realm.realm.id
   client_id = "k8s-client"
 
   name    = "K8s Client"
@@ -73,20 +73,20 @@ resource "keycloak_openid_client" "k8s_client" {
 # You need to create a new `Client Authentication` flow. In this example there is only one authenticator in it, but more can be configured if needed
 
 resource "keycloak_authentication_flow" "client_authentication" {
-  realm       = keycloak_realm.realm.id
+  realm_id    = keycloak_realm.realm.id
   alias       = "clients-federated-jwt"
   provider_id = "client-flow"
 }
 
 resource "keycloak_authentication_execution" "federated_jwt" {
-  realm             = keycloak_realm.realm.id
+  realm_id          = keycloak_realm.realm.id
   parent_flow_alias = keycloak_authentication_flow.client_authentication.alias
   authenticator     = "federated-jwt"
   requirement       = "ALTERNATIVE"
 }
 
 resource "keycloak_authentication_bindings" "auth_bindings" {
-  realm                       = keycloak_realm.realm.id
+  realm_id                   = keycloak_realm.realm.id
   client_authentication_flow = keycloak_authentication_flow.client_authentication.alias
 }
 
