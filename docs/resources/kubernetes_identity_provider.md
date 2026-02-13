@@ -2,7 +2,7 @@
 page_title: "keycloak_kubernetes_identity_provider Resource"
 ---
 
-# keycloak\_kubernetes_\_identity\_provider Resource
+# keycloak\_kubernetes\_identity\_provider Resource
 
 Allows for creating and managing Kubernetes Identity Providers within Keycloak. Workloads inside a Kubernetes cluster can authenticate using service account tokens.
 
@@ -38,7 +38,7 @@ resource "keycloak_openid_client" "k8s_client" {
     "jwt.credential.sub"    = "system:serviceaccount:<namespace>:<service-account-name>"
   }
 }
-````
+```
 
 ## Example Usage with a Kubernetes workload authentication
 
@@ -74,7 +74,7 @@ resource "keycloak_openid_client" "k8s_client" {
 
 resource "keycloak_authentication_flow" "client_authentication" {
   realm       = keycloak_realm.realm.id
-  alias       = "clients-federatet-jwt"
+  alias       = "clients-federated-jwt"
   provider_id = "client-flow"
 }
 
