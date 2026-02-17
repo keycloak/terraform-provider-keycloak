@@ -225,7 +225,7 @@ func setClientDescriptionConverterData(data *schema.ResourceData, description *k
 	data.Set("optional_client_scopes", description.OptionalClientScopes)
 	data.Set("origin", description.Origin)
 	data.Set("protocol", description.Protocol)
-	data.Set("protocol_mappers", description.ProtocolMappers)
+	data.Set("protocol_mappers", convertProtocolMappers(description.ProtocolMappers))
 	data.Set("public_client", description.PublicClient)
 	data.Set("redirect_uris", description.RedirectUris)
 	data.Set("registered_nodes", description.RegisteredNodes)
@@ -254,4 +254,28 @@ func dataSourceKeycloakClientDescriptionConverterRead(ctx context.Context, data 
 	setClientDescriptionConverterData(data, description)
 
 	return nil
+}
+
+func convertProtocolMappers(mappers []*keycloak.GenericProtocolMapper) []map[string]interface{} {
+	result := []map[string]interface{}{}
+
+	for _, mapper := range mappers {
+		config := make(map[string]string)
+
+		for k, v := range mapper.Config {
+			config[k] = v
+		}
+
+		m := make(map[string]interface{})
+
+		m["config"] = config
+		m["id"] = mapper.Id
+		m["name"] = mapper.Name
+		m["protocol"] = mapper.Protocol
+		m["protocol_mapper"] = mapper.ProtocolMapper
+
+		result = append(result, m)
+	}
+
+	return result
 }
