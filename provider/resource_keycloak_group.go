@@ -49,6 +49,22 @@ func resourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
+			"sub_groups": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -91,6 +107,15 @@ func mapFromGroupToData(data *schema.ResourceData, group *keycloak.Group) {
 	data.Set("description", group.Description)
 	data.Set("path", group.Path)
 	data.Set("attributes", attributes)
+	var subgroups []map[string]interface{}
+	for _, sg := range group.SubGroups {
+		subgroup := map[string]interface{}{
+			"id": sg.Id,
+			"name": sg.Name,
+		}
+		subgroups = append(subgroups, subgroup)
+	}
+	data.Set("sub_groups", subgroups)
 	if group.ParentId != "" {
 		data.Set("parent_id", group.ParentId)
 	}
