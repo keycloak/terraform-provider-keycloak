@@ -343,10 +343,10 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
-	offlineSessionIdleTimeout := "1800"
-	offlineSessionMaxLifespan := "1900"
-	sessionIdleTimeout := "2000"
-	sessionMaxLifespan := "2100"
+	offlineSessionIdleTimeout := "180"
+	offlineSessionMaxLifespan := "190"
+	sessionIdleTimeout := "200"
+	sessionMaxLifespan := "210"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
