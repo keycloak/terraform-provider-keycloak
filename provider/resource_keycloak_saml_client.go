@@ -12,11 +12,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -288,12 +288,24 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"browser_id": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Browser flow ID to use for this client. Conflicts with browser_alias.",
+						},
+						"browser_alias": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Browser flow alias to use for this client. The provider will look up the flow ID. Conflicts with browser_id.",
 						},
 						"direct_grant_id": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Direct grant flow ID to use for this client. Conflicts with direct_grant_alias.",
+						},
+						"direct_grant_alias": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Direct grant flow alias to use for this client. The provider will look up the flow ID. Conflicts with direct_grant_id.",
 						},
 					},
 				},
@@ -523,7 +535,7 @@ func validateSamlClientEncryptionKeySettings(keyAlgorithm, digestMethod, maskGen
 	return nil
 }
 
-func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
+func mapToSamlClientFromData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData) (*keycloak.SamlClient, error) {
 	var validRedirectUris []string
 
 	if v, ok := data.GetOk("valid_redirect_uris"); ok {
@@ -656,13 +668,44 @@ func mapToSamlClientFromData(data *schema.ResourceData) *keycloak.SamlClient {
 	if v, ok := data.GetOk("authentication_flow_binding_overrides"); ok {
 		authenticationFlowBindingOverridesData := v.(*schema.Set).List()[0]
 		authenticationFlowBindingOverrides := authenticationFlowBindingOverridesData.(map[string]interface{})
+
+		browserId := authenticationFlowBindingOverrides["browser_id"].(string)
+		browserAlias := authenticationFlowBindingOverrides["browser_alias"].(string)
+		directGrantId := authenticationFlowBindingOverrides["direct_grant_id"].(string)
+		directGrantAlias := authenticationFlowBindingOverrides["direct_grant_alias"].(string)
+
+		if browserId != "" && browserAlias != "" {
+			return nil, errors.New("authentication_flow_binding_overrides: browser_id and browser_alias are mutually exclusive, please use only one")
+		}
+		if directGrantId != "" && directGrantAlias != "" {
+			return nil, errors.New("authentication_flow_binding_overrides: direct_grant_id and direct_grant_alias are mutually exclusive, please use only one")
+		}
+
+		realmId := data.Get("realm_id").(string)
+
+		if browserAlias != "" {
+			flow, err := keycloakClient.GetAuthenticationFlowFromAlias(ctx, realmId, browserAlias)
+			if err != nil {
+				return nil, fmt.Errorf("error looking up browser authentication flow by alias %q: %w", browserAlias, err)
+			}
+			browserId = flow.Id
+		}
+
+		if directGrantAlias != "" {
+			flow, err := keycloakClient.GetAuthenticationFlowFromAlias(ctx, realmId, directGrantAlias)
+			if err != nil {
+				return nil, fmt.Errorf("error looking up direct grant authentication flow by alias %q: %w", directGrantAlias, err)
+			}
+			directGrantId = flow.Id
+		}
+
 		samlClient.AuthenticationFlowBindingOverrides = keycloak.SamlAuthenticationFlowBindingOverrides{
-			BrowserId:     authenticationFlowBindingOverrides["browser_id"].(string),
-			DirectGrantId: authenticationFlowBindingOverrides["direct_grant_id"].(string),
+			BrowserId:     browserId,
+			DirectGrantId: directGrantId,
 		}
 	}
 
-	return samlClient
+	return samlClient, nil
 }
 
 func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, client *keycloak.SamlClient) error {
@@ -684,8 +727,33 @@ func mapToDataFromSamlClient(ctx context.Context, data *schema.ResourceData, cli
 		data.Set("authentication_flow_binding_overrides", nil)
 	} else {
 		authenticationFlowBindingOverridesSettings := make(map[string]interface{})
-		authenticationFlowBindingOverridesSettings["browser_id"] = client.AuthenticationFlowBindingOverrides.BrowserId
-		authenticationFlowBindingOverridesSettings["direct_grant_id"] = client.AuthenticationFlowBindingOverrides.DirectGrantId
+
+		var existingBrowserAlias, existingDirectGrantAlias string
+		if v, ok := data.GetOk("authentication_flow_binding_overrides"); ok {
+			existingOverrides := v.(*schema.Set).List()
+			if len(existingOverrides) > 0 {
+				existing := existingOverrides[0].(map[string]interface{})
+				existingBrowserAlias = existing["browser_alias"].(string)
+				existingDirectGrantAlias = existing["direct_grant_alias"].(string)
+			}
+		}
+
+		if existingBrowserAlias != "" {
+			authenticationFlowBindingOverridesSettings["browser_alias"] = existingBrowserAlias
+			authenticationFlowBindingOverridesSettings["browser_id"] = ""
+		} else {
+			authenticationFlowBindingOverridesSettings["browser_id"] = client.AuthenticationFlowBindingOverrides.BrowserId
+			authenticationFlowBindingOverridesSettings["browser_alias"] = ""
+		}
+
+		if existingDirectGrantAlias != "" {
+			authenticationFlowBindingOverridesSettings["direct_grant_alias"] = existingDirectGrantAlias
+			authenticationFlowBindingOverridesSettings["direct_grant_id"] = ""
+		} else {
+			authenticationFlowBindingOverridesSettings["direct_grant_id"] = client.AuthenticationFlowBindingOverrides.DirectGrantId
+			authenticationFlowBindingOverridesSettings["direct_grant_alias"] = ""
+		}
+
 		data.Set("authentication_flow_binding_overrides", []interface{}{authenticationFlowBindingOverridesSettings})
 	}
 
@@ -754,9 +822,12 @@ func resourceKeycloakSamlClientSetSha1(ctx context.Context, data *schema.Resourc
 func resourceKeycloakSamlClientCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	client := mapToSamlClientFromData(data)
+	client, err := mapToSamlClientFromData(ctx, keycloakClient, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.NewSamlClient(ctx, client)
+	err = keycloakClient.NewSamlClient(ctx, client)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -788,9 +859,12 @@ func resourceKeycloakSamlClientRead(ctx context.Context, data *schema.ResourceDa
 func resourceKeycloakSamlClientUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	client := mapToSamlClientFromData(data)
+	client, err := mapToSamlClientFromData(ctx, keycloakClient, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.UpdateSamlClient(ctx, client)
+	err = keycloakClient.UpdateSamlClient(ctx, client)
 	if err != nil {
 		return diag.FromErr(err)
 	}
