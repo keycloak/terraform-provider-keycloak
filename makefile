@@ -17,6 +17,11 @@ build-debug:
 	CGO_ENABLED=0 go build -gcflags "all=-N -l" -trimpath -ldflags " -X main.version=$(VERSION)" -o terraform-provider-keycloak_$(VERSION)
 
 prepare-example:
+	rm -rf example/.terraform
+	rm -rf example/terraform.d
+	rm -rf example/.terraform.lock.hcl
+	rm -rf example/terraform.tfstate
+	rm -rf example/terraform.tfstate.backup
 	mkdir -p example/.terraform/plugins/terraform.local/keycloak/keycloak/5.6.0/$(GOOS)_$(GOARCH)
 	mkdir -p example/terraform.d/plugins/terraform.local/keycloak/keycloak/5.6.0/$(GOOS)_$(GOARCH)
 	cp terraform-provider-keycloak_* example/.terraform/plugins/terraform.local/keycloak/keycloak/5.6.0/$(GOOS)_$(GOARCH)/
