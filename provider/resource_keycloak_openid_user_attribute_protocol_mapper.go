@@ -66,6 +66,12 @@ func resourceKeycloakOpenIdUserAttributeProtocolMapper() *schema.Resource {
 				Default:     true,
 				Description: "Indicates if the attribute should appear in the userinfo response body.",
 			},
+			"add_to_token_introspection": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Indicates if the attribute should be a claim in the token introspection response.",
+			},
 			"multivalued": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -99,14 +105,15 @@ func resourceKeycloakOpenIdUserAttributeProtocolMapper() *schema.Resource {
 
 func mapFromDataToOpenIdUserAttributeProtocolMapper(data *schema.ResourceData) *keycloak.OpenIdUserAttributeProtocolMapper {
 	return &keycloak.OpenIdUserAttributeProtocolMapper{
-		Id:               data.Id(),
-		Name:             data.Get("name").(string),
-		RealmId:          data.Get("realm_id").(string),
-		ClientId:         data.Get("client_id").(string),
-		ClientScopeId:    data.Get("client_scope_id").(string),
-		AddToIdToken:     data.Get("add_to_id_token").(bool),
-		AddToAccessToken: data.Get("add_to_access_token").(bool),
-		AddToUserInfo:    data.Get("add_to_userinfo").(bool),
+		Id:                      data.Id(),
+		Name:                    data.Get("name").(string),
+		RealmId:                 data.Get("realm_id").(string),
+		ClientId:                data.Get("client_id").(string),
+		ClientScopeId:           data.Get("client_scope_id").(string),
+		AddToIdToken:            data.Get("add_to_id_token").(bool),
+		AddToAccessToken:        data.Get("add_to_access_token").(bool),
+		AddToUserInfo:           data.Get("add_to_userinfo").(bool),
+		AddToTokenIntrospection: data.Get("add_to_token_introspection").(bool),
 
 		UserAttribute:            data.Get("user_attribute").(string),
 		ClaimName:                data.Get("claim_name").(string),
@@ -130,6 +137,7 @@ func mapFromOpenIdUserAttributeMapperToData(mapper *keycloak.OpenIdUserAttribute
 	data.Set("add_to_id_token", mapper.AddToIdToken)
 	data.Set("add_to_access_token", mapper.AddToAccessToken)
 	data.Set("add_to_userinfo", mapper.AddToUserInfo)
+	data.Set("add_to_token_introspection", mapper.AddToTokenIntrospection)
 	data.Set("user_attribute", mapper.UserAttribute)
 	data.Set("claim_name", mapper.ClaimName)
 	data.Set("claim_value_type", mapper.ClaimValueType)
