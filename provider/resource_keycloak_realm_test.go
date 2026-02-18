@@ -1652,14 +1652,14 @@ resource "keycloak_realm" "realm" {
 
 func testKeycloakRealm_tokenSettings(realm string) string {
 	defaultSignatureAlgorithm := "RS256"
-	ssoSessionIdleTimeout := randomDurationString()
-	ssoSessionMaxLifespan := randomDurationString()
-	ssoSessionIdleTimeoutRememberMe := randomDurationString()
-	ssoSessionMaxLifespanRememberMe := randomDurationString()
-	offlineSessionIdleTimeout := randomDurationString()
-	offlineSessionMaxLifespan := randomDurationString()
-	clientSessionIdleTimeout := randomDurationString()
-	clientSessionMaxLifespan := randomDurationString()
+	ssoSessionIdleTimeout := durationString(42)
+	ssoSessionMaxLifespan := durationString(42 * 42)
+	ssoSessionIdleTimeoutRememberMe := durationString(42 * 42)
+	ssoSessionMaxLifespanRememberMe := durationString(42 * 42 * 42)
+	offlineSessionIdleTimeout := durationString(42)
+	offlineSessionMaxLifespan := durationString(42 * 42)
+	clientSessionIdleTimeout := durationString(42)
+	clientSessionMaxLifespan := durationString(42 * 42)
 	accessTokenLifespan := randomDurationString()
 	accessTokenLifespanForImplicitFlow := randomDurationString()
 	accessCodeLifespan := randomDurationString()

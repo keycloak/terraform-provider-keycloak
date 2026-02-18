@@ -53,6 +53,10 @@ func randomDurationString() string {
 	return (time.Duration(acctest.RandIntRange(1, 604800)) * time.Second).String()
 }
 
+func durationString(seconds int) string {
+	return (time.Duration(seconds) * time.Second).String()
+}
+
 func skipIfEnvSet(t *testing.T, envs ...string) {
 	for _, k := range envs {
 		if os.Getenv(k) != "" {
