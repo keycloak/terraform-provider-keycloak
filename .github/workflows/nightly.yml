@@ -14,7 +14,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -36,29 +35,13 @@ jobs:
           echo "version=nightly-${short_sha}" >> $GITHUB_OUTPUT
 
       - name: GoReleaser (snapshot build, no publish)
-        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           args: release --snapshot --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GORELEASER_CURRENT_TAG: ${{ steps.nightly_version.outputs.version }}
-
-      - name: Move tag "nightly" to the built commit
-        run: |
-          set -euo pipefail
-          sha="$(git rev-parse HEAD)"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git fetch --tags --force
-          git tag -f nightly "$sha"
-          git push origin refs/tags/nightly --force
-
-          echo "nightly tag now points to $sha"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create or update GitHub release "nightly"
         run: |
@@ -80,9 +63,7 @@ jobs:
             gh release delete-asset "$tag" "$name" -y || true
           done
 
-          shopt -s nullglob
-          files=(dist/*.zip dist/*SHA256SUMS dist/*SHA256SUMS.sig)
-          gh release upload "$tag" "${files[@]}" --clobber
-
+          # Upload freshly built artifacts
+          gh release upload "$tag" dist/* --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
