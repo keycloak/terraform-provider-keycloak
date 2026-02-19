@@ -63,7 +63,9 @@ jobs:
             gh release delete-asset "$tag" "$name" -y || true
           done
 
-          # Upload freshly built artifacts
-          gh release upload "$tag" dist/* --clobber
+          shopt -s nullglob
+          files=(dist/*.zip dist/*SHA256SUMS dist/*SHA256SUMS.sig)
+          gh release upload "$tag" "${files[@]}" --clobber
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
