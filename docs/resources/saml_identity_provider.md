@@ -59,6 +59,7 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `post_binding_logout` - (Optional) Indicates whether to respond to requests using HTTP-POST binding. If false, HTTP-REDIRECT binding will be used.
 - `want_assertions_signed` - (Optional) Indicates whether this service provider expects a signed Assertion.
 - `want_assertions_encrypted` - (Optional) Indicates whether this service provider expects an encrypted Assertion.
+- `want_authn_requests_signed` - (Optional) Indicates whether this service provider expects authentication requests to be signed (defaults to `true` if `signature_algorithm` is set and this isn't).
 - `force_authn` - (Optional) Indicates whether the identity provider must authenticate the presenter directly rather than rely on a previous security context.
 - `validate_signature` - (Optional) Enable/disable signature validation of SAML responses.
 - `signing_certificate` - (Optional) Signing Certificate.
