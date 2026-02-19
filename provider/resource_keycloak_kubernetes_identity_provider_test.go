@@ -12,6 +12,7 @@ import (
 )
 
 func TestAccKeycloakKubernetesIdentityProvider_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	t.Parallel()
 
 	kubernetesName := acctest.RandomWithPrefix("tf-acc")
@@ -30,6 +31,7 @@ func TestAccKeycloakKubernetesIdentityProvider_basic(t *testing.T) {
 }
 
 func TestAccKeycloakKubernetesIdentityProvider_insecureIssuer(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	t.Parallel()
 
 	kubernetesName := acctest.RandomWithPrefix("tf-acc")
