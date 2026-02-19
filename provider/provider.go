@@ -25,6 +25,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user_realm_roles":                   dataSourceKeycloakUserRealmRoles(),
 			"keycloak_saml_client_installation_provider":  dataSourceKeycloakSamlClientInstallationProvider(),
 			"keycloak_saml_client":                        dataSourceKeycloakSamlClient(),
+			"keycloak_saml_client_scope":                  dataSourceKeycloakSamlClientScope(),
 			"keycloak_authentication_execution":           dataSourceKeycloakAuthenticationExecution(),
 			"keycloak_authentication_flow":                dataSourceKeycloakAuthenticationFlow(),
 			"keycloak_authentication_subflow":             dataSourceKeycloakAuthenticationSubflow(),

@@ -91,6 +91,8 @@ func (keycloakClient *KeycloakClient) ListSamlClientScopesWithFilter(ctx context
 			scope := new(SamlClientScope)
 			*scope = clientScope
 
+			scope.RealmId = realmId
+
 			samlClientScopes = append(samlClientScopes, scope)
 		}
 	}
@@ -98,7 +100,7 @@ func (keycloakClient *KeycloakClient) ListSamlClientScopesWithFilter(ctx context
 	return samlClientScopes, nil
 }
 
-func includeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFilterFunc {
+func IncludeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFilterFunc {
 	return func(scope *SamlClientScope) bool {
 		for _, scopeName := range scopeNames {
 			if scopeName == scope.Name {
