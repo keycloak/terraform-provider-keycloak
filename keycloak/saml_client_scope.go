@@ -3,21 +3,25 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type SamlClientScope struct {
-	Id          string `json:"id,omitempty"`
-	RealmId     string `json:"-"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Protocol    string `json:"protocol"`
-	Attributes  struct {
-		DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
-		ConsentScreenText      string                   `json:"consent.screen.text"`
-		GuiOrder               string                   `json:"gui.order"`
-	} `json:"attributes"`
+	Id          string                    `json:"id,omitempty"`
+	RealmId     string                    `json:"-"`
+	Name        string                    `json:"name"`
+	Description string                    `json:"description"`
+	Protocol    string                    `json:"protocol"`
+	Attributes  SamlClientScopeAttributes `json:"attributes"`
+}
+
+type SamlClientScopeAttributes struct {
+	DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
+	ConsentScreenText      string                   `json:"consent.screen.text"`
+	GuiOrder               string                   `json:"gui.order"`
+	ExtraConfig            map[string]interface{}   `json:"-"`
 }
 
 type SamlClientScopeFilterFunc func(*SamlClientScope) bool
@@ -104,4 +108,12 @@ func includeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFi
 
 		return false
 	}
+}
+
+func (f *SamlClientScopeAttributes) UnmarshalJSON(data []byte) error {
+	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
+}
+
+func (f *SamlClientScopeAttributes) MarshalJSON() ([]byte, error) {
+	return marshalExtraConfig(reflect.ValueOf(f).Elem(), f.ExtraConfig)
 }
