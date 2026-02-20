@@ -35,7 +35,7 @@ func TestAccKeycloakKubernetesIdentityProvider_insecureIssuer(t *testing.T) {
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realm := &keycloak.Realm{
-		Realm: realmName,
+		Realm:       realmName,
 		SslRequired: "none",
 	}
 
@@ -53,7 +53,7 @@ func TestAccKeycloakKubernetesIdentityProvider_insecureIssuer(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config:      testKeycloakKubernetesIdentityProvider_basic(realmName, kubernetesName, "http://example.com/issuer"),
+				Config: testKeycloakKubernetesIdentityProvider_basic(realmName, kubernetesName, "http://example.com/issuer"),
 				Check:  testAccCheckKeycloakKubernetesIdentityProviderExists("keycloak_kubernetes_identity_provider.kubernetes"),
 			},
 		},
