@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -23,7 +22,7 @@ func TestAccKeycloakKubernetesIdentityProvider_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakKubernetesIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakKubernetesIdentityProvider_basic(kubernetesName, "https://example.com/issuer"),
+				Config: testKeycloakKubernetesIdentityProvider_basic(testAccRealm.Realm, kubernetesName, "https://example.com/issuer"),
 				Check:  testAccCheckKeycloakKubernetesIdentityProviderExists("keycloak_kubernetes_identity_provider.kubernetes"),
 			},
 		},
@@ -34,6 +33,12 @@ func TestAccKeycloakKubernetesIdentityProvider_insecureIssuer(t *testing.T) {
 	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	t.Parallel()
 
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realm := &keycloak.Realm{
+		Realm: realmName,
+		SslRequired: "none",
+	}
+
 	kubernetesName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -42,14 +47,20 @@ func TestAccKeycloakKubernetesIdentityProvider_insecureIssuer(t *testing.T) {
 		CheckDestroy:      testAccCheckKeycloakKubernetesIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakKubernetesIdentityProvider_basic(kubernetesName, "http://example.com/issuer"),
-				ExpectError: regexp.MustCompile("The url \\[issuer\\] requires secure connections"),
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, realm)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:      testKeycloakKubernetesIdentityProvider_basic(realmName, kubernetesName, "http://example.com/issuer"),
+				Check:  testAccCheckKeycloakKubernetesIdentityProviderExists("keycloak_kubernetes_identity_provider.kubernetes"),
 			},
 		},
 	})
 }
 
-func testKeycloakKubernetesIdentityProvider_basic(alias, issuer string) string {
+func testKeycloakKubernetesIdentityProvider_basic(realm, alias, issuer string) string {
 	return fmt.Sprintf(`
 		data "keycloak_realm" "realm" {
 			realm = "%s"
@@ -60,7 +71,7 @@ func testKeycloakKubernetesIdentityProvider_basic(alias, issuer string) string {
 			alias  = "%s"
 			issuer = "%s"
 		}
-			`, testAccRealm.Realm, alias, issuer)
+			`, realm, alias, issuer)
 }
 
 func testAccCheckKeycloakKubernetesIdentityProviderExists(resourceName string) resource.TestCheckFunc {

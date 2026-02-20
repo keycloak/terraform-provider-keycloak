@@ -10,7 +10,7 @@ Allows for creating and managing Kubernetes Identity Providers within Keycloak. 
 > This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource.
 > More information about enabling the preview feature can be found here: https://www.keycloak.org/docs/latest/server_admin/index.html#_identity_broker_kubernetes
 
-## Example Usage with a OpenID client
+## Example Usage with an OpenID client
 ```hcl
 resource "keycloak_realm" "realm" {
   realm   = "my-realm"
@@ -24,7 +24,7 @@ resource "keycloak_kubernetes_identity_provider" "kubernetes" {
 }
 
 resource "keycloak_openid_client" "k8s_client" {
-  realm     = keycloak_realm.realm.id
+  realm_id  = keycloak_realm.realm.id
   client_id = "k8s-client"
 
   name    = "K8s Client"
@@ -41,6 +41,8 @@ resource "keycloak_openid_client" "k8s_client" {
 ```
 
 ## Example Usage with a Kubernetes workload authentication
+
+### Keycloak configuration
 
 ```hcl
 resource "keycloak_realm" "realm" {
@@ -89,11 +91,13 @@ resource "keycloak_authentication_bindings" "auth_bindings" {
   realm_id                   = keycloak_realm.realm.id
   client_authentication_flow = keycloak_authentication_flow.client_authentication.alias
 }
+```
 
-# To verify your setup:
+### Kubernetes workload
 
-## In your Kubernetes workload, you need to mount a service account token with the right audience pointing to your Keycloak instance
-----
+In your Kubernetes workload, you need to mount a service account token with the right audience pointing to your Keycloak instance
+```yaml
+---
 apiVersion: v1
 kind: Pod
 ...
@@ -113,21 +117,25 @@ spec:
           audience: https://example.com:8443/realms/test <1>
           expirationSeconds: 600 <2>
           path: keycloak
-----
+---
+```
 
 1. Issuer URL of the Keycloak realm.
 2. Maximum time allowed by Kubernetes is 3600 seconds
 
-##  In the Pod, use curl to authenticate to Keycloak:
+###  In the Pod, use curl to authenticate to Keycloak:
 
+```bash
 curl -k https://example.com:8443/realms/<realm>/protocol/openid-connect/token \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data-urlencode grant_type=client_credentials \
-  --data-urlencode client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer \
+  --data-urlencode
+  client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer \
   --data-urlencode client_assertion=$(cat /var/run/secrets/keycloak)
+```
 
-## And the response should looks something like:
-
+### And the response should looks something like:
+```
 {
   "access_token": "ey...bw",
   "expires_in": 600,
@@ -143,7 +151,7 @@ curl -k https://example.com:8443/realms/<realm>/protocol/openid-connect/token \
 
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
-- `issuer` - (Required) The Kubernetes issuer URL of service account tokens. The URL <ISSUER>.well-known/openid-configuration must be available to Keycloak.
+- `issuer` - (Required) The Kubernetes issuer URL of service account tokens. The URL <ISSUER>/.well-known/openid-configuration must be available to Keycloak.
 - `hide_on_login_page` - (Optional) When `true`, this provider will be hidden on the login page, and is only accessible when requested explicitly. Defaults to `true`.
 
 ## Import

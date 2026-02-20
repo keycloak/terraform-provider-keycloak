@@ -19,7 +19,7 @@ func resourceKeycloakKubernetesIdentityProvider() *schema.Resource {
 		"issuer": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The issuer of the Kubernetes service account tokens.",
+			Description: "The issuer of the Kubernetes service account tokens. Depending your Keycloak Realm \"ssl_required\" setting, this may need to be an HTTPS URL.",
 		},
 		"hide_on_login_page": {
 			Type:        schema.TypeBool,
@@ -43,7 +43,7 @@ func getKubernetesProviderFromData(data *schema.ResourceData, keycloakVersion *v
 	kubernetesIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		Issuer: data.Get("issuer").(string),
 
-		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
+		//since keycloak v26 moved to IdentityProvider - still here for backward compatibility
 		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
