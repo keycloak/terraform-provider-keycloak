@@ -1,5 +1,49 @@
 ## What's Changed
 
+## 5.7.0 (February 20, 2026)
+
+FEATURES:
+
+* Signed JWT authentication by @slaskawi in https://github.com/keycloak/terraform-provider-keycloak/pull/1441
+* feat: Improve support for openid_client_scope and saml_client_scope by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1475
+* Feature: Add Kubernetes Identity Provider Resource by @Laureatgrepi in https://github.com/keycloak/terraform-provider-keycloak/pull/1467
+
+IMPROVEMENTS:
+* chore: execute goimports to format the code by @promalert in https://github.com/keycloak/terraform-provider-keycloak/pull/1429
+* Complete support for SAML encryption details by @christopher-svensson-stegra in https://github.com/keycloak/terraform-provider-keycloak/pull/1430
+* docs(realm): add missing documentation for admin_permissions_enabled by @mattef92 in https://github.com/keycloak/terraform-provider-keycloak/pull/1437
+* Add shared mutex to KC Client and enforce locking for Realm Client Profiles and Policies by @rhigdon in https://github.com/keycloak/terraform-provider-keycloak/pull/1378
+* Update to Keycloak 26.5.3 and terraform to 1.14.3 and small fixes by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1451
+* Added nightly release runs by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1471
+* added support for SAML want_authn_request_signed manual override by @dscham in https://github.com/keycloak/terraform-provider-keycloak/pull/1458
+* Update to KC26.5.4 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1476
+* Also set nightly tag on nightly builds by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1477
+* chore(deps): bump com.gradleup.shadow from 9.3.0 to 9.3.1 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1434
+* chore(deps): bump golang.org/x/net from 0.48.0 to 0.49.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1439
+* chore(deps): bump gradle-wrapper from 9.0.0 to 9.3.0 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1448
+* chore(deps): bump gradle-wrapper from 9.3.0 to 9.3.1 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1455
+* chore(deps): bump gradle/actions from 5.0.0 to 5.0.1 in /.github/workflows by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1454
+* chore(deps): bump github.com/golang-jwt/jwt/v5 from 5.3.0 to 5.3.1 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1453
+* chore(deps): bump org.jetbrains.kotlin.jvm from 2.3.0 to 2.3.10 in /custom-user-federation-example by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1462
+* chore(deps): bump github.com/hashicorp/terraform-plugin-sdk/v2 from 2.38.1 to 2.38.2 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1461
+* chore(deps): bump golang.org/x/net from 0.49.0 to 0.50.0 by @dependabot[bot] in https://github.com/keycloak/terraform-provider-keycloak/pull/1468
+
+BUG FIXES:
+
+* 1426 fixed wrong authorization resource names in documentation by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1427
+* fix: Improve handling of empty strings for description like fields by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1432
+* Fixed artifact upload by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1473
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [slaskawi](https://github.com/slaskawi)
+- [Laureatgrepi](https://github.com/Laureatgrepi)
+- [promalert](https://github.com/promalert)
+- [christopher-svensson-stegra](https://github.com/christopher-svensson-stegra)
+- [mattef92](https://github.com/mattef92)
+- [rhigdon](https://github.com/rhigdon)
+- [dscham](https://github.com/dscham)
+
 ## 5.6.0 (December 23, 2025)
 
 FEATURES:
