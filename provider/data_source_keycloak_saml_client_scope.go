@@ -8,9 +8,9 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-func dataSourceKeycloakOpenidClientScope() *schema.Resource {
+func dataSourceKeycloakSamlClientScope() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKeycloakOpenidClientScopeRead,
+		ReadContext: dataSourceKeycloakSamlClientScopeRead,
 
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
@@ -29,10 +29,6 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"include_in_token_scope": {
-				Type:     schema.TypeBool,
-				Computed: true,
-			},
 			"gui_order": {
 				Type:     schema.TypeInt,
 				Computed: true,
@@ -46,13 +42,13 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 	}
 }
 
-func dataSourceKeycloakOpenidClientScopeRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKeycloakSamlClientScopeRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
 	name := data.Get("name").(string)
 
-	scopes, err := keycloakClient.ListOpenidClientScopesWithFilter(ctx, realmId, keycloak.IncludeOpenidClientScopesMatchingNames([]string{name}))
+	scopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, keycloak.IncludeSamlClientScopesMatchingNames([]string{name}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -61,7 +57,7 @@ func dataSourceKeycloakOpenidClientScopeRead(ctx context.Context, data *schema.R
 		return diag.Errorf("expected provided client scope name to match 1 scope, but matched %d scopes", len(scopes))
 	}
 
-	setOpenidClientScopeData(data, scopes[0])
+	setSamlClientScopeData(data, scopes[0])
 
 	return nil
 }
