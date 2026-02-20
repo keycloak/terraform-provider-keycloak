@@ -76,9 +76,14 @@ func testKeycloakKubernetesIdentityProvider_basic(realm, alias, issuer string) s
 
 func testAccCheckKeycloakKubernetesIdentityProviderExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		_, err := getKeycloakKubernetesIdentityProviderFromState(s, resourceName)
+		idp, err := getKeycloakKubernetesIdentityProviderFromState(s, resourceName)
 		if err != nil {
 			return err
+		}
+
+		// Kubernetes identity provider should always be hidden on login page
+		if idp.HideOnLogin != true {
+			return fmt.Errorf("error checking if kubernetes identity provider is hidden on login page: expected true but got %t", idp.HideOnLogin)
 		}
 
 		return nil

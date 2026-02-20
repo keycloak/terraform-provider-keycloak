@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakKubernetesIdentityProvider() *schema.Resource {
@@ -23,28 +22,26 @@ func resourceKeycloakKubernetesIdentityProvider() *schema.Resource {
 		},
 		"hide_on_login_page": {
 			Type:        schema.TypeBool,
-			Optional:    true,
-			Default:     true,
-			Description: "Hide On Login Page.",
+			Computed:    true,
+			Description: "This is always set to true for Kubernetes identity provider.",
 		},
 	}
 	kubernetesResource := resourceKeycloakIdentityProvider()
 	kubernetesResource.Schema = mergeSchemas(kubernetesResource.Schema, kubernetesSchema)
-	kubernetesResource.CreateContext = resourceKeycloakIdentityProviderCreate(getKubernetesProviderFromData, setKubernetesIdentityProviderData)
+	kubernetesResource.CreateContext = resourceKeycloakIdentityProviderCreate(getKubernetesIdentityProviderFromData, setKubernetesIdentityProviderData)
 	kubernetesResource.ReadContext = resourceKeycloakIdentityProviderRead(setKubernetesIdentityProviderData)
-	kubernetesResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getKubernetesProviderFromData, setKubernetesIdentityProviderData)
+	kubernetesResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getKubernetesIdentityProviderFromData, setKubernetesIdentityProviderData)
 	return kubernetesResource
 }
 
-func getKubernetesProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
+func getKubernetesIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	idp, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	idp.ProviderId = data.Get("provider_id").(string)
+	// The Kubernetes Identity Provider is only used for service accounts, so we always hide it on the login page.
+	idp.HideOnLogin = true
 
 	kubernetesIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		Issuer: data.Get("issuer").(string),
-
-		//since keycloak v26 moved to IdentityProvider - still here for backward compatibility
-		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if err := mergo.Merge(kubernetesIdentityProviderConfig, defaultConfig); err != nil {
@@ -60,12 +57,6 @@ func setKubernetesIdentityProviderData(data *schema.ResourceData, identityProvid
 	setIdentityProviderData(data, identityProvider, keycloakVersion)
 
 	data.Set("issuer", identityProvider.Config.Issuer)
-
-	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
-		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
-		return nil
-	}
 
 	return nil
 }
