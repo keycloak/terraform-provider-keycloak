@@ -160,7 +160,7 @@ func (keycloakClient *KeycloakClient) attachSamlClientScopes(ctx context.Context
 		return err
 	}
 
-	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, includeSamlClientScopesMatchingNames(scopeNames))
+	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, IncludeSamlClientScopesMatchingNames(scopeNames))
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (keycloakClient *KeycloakClient) AttachSamlClientDefaultScopes(ctx context.
 }
 
 func (keycloakClient *KeycloakClient) detachSamlClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
-	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, includeSamlClientScopesMatchingNames(scopeNames))
+	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, IncludeSamlClientScopesMatchingNames(scopeNames))
 	if err != nil {
 		return err
 	}

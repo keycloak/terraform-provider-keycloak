@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -45,6 +46,11 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"extra_config": {
+				Type:             schema.TypeMap,
+				Optional:         true,
+				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.SamlClientScopeAttributes{}).Elem()),
+			},
 		},
 	}
 }
@@ -74,6 +80,8 @@ func getSamlClientScopeFromData(data *schema.ResourceData) *keycloak.SamlClientS
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
 	}
 
+	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
+
 	return clientScope
 }
 
@@ -91,6 +99,8 @@ func setSamlClientScopeData(data *schema.ResourceData, clientScope *keycloak.Sam
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	setExtraConfigData(data, clientScope.Attributes.ExtraConfig)
 }
 
 func resourceKeycloakSamlClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
