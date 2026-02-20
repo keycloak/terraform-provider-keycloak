@@ -134,7 +134,7 @@ curl -k https://example.com:8443/realms/<realm>/protocol/openid-connect/token \
   --data-urlencode client_assertion=$(cat /var/run/secrets/keycloak)
 ```
 
-### And the response should looks something like:
+### And the response should look something like:
 ```
 {
   "access_token": "ey...bw",
