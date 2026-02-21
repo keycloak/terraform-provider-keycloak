@@ -67,3 +67,22 @@ func (keycloakClient *KeycloakClient) listGenericProtocolMappers(ctx context.Con
 
 	return protocolMappers, nil
 }
+
+// ListGenericProtocolMappers returns all protocol mappers for a client or client scope.
+// Used by the data source to look up mappers by name.
+func (keycloakClient *KeycloakClient) ListGenericProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*GenericProtocolMapper, error) {
+	var protocolMappers []*GenericProtocolMapper
+
+	err := keycloakClient.get(ctx, protocolMapperPath(realmId, clientId, clientScopeId), &protocolMappers, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, mapper := range protocolMappers {
+		mapper.RealmId = realmId
+		mapper.ClientId = clientId
+		mapper.ClientScopeId = clientScopeId
+	}
+
+	return protocolMappers, nil
+}
