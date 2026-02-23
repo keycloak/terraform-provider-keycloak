@@ -177,8 +177,8 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		if v, ok := conditionMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
-				// handle json objects and arrays
-				if strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[") {
+				// handle json objects and arrays with exception of the attributes field as that needs to stay json-encoded, see https://github.com/keycloak/keycloak/blob/ca205272ba6360bc808d19b5f8e2af119fa37c5a/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientAttributesCondition.java#L138-L141
+				if cond.Name != "client-attributes" && (strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[")) {
 					var t interface{}
 					json.Unmarshal([]byte(value.(string)), &t)
 					configurations[key] = t
