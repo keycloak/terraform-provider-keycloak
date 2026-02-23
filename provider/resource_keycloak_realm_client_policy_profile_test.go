@@ -77,7 +77,7 @@ func TestAccKeycloakRealmClientPolicyProfile_basicWithPolicy(t *testing.T) {
 	profileDescription := "Test profile description"
 	policyName := "test-policy"
 	policyDescription := "Test policy description"
-	conditionName := "client-updater-source-roles"
+	conditionName := "client-attributes"
 	configuration := map[string]interface{}{
 		"is_negative_logic": false,
 		"attributes": []map[string]string{
@@ -171,6 +171,16 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 		configuration = %s
 	}
 }
+
+resource "keycloak_openid_client" "policy-client" {
+  client_id   = "policy-test-client"
+  realm_id    = keycloak_realm.realm.realm
+  access_type = "PUBLIC"
+
+  depends_on = [
+    keycloak_realm_client_policy_profile.profile
+  ]
+}
 	`, realm, name, description, executorName, configuration)
 }
 
@@ -199,6 +209,16 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     name = "%s"
     configuration = %s
   }
+}
+
+resource "keycloak_openid_client" "policy-client" {
+  client_id   = "policy-test-client"
+  realm_id    = keycloak_realm.realm.realm
+  access_type = "PUBLIC"
+
+  depends_on = [
+    keycloak_realm_client_policy_profile.profile
+  ]
 }
 	`, realm, profileName, profileDescription, policyName, policyDescription, conditionName, configuration)
 }
