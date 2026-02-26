@@ -8,12 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmLocalizationTexts_basic(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -30,8 +27,6 @@ func TestAccKeycloakRealmLocalizationTexts_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRealmLocalizationTexts_empty(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -50,8 +45,6 @@ func TestAccKeycloakRealmLocalizationTexts_empty(t *testing.T) {
 // Tests creating a realm translation in a realm without localization in a non-default locale
 // The translation should exist, but it won't take effect.
 func TestAccKeycloakRealmLocalizationTexts_noLocalization(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

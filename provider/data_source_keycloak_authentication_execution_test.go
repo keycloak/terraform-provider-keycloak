@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
@@ -71,7 +70,6 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basicWithPriority(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")

@@ -722,16 +722,7 @@ func testAccCheckKeycloakSamlClientExtraConfigMissing(resourceName string, key s
 			return err
 		}
 
-		if val, ok := client.Attributes.ExtraConfig[key]; ok {
-			// keycloak 13+ will remove attributes if set to empty string. on older versions, we'll just check if this value is empty
-			if versionOk, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !versionOk {
-				if val != "" {
-					return fmt.Errorf("expected saml client to have empty attribute %v", key)
-				}
-
-				return nil
-			}
-
+		if _, ok := client.Attributes.ExtraConfig[key]; ok {
 			return fmt.Errorf("expected saml client to not have attribute %v", key)
 		}
 
