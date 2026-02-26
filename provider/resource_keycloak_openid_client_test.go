@@ -372,10 +372,6 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -912,10 +908,6 @@ func TestAccKeycloakOpenidClient_extraConfigInvalid(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -1511,16 +1503,7 @@ func testAccCheckKeycloakOpenidClientExtraConfigMissing(resourceName string, key
 			return err
 		}
 
-		if val, ok := client.Attributes.ExtraConfig[key]; ok {
-			// keycloak 13+ will remove attributes if set to empty string. on older versions, we'll just check if this value is empty
-			if versionOk, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !versionOk {
-				if val != "" {
-					return fmt.Errorf("expected openid client to have empty attribute %v", key)
-				}
-
-				return nil
-			}
-
+		if _, ok := client.Attributes.ExtraConfig[key]; ok {
 			return fmt.Errorf("expected openid client to not have attribute %v", key)
 		}
 

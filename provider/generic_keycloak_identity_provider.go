@@ -163,10 +163,7 @@ func getIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *ver
 		PostBrokerLoginFlowAlias:  data.Get("post_broker_login_flow_alias").(string),
 		OrganizationId:            data.Get("organization_id").(string),
 		InternalId:                data.Get("internal_id").(string),
-	}
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute is moved from Config to Provider.
-		identityProvider.HideOnLogin = data.Get("hide_on_login_page").(bool)
+		HideOnLogin:               data.Get("hide_on_login_page").(bool),
 	}
 
 	return identityProvider, defaultIdentityProviderConfig
@@ -188,10 +185,7 @@ func setIdentityProviderData(data *schema.ResourceData, identityProvider *keyclo
 	data.Set("first_broker_login_flow_alias", identityProvider.FirstBrokerLoginFlowAlias)
 	data.Set("post_broker_login_flow_alias", identityProvider.PostBrokerLoginFlowAlias)
 	data.Set("organization_id", identityProvider.OrganizationId)
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26.AsVersion()) {
-		data.Set("hide_on_login_page", identityProvider.HideOnLogin)
-	}
+	data.Set("hide_on_login_page", identityProvider.HideOnLogin)
 
 	// identity provider config
 	data.Set("gui_order", identityProvider.Config.GuiOrder)

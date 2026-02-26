@@ -228,9 +228,6 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		AuthnContextClassRefs:           authnContextClassRefs,
 		AuthnContextComparisonType:      data.Get("authn_context_comparison_type").(string),
 		AuthnContextDeclRefs:            authnContextDeclRefs,
-
-		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
-		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if _, explicitlySet := data.GetOkExists("want_authn_requests_signed"); !explicitlySet {
@@ -281,12 +278,6 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("authn_context_class_refs", identityProvider.Config.AuthnContextClassRefs)
 	data.Set("authn_context_comparison_type", identityProvider.Config.AuthnContextComparisonType)
 	data.Set("authn_context_decl_refs", identityProvider.Config.AuthnContextDeclRefs)
-
-	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
-		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
-		return nil
-	}
 
 	return nil
 }

@@ -493,10 +493,6 @@ resource "keycloak_user" "user" {
 }
 
 func userProfileIfKeycloakHasSupport(realmRef string) (string, string) {
-	ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24)
-	if !ok {
-		return "", ""
-	}
 
 	return fmt.Sprintf(`
 resource "keycloak_realm_user_profile" "realm_user_profile" {

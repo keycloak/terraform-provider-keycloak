@@ -792,12 +792,10 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keyc
 		realm.DockerAuthenticationFlow = stringPointer("docker auth")
 	}
 
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		if flow, ok := data.GetOk("first_broker_login_flow"); ok {
-			realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
-		} else {
-			realm.FirstBrokerLoginFlow = stringPointer("first broker login")
-		}
+	if flow, ok := data.GetOk("first_broker_login_flow"); ok {
+		realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
+	} else {
+		realm.FirstBrokerLoginFlow = stringPointer("first broker login")
 	}
 }
 
@@ -1093,7 +1091,6 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 
 		bruteForceDetectionConfig := securityDefensesSettings["brute_force_detection"].([]interface{})
-		versionOk := keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion())
 		if len(bruteForceDetectionConfig) == 1 {
 			bruteForceDetectionSettings := bruteForceDetectionConfig[0].(map[string]interface{})
 			realm.BruteForceProtected = true
@@ -1104,10 +1101,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
 			realm.MaxFailureWaitSeconds = bruteForceDetectionSettings["max_failure_wait_seconds"].(int)
 			realm.MaxDeltaTimeSeconds = bruteForceDetectionSettings["failure_reset_time_seconds"].(int)
-
-			if versionOk {
-				realm.MaxTemporaryLockouts = bruteForceDetectionSettings["max_temporary_lockouts"].(int)
-			}
+			realm.MaxTemporaryLockouts = bruteForceDetectionSettings["max_temporary_lockouts"].(int)
 		} else {
 			setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 		}
@@ -1286,10 +1280,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.MinimumQuickLoginWaitSeconds = 60
 	realm.MaxFailureWaitSeconds = 900
 	realm.MaxDeltaTimeSeconds = 43200
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		realm.MaxTemporaryLockouts = 0
-	}
+	realm.MaxTemporaryLockouts = 0
 }
 
 func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
@@ -1425,10 +1416,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
-	}
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
@@ -1493,10 +1481,7 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *vers
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
 	bruteForceDetectionSettings["max_failure_wait_seconds"] = realm.MaxFailureWaitSeconds
 	bruteForceDetectionSettings["failure_reset_time_seconds"] = realm.MaxDeltaTimeSeconds
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		bruteForceDetectionSettings["max_temporary_lockouts"] = realm.MaxTemporaryLockouts
-	}
+	bruteForceDetectionSettings["max_temporary_lockouts"] = realm.MaxTemporaryLockouts
 	return bruteForceDetectionSettings
 }
 

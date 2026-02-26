@@ -54,10 +54,6 @@ The following versions are used when running acceptance tests in CI:
 - 26.2.5
 - 26.1.4
 - 26.0.8
-- 25.0.6
-- 24.0.5
-- 23.0.7
-- 22.0.5
 
 ## Releases
 

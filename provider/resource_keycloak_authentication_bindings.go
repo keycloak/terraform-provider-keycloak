@@ -75,9 +75,7 @@ func setAuthenticationBindingsData(data *schema.ResourceData, realm *keycloak.Re
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
-	}
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 }
 
 func resetAuthenticationBindingsForRealm(realm *keycloak.Realm, keycloakVersion *version.Version) {
@@ -87,9 +85,7 @@ func resetAuthenticationBindingsForRealm(realm *keycloak.Realm, keycloakVersion 
 	realm.ResetCredentialsFlow = stringPointer("reset credentials")
 	realm.ClientAuthenticationFlow = stringPointer("clients")
 	realm.DockerAuthenticationFlow = stringPointer("docker auth")
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		realm.FirstBrokerLoginFlow = stringPointer("first broker login")
-	}
+	realm.FirstBrokerLoginFlow = stringPointer("first broker login")
 }
 
 func resourceKeycloakAuthenticationBindingsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

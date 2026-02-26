@@ -434,10 +434,6 @@ func TestAccKeycloakRealm_tokenSettings(t *testing.T) {
 }
 
 func TestAccKeycloakRealm_tokenSettingsOauth2Device(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
 
@@ -518,10 +514,6 @@ func TestAccKeycloakRealm_computedTokenSettings(t *testing.T) {
 }
 
 func TestAccKeycloakRealm_oauth2DeviceSettings(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
