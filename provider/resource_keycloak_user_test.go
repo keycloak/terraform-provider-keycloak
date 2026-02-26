@@ -492,7 +492,7 @@ resource "keycloak_user" "user" {
 	`, testAccRealm.Realm, username)
 }
 
-func userProfileIfKeycloakHasSupport(realmRef string) (string, string) {
+func userProfile(realmRef string) (string, string) {
 
 	return fmt.Sprintf(`
 resource "keycloak_realm_user_profile" "realm_user_profile" {
@@ -528,7 +528,7 @@ depends_on = [
 }
 
 func testKeycloakUser_basic(username, attributeName, attributeValue string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -551,7 +551,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_initialPassword(username string, password string, clientId string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -584,7 +584,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_fromInterface(user *keycloak.User) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -607,7 +607,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_FederationLink(sourceRealmUserName, destinationRealmId string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("keycloak_realm.source_realm.id")
+	userProfile, dependsOn := userProfile("keycloak_realm.source_realm.id")
 	return fmt.Sprintf(`
 resource "keycloak_realm" "source_realm" {
   realm   = "source_test_realm"
