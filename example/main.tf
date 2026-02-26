@@ -934,12 +934,6 @@ data "keycloak_openid_client" "broker" {
   client_id = "broker"
 }
 
-data "keycloak_openid_client_authorization_policy" "default" {
-  realm_id           = keycloak_realm.test.id
-  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
-  name               = "default"
-}
-
 resource "keycloak_openid_client" "test_client_auth" {
   client_id   = "test-client-auth"
   name        = "test-client-auth"
@@ -996,6 +990,14 @@ resource "keycloak_openid_client" "test_open_id_client_with_consent_text" {
   consent_screen_text       = "some consent screen text"
 }
 
+resource "keycloak_openid_client_client_policy" "testpolicy" {
+  realm_id           = keycloak_realm.test.id
+  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
+  name               = "test-policy"
+  logic = "POSITIVE"
+  decision_strategy = "AFFIRMATIVE"
+  clients = ["${keycloak_openid_client.test_client_auth.resource_server_id}"]
+}
 
 resource "keycloak_openid_client_authorization_permission" "resource" {
   resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
@@ -1003,7 +1005,7 @@ resource "keycloak_openid_client_authorization_permission" "resource" {
   name               = "test"
 
   policies = [
-    data.keycloak_openid_client_authorization_policy.default.id,
+    keycloak_openid_client_client_policy.testpolicy.id,
   ]
 
   resources = [
