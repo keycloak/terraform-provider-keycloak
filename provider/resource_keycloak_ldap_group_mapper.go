@@ -157,12 +157,8 @@ func getLdapGroupMapperFromData(ctx context.Context, keycloakClient *keycloak.Ke
 		MappedGroupAttributes:           mappedGroupAttributes,
 		DropNonExistingGroupsDuringSync: data.Get("drop_non_existing_groups_during_sync").(bool),
 	}
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_11)
-	if err != nil {
-		return nil, err
-	}
 
-	if groupsPath, ok := data.GetOk("groups_path"); ok && versionOk {
+	if groupsPath, ok := data.GetOk("groups_path"); ok {
 		mapper.GroupsPath = groupsPath.(string)
 	}
 
@@ -191,12 +187,7 @@ func setLdapGroupMapperData(ctx context.Context, keycloakClient *keycloak.Keyclo
 	data.Set("mapped_group_attributes", ldapGroupMapper.MappedGroupAttributes)
 	data.Set("drop_non_existing_groups_during_sync", ldapGroupMapper.DropNonExistingGroupsDuringSync)
 
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_11)
-	if err != nil {
-		return err
-	}
-
-	if ldapGroupMapper.GroupsPath != "" && versionOk {
+	if ldapGroupMapper.GroupsPath != "" {
 		data.Set("groups_path", ldapGroupMapper.GroupsPath)
 	}
 

@@ -146,7 +146,6 @@ func TestAccKeycloakSamlIdentityProvider_wantAuthnRequestsSignedOverride(t *test
 }
 
 func TestAccKeycloakSamlIdentityProvider_linkOrganization(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	t.Parallel()
 
 	samlName := acctest.RandomWithPrefix("tf-acc")
@@ -223,7 +222,6 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 			SingleSignOnServiceUrl:          "https://example.com/signon/1",
 			BackchannelSupported:            types.KeycloakBoolQuoted(firstBackchannel),
 			ValidateSignature:               types.KeycloakBoolQuoted(firstValidateSignature),
-			HideOnLoginPage:                 types.KeycloakBoolQuoted(firstHideOnLogin),
 			NameIDPolicyFormat:              "Email",
 			SingleLogoutServiceUrl:          "https://example.com/logout/1",
 			SigningCertificate:              acctest.RandString(10),
@@ -254,7 +252,6 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 			SingleSignOnServiceUrl:          "https://example.com/signon/2",
 			BackchannelSupported:            types.KeycloakBoolQuoted(!firstBackchannel),
 			ValidateSignature:               types.KeycloakBoolQuoted(!firstValidateSignature),
-			HideOnLoginPage:                 types.KeycloakBoolQuoted(!firstHideOnLogin),
 			NameIDPolicyFormat:              "Persistent",
 			SingleLogoutServiceUrl:          "https://example.com/logout/2",
 			SigningCertificate:              acctest.RandString(10),
@@ -526,7 +523,7 @@ resource "keycloak_saml_identity_provider" "saml" {
 	authn_context_decl_refs       = %v
 	authn_context_comparison_type = "%s"
 }
-	`, testAccRealm.Realm, saml.Alias, saml.Enabled, saml.Config.EntityId, saml.Config.SingleSignOnServiceUrl, bool(saml.Config.BackchannelSupported), bool(saml.Config.ValidateSignature), bool(saml.Config.HideOnLoginPage), saml.Config.NameIDPolicyFormat, saml.Config.SingleLogoutServiceUrl, saml.Config.SigningCertificate, saml.Config.SignatureAlgorithm, saml.Config.XmlSigKeyInfoKeyNameTransformer, bool(saml.Config.PostBindingAuthnRequest), bool(saml.Config.PostBindingResponse), bool(saml.Config.PostBindingLogout), bool(saml.Config.ForceAuthn), bool(saml.Config.WantAssertionsSigned), bool(saml.Config.WantAssertionsEncrypted), bool(saml.Config.WantAuthnRequestsSigned), saml.Config.GuiOrder, saml.Config.SyncMode, arrayOfStringsForTerraformResource(authnContextClassRefs), arrayOfStringsForTerraformResource(authnContextDeclRefs), saml.Config.AuthnContextComparisonType)
+	`, testAccRealm.Realm, saml.Alias, saml.Enabled, saml.Config.EntityId, saml.Config.SingleSignOnServiceUrl, bool(saml.Config.BackchannelSupported), bool(saml.Config.ValidateSignature), saml.HideOnLogin, saml.Config.NameIDPolicyFormat, saml.Config.SingleLogoutServiceUrl, saml.Config.SigningCertificate, saml.Config.SignatureAlgorithm, saml.Config.XmlSigKeyInfoKeyNameTransformer, bool(saml.Config.PostBindingAuthnRequest), bool(saml.Config.PostBindingResponse), bool(saml.Config.PostBindingLogout), bool(saml.Config.ForceAuthn), bool(saml.Config.WantAssertionsSigned), bool(saml.Config.WantAssertionsEncrypted), bool(saml.Config.WantAuthnRequestsSigned), saml.Config.GuiOrder, saml.Config.SyncMode, arrayOfStringsForTerraformResource(authnContextClassRefs), arrayOfStringsForTerraformResource(authnContextDeclRefs), saml.Config.AuthnContextComparisonType)
 }
 
 func testKeycloakSamlIdentityProvider_linkOrganization(saml, organizationName string) string {

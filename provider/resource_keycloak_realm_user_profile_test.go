@@ -16,44 +16,7 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-func TestAccKeycloakRealmUserProfile_featureDisabled(t *testing.T) {
-	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
-
-	realmName := acctest.RandomWithPrefix("tf-acc")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
-		Steps: []resource.TestStep{
-			{
-				Config:      testKeycloakRealmUserProfile_userProfileDisabled(realmName),
-				ExpectError: regexp.MustCompile("User Profile is disabled"),
-			},
-		},
-	})
-}
-
-func TestAccKeycloakRealmUserProfile_featureNotSet(t *testing.T) {
-	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_24)
-
-	realmName := acctest.RandomWithPrefix("tf-acc")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
-		Steps: []resource.TestStep{
-			{
-				Config:      testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
-				ExpectError: regexp.MustCompile("User Profile is disabled"),
-			},
-		},
-	})
-}
-
 func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
@@ -71,14 +34,10 @@ func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_basicEmpty(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
-	realmUserProfile := &keycloak.RealmUserProfile{}
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_23); ok {
-		// Username and email can't be removed in this version
-		realmUserProfile.Attributes = []*keycloak.RealmUserProfileAttribute{{Name: "username"}, {Name: "email"}}
+	realmUserProfile := &keycloak.RealmUserProfile{
+		Attributes: []*keycloak.RealmUserProfileAttribute{{Name: "username"}, {Name: "email"}},
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -95,14 +54,7 @@ func TestAccKeycloakRealmUserProfile_basicEmpty(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
-
-	mvSupported, err := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24)
-	if err != nil {
-		t.Errorf("error checking keycloak version: %v", err)
-	}
 
 	realmUserProfile := &keycloak.RealmUserProfile{
 		Attributes: []*keycloak.RealmUserProfileAttribute{
@@ -111,7 +63,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 			{
 				Name:        "attribute2",
 				DisplayName: "attribute 2",
-				MultiValued: mvSupported,
+				MultiValued: true,
 				Group:       "group",
 				Selector:    &keycloak.RealmUserProfileSelector{Scopes: []string{"roles"}},
 				Required: &keycloak.RealmUserProfileRequired{
@@ -161,8 +113,6 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_group(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	withoutGroup := &keycloak.RealmUserProfile{
@@ -210,8 +160,6 @@ func TestAccKeycloakRealmUserProfile_group(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	withoutValidator := &keycloak.RealmUserProfile{
@@ -305,8 +253,6 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
-	skipIfVersionIsLessThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_14)
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	withoutPermissions := &keycloak.RealmUserProfile{
@@ -405,7 +351,6 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 }
 
 func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
@@ -491,21 +436,6 @@ func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testKeycloakRealmUserProfile_userProfileDisabled(realm string) string {
-	return fmt.Sprintf(`
-resource "keycloak_realm" "realm" {
-	realm = "%s"
-
-	attributes = {
-		userProfileEnabled  = false
-	}
-}
-resource "keycloak_realm_user_profile" "realm_user_profile" {
-	realm_id = keycloak_realm.realm.id
-}
-`, realm)
 }
 
 func testKeycloakRealmUserProfile_userProfileEnabledNotSet(realm string) string {

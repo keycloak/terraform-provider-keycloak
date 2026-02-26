@@ -84,13 +84,7 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 
 	var err error
 
-	validVersion, err := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26)
-	if err != nil {
-		log.Printf("Unable to check keycloak version: %s", err)
-	}
-	if validVersion {
-		r.OrganizationsEnabled = true
-	}
+	r.OrganizationsEnabled = true
 
 	for i := 0; i < 3; i++ { // on CI this sometimes fails and keycloak can't be reached
 		err = keycloakClient.NewRealm(testCtx, r)

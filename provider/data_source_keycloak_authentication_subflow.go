@@ -97,15 +97,7 @@ func mapFromAuthenticationSubFlowToDataSource(ctx context.Context, keycloakClien
 	data.Set("description", authenticationSubFlow.Description)
 	data.Set("authenticator", authenticationSubFlow.Authenticator)
 	data.Set("requirement", authenticationSubFlow.Requirement)
-
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
-	if err != nil {
-		return err
-	}
-
-	if versionOk {
-		data.Set("priority", authenticationSubFlow.Priority)
-	}
+	data.Set("priority", authenticationSubFlow.Priority)
 
 	return nil
 }

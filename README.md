@@ -44,7 +44,7 @@ If you are using the legacy Wildfly distribution of Keycloak, you will need to s
 
 ## Supported Versions
 
-This provider will officially support the latest three major versions of Keycloak, although older versions may still work.
+This provider will officially support the latest three minor versions of Keycloak, although older versions may still work.
 
 The following versions are used when running acceptance tests in CI:
 
@@ -54,10 +54,6 @@ The following versions are used when running acceptance tests in CI:
 - 26.2.5
 - 26.1.4
 - 26.0.8
-- 25.0.6
-- 24.0.5
-- 23.0.7
-- 22.0.5
 
 ## Releases
 
