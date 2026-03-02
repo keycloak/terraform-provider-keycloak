@@ -73,13 +73,13 @@ jobs:
           cache: true
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # version v3.1.2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # version v4.0.0
         with:
           terraform_wrapper: false
           terraform_version: 1.14.3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # version v5.0.1
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # version v5.0.2
       - name: Build user-federation-example with Gradle
         run:  make user-federation-example
 
