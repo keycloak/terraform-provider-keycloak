@@ -149,6 +149,11 @@ func resourceKeycloakRealm() *schema.Resource {
 			Default:      "not specified",
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
+		"passwordless_passkeys_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
 	}
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
@@ -1228,6 +1233,10 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment = webAuthnPolicyPasswordlessAuthenticatorAttachment.(string)
 		}
 
+		if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
+			realm.WebAuthnPolicyPasswordlessPasskeysEnabled = webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+		}
+
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
 			realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister = webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister.(bool)
 		}
@@ -1456,6 +1465,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
+	webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = realm.WebAuthnPolicyPasswordlessPasskeysEnabled
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
