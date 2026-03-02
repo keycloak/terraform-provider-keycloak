@@ -371,6 +371,50 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_AccessToken_revertToDefault(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_AccessToken_basic(clientId, "1800"),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", "1800"),
+			},
+			{
+				Config: testKeycloakOpenidClient_AccessToken_basic(clientId, ""),
+				Check:  testAccCheckKeycloakOpenidClientExistsWithCorrectLifespan("keycloak_openid_client.client", ""),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_ClientTimeouts_revertToDefault(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_ClientTimeouts(clientId, "180", "190", "200", "210"),
+				Check: testAccCheckKeycloakOpenidClientExistsWithCorrectClientTimeouts("keycloak_openid_client.client",
+					"180", "190", "200", "210"),
+			},
+			{
+				Config: testKeycloakOpenidClient_ClientTimeouts(clientId, "", "", "", ""),
+				Check: testAccCheckKeycloakOpenidClientExistsWithCorrectClientTimeouts("keycloak_openid_client.client",
+					"", "", "", ""),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
