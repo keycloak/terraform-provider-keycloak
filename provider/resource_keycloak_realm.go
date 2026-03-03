@@ -150,6 +150,17 @@ func resourceKeycloakRealm() *schema.Resource {
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	for k, v := range webAuthnSchema {
+		webAuthnPasswordlessSchema[k] = v
+	}
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  false,
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
 		ReadContext:   resourceKeycloakRealmRead,
@@ -733,7 +744,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 		},
