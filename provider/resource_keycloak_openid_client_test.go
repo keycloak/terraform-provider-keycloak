@@ -1041,7 +1041,40 @@ func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiff(t *testing.T) {
 				Config: config,
 			},
 			{
+				Config:   config,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiffAfterUpgradeFrom550(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	config := testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
 				Config: config,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"keycloak": {
+						Source:            "registry.terraform.io/keycloak/keycloak",
+						VersionConstraint: "=5.5.0",
+					},
+				},
+			},
+			{
+				Config:            config,
+				ProviderFactories: testAccProviderFactories,
+			},
+			{
+				Config:            config,
+				ProviderFactories: testAccProviderFactories,
+				PlanOnly:          true,
 			},
 		},
 	})
