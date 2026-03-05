@@ -149,6 +149,7 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 		"want_authn_requests_signed": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			Computed:    true,
 			Description: "Want Authn Requests Signed.",
 		},
 		"principal_type": {
