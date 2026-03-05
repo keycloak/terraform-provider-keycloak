@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreRsaGenerated struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
@@ -40,10 +41,15 @@ func convertFromRealmKeystoreRsaGeneratedToComponent(realmKey *RealmKeystoreRsaG
 		},
 	}
 
+	parentId := realmKey.RealmId
+	if realmKey.ParentId != "" {
+		parentId = realmKey.ParentId
+	}
+
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
+		ParentId:     parentId,
 		ProviderId:   "rsa-generated",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
