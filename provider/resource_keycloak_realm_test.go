@@ -1852,7 +1852,7 @@ resource "keycloak_realm" "realm" {
 		avoid_same_authenticator_register = %t
 		require_resident_key              = "%s"
 		user_verification_requirement     = "%s"
-		passwordless_passkeys_enabled     = "%t"
+		passwordless_passkeys_enabled     = %t
 	}
 }
 	`, realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, arrayOfStringsForTerraformResource(signatureAlgorithms), attestationConveyancePreference, authenticatorAttachment, avoidSameAuthenticatorRegister, requireResidentKey, userVerificationRequirement, passwordlessPasskeysEnabled)
