@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -126,13 +127,30 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Description: "DN of LDAP admin, which will be used by Keycloak to access LDAP server.",
 			},
 			"bind_credential": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"bind_credential_wo", "bind_credential_wo_version"},
 				DiffSuppressFunc: func(_, remoteBindCredential, _ string, _ *schema.ResourceData) bool {
 					return remoteBindCredential == "**********"
 				},
 				Description: "Password of LDAP admin.",
+			},
+			"bind_credential_wo": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{"bind_credential"},
+				RequiredWith:  []string{"bind_credential_wo_version"},
+				Description:   "Password of LDAP admin as a write-only argument.",
+			},
+			"bind_credential_wo_version": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				ConflictsWith: []string{"bind_credential"},
+				RequiredWith:  []string{"bind_credential_wo"},
+				Description:   "Version of the bind credential write-only argument.",
 			},
 			"custom_user_search_filter": {
 				Type:        schema.TypeString,
@@ -334,7 +352,7 @@ func validateSyncPeriod(i interface{}, k string) (s []string, errs []error) {
 	return
 }
 
-func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId string) *keycloak.LdapUserFederation {
+func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId string) (*keycloak.LdapUserFederation, error) {
 	var userObjectClasses []string
 
 	for _, userObjectClass := range data.Get("user_object_classes").([]interface{}) {
@@ -412,7 +430,16 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		ldapUserFederation.AllowKerberosAuthentication = false
 	}
 
-	return ldapUserFederation
+	if data.Get("bind_credential_wo_version").(int) != 0 && data.HasChange("bind_credential_wo_version") {
+		bindCredentialWriteOnly, bindCredentialWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("bind_credential_wo"))
+		if bindCredentialWriteOnlyDiags.HasError() {
+			return nil, errors.New("error reading 'bind_credential_wo' argument")
+		}
+
+		ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
+	}
+
+	return ldapUserFederation, nil
 }
 
 func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUserFederation, realmId string) {
@@ -437,7 +464,11 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("users_dn", ldap.UsersDn)
 	data.Set("relative_create_dn", ldap.RelativeCreateDn)
 	data.Set("bind_dn", ldap.BindDn)
-	data.Set("bind_credential", ldap.BindCredential)
+	if v, ok := data.GetOk("bind_credential_wo_version"); ok && v != nil {
+		data.Set("bind_credential_wo_version", v.(int))
+	} else {
+		data.Set("bind_credential", ldap.BindCredential)
+	}
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)
 	data.Set("krb_principal_attribute", ldap.KrbPrincipalAttribute)
 	data.Set("debug", ldap.Debug)
@@ -503,7 +534,10 @@ func resourceKeycloakLdapUserFederationCreate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(data, realm.Id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
 		ldap.RelativeCreateDn = ""
@@ -542,7 +576,9 @@ func resourceKeycloakLdapUserFederationRead(ctx context.Context, data *schema.Re
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	ldap.BindCredential = data.Get("bind_credential").(string) // we can't trust the API to set this field correctly since it just responds with "**********"
+	if _, ok := data.GetOk("bind_credential_wo_version"); !ok {
+		ldap.BindCredential = data.Get("bind_credential").(string) // we can't trust the API to set this field correctly since it just responds with "**********"
+	}
 	setLdapUserFederationData(data, ldap, realmId)
 
 	return nil
@@ -558,7 +594,10 @@ func resourceKeycloakLdapUserFederationUpdate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(data, realm.Id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
 		ldap.RelativeCreateDn = ""
