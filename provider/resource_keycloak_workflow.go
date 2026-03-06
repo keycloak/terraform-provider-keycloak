@@ -34,7 +34,7 @@ func resourceKeycloakWorkflow() *schema.Resource {
 			"on": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The event that triggers the workflow (e.g. USER_LOGIN, USER_ADD, USER_GROUP_MEMBERSHIP_ADD, USER_ROLE_ADD).",
+				Description: "The event that triggers the workflow. Supported values: USER_AUTHENTICATED, USER_CREATED, USER_FEDERATED_IDENTITY_ADDED, USER_FEDERATED_IDENTITY_REMOVED, USER_GROUP_MEMBERSHIP_ADDED, USER_GROUP_MEMBERSHIP_REMOVED, USER_ROLE_GRANTED, USER_ROLE_REVOKED, AD_HOC.",
 			},
 			"enabled": {
 				Type:        schema.TypeBool,

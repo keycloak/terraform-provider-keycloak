@@ -3,6 +3,7 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type WorkflowStep struct {
@@ -18,7 +19,7 @@ type Workflow struct {
 	Name              string         `json:"name"`
 	On                string         `json:"on"`
 	Enabled           bool           `json:"enabled"`
-	Conditions        string         `json:"conditions,omitempty"`
+	Conditions        string         `json:"if,omitempty"`
 	Steps             []WorkflowStep `json:"steps"`
 	CancelInProgress  string         `json:"cancelInProgress,omitempty"`
 	RestartInProgress string         `json:"restartInProgress,omitempty"`
@@ -39,6 +40,12 @@ func (keycloakClient *KeycloakClient) GetWorkflow(ctx context.Context, realm, id
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/workflows/%s", realm, id), &workflow, nil)
 	if err != nil {
+		// The workflow API returns 400 "Not a valid resource workflow: <id>" when the
+		// workflow does not exist, instead of a standard 404.
+		if apiErr, ok := err.(*ApiError); ok && apiErr.Code == 400 &&
+			strings.Contains(apiErr.Message, "Not a valid resource workflow:") {
+			return nil, &ApiError{Code: 404, Message: apiErr.Message}
+		}
 		return nil, err
 	}
 

@@ -176,7 +176,7 @@ data "keycloak_realm" "realm" {
 resource "keycloak_workflow" "workflow" {
 	realm   = data.keycloak_realm.realm.id
 	name    = "%s"
-	on      = "USER_LOGIN"
+	on      = "USER_AUTHENTICATED"
 	enabled = true
 
 	step {
@@ -196,7 +196,7 @@ data "keycloak_realm" "realm" {
 resource "keycloak_workflow" "workflow" {
 	realm      = data.keycloak_realm.realm.id
 	name       = "%s"
-	on         = "USER_LOGIN"
+	on         = "USER_AUTHENTICATED"
 	enabled    = true
 	conditions = "!has-role('some-role')"
 
