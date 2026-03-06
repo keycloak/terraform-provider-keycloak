@@ -31,6 +31,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_authentication_subflow":             dataSourceKeycloakAuthenticationSubflow(),
 			"keycloak_client_description_converter":       dataSourceKeycloakClientDescriptionConverter(),
 			"keycloak_organization":                       dataSourceKeycloakOrgnization(),
+			"keycloak_workflow":                           dataSourceKeycloakWorkflow(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"keycloak_realm":                                             resourceKeycloakRealm(),
@@ -130,6 +131,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user_groups":                                       resourceKeycloakUserGroups(),
 			"keycloak_group_permissions":                                 resourceKeycloakGroupPermissions(),
 			"keycloak_authentication_bindings":                           resourceKeycloakAuthenticationBindings(),
+			"keycloak_workflow":                                          resourceKeycloakWorkflow(),
 		},
 		Schema: map[string]*schema.Schema{
 			"client_id": {
