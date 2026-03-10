@@ -12,6 +12,7 @@ import (
 )
 
 func TestAccKeycloakWorkflow_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	workflowName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -28,6 +29,7 @@ func TestAccKeycloakWorkflow_basic(t *testing.T) {
 }
 
 func TestAccKeycloakWorkflow_update(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	workflowName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -51,6 +53,7 @@ func TestAccKeycloakWorkflow_update(t *testing.T) {
 }
 
 func TestAccKeycloakWorkflow_createAfterManualDestroy(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	var workflow = &keycloak.Workflow{}
 
 	workflowName := acctest.RandomWithPrefix("tf-acc")
@@ -82,6 +85,7 @@ func TestAccKeycloakWorkflow_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakWorkflow_import(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_5)
 	workflowName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
