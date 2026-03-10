@@ -144,6 +144,7 @@ is set to `true`.
 - `admin_url` - (Optional) URL to the admin interface of the client.
 - `base_url` - (Optional) Default URL to use when the auth server needs to redirect or link back to the client.
 - `pkce_code_challenge_method` - (Optional) The challenge method to use for Proof Key for Code Exchange. Can be either `plain` or `S256` or set to empty value ``.
+- `require_dpop_bound_tokens` - (Optional) Enable support for Demonstrating Proof-of-Possession (DPoP) bound tokens.
 - `full_scope_allowed` - (Optional) Allow to include all roles mappings in the access token.
 - `access_token_lifespan` - (Optional) The amount of time in seconds before an access token expires. This will override the default for the realm.
 - `client_offline_session_idle_timeout` - (Optional) Time a client session is allowed to be idle before it expires. Tokens are invalidated when a client session is expired. If not set it uses the standard SSO Session Idle value.

@@ -1,8 +1,9 @@
 package provider
 
 import (
-	"dario.cat/mergo"
 	"errors"
+
+	"dario.cat/mergo"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -171,9 +172,6 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		Issuer:                      data.Get("issuer").(string),
 		DisableTypeClaimCheck:       types.KeycloakBoolQuoted(data.Get("disable_type_claim_check").(bool)),
-
-		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
-		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
@@ -212,11 +210,6 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 
 	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
 		data.Set("client_secret_wo_version", v.(int))
-	}
-	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
-		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
-		return nil
 	}
 	return nil
 }

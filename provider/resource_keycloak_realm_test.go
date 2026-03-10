@@ -434,10 +434,6 @@ func TestAccKeycloakRealm_tokenSettings(t *testing.T) {
 }
 
 func TestAccKeycloakRealm_tokenSettingsOauth2Device(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
 
@@ -518,10 +514,6 @@ func TestAccKeycloakRealm_computedTokenSettings(t *testing.T) {
 }
 
 func TestAccKeycloakRealm_oauth2DeviceSettings(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
@@ -1652,14 +1644,14 @@ resource "keycloak_realm" "realm" {
 
 func testKeycloakRealm_tokenSettings(realm string) string {
 	defaultSignatureAlgorithm := "RS256"
-	ssoSessionIdleTimeout := randomDurationString()
-	ssoSessionMaxLifespan := randomDurationString()
-	ssoSessionIdleTimeoutRememberMe := randomDurationString()
-	ssoSessionMaxLifespanRememberMe := randomDurationString()
-	offlineSessionIdleTimeout := randomDurationString()
-	offlineSessionMaxLifespan := randomDurationString()
-	clientSessionIdleTimeout := randomDurationString()
-	clientSessionMaxLifespan := randomDurationString()
+	ssoSessionIdleTimeout := durationString(4200)
+	ssoSessionMaxLifespan := durationString(4242)
+	ssoSessionIdleTimeoutRememberMe := durationString(42000)
+	ssoSessionMaxLifespanRememberMe := durationString(42420)
+	offlineSessionIdleTimeout := durationString(420)
+	offlineSessionMaxLifespan := durationString(4242)
+	clientSessionIdleTimeout := durationString(420)
+	clientSessionMaxLifespan := durationString(4242)
 	accessTokenLifespan := randomDurationString()
 	accessTokenLifespanForImplicitFlow := randomDurationString()
 	accessCodeLifespan := randomDurationString()
@@ -1873,4 +1865,55 @@ resource "keycloak_realm" "realm" {
 	internal_id = "%s"
 }
 	`, realm, internalId)
+}
+
+func TestAccKeycloakRealm_displayNameCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_realm.realm"
+
+	configWithValues := testAccKeycloakRealmWithClearableFields(realmName, "My Realm", "<b>My Realm</b>")
+	configWithEmptyValues := testAccKeycloakRealmWithClearableFields(realmName, "", "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: configWithValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "realm", realmName),
+					resource.TestCheckResourceAttr(resourceName, "display_name", "My Realm"),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", "<b>My Realm</b>"),
+				),
+			},
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_name", ""),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_name", ""),
+					resource.TestCheckResourceAttr(resourceName, "display_name_html", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakRealmWithClearableFields(realm, displayName, displayNameHtml string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+  realm             = "%s"
+  enabled           = true
+  display_name      = "%s"
+  display_name_html = "%s"
+}
+`, realm, displayName, displayNameHtml)
 }

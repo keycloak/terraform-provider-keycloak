@@ -176,12 +176,14 @@ func resourceKeycloakRealm() *schema.Resource {
 				Default:  true,
 			},
 			"display_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name"),
 			},
 			"display_name_html": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name_html"),
 			},
 			"user_managed_access": {
 				Type:     schema.TypeBool,
@@ -189,6 +191,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Default:  false,
 			},
 			"organizations_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"terraform_deletion_protection": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -282,6 +289,10 @@ func resourceKeycloakRealm() *schema.Resource {
 							Optional: true,
 						},
 						"ssl": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"allow_utf8": {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
@@ -573,6 +584,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  false,
 									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
 									"max_login_failures": { //failureFactor
 										Type:     schema.TypeInt,
 										Optional: true,
@@ -776,12 +792,10 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keyc
 		realm.DockerAuthenticationFlow = stringPointer("docker auth")
 	}
 
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		if flow, ok := data.GetOk("first_broker_login_flow"); ok {
-			realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
-		} else {
-			realm.FirstBrokerLoginFlow = stringPointer("first broker login")
-		}
+	if flow, ok := data.GetOk("first_broker_login_flow"); ok {
+		realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
+	} else {
+		realm.FirstBrokerLoginFlow = stringPointer("first broker login")
 	}
 }
 
@@ -806,12 +820,14 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		realmId = internalId
 	}
 
+	// Use GetOkExists for string fields to preserve empty strings
+	displayName, displayNameOk := data.GetOkExists("display_name")
+	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
+
 	realm := &keycloak.Realm{
 		Id:                   realmId.(string),
 		Realm:                data.Get("realm").(string),
 		Enabled:              data.Get("enabled").(bool),
-		DisplayName:          data.Get("display_name").(string),
-		DisplayNameHtml:      data.Get("display_name_html").(string),
 		UserManagedAccess:    data.Get("user_managed_access").(bool),
 		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
@@ -832,6 +848,14 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		DefaultLocale:               defaultLocale,
 	}
 
+	// Set string fields only if explicitly provided, preserving empty strings
+	if displayNameOk {
+		realm.DisplayName = displayName.(string)
+	}
+	if displayNameHtmlOk {
+		realm.DisplayNameHtml = displayNameHtml.(string)
+	}
+
 	//smtp
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
@@ -846,6 +870,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			FromDisplayName:    smtpSettings["from_display_name"].(string),
 			EnvelopeFrom:       smtpSettings["envelope_from"].(string),
 			Ssl:                types.KeycloakBoolQuoted(smtpSettings["ssl"].(bool)),
+			AllowUtf8:          types.KeycloakBoolQuoted(smtpSettings["allow_utf8"].(bool)),
 		}
 
 		authConfig := smtpSettings["auth"].([]interface{})
@@ -1076,12 +1101,13 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
 			realm.MaxFailureWaitSeconds = bruteForceDetectionSettings["max_failure_wait_seconds"].(int)
 			realm.MaxDeltaTimeSeconds = bruteForceDetectionSettings["failure_reset_time_seconds"].(int)
+			realm.MaxTemporaryLockouts = bruteForceDetectionSettings["max_temporary_lockouts"].(int)
 		} else {
-			setDefaultSecuritySettingsBruteForceDetection(realm)
+			setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 		}
 	} else {
 		setDefaultSecuritySettingHeaders(realm)
-		setDefaultSecuritySettingsBruteForceDetection(realm)
+		setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 	}
 
 	if passwordPolicy, ok := data.GetOk("password_policy"); ok {
@@ -1245,7 +1271,7 @@ func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
 	}
 }
 
-func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
+func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keycloakVersion *version.Version) {
 	realm.BruteForceProtected = false
 	realm.PermanentLockout = false
 	realm.FailureFactor = 30
@@ -1254,6 +1280,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
 	realm.MinimumQuickLoginWaitSeconds = 60
 	realm.MaxFailureWaitSeconds = 900
 	realm.MaxDeltaTimeSeconds = 43200
+	realm.MaxTemporaryLockouts = 0
 }
 
 func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
@@ -1295,6 +1322,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
 		smtpSettings["ssl"] = realm.SmtpServer.Ssl
+		smtpSettings["allow_utf8"] = realm.SmtpServer.AllowUtf8
 
 		if realm.SmtpServer.Auth {
 			if realm.SmtpServer.AuthType == "token" {
@@ -1366,7 +1394,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		} else if len(oldHeadersConfig) == 1 && realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
 			securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if len(oldHeadersConfig) == 1 {
 			securityDefensesSettings := make(map[string]interface{})
@@ -1374,7 +1402,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		}
 	}
@@ -1388,10 +1416,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_24.AsVersion()) {
-		data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
-	}
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
@@ -1447,7 +1472,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("default_optional_client_scopes", realm.DefaultOptionalClientScopes)
 }
 
-func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{} {
+func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *version.Version) map[string]interface{} {
 	bruteForceDetectionSettings := make(map[string]interface{})
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
@@ -1456,6 +1481,7 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
 	bruteForceDetectionSettings["max_failure_wait_seconds"] = realm.MaxFailureWaitSeconds
 	bruteForceDetectionSettings["failure_reset_time_seconds"] = realm.MaxDeltaTimeSeconds
+	bruteForceDetectionSettings["max_temporary_lockouts"] = realm.MaxTemporaryLockouts
 	return bruteForceDetectionSettings
 }
 
@@ -1521,6 +1547,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		realm.SmtpServer.Password = smtpPassword
 	}
 
+	if _, ok := data.GetOk("terraform_deletion_protection"); !ok {
+		data.Set("terraform_deletion_protection", false)
+	}
+
 	setRealmData(data, realm, keycloakVersion)
 
 	return nil
@@ -1554,6 +1584,9 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if data.Get("terraform_deletion_protection").(bool) {
+		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `terraform_deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
+	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	return diag.FromErr(keycloakClient.DeleteRealm(ctx, data.Id()))

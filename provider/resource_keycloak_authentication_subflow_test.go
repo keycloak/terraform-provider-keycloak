@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"testing"
 )
 
 func TestAccKeycloakAuthenticationSubFlow_basic(t *testing.T) {
@@ -137,10 +138,6 @@ func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowRequirement
 func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowPriority(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
-
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
@@ -170,10 +167,6 @@ func TestAccKeycloakAuthenticationSubFlow_updateAuthenticationSubFlowPriority(t 
 func TestAccKeycloakAuthenticationSubFlow_createAuthenticationSubFlowPriority(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
-
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
@@ -195,10 +188,6 @@ func TestAccKeycloakAuthenticationSubFlow_createAuthenticationSubFlowPriority(t 
 
 func TestAccKeycloakAuthenticationSubFlowNested_updateAuthenticationPriority(t *testing.T) {
 	t.Parallel()
-
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
 
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 	authFlowAlias := acctest.RandomWithPrefix("tf-acc")

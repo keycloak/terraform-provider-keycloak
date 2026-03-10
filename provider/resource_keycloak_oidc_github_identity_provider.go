@@ -96,9 +96,6 @@ func getOidcGithubIdentityProviderFromData(data *schema.ResourceData, keycloakVe
 		GithubJsonFormat: types.KeycloakBoolQuoted(data.Get("github_json_format").(bool)),
 		BaseUrl:          data.Get("base_url").(string),
 		ApiUrl:           data.Get("api_url").(string),
-
-		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
-		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if err := mergo.Merge(githubOidcIdentityProviderConfig, defaultConfig); err != nil {
@@ -118,12 +115,6 @@ func setOidcGithubIdentityProviderData(data *schema.ResourceData, identityProvid
 	data.Set("base_url", identityProvider.Config.BaseUrl)
 	data.Set("api_url", identityProvider.Config.ApiUrl)
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
-
-	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
-		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
-		return nil
-	}
 
 	return nil
 }

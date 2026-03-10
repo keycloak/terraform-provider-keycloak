@@ -99,10 +99,8 @@ func getOpenidClientAuthorizationRolePolicyResourceFromData(data *schema.Resourc
 		Description:      data.Get("description").(string),
 	}
 
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
-		if v, ok := data.GetOk("fetch_roles"); ok {
-			resource.FetchRoles = v.(bool)
-		}
+	if v, ok := data.GetOk("fetch_roles"); ok {
+		resource.FetchRoles = v.(bool)
 	}
 
 	return &resource
@@ -118,10 +116,7 @@ func setOpenidClientAuthorizationRolePolicyResourceData(data *schema.ResourceDat
 	data.Set("logic", policy.Logic)
 	data.Set("type", policy.Type)
 	data.Set("description", policy.Description)
-
-	if keycloakVersion.GreaterThanOrEqual(keycloak.Version_25.AsVersion()) {
-		data.Set("fetch_roles", policy.FetchRoles)
-	}
+	data.Set("fetch_roles", policy.FetchRoles)
 
 	var roles []interface{}
 	for _, r := range policy.Roles {

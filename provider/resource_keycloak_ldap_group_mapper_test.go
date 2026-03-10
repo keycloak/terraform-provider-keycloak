@@ -265,10 +265,6 @@ func TestAccKeycloakLdapGroupMapper_updateLdapUserFederationInPlace(t *testing.T
 func TestAccKeycloakLdapGroupMapper_groupsPath(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_11); !ok {
-		t.Skip()
-	}
-
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 

@@ -13,7 +13,6 @@ import (
 
 func TestAccKeycloakOpenIdSubProtocolMapper_basicClient(t *testing.T) {
 	t.Parallel()
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -35,7 +34,6 @@ func TestAccKeycloakOpenIdSubProtocolMapper_basicClient(t *testing.T) {
 
 func TestAccKeycloakOpenIdSubProtocolMapper_basicClientScope(t *testing.T) {
 	t.Parallel()
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
 	mapperName := acctest.RandomWithPrefix("tf-acc")
@@ -57,7 +55,6 @@ func TestAccKeycloakOpenIdSubProtocolMapper_basicClientScope(t *testing.T) {
 
 func TestAccKeycloakOpenIdSubProtocolMapper_import(t *testing.T) {
 	t.Parallel()
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	clientScopeId := acctest.RandomWithPrefix("tf-acc")
@@ -96,7 +93,6 @@ func TestAccKeycloakOpenIdSubProtocolMapper_import(t *testing.T) {
 
 func TestAccKeycloakOpenIdSubProtocolMapper_update(t *testing.T) {
 	t.Parallel()
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 
 	resourceName := "keycloak_openid_sub_protocol_mapper.sub_mapper"
 
@@ -133,7 +129,6 @@ func TestAccKeycloakOpenIdSubProtocolMapper_update(t *testing.T) {
 
 func TestAccKeycloakOpenIdSubProtocolMapper_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 
 	var mapper = &keycloak.OpenIdSubProtocolMapper{}
 

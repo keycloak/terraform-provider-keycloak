@@ -6,11 +6,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakDataSourceOrganization_basic(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	orgName := acctest.RandomWithPrefix("tf-acc-test")
 	domainName := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_organization.test"

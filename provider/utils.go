@@ -3,10 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -28,6 +29,15 @@ func mapKeyFromValue(m map[string]string, value string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func reverseStringMap(m map[string]string) map[string]string {
+	reversed := make(map[string]string, len(m))
+	for k, v := range m {
+		reversed[v] = k
+	}
+
+	return reversed
 }
 
 func mergeSchemas(a map[string]*schema.Schema, b map[string]*schema.Schema) map[string]*schema.Schema {
@@ -113,6 +123,22 @@ func stringSliceContains(s []string, e string) bool {
 
 func stringPointer(s string) *string {
 	return &s
+}
+
+// suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
+// when the specified attribute is not present in the config (null).
+// This allows:
+// - Clearing a field with an empty string (field = "")
+// - Keeping the server value when the field is not in the config
+func suppressDiffWhenNotInConfig(attrName string) schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		rawConfig := d.GetRawConfig()
+		if rawConfig.IsNull() || !rawConfig.IsKnown() {
+			return true
+		}
+		configValue := rawConfig.GetAttr(attrName)
+		return configValue.IsNull()
+	}
 }
 
 func intPointer(i int) *int {
