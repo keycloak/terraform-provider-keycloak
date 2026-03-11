@@ -587,10 +587,19 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy("keycloak_realm.realm", "LINEAR"),
+				),
+			},
+			{
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "MULTIPLE"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy("keycloak_realm.realm", "MULTIPLE"),
 				),
 			},
 			{
@@ -639,7 +648,7 @@ func TestAccKeycloakRealm_securityDefenses(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 31),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 31, "MULTIPLE"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
@@ -1341,6 +1350,21 @@ func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor(r
 	}
 }
 
+func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy(resourceName, strategy string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.BruteForceStrategy != strategy {
+			return fmt.Errorf("expected realm %s to have BruteForceStrategy set to %s, but was %s", realm.Realm, strategy, realm.BruteForceStrategy)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakRealmPasswordPolicy(resourceName, passwordPolicy string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
@@ -1725,7 +1749,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realmDisplayName, xFrameOptions)
 }
 
-func testKeycloakRealm_securityDefensesBruteForceDetection(realm, realmDisplayName string, maxLoginFailures int) string {
+func testKeycloakRealm_securityDefensesBruteForceDetection(realm, realmDisplayName string, maxLoginFailures int, bruteForceStrategy string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm        = "%s"
@@ -1734,6 +1758,7 @@ resource "keycloak_realm" "realm" {
 	security_defenses {
     	brute_force_detection {
             permanent_lockout                 = false
+			brute_force_strategy              = "%s"
       		max_login_failures                = %d
       		wait_increment_seconds            = 60
       		quick_login_check_milli_seconds   = 1000
@@ -1743,7 +1768,7 @@ resource "keycloak_realm" "realm" {
         }
 	}
 }
-	`, realm, realmDisplayName, maxLoginFailures)
+	`, realm, realmDisplayName, bruteForceStrategy, maxLoginFailures)
 }
 
 func testKeycloakRealm_securityDefenses(realm, realmDisplayName, xFrameOptions string, maxLoginFailures int) string {
