@@ -7,10 +7,10 @@ import (
 )
 
 type WorkflowStep struct {
-	Id     string              `json:"id,omitempty"`
-	Uses   string              `json:"uses"`
-	After  string              `json:"after,omitempty"`
-	Config map[string][]string `json:"config,omitempty"`
+	Id     string            `json:"id,omitempty"`
+	Uses   string            `json:"uses"`
+	After  string            `json:"after,omitempty"`
+	Config map[string]string `json:"with,omitempty"`
 }
 
 type Workflow struct {

@@ -13,7 +13,7 @@ Workflows automate administrative tasks in response to realm events (e.g. disabl
 ### Disable inactive users
 
 This example mirrors the [official Keycloak workflow guide](https://www.keycloak.org/docs/latest/server_admin/index.html#_understanding_workflow_definition_).
-The workflow triggers on every `USER_AUTHENTICATED` event and resets on the same event.
+The workflow triggers on every `user_authenticated` event and resets on the same event.
 Users who do not hold the `realm-management/realm-admin` role will first receive
 a warning notification, and then have their account disabled — each step running
 30 seconds after the previous one.
@@ -27,10 +27,9 @@ resource "keycloak_realm" "realm" {
 resource "keycloak_workflow" "disable_inactive" {
   realm              = keycloak_realm.realm.name
   name               = "disable inactive users"
-  on                 = "USER_AUTHENTICATED"
-  restart_in_progress = "USER_AUTHENTICATED"
+  on                 = "user_authenticated"
+  restart_in_progress = "user_authenticated"
   enabled            = true
-  conditions         = "!has-role(\"realm-management/realm-admin\")"
 
   step {
     uses  = "notify-user"
@@ -53,7 +52,7 @@ resource "keycloak_workflow" "disable_inactive" {
 resource "keycloak_workflow" "offboard" {
   realm   = keycloak_realm.realm.name
   name    = "offboard-users"
-  on      = "USER_CREATED"
+  on      = "user_created"
   enabled = true
 
   step {
@@ -75,9 +74,9 @@ resource "keycloak_workflow" "offboard" {
 
 - `realm` - (Required) The realm this workflow exists in. Changing this forces a new resource.
 - `name` - (Required) The name of the workflow.
-- `on` - (Required) The realm event that triggers the workflow. Supported values: `USER_AUTHENTICATED`, `USER_CREATED`, `USER_FEDERATED_IDENTITY_ADDED`, `USER_FEDERATED_IDENTITY_REMOVED`, `USER_GROUP_MEMBERSHIP_ADDED`, `USER_GROUP_MEMBERSHIP_REMOVED`, `USER_ROLE_GRANTED`, `USER_ROLE_REVOKED`, `AD_HOC`.
+- `on` - (Required) The realm event that triggers the workflow. Supported values: `user_created`, `user_removed`, `user_authenticated`, `user_federated_identity_added`, `user_federated_identity_removed`, `user_group_membership_added`, `user_group_membership_removed`, `user_role_granted`, `user_role_revoked`.
 - `enabled` - (Optional) Whether the workflow is enabled. Defaults to `true`.
-- `conditions` - (Optional) An expression that must evaluate to true for the workflow to run (e.g. `!has-role('some-role')`).
+- `conditions` - (Optional) An expression that must evaluate to true for the workflow to run (e.g. `has-role('some-role')`).
 - `cancel_in_progress` - (Optional) Event that cancels an in-progress workflow execution.
 - `restart_in_progress` - (Optional) Event that restarts an in-progress workflow execution.
 - `step` - (Required) One or more [step blocks](#step-arguments) defining the actions to execute, in order.

@@ -34,7 +34,7 @@ func resourceKeycloakWorkflow() *schema.Resource {
 			"on": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The event that triggers the workflow. Supported values: USER_AUTHENTICATED, USER_CREATED, USER_FEDERATED_IDENTITY_ADDED, USER_FEDERATED_IDENTITY_REMOVED, USER_GROUP_MEMBERSHIP_ADDED, USER_GROUP_MEMBERSHIP_REMOVED, USER_ROLE_GRANTED, USER_ROLE_REVOKED, AD_HOC.",
+				Description: "The event that triggers the workflow. Supported values: user_created, user_removed, user_authenticated, user_federated_identity_added, user_federated_identity_removed, user_group_membership_added, user_group_membership_removed, user_role_granted, user_role_revoked.",
 			},
 			"enabled": {
 				Type:        schema.TypeBool,
@@ -108,9 +108,9 @@ func getWorkflowFromData(data *schema.ResourceData) *keycloak.Workflow {
 				After: stepMap["after"].(string),
 			}
 			if cfgRaw, ok := stepMap["config"]; ok {
-				config := make(map[string][]string)
+				config := make(map[string]string)
 				for k, val := range cfgRaw.(map[string]interface{}) {
-					config[k] = strings.Split(val.(string), MULTIVALUE_ATTRIBUTE_SEPARATOR)
+					config[k] = val.(string)
 				}
 				step.Config = config
 			}
@@ -140,10 +140,8 @@ func setWorkflowData(data *schema.ResourceData, workflow *keycloak.Workflow) {
 		}
 		if len(step.Config) > 0 {
 			config := make(map[string]interface{})
-			for k, vals := range step.Config {
-				if len(vals) > 0 {
-					config[k] = strings.Join(vals, MULTIVALUE_ATTRIBUTE_SEPARATOR)
-				}
+			for k, v := range step.Config {
+				config[k] = v
 			}
 			stepMap["config"] = config
 		}

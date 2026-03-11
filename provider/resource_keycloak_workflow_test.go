@@ -45,7 +45,7 @@ func TestAccKeycloakWorkflow_update(t *testing.T) {
 				Config: testKeycloakWorkflow_withConditions(workflowName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakWorkflowExists("keycloak_workflow.workflow"),
-					resource.TestCheckResourceAttr("keycloak_workflow.workflow", "conditions", "!has-role('some-role')"),
+					resource.TestCheckResourceAttr("keycloak_workflow.workflow", "conditions", "has-role('some-role')"),
 				),
 			},
 		},
@@ -180,7 +180,7 @@ data "keycloak_realm" "realm" {
 resource "keycloak_workflow" "workflow" {
 	realm   = data.keycloak_realm.realm.id
 	name    = "%s"
-	on      = "USER_AUTHENTICATED"
+	on      = "user_authenticated"
 	enabled = true
 
 	step {
@@ -200,9 +200,9 @@ data "keycloak_realm" "realm" {
 resource "keycloak_workflow" "workflow" {
 	realm      = data.keycloak_realm.realm.id
 	name       = "%s"
-	on         = "USER_AUTHENTICATED"
+	on         = "user_authenticated"
 	enabled    = true
-	conditions = "!has-role('some-role')"
+	conditions = "has-role('some-role')"
 
 	step {
 		uses  = "disable-user"
