@@ -8,9 +8,9 @@ import (
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -19,9 +19,9 @@ func TestAccKeycloakSamlClient_basic(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_basic(clientId),
@@ -194,9 +194,9 @@ func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_basic(clientId),
@@ -219,9 +219,9 @@ func TestAccKeycloakSamlClient_createAfterManualDestroy(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_basic(clientId),
@@ -250,9 +250,9 @@ func TestAccKeycloakSamlClient_updateRealm(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_updateRealmBefore(clientId),
@@ -372,9 +372,9 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_fromInterface(samlClientBefore),
@@ -401,9 +401,9 @@ func TestAccKeycloakSamlClient_certificateAndKey(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_signingCertificateAndKey(clientId),
@@ -424,9 +424,9 @@ func TestAccKeycloakSamlClient_encryptionCertificate(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_encryptionCertificate(clientId),
@@ -446,9 +446,9 @@ func TestAccCheckKeycloakSamlClient_authenticationFlowBindingOverrides(t *testin
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_authenticationFlowBindingOverrides(clientId),
@@ -468,9 +468,9 @@ func TestAccKeycloakSamlClient_extraConfig(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_extraConfig(clientId, map[string]string{
@@ -501,9 +501,9 @@ func TestAccKeycloakSamlClient_extraConfigInvalid(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakSamlClient_extraConfig(clientId, map[string]string{"saml.signature.algorithm": "RSA_SHA1"}),
@@ -1026,9 +1026,9 @@ func TestAccKeycloakSamlClient_fieldsCanBeCleared(t *testing.T) {
 	configWithEmptyValues := testAccKeycloakSamlClientWithClearableFields(clientId, "", "", "")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: configWithValues,

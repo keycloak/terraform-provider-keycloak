@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -16,9 +16,9 @@ func TestAccKeycloakLdapUserAttributeMapper_basic(t *testing.T) {
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basic(userAttributeMapperName),
@@ -42,9 +42,9 @@ func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basic(userAttributeMapperName),
@@ -66,12 +66,13 @@ func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.
 
 func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.T) {
 	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_updateLdapUserFederationBefore(userAttributeMapperName),
@@ -86,6 +87,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	userAttributeMapperBefore := &keycloak.LdapUserAttributeMapper{
@@ -112,9 +114,9 @@ func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basicFromInterface(userAttributeMapperBefore),

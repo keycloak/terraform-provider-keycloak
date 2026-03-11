@@ -9,9 +9,9 @@ import (
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -20,9 +20,9 @@ func TestAccKeycloakOpenidClient_basic(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -44,9 +44,9 @@ func TestAccKeycloakOpenidClient_basic_with_consent(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic_with_consent(clientId),
@@ -70,9 +70,9 @@ func TestAccKeycloakOpenidClient_createAfterManualDestroy(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -101,9 +101,9 @@ func TestAccKeycloakOpenidClient_updateRealm(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_updateRealmBefore(clientId),
@@ -128,9 +128,9 @@ func TestAccKeycloakOpenidClient_accessType(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_accessType(clientId, "CONFIDENTIAL"),
@@ -152,9 +152,9 @@ func TestAccKeycloakOpenidClient_clientAuthenticatorType(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_clientAuthenticatorType(clientId, "client-secret"),
@@ -240,9 +240,9 @@ func TestAccKeycloakOpenidClient_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_fromInterface(openidClientBefore),
@@ -275,9 +275,9 @@ func TestAccKeycloakOpenidClient_backChannel(t *testing.T) {
 	backchannelLogoutRevokeOfflineSessions := !backchannelLogoutSessionRequired
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_backchannel(clientId, backchannelLogoutUrl, backchannelLogoutSessionRequired, backchannelLogoutRevokeOfflineSessions),
@@ -298,9 +298,9 @@ func TestAccKeycloakOpenidClient_frontChannel(t *testing.T) {
 	frontchannelLogoutEnabled := true
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_frontchannel(clientId, frontchannelLogoutUrl, frontchannelLogoutEnabled),
@@ -320,9 +320,9 @@ func TestAccKeycloakOpenidClient_AccessToken_basic(t *testing.T) {
 	accessTokenLifespan := "1800"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_AccessToken_basic(clientId, accessTokenLifespan),
@@ -349,9 +349,9 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	sessionMaxLifespan := "210"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_ClientTimeouts(clientId,
@@ -380,9 +380,9 @@ func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
 	oauth2DeviceAuthorizationGrantEnabled := true
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_oauth2DeviceTimes(clientId,
@@ -409,9 +409,9 @@ func TestAccKeycloakOpenidClient_secret(t *testing.T) {
 	clientSecret := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -440,9 +440,9 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 	clientSecretWOVersion := 1
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				// test CREATION of the client_secret via write-only attribute
@@ -502,9 +502,9 @@ func TestAccKeycloakOpenidClient_redirectUrisValidation(t *testing.T) {
 	accessType := randomStringInSlice([]string{"PUBLIC", "CONFIDENTIAL"})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_invalidRedirectUris(clientId, accessType, true, false),
@@ -523,9 +523,9 @@ func TestAccKeycloakOpenidClient_publicClientCredentialsValidation(t *testing.T)
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_invalidPublicClientWithClientCredentials(clientId),
@@ -540,9 +540,9 @@ func TestAccKeycloakOpenidClient_bearerClientNoGrantsValidation(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_bearerOnlyClientsCannotIssueTokens(clientId, true, false, false, false),
@@ -569,9 +569,9 @@ func TestAccKeycloakOpenidClient_pkceCodeChallengeMethod(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_pkceChallengeMethod(clientId, "invalidMethod"),
@@ -618,9 +618,9 @@ func TestAccKeycloakOpenidClient_excludeSessionStateFromAuthResponse(t *testing.
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_omitExcludeSessionStateFromAuthResponse(clientId, "plain"),
@@ -659,9 +659,9 @@ func TestAccKeycloakOpenidClient_excludeIssuerFromAuthResponse(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_omitExcludeIssuerFromAuthResponse(clientId, "plain"),
@@ -700,9 +700,9 @@ func TestAccKeycloakOpenidClient_authenticationFlowBindingOverrides(t *testing.T
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_authenticationFlowBindingOverrides(clientId),
@@ -724,9 +724,9 @@ func TestAccKeycloakOpenidClient_loginTheme(t *testing.T) {
 	loginThemeRandom := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_loginTheme(clientId, loginThemeKeycloak),
@@ -752,9 +752,9 @@ func TestAccKeycloakOpenidClient_import(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientNotDestroyed(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientNotDestroyed(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_import("non-existing-client", true),
@@ -773,9 +773,9 @@ func TestAccKeycloakOpenidClient_useRefreshTokens(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_useRefreshTokens(clientId, true),
@@ -797,9 +797,9 @@ func TestAccKeycloakOpenidClient_enableStandardTokenExchange(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_enableStandardTokenExchange(clientId, true),
@@ -821,9 +821,9 @@ func TestAccKeycloakOpenidClient_allowRefreshTokenInStandardExchange(t *testing.
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_allowRefreshTokenInStandardExchange(clientId, "SAME_SESSION"),
@@ -842,9 +842,9 @@ func TestAccKeycloakOpenidClient_useRefreshTokensClientCredentials(t *testing.T)
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_useRefreshTokensClientCredentials(clientId, true),
@@ -863,9 +863,9 @@ func TestAccKeycloakOpenidClient_extraConfig(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_extraConfig(clientId, map[string]string{
@@ -895,9 +895,9 @@ func TestAccKeycloakOpenidClient_extraConfigInvalid(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClient_extraConfig(clientId, map[string]string{"login_theme": "keycloak"}),
@@ -908,17 +908,13 @@ func TestAccKeycloakOpenidClient_extraConfigInvalid(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(clientId, true),
@@ -937,9 +933,9 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 	var client = &keycloak.OpenidClient{}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
-		PreCheck:                 func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		PreCheck:          func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{ // Create client with client_secret_regenerate_when_changed = null
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -981,8 +977,8 @@ func TestAccKeycloakOpenidClient_descriptionCanBeCleared(t *testing.T) {
 	configWithEmptyDescription := testAccKeycloakOpenidClientWithDescription(realmName, clientId, "")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: configWithDescription,
@@ -1012,9 +1008,9 @@ func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_withAuthorization(clientId),

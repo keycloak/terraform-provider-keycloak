@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakLdapHardcodedAttributeMapper_basic(t *testing.T) {
 	attributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapHardcodedAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapHardcodedAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapHardcodedAttributeMapper(attributeMapperName, attributeName, attributeValue),
@@ -45,9 +45,9 @@ func TestAccKeycloakLdapHardcodedAttributeMapper_createAfterManualDestroy(t *tes
 	attributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckKeycloakLdapHardcodedAttributeMapperDestroy(),
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakLdapHardcodedAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapHardcodedAttributeMapper(attributeMapperName, attributeName, attributeValue),
@@ -152,7 +152,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
-  referral                = "ignore"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_hardcoded_attribute_mapper" "hardcoded_attribute_mapper" {

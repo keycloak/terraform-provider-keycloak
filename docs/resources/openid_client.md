@@ -107,28 +107,6 @@ resource "keycloak_openid_client" "openid_client" {
 }
 ```
 
-## Example Usage with Regenerating the Client Secret using Time provider
-
-```hcl
-resource "keycloak_realm" "realm" {
-  realm   = "my-realm"
-  enabled = true
-}
-resource "time_rotating" "rotate" {
-  rotation_days = 10
-}
-resource "keycloak_openid_client" "openid_client" {
-  realm_id            = keycloak_realm.realm.id
-  client_id           = "test-client"
-  name                = "test client"
-  enabled             = true
-  access_type         = "CONFIDENTIAL"
-  client_secret_regenerate_when_changed = {
-    rotation = time_rotating.rotate.rotation_rfc3339
-  }
-}
-```
-
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this client is attached to.
