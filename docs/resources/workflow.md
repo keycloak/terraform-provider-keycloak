@@ -4,7 +4,7 @@ page_title: "keycloak_workflow Resource"
 
 # keycloak\_workflow Resource
 
-Allow for creating and managing Workflows within Keycloak.
+Allows creating and managing workflows within Keycloak.
 
 Workflows automate administrative tasks in response to realm events (e.g. disabling inactive users, sending notifications). This feature requires Keycloak 26.4 or later and must be enabled with `--features=workflows` at startup.
 

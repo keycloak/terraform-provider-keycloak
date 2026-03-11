@@ -157,7 +157,7 @@ func resourceKeycloakWorkflowImport(ctx context.Context, d *schema.ResourceData,
 	parts := strings.Split(d.Id(), "/")
 
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid import. Supported import format: {{realm}}/{{workflowId}}")
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realm}}/{{workflowId}}")
 	}
 
 	realm, id := parts[0], parts[1]
@@ -172,7 +172,7 @@ func resourceKeycloakWorkflowImport(ctx context.Context, d *schema.ResourceData,
 
 	diagnostics := resourceKeycloakWorkflowRead(ctx, d, meta)
 	if diagnostics.HasError() {
-		return nil, fmt.Errorf("error reading workflow: %s", diagnostics[0].Summary)
+		return nil, fmt.Errorf("Error reading workflow: %s", diagnostics[0].Summary)
 	}
 
 	return []*schema.ResourceData{d}, nil
