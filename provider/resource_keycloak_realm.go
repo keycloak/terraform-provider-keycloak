@@ -152,6 +152,7 @@ func resourceKeycloakRealm() *schema.Resource {
 		"passwordless_passkeys_enabled": {
 			Type:     schema.TypeBool,
 			Optional: true,
+			Computed: true,
 			Default:  false,
 		},
 	}
