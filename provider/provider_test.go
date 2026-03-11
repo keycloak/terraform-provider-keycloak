@@ -8,14 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/keycloak/terraform-provider-keycloak/helper"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-var testAccProviderFactories map[string]func() (*schema.Provider, error)
+var testAccProtoV5ProviderFactories map[string]func() (tfprotov5.ProviderServer, error)
 var testAccProvider *schema.Provider
 var keycloakClient *keycloak.KeycloakClient
 var testAccRealm *keycloak.Realm
@@ -41,9 +42,13 @@ func init() {
 		panic(err)
 	}
 	testAccProvider = KeycloakProvider(keycloakClient)
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
-		"keycloak": func() (*schema.Provider, error) {
-			return testAccProvider, nil
+	testAccProtoV5ProviderFactories = protoV5ProviderFactories(testAccProvider)
+}
+
+func protoV5ProviderFactories(provider *schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		"keycloak": func() (tfprotov5.ProviderServer, error) {
+			return provider.GRPCProvider(), nil
 		},
 	}
 }

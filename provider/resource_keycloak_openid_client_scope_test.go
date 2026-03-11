@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -18,9 +18,9 @@ func TestAccKeycloakClientScope_basic(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -43,9 +43,9 @@ func TestAccKeycloakClientScope_createAfterManualDestroy(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -73,9 +73,9 @@ func TestAccKeycloakClientScope_updateRealm(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_updateRealmBefore(clientScopeName),
@@ -100,9 +100,9 @@ func TestAccKeycloakClientScope_consentScreenText(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -126,9 +126,9 @@ func TestAccKeycloakClientScope_includeInTokenScope(t *testing.T) {
 	includeInTokenScope := false
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -155,9 +155,9 @@ func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 	guiOrder := acctest.RandIntRange(0, 1000)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -183,9 +183,9 @@ func TestAccKeycloakClientScope_extraConfig(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_withExtraConfigMap(clientScopeName, map[string]string{
@@ -307,8 +307,6 @@ func testAccCheckKeycloakClientScopeDestroy() resource.TestCheckFunc {
 }
 
 func getClientScopeFromState(s *terraform.State, resourceName string) (*keycloak.OpenidClientScope, error) {
-	keycloakClientScope := testAccProvider.Meta().(*keycloak.KeycloakClient)
-
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, fmt.Errorf("resource not found: %s", resourceName)
@@ -317,7 +315,7 @@ func getClientScopeFromState(s *terraform.State, resourceName string) (*keycloak
 	id := rs.Primary.ID
 	realm := rs.Primary.Attributes["realm_id"]
 
-	clientScope, err := keycloakClientScope.GetOpenidClientScope(testCtx, realm, id)
+	clientScope, err := keycloakClient.GetOpenidClientScope(testCtx, realm, id)
 	if err != nil {
 		return nil, fmt.Errorf("error getting openid client scope %s: %s", id, err)
 	}

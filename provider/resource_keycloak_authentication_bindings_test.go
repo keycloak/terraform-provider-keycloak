@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakAuthenticationBindings_browser(t *testing.T) {
@@ -15,8 +15,8 @@ func TestAccKeycloakAuthenticationBindings_browser(t *testing.T) {
 	flowAlias := "browserCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -33,8 +33,8 @@ func TestAccKeycloakAuthenticationBindings_browserWithRealm(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindingsWithRealm(realmName, flow, flowAlias),
@@ -49,8 +49,8 @@ func TestAccKeycloakAuthenticationBindings_registration(t *testing.T) {
 	flowAlias := "registrationCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -65,8 +65,8 @@ func TestAccKeycloakAuthenticationBindings_directGrant(t *testing.T) {
 	flowAlias := "directGrantCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -81,8 +81,8 @@ func TestAccKeycloakAuthenticationBindings_resetCredentialsGrant(t *testing.T) {
 	flowAlias := "resetCredentialsCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -97,8 +97,8 @@ func TestAccKeycloakAuthenticationBindings_clientAuthenticationGrant(t *testing.
 	flowAlias := "clientAuthenticationCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -113,8 +113,8 @@ func TestAccKeycloakAuthenticationBindings_dockerAuthenticationGrant(t *testing.
 	flowAlias := "dockerAuthenticationCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -130,8 +130,8 @@ func TestAccKeycloakAuthenticationBindings_firstBrokerLoginFlow(t *testing.T) {
 	flowAlias := "firstBrokerLoginCopyFlow"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
@@ -146,8 +146,8 @@ func TestAccKeycloakAuthenticationBindings_existingFlow(t *testing.T) {
 	flowAlias := "browser"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationBindings_existingFlow(testAccRealm.Realm, flow, flowAlias),
