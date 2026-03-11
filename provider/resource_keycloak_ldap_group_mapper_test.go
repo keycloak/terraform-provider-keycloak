@@ -12,6 +12,7 @@ import (
 )
 
 func TestAccKeycloakLdapGroupMapper_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
@@ -36,6 +37,7 @@ func TestAccKeycloakLdapGroupMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapGroupMapper_createAfterManualDestroy(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	var mapper = &keycloak.LdapGroupMapper{}
