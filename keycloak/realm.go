@@ -146,7 +146,7 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
 	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
 	WebAuthnPolicyPasswordlessUserVerificationRequirement     string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
-	WebAuthnPolicyPasswordlessPasskeysEnabled                 bool     `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
+	WebAuthnPolicyPasswordlessPasskeysEnabled                 *bool     `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`
