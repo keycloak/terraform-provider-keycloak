@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -15,7 +15,9 @@ import (
 var (
 	keycloakLdapUserFederationEditModes             = []string{"READ_ONLY", "WRITABLE", "UNSYNCED"}
 	keycloakLdapUserFederationVendors               = []string{"OTHER", "EDIRECTORY", "AD", "RHDS", "TIVOLI"}
+	keycloakLdapUserFederationDebug                 = []string{"false", "true"}
 	keycloakLdapUserFederationSearchScopes          = []string{"ONE_LEVEL", "SUBTREE"}
+	keycloakLdapUserFederationReferral              = []string{"ignore", "follow"}
 	keycloakLdapUserFederationTruststoreSpiSettings = []string{"ALWAYS", "ONLY_FOR_LDAPS", "NEVER"}
 	keycloakUserFederationCachePolicies             = []string{"DEFAULT", "EVICT_DAILY", "EVICT_WEEKLY", "MAX_LIFESPAN", "NO_CACHE"}
 )
@@ -133,6 +135,19 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Optional:    true,
 				Description: "Additional LDAP filter for filtering searched users. Must begin with '(' and end with ')'.",
 			},
+			"krb_principal_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Name of the LDAP attribute, which refers to Kerberos principal. This is used to lookup appropriate LDAP user after successful Kerberos/SPNEGO authentication in Keycloak. When this is empty, the LDAP user will be looked based on LDAP username corresponding to the first part of his Kerberos principal. For instance, for principal 'john@KEYCLOAK.ORG', it will assume that LDAP username is 'john'.",
+			},
+			"debug": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "false",
+				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationDebug, false),
+				Description:  "true: enables debug logging for Krb5LoginModule. false: disables debug logging for Krb5LoginModule",
+			},
 			"search_scope": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -140,12 +155,25 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationSearchScopes, false),
 				Description:  "ONE_LEVEL: only search for users in the DN specified by user_dn. SUBTREE: search entire LDAP subtree.",
 			},
+			"referral": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "ignore",
+				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationReferral, false),
+				Description:  "Specifies if LDAP referrals should be followed or ignored. Please note that enabling referrals can slow down authentication as it allows the LDAP server to decide which other LDAP servers to use. This could potentially include untrusted servers.",
+			},
 
 			"start_tls": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "When true, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.",
+			},
+			"connection_pooling": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, Keycloak will use connection pooling when connecting to LDAP.",
 			},
 			"use_password_modify_extended_op": {
 				Type:        schema.TypeBool,
@@ -338,9 +366,13 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		BindDn:                 data.Get("bind_dn").(string),
 		BindCredential:         data.Get("bind_credential").(string),
 		CustomUserSearchFilter: data.Get("custom_user_search_filter").(string),
+		KrbPrincipalAttribute:  data.Get("krb_principal_attribute").(string),
+		Debug:                  data.Get("debug").(string),
 		SearchScope:            data.Get("search_scope").(string),
+		Referral:               data.Get("referral").(string),
 
 		StartTls:                    data.Get("start_tls").(bool),
+		ConnectionPooling:           data.Get("connection_pooling").(bool),
 		UsePasswordModifyExtendedOp: data.Get("use_password_modify_extended_op").(bool),
 		ValidatePasswordPolicy:      data.Get("validate_password_policy").(bool),
 		TrustEmail:                  data.Get("trust_email").(bool),
@@ -409,9 +441,13 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("bind_dn", ldap.BindDn)
 	data.Set("bind_credential", ldap.BindCredential)
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)
+	data.Set("krb_principal_attribute", ldap.KrbPrincipalAttribute)
+	data.Set("debug", ldap.Debug)
 	data.Set("search_scope", ldap.SearchScope)
+	data.Set("referral", ldap.Referral)
 
 	data.Set("start_tls", ldap.StartTls)
+	data.Set("connection_pooling", ldap.ConnectionPooling)
 	data.Set("use_password_modify_extended_op", ldap.UsePasswordModifyExtendedOp)
 	data.Set("validate_password_policy", ldap.ValidatePasswordPolicy)
 	data.Set("trust_email", ldap.TrustEmail)

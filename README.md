@@ -22,7 +22,7 @@ terraform {
   required_providers {
     keycloak = {
       source = "keycloak/keycloak"
-      version = ">= 5.0.0"
+      version = ">= 5.7.0"
     }
   }
 }
@@ -44,18 +44,16 @@ If you are using the legacy Wildfly distribution of Keycloak, you will need to s
 
 ## Supported Versions
 
-This provider will officially support the latest three major versions of Keycloak, although older versions may still work.
+This provider will officially support the latest three minor versions of Keycloak, although older versions may still work.
 
 The following versions are used when running acceptance tests in CI:
 
-- 26.3.4 (latest)
+- 26.5.4 (latest)
+- 26.4.7
+- 26.3.5
 - 26.2.5
 - 26.1.4
 - 26.0.8
-- 25.0.6
-- 24.0.5
-- 23.0.7
-- 22.0.5
 
 ## Releases
 
@@ -74,7 +72,7 @@ build you can use the `linux_amd64` build as long as `libc6-compat` is installed
 
 ## Development
 
-This project requires Go 1.23 and Terraform 1.12.2.
+This project requires Go 1.25 and Terraform 1.14.0.
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependency management, which allows this project to exist outside an existing GOPATH.
 
 After cloning the repository, you can build the project by running `make build`.

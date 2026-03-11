@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +51,10 @@ func arrayOfStringsForTerraformResource(parts []string) string {
 
 func randomDurationString() string {
 	return (time.Duration(acctest.RandIntRange(1, 604800)) * time.Second).String()
+}
+
+func durationString(seconds int) string {
+	return (time.Duration(seconds) * time.Second).String()
 }
 
 func skipIfEnvSet(t *testing.T, envs ...string) {
@@ -110,4 +116,25 @@ func TestCheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func equalsIgnoreType(want, got interface{}) bool {
+	if reflect.DeepEqual(want, got) {
+		return true
+	}
+
+	// TODO this should be replaced with an actual comparison the json == json is a quick fix.
+	wantJSON, _ := json.Marshal(want)
+	gotJSON, _ := json.Marshal(got)
+
+	if string(wantJSON) == string(gotJSON) {
+		return true
+	}
+
+	// compare as strings (this handles "false" == false and "0" == 0)
+	if fmt.Sprintf("%v", want) == fmt.Sprintf("%v", got) {
+		return true
+	}
+
+	return false
 }

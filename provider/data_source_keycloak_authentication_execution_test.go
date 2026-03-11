@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"testing"
 
@@ -71,7 +70,6 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 }
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basicWithPriority(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_25)
 	t.Parallel()
 
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")

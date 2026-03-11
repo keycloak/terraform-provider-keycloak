@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"strings"
 )
 
 func resourceKeycloakAuthenticationSubFlow() *schema.Resource {
@@ -92,15 +93,7 @@ func mapFromAuthenticationSubFlowToData(ctx context.Context, keycloakClient *key
 	data.Set("description", authenticationSubFlow.Description)
 	data.Set("authenticator", authenticationSubFlow.Authenticator)
 	data.Set("requirement", authenticationSubFlow.Requirement)
-
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
-	if err != nil {
-		return err
-	}
-
-	if versionOk {
-		data.Set("priority", authenticationSubFlow.Priority)
-	}
+	data.Set("priority", authenticationSubFlow.Priority)
 	return nil
 }
 

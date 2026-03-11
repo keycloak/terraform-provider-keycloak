@@ -2,13 +2,14 @@ package provider
 
 import (
 	"fmt"
+	"slices"
+	"sort"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"slices"
-	"sort"
-	"testing"
 )
 
 func TestAccKeycloakRealmOptionalClientScopes_basic(t *testing.T) {

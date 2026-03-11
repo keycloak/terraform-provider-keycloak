@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
@@ -33,8 +34,9 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
@@ -44,16 +46,26 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"extra_config": {
+				Type:             schema.TypeMap,
+				Optional:         true,
+				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.SamlClientScopeAttributes{}).Elem()),
+			},
 		},
 	}
 }
 
 func getSamlClientScopeFromData(data *schema.ResourceData) *keycloak.SamlClientScope {
+
 	clientScope := &keycloak.SamlClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:      data.Id(),
+		RealmId: data.Get("realm_id").(string),
+		Name:    data.Get("name").(string),
+	}
+
+	description, descriptionOk := data.GetOkExists("description")
+	if descriptionOk {
+		clientScope.Description = description.(string)
 	}
 
 	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
@@ -67,6 +79,8 @@ func getSamlClientScopeFromData(data *schema.ResourceData) *keycloak.SamlClientS
 	if guiOrder := data.Get("gui_order").(int); guiOrder != 0 {
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
 	}
+
+	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
 
 	return clientScope
 }
@@ -85,6 +99,8 @@ func setSamlClientScopeData(data *schema.ResourceData, clientScope *keycloak.Sam
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	setExtraConfigData(data, clientScope.Attributes.ExtraConfig)
 }
 
 func resourceKeycloakSamlClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

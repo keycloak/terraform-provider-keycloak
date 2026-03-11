@@ -2,14 +2,15 @@ package provider
 
 import (
 	"fmt"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakClientScope_basic(t *testing.T) {
@@ -172,6 +173,40 @@ func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
 				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_extraConfig(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key1", "value1"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key2", "value2"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key2", "value2"),
+					testAccCheckKeycloakClientScopeExtraConfigMissing("keycloak_openid_client_scope.client_scope", "key1"),
+				),
 			},
 		},
 	})
@@ -388,4 +423,68 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	realm_id  = data.keycloak_realm.realm_2.id
 }
 	`, testAccRealm.Realm, testAccRealmTwo.Realm, clientScopeName)
+}
+
+// check that a particular extra config key is missing
+func testAccCheckKeycloakClientScopeExtraConfigMissing(resourceName string, key string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if val, ok := clientScope.Attributes.ExtraConfig[key]; ok {
+			// an empty string value is treated as removed (see setExtraConfigData)
+			if val == "" {
+				return nil
+			}
+
+			return fmt.Errorf("expected openid client scope to not have attribute %v, but got %v", key, val)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakClientScopeExtraConfigHasValue(resourceName, key, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		value, ok := clientScope.Attributes.ExtraConfig[key]
+		if !ok {
+			return fmt.Errorf("expected extra_config to contain key %q, but it was not found", key)
+		}
+
+		if value != expectedValue {
+			return fmt.Errorf("expected extra_config key %q to have value %q, but got %q", key, expectedValue, value)
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakClientScope_withExtraConfigMap(clientScopeName string, extraConfig map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("{\n")
+	for k, v := range extraConfig {
+		sb.WriteString(fmt.Sprintf("\t\t\"%s\" = \"%s\"\n", k, v))
+	}
+	sb.WriteString("\t}")
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name        = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	description = "test description"
+
+	extra_config = %s
+}
+	`, testAccRealm.Realm, clientScopeName, sb.String())
 }

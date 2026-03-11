@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 /*
@@ -128,7 +127,6 @@ func TestAccKeycloakOidcGithubIdentityProvider_extraConfigInvalid(t *testing.T) 
 }
 
 func TestAccKeycloakOidcGithubIdentityProvider_linkOrganization(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
@@ -183,11 +181,10 @@ func TestAccKeycloakOidcGithubIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     firstEnabled,
 		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
-			ClientId:        acctest.RandString(10),
-			ClientSecret:    acctest.RandString(10),
-			GuiOrder:        strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:        randomStringInSlice(syncModes),
-			HideOnLoginPage: types.KeycloakBoolQuoted(firstHideOnLogin),
+			ClientId:     acctest.RandString(10),
+			ClientSecret: acctest.RandString(10),
+			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:     randomStringInSlice(syncModes),
 		},
 	}
 
@@ -196,11 +193,10 @@ func TestAccKeycloakOidcGithubIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     !firstEnabled,
 		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
-			ClientId:        acctest.RandString(10),
-			ClientSecret:    acctest.RandString(10),
-			GuiOrder:        strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:        randomStringInSlice(syncModes),
-			HideOnLoginPage: types.KeycloakBoolQuoted(!firstHideOnLogin),
+			ClientId:     acctest.RandString(10),
+			ClientSecret: acctest.RandString(10),
+			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:     randomStringInSlice(syncModes),
 		},
 	}
 
@@ -363,7 +359,7 @@ resource "keycloak_oidc_github_identity_provider" "github" {
 	sync_mode                               = "%s"
 	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.ApiUrl, idp.Config.BaseUrl, idp.Config.GithubJsonFormat, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, bool(idp.Config.HideOnLoginPage))
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.ApiUrl, idp.Config.BaseUrl, idp.Config.GithubJsonFormat, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
 }
 
 func testKeycloakOidcGithubIdentityProvider_linkOrganization(organizationName string) string {

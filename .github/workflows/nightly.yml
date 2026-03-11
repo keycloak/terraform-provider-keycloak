@@ -1,0 +1,88 @@
+name: nightly
+on:
+  schedule:
+    - cron: "0 2 * * *" # run daily at 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  nightly:
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Compute nightly version
+        id: nightly_version
+        run: |
+          short_sha="$(git rev-parse --short HEAD)"
+          echo "version=nightly-${short_sha}" >> $GITHUB_OUTPUT
+
+      - name: GoReleaser (snapshot build, no publish)
+        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
+        with:
+          args: release --snapshot --clean --skip=publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GORELEASER_CURRENT_TAG: ${{ steps.nightly_version.outputs.version }}
+
+      - name: Move tag "nightly" to the built commit
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch --tags --force
+          git tag -f nightly "$sha"
+          git push origin refs/tags/nightly --force
+
+          echo "nightly tag now points to $sha"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create or update GitHub release "nightly"
+        run: |
+          set -euo pipefail
+
+          tag="nightly"
+          title="nightly"
+          notes="Automated nightly build. Updated on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+
+          # Create the release if it does not exist; otherwise update it
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$title" --notes "$notes" --prerelease
+          else
+            gh release create "$tag" --title "$title" --notes "$notes" --prerelease
+          fi
+
+          # Remove existing assets to avoid accumulation across runs
+          gh release view "$tag" --json assets --jq '.assets[].name' | while read -r name; do
+            gh release delete-asset "$tag" "$name" -y || true
+          done
+
+          shopt -s nullglob
+          files=(dist/*.zip dist/*SHA256SUMS dist/*SHA256SUMS.sig)
+          gh release upload "$tag" "${files[@]}" --clobber
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

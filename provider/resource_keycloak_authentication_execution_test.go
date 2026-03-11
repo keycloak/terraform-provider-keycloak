@@ -102,10 +102,6 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriority(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
-
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -130,10 +126,6 @@ func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriorit
 
 func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionPriority(t *testing.T) {
 	t.Parallel()
-
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
 
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 

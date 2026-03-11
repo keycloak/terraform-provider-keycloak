@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -72,15 +72,7 @@ func mapFromAuthenticationExecutionToData(ctx context.Context, keycloakClient *k
 	data.Set("parent_flow_alias", authenticationExecution.ParentFlowAlias)
 	data.Set("authenticator", authenticationExecution.Authenticator)
 	data.Set("requirement", authenticationExecution.Requirement)
-
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
-	if err != nil {
-		return err
-	}
-
-	if versionOk {
-		data.Set("priority", authenticationExecution.Priority)
-	}
+	data.Set("priority", authenticationExecution.Priority)
 
 	return nil
 }
@@ -90,15 +82,7 @@ func mapFromAuthenticationExecutionInfoToData(ctx context.Context, keycloakClien
 
 	data.Set("realm_id", authenticationExecutionInfo.RealmId)
 	data.Set("parent_flow_alias", authenticationExecutionInfo.ParentFlowAlias)
-
-	versionOk, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, keycloak.Version_25)
-	if err != nil {
-		return err
-	}
-
-	if versionOk {
-		data.Set("priority", authenticationExecutionInfo.Priority)
-	}
+	data.Set("priority", authenticationExecutionInfo.Priority)
 
 	return nil
 }

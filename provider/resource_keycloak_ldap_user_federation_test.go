@@ -161,6 +161,7 @@ func generateRandomLdapKerberos(enabled bool) *keycloak.LdapUserFederation {
 		BindCredential:                       acctest.RandString(10),
 		SearchScope:                          randomStringInSlice([]string{"ONE_LEVEL", "SUBTREE"}),
 		StartTls:                             true,
+		ConnectionPooling:                    false,
 		UsePasswordModifyExtendedOp:          true,
 		ValidatePasswordPolicy:               true,
 		UseTruststoreSpi:                     randomStringInSlice([]string{"ALWAYS", "ONLY_FOR_LDAPS", "NEVER"}),
@@ -181,6 +182,7 @@ func generateRandomLdapKerberos(enabled bool) *keycloak.LdapUserFederation {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
+		//Referral:                             "ignore",
 	}
 }
 
@@ -273,8 +275,10 @@ func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
 		UsersDn:                              acctest.RandString(10),
 		BindDn:                               acctest.RandString(10),
 		BindCredential:                       acctest.RandString(10),
+		Debug:                                randomStringInSlice([]string{"true", "false"}),
 		SearchScope:                          randomStringInSlice([]string{"ONE_LEVEL", "SUBTREE"}),
 		StartTls:                             firstStartTls,
+		ConnectionPooling:                    !firstStartTls,
 		UsePasswordModifyExtendedOp:          firstUsePasswordModifyExtendedOp,
 		ValidatePasswordPolicy:               firstValidatePasswordPolicy,
 		TrustEmail:                           firstTrustEmail,
@@ -312,8 +316,11 @@ func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
 		UsersDn:                              acctest.RandString(10),
 		BindDn:                               acctest.RandString(10),
 		BindCredential:                       acctest.RandString(10),
+		KrbPrincipalAttribute:                "sAMAccountName",
+		Debug:                                randomStringInSlice([]string{"true", "false"}),
 		SearchScope:                          randomStringInSlice([]string{"ONE_LEVEL", "SUBTREE"}),
 		StartTls:                             !firstStartTls,
+		ConnectionPooling:                    firstStartTls,
 		UsePasswordModifyExtendedOp:          !firstUsePasswordModifyExtendedOp,
 		ValidatePasswordPolicy:               !firstValidatePasswordPolicy,
 		TrustEmail:                           secondTrustEmail,
@@ -666,6 +673,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap)
 }
@@ -694,6 +702,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 
 	edit_mode                       = "%s"
 	start_tls                       = %t
+	connection_pooling              = %t
 	use_password_modify_extended_op = %t
 	validate_password_policy        = %t
 	trust_email                     = %t
@@ -721,7 +730,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 		eviction_minute      = %d
 	}
 }
-	`, testAccRealmUserFederation.Realm, ldap.Name, ldap.Enabled, ldap.UsernameLDAPAttribute, ldap.RdnLDAPAttribute, ldap.UuidLDAPAttribute, arrayOfStringsForTerraformResource(ldap.UserObjectClasses), ldap.ConnectionUrl, ldap.UsersDn, ldap.BindDn, ldap.BindCredential, ldap.SearchScope, ldap.EditMode, ldap.StartTls, ldap.UsePasswordModifyExtendedOp, ldap.ValidatePasswordPolicy, ldap.TrustEmail, ldap.UseTruststoreSpi, ldap.ConnectionTimeout, ldap.ReadTimeout, ldap.Pagination, ldap.BatchSizeForSync, ldap.FullSyncPeriod, ldap.ChangedSyncPeriod, ldap.ServerPrincipal, ldap.UseKerberosForPasswordAuthentication, ldap.KeyTab, ldap.KerberosRealm, ldap.CachePolicy, ldap.MaxLifespan, *ldap.EvictionDay, *ldap.EvictionHour, *ldap.EvictionMinute)
+	`, testAccRealmUserFederation.Realm, ldap.Name, ldap.Enabled, ldap.UsernameLDAPAttribute, ldap.RdnLDAPAttribute, ldap.UuidLDAPAttribute, arrayOfStringsForTerraformResource(ldap.UserObjectClasses), ldap.ConnectionUrl, ldap.UsersDn, ldap.BindDn, ldap.BindCredential, ldap.SearchScope, ldap.EditMode, ldap.StartTls, ldap.ConnectionPooling, ldap.UsePasswordModifyExtendedOp, ldap.ValidatePasswordPolicy, ldap.TrustEmail, ldap.UseTruststoreSpi, ldap.ConnectionTimeout, ldap.ReadTimeout, ldap.Pagination, ldap.BatchSizeForSync, ldap.FullSyncPeriod, ldap.ChangedSyncPeriod, ldap.ServerPrincipal, ldap.UseKerberosForPasswordAuthentication, ldap.KeyTab, ldap.KerberosRealm, ldap.CachePolicy, ldap.MaxLifespan, *ldap.EvictionDay, *ldap.EvictionHour, *ldap.EvictionMinute)
 }
 
 func testKeycloakLdapUserFederation_basicWithAttrValidation(attr, ldap, val string) string {
@@ -749,6 +758,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap, attr, val)
 }
@@ -766,6 +776,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	enabled                 = true
 
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	username_ldap_attribute = "cn"
 	rdn_ldap_attribute      = "cn"
@@ -830,6 +841,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	full_sync_period        = %d
 	changed_sync_period     = %d
@@ -860,6 +872,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	connection_timeout      = "10s"
 	read_timeout            = "5s"
@@ -942,6 +955,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+    referral                     = "ignore"
 
 	delete_default_mappers = true
 }

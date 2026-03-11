@@ -677,8 +677,8 @@ resource "keycloak_saml_client" "saml_client" {
   sign_assertions         = true
   include_authn_statement = true
 
-  signing_certificate = file("../provider/misc/saml-cert.pem")
-  signing_private_key = file("../provider/misc/saml-key.pem")
+  signing_certificate = file("../provider/testdata/saml-cert.pem")
+  signing_private_key = file("../provider/testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_mapper" {
@@ -712,6 +712,17 @@ resource "keycloak_oidc_identity_provider" "oidc" {
   default_scopes    = "openid random profile"
   sync_mode         = "FORCE"
   gui_order         = 1
+}
+
+resource "keycloak_oidc_facebook_identity_provider" "facebook" {
+  realm                                   = keycloak_realm.test.id
+  client_id                               = "myclientid.apps.facebookusercontent.com"
+  client_secret                           = "myclientsecret"
+  fetched_fields                          = "picture"
+  default_scopes                          = "openid random profile"
+  accepts_prompt_none_forward_from_client = false
+  sync_mode                               = "FORCE"
+  gui_order                               = 2
 }
 
 resource "keycloak_oidc_google_identity_provider" "google" {
@@ -923,12 +934,6 @@ data "keycloak_openid_client" "broker" {
   client_id = "broker"
 }
 
-data "keycloak_openid_client_authorization_policy" "default" {
-  realm_id           = keycloak_realm.test.id
-  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
-  name               = "default"
-}
-
 resource "keycloak_openid_client" "test_client_auth" {
   client_id   = "test-client-auth"
   name        = "test-client-auth"
@@ -985,6 +990,14 @@ resource "keycloak_openid_client" "test_open_id_client_with_consent_text" {
   consent_screen_text       = "some consent screen text"
 }
 
+resource "keycloak_openid_client_client_policy" "testpolicy" {
+  realm_id           = keycloak_realm.test.id
+  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
+  name               = "test-policy"
+  logic = "POSITIVE"
+  decision_strategy = "AFFIRMATIVE"
+  clients = ["${keycloak_openid_client.test_client_auth.resource_server_id}"]
+}
 
 resource "keycloak_openid_client_authorization_permission" "resource" {
   resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
@@ -992,7 +1005,7 @@ resource "keycloak_openid_client_authorization_permission" "resource" {
   name               = "test"
 
   policies = [
-    data.keycloak_openid_client_authorization_policy.default.id,
+    keycloak_openid_client_client_policy.testpolicy.id,
   ]
 
   resources = [
@@ -1226,6 +1239,44 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
     configuration = {
       "is-negative-logic" = false
       "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
+    }
+  }
+}
+
+resource "keycloak_realm_client_policy_profile" "additional_profile" {
+  name     = "additional-profile"
+  realm_id = keycloak_realm.test.id
+  executor {
+    name = "intent-client-bind-checker"
+    configuration = {
+      auto-configure = true
+    }
+  }
+  executor {
+    name = "secure-session"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "additional_policy" {
+  name        = "additional-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some additional desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.additional_profile.name
+  ]
+
+  condition {
+    name = "client-type"
+    configuration = {
+      "protocol" = "openid-connect"
+    }
+  }
+
+  condition {
+    name = "client-roles"
+    configuration = {
+      "is-negative-logic" = false
+      "roles"        = jsonencode(["Role_A"])
     }
   }
 }

@@ -343,10 +343,10 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
-	offlineSessionIdleTimeout := "1800"
-	offlineSessionMaxLifespan := "1900"
-	sessionIdleTimeout := "2000"
-	sessionMaxLifespan := "2100"
+	offlineSessionIdleTimeout := "180"
+	offlineSessionMaxLifespan := "190"
+	sessionIdleTimeout := "200"
+	sessionMaxLifespan := "210"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -372,10 +372,6 @@ func TestAccKeycloakOpenidClient_ClientTimeouts_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -912,10 +908,6 @@ func TestAccKeycloakOpenidClient_extraConfigInvalid(t *testing.T) {
 }
 
 func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !ok {
-		t.Skip()
-	}
-
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -969,6 +961,66 @@ func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 					testAccCheckKeycloakOpenidClientExistsWithRegeneratedSecret("keycloak_openid_client.client", client),
 					testAccCheckKeycloakOpenidClientFetch("keycloak_openid_client.client", client, true),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_descriptionCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	configWithDescription := testAccKeycloakOpenidClientWithDescription(realmName, clientId, "initial")
+	configWithEmptyDescription := testAccKeycloakOpenidClientWithDescription(realmName, clientId, "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: configWithDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "client_id", clientId),
+					resource.TestCheckResourceAttr(resourceName, "description", "initial"),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_withAuthorization(clientId),
+			},
+			{
+				ResourceName:            "keycloak_openid_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateIdPrefix:     testAccRealm.Realm + "/",
+				ImportStateVerifyIgnore: []string{"exclude_session_state_from_auth_response", "exclude_issuer_from_auth_response"},
 			},
 		},
 	})
@@ -1451,16 +1503,7 @@ func testAccCheckKeycloakOpenidClientExtraConfigMissing(resourceName string, key
 			return err
 		}
 
-		if val, ok := client.Attributes.ExtraConfig[key]; ok {
-			// keycloak 13+ will remove attributes if set to empty string. on older versions, we'll just check if this value is empty
-			if versionOk, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); !versionOk {
-				if val != "" {
-					return fmt.Errorf("expected openid client to have empty attribute %v", key)
-				}
-
-				return nil
-			}
-
+		if _, ok := client.Attributes.ExtraConfig[key]; ok {
 			return fmt.Errorf("expected openid client to not have attribute %v", key)
 		}
 
@@ -1525,6 +1568,28 @@ resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "CONFIDENTIAL"
+}
+	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_withAuthorization(clientId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+
+	authorization {
+		policy_enforcement_mode         = "ENFORCING"
+		decision_strategy               = "UNANIMOUS"
+		allow_remote_resource_management = false
+		keep_defaults                   = false
+	}
 }
 	`, testAccRealm.Realm, clientId)
 }
@@ -2105,4 +2170,21 @@ resource "keycloak_openid_client" "client" {
 	import      = true
 }
 	`, testAccRealm.Realm, clientId, enabled)
+}
+
+func testAccKeycloakOpenidClientWithDescription(realm, clientId, description string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "test" {
+  realm   = "%s"
+  enabled = true
+}
+
+resource "keycloak_openid_client" "client" {
+  realm_id    = keycloak_realm.test.id
+  client_id   = "%s"
+  access_type = "CONFIDENTIAL"
+
+  description = "%s"
+}
+`, realm, clientId, description)
 }

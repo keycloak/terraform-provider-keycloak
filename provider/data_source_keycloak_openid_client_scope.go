@@ -37,6 +37,11 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			"extra_config": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }

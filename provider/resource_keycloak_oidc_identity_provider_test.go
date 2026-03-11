@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakOidcIdentityProvider_basic(t *testing.T) {
@@ -132,7 +131,6 @@ func TestAccKeycloakOidcIdentityProvider_keyDefaultScopes(t *testing.T) {
 }
 
 func TestAccKeycloakOidcIdentityProvider_linkOrganization(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	t.Parallel()
 
 	oidcName := acctest.RandomWithPrefix("tf-acc")
@@ -202,7 +200,6 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:     acctest.RandString(10),
 			GuiOrder:         strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:         randomStringInSlice(syncModes),
-			HideOnLoginPage:  types.KeycloakBoolQuoted(firstHideOnLogin),
 		},
 	}
 
@@ -218,7 +215,6 @@ func TestAccKeycloakOidcIdentityProvider_basicUpdateAll(t *testing.T) {
 			ClientSecret:     acctest.RandString(10),
 			GuiOrder:         strconv.Itoa(acctest.RandIntRange(1, 3)),
 			SyncMode:         randomStringInSlice(syncModes),
-			HideOnLoginPage:  types.KeycloakBoolQuoted(!firstHideOnLogin),
 		},
 	}
 
@@ -452,7 +448,7 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	sync_mode          = "%s"
     hide_on_login_page = %t
 }
-	`, testAccRealm.Realm, oidc.Alias, oidc.Enabled, oidc.Config.AuthorizationUrl, oidc.Config.TokenUrl, oidc.Config.ClientId, oidc.Config.ClientSecret, oidc.Config.GuiOrder, oidc.Config.SyncMode, bool(oidc.Config.HideOnLoginPage))
+	`, testAccRealm.Realm, oidc.Alias, oidc.Enabled, oidc.Config.AuthorizationUrl, oidc.Config.TokenUrl, oidc.Config.ClientId, oidc.Config.ClientSecret, oidc.Config.GuiOrder, oidc.Config.SyncMode, oidc.HideOnLogin)
 }
 
 func testKeycloakOidcIdentityProvider_linkOrganization(oidc, organizationName string) string {

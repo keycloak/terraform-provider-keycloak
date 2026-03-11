@@ -2,10 +2,11 @@ package keycloak
 
 import (
 	"encoding/json"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func unmarshalExtraConfig(data []byte, reflectValue reflect.Value, extraConfig *map[string]interface{}) error {
