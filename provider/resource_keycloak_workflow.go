@@ -110,7 +110,7 @@ func getWorkflowFromData(data *schema.ResourceData) *keycloak.Workflow {
 			if cfgRaw, ok := stepMap["config"]; ok {
 				config := make(map[string][]string)
 				for k, val := range cfgRaw.(map[string]interface{}) {
-					config[k] = []string{val.(string)}
+					config[k] = strings.Split(val.(string), MULTIVALUE_ATTRIBUTE_SEPARATOR)
 				}
 				step.Config = config
 			}
@@ -142,7 +142,7 @@ func setWorkflowData(data *schema.ResourceData, workflow *keycloak.Workflow) {
 			config := make(map[string]interface{})
 			for k, vals := range step.Config {
 				if len(vals) > 0 {
-					config[k] = vals[0]
+					config[k] = strings.Join(vals, MULTIVALUE_ATTRIBUTE_SEPARATOR)
 				}
 			}
 			stepMap["config"] = config
