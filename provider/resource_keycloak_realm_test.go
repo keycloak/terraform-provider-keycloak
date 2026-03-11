@@ -1050,7 +1050,6 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
 	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
 	avoidSameAuthenticatorRegister := randomBool()
-	passwordlessPasskeysEnabled := randomBool()
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
@@ -1061,6 +1060,37 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 				Config: testKeycloakRealm_webauthn_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister),
 				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 			},
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_3); !ok {
+		t.Skip()
+	}
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+	rpName := acctest.RandomWithPrefix("tf-acc")
+	rpId := acctest.RandomWithPrefix("tf-acc")
+	attestationConveyancePreference := randomStringInSlice([]string{"none", "indirect", "not specified"})
+	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
+	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
+	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
+	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	avoidSameAuthenticatorRegister := randomBool()
+	passwordlessPasskeysEnabled := randomBool()
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealm_webauthn_passwordless_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister, passwordlessPasskeysEnabled),
 				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
