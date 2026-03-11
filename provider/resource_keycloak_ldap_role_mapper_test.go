@@ -12,7 +12,6 @@ import (
 )
 
 func TestAccKeycloakLdapRoleMapper_basic(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	roleMapperName := acctest.RandomWithPrefix("tf-acc")

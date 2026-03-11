@@ -111,7 +111,6 @@ func TestAccKeycloakLdapFullNameMapper_writableValidation(t *testing.T) {
 }
 
 func TestAccKeycloakLdapFullNameMapper_updateLdapUserFederation(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	mapperName := acctest.RandomWithPrefix("tf-acc")
