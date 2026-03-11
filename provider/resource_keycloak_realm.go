@@ -153,7 +153,6 @@ func resourceKeycloakRealm() *schema.Resource {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
-			Default:  false,
 		},
 	}
 	return &schema.Resource{
