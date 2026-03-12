@@ -14,9 +14,9 @@ data "keycloak_realm" "realm" {
   realm = "my-realm"
 }
 
-data "keycloak_workflow" "disable_inactive" {
+data "keycloak_workflow" "onboarding" {
   realm = data.keycloak_realm.realm.id
-  name  = "disable-inactive-users"
+  name  = "onboarding-new-users"
 }
 ```
 

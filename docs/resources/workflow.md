@@ -6,17 +6,17 @@ page_title: "keycloak_workflow Resource"
 
 Allows creating and managing workflows within Keycloak.
 
-Workflows automate administrative tasks in response to realm events (e.g. disabling inactive users, sending notifications). This feature requires Keycloak 26.4 or later and must be enabled with `--features=workflows` at startup.
+Workflows automate administrative tasks in response to realm events (e.g. onboarding new users, sending notifications). This feature requires Keycloak 26.4 or later and must be enabled with `--features=workflows` at startup.
 
 ## Example Usage
 
-### Disable inactive users
+### Onboard new users
 
 This example mirrors the [official Keycloak workflow guide](https://www.keycloak.org/docs/latest/server_admin/index.html#_understanding_workflow_definition_).
-The workflow triggers on every `user_authenticated` event and resets on the same event.
-Users who do not hold the `realm-management/realm-admin` role will first receive
-a warning notification, and then have their account disabled — each step running
-30 seconds after the previous one.
+The example workflow sends the user a welcome notification, then requires them to update their password after 30 days.
+Finally, it restarts the workflow so the password update requirement repeats every 30 days.
+
+The workflow triggers on every `user_created` event.
 
 ```hcl
 resource "keycloak_realm" "realm" {
@@ -24,24 +24,40 @@ resource "keycloak_realm" "realm" {
   enabled = true
 }
 
-resource "keycloak_workflow" "disable_inactive" {
-  realm              = keycloak_realm.realm.name
-  name               = "disable inactive users"
-  on                 = "user_authenticated"
-  restart_in_progress = "user_authenticated"
+resource "keycloak_workflow" "onboarding" {
+  realm              = keycloak_realm.realm.id
+  name               = "onboarding-new-users"
+  on                 = "user_created"
   enabled            = true
 
   step {
-    uses  = "notify-user"
-    after = "30000"
+    uses = "notify-user"
     config = {
-      custom_message = "Your account can be disabled due to inactivity!"
+      message = <<-EOT
+        <p>Dear $${user.firstName} $${user.lastName}, </p>
+        <p>Welcome to $${realm.displayName}!</p>
+        <p>
+           Best regards,<br/>
+           The Keycloak Team
+        </p>
+      EOT
     }
   }
 
   step {
-    uses  = "disable-user"
-    after = "30000"
+    uses  = "set-user-required-action"
+    after = "2592000000" # 30 days in milliseconds
+    config = {
+      action = "UPDATE_PASSWORD"
+    }
+  }
+
+  # restart is a workflow control-flow step (loop back to step 1)
+  step {
+    uses = "restart"
+    config = {
+      position = "1"
+    }
   }
 }
 ```
@@ -50,7 +66,7 @@ resource "keycloak_workflow" "disable_inactive" {
 
 ```hcl
 resource "keycloak_workflow" "offboard" {
-  realm   = keycloak_realm.realm.name
+  realm   = keycloak_realm.realm.id
   name    = "offboard-users"
   on      = "user_created"
   enabled = true
@@ -83,13 +99,13 @@ resource "keycloak_workflow" "offboard" {
 
 ### Step arguments
 
-- `uses` - (Required) The step type. Built-in values: `disable-user`, `delete-user`, `notify-user`.
+- `uses` - (Required) The step type. Built-in values: `disable-user`, `delete-user`, `notify-user`, `set-user-required-action`, `set-user-attribute`.
 - `after` - (Optional) Delay in milliseconds before executing this step.
 - `config` - (Optional) A map of key-value pairs configuring the step (e.g. `emailTemplate` for `notify-user`).
 
 ## Import
 
-Workflows can be imported using the format `{{realm_id}}/{{workflow_id}}`, where `workflow_id` is the unique ID Keycloak assigns upon creation.
+Workflows can be imported using the format `{{realm}}/{{workflow_id}}`, where `realm` is the realm name and `workflow_id` is the unique ID Keycloak assigns upon creation.
 
 ```bash
 $ terraform import keycloak_workflow.disable_inactive my-realm/cec54914-b702-4c7b-9431-b407817d059a
