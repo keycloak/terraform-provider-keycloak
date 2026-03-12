@@ -1093,7 +1093,17 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealm_webauthn_passwordless_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister, passwordlessPasskeysEnabled),
-				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_passwordless_policy.0.passwordless_passkeys_enabled", fmt.Sprintf("%t", passwordlessPasskeysEnabled)),
+				),
+			},
+			{
+				Config: testKeycloakRealm_webauthn_passwordless_policy(realmName, realmDisplayName, realmDisplayNameHtml, rpName, rpId, attestationConveyancePreference, authenticatorAttachment, requireResidentKey, userVerificationRequirement, signatureAlgorithms, avoidSameAuthenticatorRegister, !passwordlessPasskeysEnabled),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_passwordless_policy.0.passwordless_passkeys_enabled", fmt.Sprintf("%t", !passwordlessPasskeysEnabled)),
+				),
 			},
 			{
 				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
