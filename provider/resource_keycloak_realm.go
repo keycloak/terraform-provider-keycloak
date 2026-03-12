@@ -152,7 +152,7 @@ func resourceKeycloakRealm() *schema.Resource {
 		"passwordless_passkeys_enabled": {
 			Type:     schema.TypeBool,
 			Optional: true,
-			Computed: true,
+			Default:  false,
 		},
 	}
 	return &schema.Resource{
@@ -1239,8 +1239,21 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment = webAuthnPolicyPasswordlessAuthenticatorAttachment.(string)
 		}
 
-		if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
-			realm.WebAuthnPolicyPasswordlessPasskeysEnabled = webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+		supportsPasskeys := true
+		if minSupportedVersion, err := version.NewVersion("26.3.5"); err == nil {
+			if keycloakVersion.LessThan(minSupportedVersion) {
+				supportsPasskeys = false
+			}
+		}
+
+		if supportsPasskeys {
+			if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
+				passkeysEnabled := webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			} else {
+				passkeysEnabled := false
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			}
 		}
 
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
@@ -1472,7 +1485,15 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
-	webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+	if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
+		webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+	} else {
+		if minVersion, err := version.NewVersion("26.3.5"); err == nil {
+			if keycloakVersion.GreaterThanOrEqual(minVersion) {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = false
+			}
+		}
+	}
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
