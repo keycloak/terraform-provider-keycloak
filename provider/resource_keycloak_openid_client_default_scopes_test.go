@@ -136,6 +136,22 @@ func TestAccKeycloakOpenidClientDefaultScopes_validateClientAccessType(t *testin
 	})
 }
 
+func TestAccKeycloakOpenidClientDefaultScopes_validateScopeDoesNotExist(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakOpenidClientDefaultScopes_listOfScopes(client, acctest.RandomWithPrefix("tf-acc"), []string{"profile", "non_existent_scope_that_should_fail"}),
+				ExpectError: regexp.MustCompile("scope .+ does not exist"),
+			},
+		},
+	})
+}
+
 // if a default client scope is manually detached from a client with default scopes controlled by this resource, terraform should add it again
 func TestAccKeycloakOpenidClientDefaultScopes_authoritativeAdd(t *testing.T) {
 	t.Parallel()
