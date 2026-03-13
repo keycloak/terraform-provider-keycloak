@@ -64,7 +64,9 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `connection_url` - (Required) Connection URL to the LDAP server.
 - `users_dn` - (Required) Full DN of LDAP tree where your users are.
 - `bind_dn` - (Optional) DN of LDAP admin, which will be used by Keycloak to access LDAP server. This attribute must be set if `bind_credential` is set.
-- `bind_credential` - (Optional) Password of LDAP admin. This attribute must be set if `bind_dn` is set.
+- `bind_credential` - (Optional) Password of LDAP admin. This attribute must be set if `bind_dn` is set. Conflicts with `bind_credential_wo` and `bind_credential_wo_version`.
+- `bind_credential_wo` - (Optional, Write-Only) Password of LDAP admin as a write-only argument for ephemeral values. Must be set together with `bind_credential_wo_version` and conflicts with `bind_credential`.
+- `bind_credential_wo_version` - (Optional) Version for `bind_credential_wo`. Increment this value to rotate the write-only credential. Must be set together with `bind_credential_wo` and conflicts with `bind_credential`.
 - `custom_user_search_filter` - (Optional) Additional LDAP filter for filtering searched users. Must begin with `(` and end with `)`.
 - `krb_principal_attribute` - (Optional) Name of the LDAP attribute, which refers to Kerberos principal. This is used to lookup appropriate LDAP user after successful Kerberos/SPNEGO authentication in Keycloak. When this is empty, the LDAP user will be looked based on LDAP username corresponding to the first part of his Kerberos principal. For instance, for principal 'john@KEYCLOAK.ORG', it will assume that LDAP username is 'john'.
 - `debug` - (Optional) Can be one of `true` or `false`. Will enable/disable logging for Kerberos Authentication. Defaults to `false`:
@@ -103,7 +105,12 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `delete_default_mappers` - (Optional) When true, the provider will delete the default mappers which are normally created by Keycloak when creating an LDAP user federation provider. Defaults to `false`.
 ## Import
 
-LDAP user federation providers can be imported using the format `{{realm_id}}/{{ldap_user_federation_id}}`.
+LDAP user federation providers can be imported using one of these formats:
+- `{{realm_id}}/{{ldap_user_federation_id}}`
+- `{{realm_id}}/{{ldap_user_federation_id}}/{{bind_credential}}` (required when using `bind_credential` and LDAP bind authentication)
+
+When using `bind_credential_wo`, import with `{{realm_id}}/{{ldap_user_federation_id}}` and then configure `bind_credential_wo` and `bind_credential_wo_version` in Terraform.
+
 The ID of the LDAP user federation provider can be found within the Keycloak GUI and is typically a GUID:
 
 ```bash
