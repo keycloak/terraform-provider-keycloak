@@ -258,6 +258,7 @@ Each of these attributes are blocks with the following attributes:
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
 - `extra_origins` - (Optional) A set of extra origins for non-web applications.
+- `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. Defaults to `false`.
 
 ## Default Client Scopes
 
