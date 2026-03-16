@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.5.4'
+          - '26.5.5'
           - '26.4.7'
           - '26.3.5'
           - '26.2.5'
@@ -88,7 +88,7 @@ jobs:
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
           MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
-          if [[ "${{ matrix.keycloak-version }}" == "26.5.4" || "${{ matrix.keycloak-version }}" == "26.4.7"|| "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.5.5" || "${{ matrix.keycloak-version }}" == "26.4.7"|| "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
 
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
@@ -145,7 +145,7 @@ jobs:
         timeout-minutes: 60
 # Only run mtls test for the later versions
       - name: Test (auth with mtls client certificate)
-        if: matrix.keycloak-version == '26.5.4' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download
@@ -167,7 +167,7 @@ jobs:
         timeout-minutes: 60
 
       - name: Test (auth with provided access token)
-        if: matrix.keycloak-version == '26.5.4' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download

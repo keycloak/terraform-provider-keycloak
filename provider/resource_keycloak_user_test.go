@@ -324,6 +324,58 @@ func TestAccKeycloakUser_import(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakUser_multiValuedAttributeNoDrift(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
+
+	attributeValue := "role-1##role-2##role-3##role-4##role-5##role-6##role-7##role-8##role-9##role-10"
+	resourceName := "keycloak_user.user"
+
+	var user keycloak.User
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakUser_basic(username, attributeName, attributeValue),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "attributes."+attributeName, attributeValue),
+					testAccCheckKeycloakUserFetch(resourceName, &user),
+				),
+			},
+			{
+				PreConfig: func() {
+					// right now, Keycloak won't persist different order of items in a collection
+					// if existing collection with roles has same items, so in order to achieve a different order
+					// we need to first put there a different attribute and then the original items in a different order
+					fullUser, err := keycloakClient.GetUser(testCtx, user.RealmId, user.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					fullUser.Attributes = map[string][]string{
+						attributeName: {"dummy"},
+					}
+					if err = keycloakClient.UpdateUser(testCtx, fullUser); err != nil {
+						t.Fatal(err)
+					}
+					fullUser.Attributes = map[string][]string{
+						attributeName: {"role-5", "role-3", "role-10", "role-1", "role-8", "role-2", "role-9", "role-4", "role-7", "role-6"},
+					}
+					if err = keycloakClient.UpdateUser(testCtx, fullUser); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakUser_basic(username, attributeName, attributeValue),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakUserNotDestroyed() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {

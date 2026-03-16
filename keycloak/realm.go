@@ -89,15 +89,16 @@ type Realm struct {
 
 	BrowserSecurityHeaders BrowserSecurityHeaders `json:"browserSecurityHeaders"`
 
-	BruteForceProtected          bool `json:"bruteForceProtected"`
-	PermanentLockout             bool `json:"permanentLockout"`
-	MaxTemporaryLockouts         int  `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
-	FailureFactor                int  `json:"failureFactor"`                  //Max Login Failures
-	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
-	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
-	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
-	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
-	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+	BruteForceProtected          bool   `json:"bruteForceProtected"`
+	PermanentLockout             bool   `json:"permanentLockout"`
+	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`   // Strategy to increase wait time
+	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
+	FailureFactor                int    `json:"failureFactor"`                  //Max Login Failures
+	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
+	QuickLoginCheckMilliSeconds  int    `json:"quickLoginCheckMilliSeconds"`
+	MinimumQuickLoginWaitSeconds int    `json:"minimumQuickLoginWaitSeconds"`
+	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
+	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
 	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
 

@@ -297,6 +297,16 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 		return err
 	}
 
+	foundNames := make(map[string]bool, len(allOpenidClientScopes))
+	for _, s := range allOpenidClientScopes {
+		foundNames[s.Name] = true
+	}
+	for _, name := range scopeNames {
+		if !foundNames[name] {
+			return fmt.Errorf("validation error: scope %s does not exist", name)
+		}
+	}
+
 	var attachedClientScopes []*OpenidClientScope
 	var duplicateScopeAssignmentErrorMessage string
 	switch t {
