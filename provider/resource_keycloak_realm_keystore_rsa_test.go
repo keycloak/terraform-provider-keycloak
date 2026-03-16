@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -27,9 +27,9 @@ func TestAccKeycloakRealmKeystoreRsa_basic(t *testing.T) {
 	privateKey, certificate := generateKeyAndCert(2048)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsa_basic(rsaName, privateKey, certificate),
@@ -54,9 +54,9 @@ func TestAccKeycloakRealmKeystoreRsa_createAfterManualDestroy(t *testing.T) {
 	privateKey, certificate := generateKeyAndCert(2048)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsa_basic(fullNameKeystoreName, privateKey, certificate),
@@ -84,9 +84,9 @@ func TestAccKeycloakRealmKeystoreRsa_algorithmValidation(t *testing.T) {
 	privateKey, certificate := generateKeyAndCert(2048)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsa_basicWithAttrValidation("rsa", rsaAlgorithm, "algorithm",
@@ -120,9 +120,9 @@ func TestAccKeycloakRealmKeystoreRsa_extraConfigKid(t *testing.T) {
 	privateKey, certificate := generateKeyAndCert(2048)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsa_withKidExtraConfig(rsaName, privateKey, certificate, kid),

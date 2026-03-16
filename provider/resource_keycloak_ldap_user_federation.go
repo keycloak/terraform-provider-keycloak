@@ -17,6 +17,7 @@ var (
 	keycloakLdapUserFederationVendors               = []string{"OTHER", "EDIRECTORY", "AD", "RHDS", "TIVOLI"}
 	keycloakLdapUserFederationDebug                 = []string{"false", "true"}
 	keycloakLdapUserFederationSearchScopes          = []string{"ONE_LEVEL", "SUBTREE"}
+	keycloakLdapUserFederationReferral              = []string{"ignore", "follow"}
 	keycloakLdapUserFederationTruststoreSpiSettings = []string{"ALWAYS", "ONLY_FOR_LDAPS", "NEVER"}
 	keycloakUserFederationCachePolicies             = []string{"DEFAULT", "EVICT_DAILY", "EVICT_WEEKLY", "MAX_LIFESPAN", "NO_CACHE"}
 )
@@ -154,7 +155,13 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationSearchScopes, false),
 				Description:  "ONE_LEVEL: only search for users in the DN specified by user_dn. SUBTREE: search entire LDAP subtree.",
 			},
-
+			"referral": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "ignore",
+				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationReferral, false),
+				Description:  "Specifies if LDAP referrals should be followed or ignored. Please note that enabling referrals can slow down authentication as it allows the LDAP server to decide which other LDAP servers to use. This could potentially include untrusted servers.",
+			},
 			"start_tls": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -361,6 +368,7 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		KrbPrincipalAttribute:  data.Get("krb_principal_attribute").(string),
 		Debug:                  data.Get("debug").(string),
 		SearchScope:            data.Get("search_scope").(string),
+		Referral:               data.Get("referral").(string),
 
 		StartTls:                    data.Get("start_tls").(bool),
 		ConnectionPooling:           data.Get("connection_pooling").(bool),
@@ -435,6 +443,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("krb_principal_attribute", ldap.KrbPrincipalAttribute)
 	data.Set("debug", ldap.Debug)
 	data.Set("search_scope", ldap.SearchScope)
+	data.Set("referral", ldap.Referral)
 
 	data.Set("start_tls", ldap.StartTls)
 	data.Set("connection_pooling", ldap.ConnectionPooling)

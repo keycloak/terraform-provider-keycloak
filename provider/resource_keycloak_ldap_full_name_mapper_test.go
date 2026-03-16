@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -17,9 +17,9 @@ func TestAccKeycloakLdapFullNameMapper_basic(t *testing.T) {
 	fullNameMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapFullNameMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapFullNameMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapFullNameMapper_basic(fullNameMapperName),
@@ -43,9 +43,9 @@ func TestAccKeycloakLdapFullNameMapper_createAfterManualDestroy(t *testing.T) {
 	fullNameMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapFullNameMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapFullNameMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapFullNameMapper_basic(fullNameMapperName),
@@ -75,9 +75,9 @@ func TestAccKeycloakLdapFullNameMapper_readWriteValidation(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapFullNameMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapFullNameMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapFullNameMapper_basicFromInterface(mapper),
@@ -94,9 +94,9 @@ func TestAccKeycloakLdapFullNameMapper_writableValidation(t *testing.T) {
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapFullNameMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapFullNameMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapFullNameMapper_writableInvalid(mapperName),
@@ -116,9 +116,9 @@ func TestAccKeycloakLdapFullNameMapper_updateLdapUserFederation(t *testing.T) {
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapFullNameMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapFullNameMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapFullNameMapper_updateLdapUserFederationBefore(mapperName),
@@ -232,6 +232,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
@@ -267,6 +268,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
@@ -308,6 +310,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -327,6 +330,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
@@ -366,6 +370,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -385,6 +390,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
@@ -421,6 +427,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
@@ -458,6 +465,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {

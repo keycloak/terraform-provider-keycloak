@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -17,9 +17,9 @@ func TestAccKeycloakLdapUserFederation_basic(t *testing.T) {
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basic(ldapName),
@@ -36,9 +36,9 @@ func TestAccKeycloakLdapUserFederation_import(t *testing.T) {
 	bindCredentialForImport := "admin"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basic(ldapName),
@@ -71,9 +71,9 @@ func TestAccKeycloakLdapUserFederation_createAfterManualDestroy(t *testing.T) {
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basic(ldapName),
@@ -98,9 +98,9 @@ func TestAccKeycloakLdapUserFederation_basicUpdateRealm(t *testing.T) {
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basic(ldapName),
@@ -125,9 +125,9 @@ func TestAccKeycloakLdapUserFederation_deleteDefaultMappers(t *testing.T) {
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_deleteDefaultMappers(ldapName),
@@ -182,6 +182,7 @@ func generateRandomLdapKerberos(enabled bool) *keycloak.LdapUserFederation {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
+		Referral:                             "ignore",
 	}
 }
 
@@ -214,9 +215,9 @@ func TestAccKeycloakLdapUserFederation_basicUpdateKerberosSettings(t *testing.T)
 	secondLdap := generateRandomLdapKerberos(false)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basicFromInterface(firstLdap),
@@ -344,9 +345,9 @@ func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basicFromInterface(firstLdap),
@@ -365,9 +366,9 @@ func TestAccKeycloakLdapUserFederation_unsetTimeoutDurationStrings(t *testing.T)
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_basicWithTimeouts(ldapName),
@@ -387,9 +388,9 @@ func TestAccKeycloakLdapUserFederation_editModeValidation(t *testing.T) {
 	editMode := randomStringInSlice(keycloakLdapUserFederationEditModes)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_basicWithAttrValidation("edit_mode", ldapName, acctest.RandString(10)),
@@ -409,9 +410,9 @@ func TestAccKeycloakLdapUserFederation_vendorValidation(t *testing.T) {
 	vendor := randomStringInSlice(keycloakLdapUserFederationVendors)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_basicWithAttrValidation("vendor", ldapName, acctest.RandString(10)),
@@ -431,9 +432,9 @@ func TestAccKeycloakLdapUserFederation_searchScopeValidation(t *testing.T) {
 	searchScope := randomStringInSlice(keycloakLdapUserFederationSearchScopes)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_basicWithAttrValidation("search_scope", ldapName, acctest.RandString(10)),
@@ -453,9 +454,9 @@ func TestAccKeycloakLdapUserFederation_useTrustStoreValidation(t *testing.T) {
 	useTrustStore := randomStringInSlice(keycloakLdapUserFederationTruststoreSpiSettings)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_basicWithAttrValidation("use_truststore_spi", ldapName, acctest.RandString(10)),
@@ -474,9 +475,9 @@ func TestAccKeycloakLdapUserFederation_bindValidation(t *testing.T) {
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_noBindCredentialValidation(ldapName),
@@ -499,9 +500,9 @@ func TestAccKeycloakLdapUserFederation_syncPeriodValidation(t *testing.T) {
 	invalidZeroSyncPeriod := 0
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_basicWithSyncPeriod(ldapName, validSyncPeriod, invalidNegativeSyncPeriod),
@@ -537,9 +538,9 @@ func TestAccKeycloakLdapUserFederation_bindCredential(t *testing.T) {
 	secondBindCredential := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_bindCredential(ldapName, firstBindCredential),
@@ -672,6 +673,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap)
 }
@@ -756,6 +758,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap, attr, val)
 }
@@ -773,6 +776,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	enabled                 = true
 
 	bind_credential         = "admin"
+	referral                = "ignore"
 
 	username_ldap_attribute = "cn"
 	rdn_ldap_attribute      = "cn"
@@ -867,6 +871,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 
 	connection_timeout      = "10s"
 	read_timeout            = "5s"
@@ -949,6 +954,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 
 	delete_default_mappers = true
 }

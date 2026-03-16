@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -16,9 +16,9 @@ func TestAccKeycloakLdapUserAttributeMapper_basic(t *testing.T) {
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basic(userAttributeMapperName),
@@ -42,9 +42,9 @@ func TestAccKeycloakLdapUserAttributeMapper_createAfterManualDestroy(t *testing.
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basic(userAttributeMapperName),
@@ -70,9 +70,9 @@ func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.
 	userAttributeMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_updateLdapUserFederationBefore(userAttributeMapperName),
@@ -87,6 +87,7 @@ func TestAccKeycloakLdapUserAttributeMapper_updateLdapUserFederation(t *testing.
 }
 
 func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	userAttributeMapperBefore := &keycloak.LdapUserAttributeMapper{
@@ -113,9 +114,9 @@ func TestAccKeycloakLdapUserAttributeMapper_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserAttributeMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserAttributeMapper_basicFromInterface(userAttributeMapperBefore),
@@ -214,6 +215,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_attribute_mapper" "username" {
@@ -250,6 +252,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_attribute_mapper" "username" {
@@ -298,6 +301,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -317,6 +321,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_attribute_mapper" "username" {
@@ -357,6 +362,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -376,6 +382,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_attribute_mapper" "username" {
