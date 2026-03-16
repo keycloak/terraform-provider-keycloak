@@ -125,6 +125,19 @@ func stringPointer(s string) *string {
 	return &s
 }
 
+func boolPointer(b bool) *bool {
+	return &b
+}
+
+// isAttributeInConfig returns true if the specified attribute is explicitly present in the user's config
+func isAttributeInConfig(d *schema.ResourceData, attrName string) bool {
+	rawConfig := d.GetRawConfig()
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return false
+	}
+	return !rawConfig.GetAttr(attrName).IsNull()
+}
+
 // suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
 // when the specified attribute is not present in the config (null).
 // This allows:
@@ -132,12 +145,7 @@ func stringPointer(s string) *string {
 // - Keeping the server value when the field is not in the config
 func suppressDiffWhenNotInConfig(attrName string) schema.SchemaDiffSuppressFunc {
 	return func(k, old, new string, d *schema.ResourceData) bool {
-		rawConfig := d.GetRawConfig()
-		if rawConfig.IsNull() || !rawConfig.IsKnown() {
-			return true
-		}
-		configValue := rawConfig.GetAttr(attrName)
-		return configValue.IsNull()
+		return !isAttributeInConfig(d, attrName)
 	}
 }
 

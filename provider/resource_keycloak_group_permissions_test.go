@@ -11,6 +11,9 @@ import (
 )
 
 func TestAccKeycloakGroupPermission_basic(t *testing.T) {
+	// only supported with admin-fine-grained-authz:v1, not v2
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_26_5)
+
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

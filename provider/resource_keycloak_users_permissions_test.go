@@ -11,6 +11,9 @@ import (
 )
 
 func TestAccKeycloakUsersPermission_basic(t *testing.T) {
+	// only supported with admin-fine-grained-authz:v1, not v2
+	skipIfVersionIsGreaterThanOrEqualTo(testCtx, t, keycloakClient, keycloak.Version_26_5)
+
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"
