@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -19,9 +19,9 @@ func TestAccKeycloakCustomIdentityProviderMapper_basic(t *testing.T) {
 	claimName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomIdentityProviderMapper_basic(alias, mapperType, mapperName, userAttribute, claimName),
@@ -41,9 +41,9 @@ func TestAccKeycloakCustomIdentityProviderMapper_withExtraConfig(t *testing.T) {
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomIdentityProviderMapper_withExtraConfig(alias, mapperType, mapperName, userAttribute, claimName, syncMode),
@@ -64,9 +64,9 @@ func TestAccKeycloakCustomIdentityProviderMapper_createAfterManualDestroy(t *tes
 	claimName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomIdentityProviderMapper_basic(alias, mapperType, mapperName, userAttribute, claimName),
@@ -98,9 +98,9 @@ func TestAccKeycloakCustomIdentityProviderMapper_withExtraConfig_createAfterManu
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomIdentityProviderMapper_withExtraConfig(alias, mapperType, mapperName, userAttribute, claimName, syncMode),
@@ -148,9 +148,9 @@ func TestAccKeycloakCustomIdentityProviderMapper_basicUpdateAll(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomIdentityProviderMapper_basicFromInterface(firstMapper),

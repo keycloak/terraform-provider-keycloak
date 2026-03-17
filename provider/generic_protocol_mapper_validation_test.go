@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 /*
@@ -25,9 +25,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_clientDuplicateNameValidation(t
 	groupMembershipProtocolMapperResourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientGroupMembershipMapper(clientId, mapperName),
@@ -49,9 +49,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_clientScopeDuplicateNameValidat
 	groupMembershipProtocolMapperResourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeGroupMembershipMapper(clientId, mapperName),
@@ -73,9 +73,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientDuplicateNameValid
 	fullNameProtocolMapperResourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientFullNameMapper(clientId, mapperName),
@@ -97,9 +97,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_clientScopeDuplicateName
 	fullNameProtocolMapperResourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeFullNameMapper(clientId, mapperName),
@@ -121,9 +121,9 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientDuplicateNameValidat
 	groupMembershipProtocolMapperResourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientGroupMembershipMapper(clientId, mapperName),
@@ -145,9 +145,9 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_clientScopeDuplicateNameVa
 	groupMembershipProtocolMapperResourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeGroupMembershipMapper(clientId, mapperName),
@@ -169,9 +169,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientDuplicateNameValidati
 	userAttributeProtocolMapperResourceName := "keycloak_openid_user_attribute_protocol_mapper.user_attribute_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientUserAttributeMapper(clientId, mapperName),
@@ -193,9 +193,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_clientScopeDuplicateNameVal
 	userAttributeProtocolMapperResourceName := "keycloak_openid_user_attribute_protocol_mapper.user_attribute_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeUserAttributeMapper(clientId, mapperName),
@@ -217,9 +217,9 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientDuplicateNameValida
 	userPropertyProtocolMapperResourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientUserPropertyMapper(clientId, mapperName),
@@ -241,9 +241,9 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_clientScopeDuplicateNameV
 	userPropertyProtocolMapperResourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeUserPropertyMapper(clientId, mapperName),
@@ -265,9 +265,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_clientScopeDuplicateNameVa
 	fullNameProtocolMapperResourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeUserRealmRoleMapper(clientId, mapperName),
@@ -289,9 +289,9 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_clientScopeDuplicateNameV
 	userClientRoleProtocolMapperResourceName := "keycloak_openid_user_client_role_protocol_mapper.user_client_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserClientRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserClientRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeUserClientRoleMapper(clientId, mapperName),
@@ -313,9 +313,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientDuplicateNameValid
 	userRealmRoleProtocolMapperResourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientRealmRoleMapper(clientId, mapperName),
@@ -337,9 +337,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_clientScopeDuplicateName
 	userRealmRoleProtocolMapperResourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testGenericProtocolMapperValidation_clientScopeUserRealmRoleMapper(clientId, mapperName),
@@ -363,8 +363,8 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_validateClientOrClientScopeSet(
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdFullNameProtocolMapper_parentResourceValidation(mapperName),
@@ -379,8 +379,8 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_validateClientOrClientSc
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdGroupMembershipProtocolMapper_parentResourceValidation(mapperName),
@@ -395,8 +395,8 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClientOrClientScop
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserAttributeProtocolMapper_parentResourceValidation(mapperName),
@@ -411,8 +411,8 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClientOrClientScope
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserPropertyProtocolMapper_parentResourceValidation(mapperName),
@@ -427,8 +427,8 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_validateClientOrClientSco
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdHardcodedClaimProtocolMapper_parentResourceValidation(mapperName),
@@ -443,8 +443,8 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_validateClientOrClientScop
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserRealmRoleProtocolMapper_parentResourceValidation(mapperName),
@@ -459,8 +459,8 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClientOrClientSco
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserClientRoleProtocolMapper_parentResourceValidation(mapperName),
@@ -475,8 +475,8 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClientOrClientSc
 	mapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserSessionNoteProtocolMapper_parentResourceValidation(mapperName),

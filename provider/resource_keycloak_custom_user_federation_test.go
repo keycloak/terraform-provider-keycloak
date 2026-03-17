@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakCustomUserFederation_basic(t *testing.T) {
 	providerId := "custom"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomUserFederation_basic(name, providerId),
@@ -44,9 +44,9 @@ func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
 	providerId := "custom"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomUserFederation_customConfig(name, providerId, configValue),
@@ -58,9 +58,9 @@ func TestAccKeycloakCustomUserFederation_customConfig(t *testing.T) {
 	configValue = configValue + "," + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomUserFederation_customConfig(name, providerId, configValue),
@@ -79,9 +79,9 @@ func TestAccKeycloakCustomUserFederation_createAfterManualDestroy(t *testing.T) 
 	providerId := "custom"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakCustomUserFederation_basic(name, providerId),
@@ -108,9 +108,9 @@ func TestAccKeycloakCustomUserFederation_validation(t *testing.T) {
 	providerId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakCustomUserFederation_basic(name, providerId),
@@ -132,9 +132,9 @@ func TestAccKeycloakCustomUserFederation_ParentIdDifferentFromRealmName(t *testi
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakCustomUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				ResourceName:  "keycloak_realm.realm",

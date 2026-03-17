@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -17,9 +17,9 @@ func TestAccKeycloakUserTemplateIdentityProviderMapper_basic(t *testing.T) {
 	template := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUserTemplateIdentityProviderMapper_basic(alias, mapperName, template),
@@ -37,9 +37,9 @@ func TestAccKeycloakUserTemplateIdentityProviderMapper_withExtraConfig(t *testin
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUserTemplateIdentityProviderMapper_withExtraConfig(alias, mapperName, template, syncMode),
@@ -58,9 +58,9 @@ func TestAccKeycloakUserTemplateIdentityProviderMapper_createAfterManualDestroy(
 	template := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUserTemplateIdentityProviderMapper_basic(alias, mapperName, template),
@@ -90,9 +90,9 @@ func TestAccKeycloakUserTemplateIdentityProviderMapper_withExtraConfig_createAft
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUserTemplateIdentityProviderMapper_withExtraConfig(alias, mapperName, template, syncMode),
@@ -135,9 +135,9 @@ func TestAccKeycloakUserTemplateIdentityProviderMapper_basicUpdateAll(t *testing
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserTemplateIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUserTemplateIdentityProviderMapper_basicFromInterface(firstMapper),

@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -19,9 +19,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClient(t *testing.T
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_basic_client(clientId, mapperName),
@@ -39,9 +39,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_basicClientScope(t *test
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -61,9 +61,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -99,9 +99,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClaim(t *testing.T
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_claim(clientId, mapperName, claimName),
@@ -126,9 +126,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateNote(t *testing.T)
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_note(clientId, mapperName, noteName),
@@ -152,9 +152,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_createAfterManualDestroy
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_basic_client(clientId, mapperName),
@@ -180,9 +180,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClaimValueType(t
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserSessionNoteProtocolMapper_validateClaimValueType(mapperName, invalidClaimValueType),
@@ -202,9 +202,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientIdForceNew(t
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_claim(clientId, mapperName, claimName),
@@ -226,9 +226,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateClientScopeForceNe
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -251,9 +251,9 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateRealmIdForceNew(t 
 	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_claim(clientId, mapperName, claimName),
