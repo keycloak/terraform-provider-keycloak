@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"dario.cat/mergo"
@@ -66,13 +65,7 @@ func resourceKeycloakUser() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 				// ignore ordering of multi-valued attributes
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					oldParts := strings.Split(old, MULTIVALUE_ATTRIBUTE_SEPARATOR)
-					newParts := strings.Split(new, MULTIVALUE_ATTRIBUTE_SEPARATOR)
-					slices.Sort(oldParts)
-					slices.Sort(newParts)
-					return strings.Join(oldParts, MULTIVALUE_ATTRIBUTE_SEPARATOR) == strings.Join(newParts, MULTIVALUE_ATTRIBUTE_SEPARATOR)
-				},
+				DiffSuppressFunc: suppressDiffForMultivalueAttributeOrder(),
 			},
 			"required_actions": {
 				Type:     schema.TypeSet,
