@@ -470,16 +470,16 @@ func TestAccKeycloakRealm_computedTokenSettings(t *testing.T) {
 					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "sso_session_idle_timeout"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "sso_session_idle_timeout", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "sso_session_idle_timeout", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "sso_session_max_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "sso_session_max_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "sso_session_max_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "offline_session_idle_timeout"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "offline_session_idle_timeout", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "offline_session_idle_timeout", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "offline_session_max_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "offline_session_max_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "offline_session_max_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "client_session_idle_timeout"),
 					resource.TestCheckResourceAttr("keycloak_realm.realm", "client_session_idle_timeout", "0s"),
@@ -488,25 +488,25 @@ func TestAccKeycloakRealm_computedTokenSettings(t *testing.T) {
 					resource.TestCheckResourceAttr("keycloak_realm.realm", "client_session_max_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "access_token_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "access_token_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "access_token_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "access_token_lifespan_for_implicit_flow"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "access_token_lifespan_for_implicit_flow", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "access_token_lifespan_for_implicit_flow", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "access_code_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "access_code_lifespan_login"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan_login", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan_login", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "access_code_lifespan_user_action"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan_user_action", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "access_code_lifespan_user_action", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "action_token_generated_by_user_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "action_token_generated_by_user_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "action_token_generated_by_user_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "action_token_generated_by_admin_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "action_token_generated_by_admin_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "action_token_generated_by_admin_lifespan", "0s"),
 				),
 			},
 		},
@@ -529,10 +529,10 @@ func TestAccKeycloakRealm_oauth2DeviceSettings(t *testing.T) {
 					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "oauth2_device_code_lifespan"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "oauth2_device_code_lifespan", "0s"),
+					CheckResourceAttrNot("keycloak_realm.realm", "oauth2_device_code_lifespan", "0s"),
 
 					resource.TestCheckResourceAttrSet("keycloak_realm.realm", "oauth2_device_polling_interval"),
-					TestCheckResourceAttrNot("keycloak_realm.realm", "oauth2_device_polling_interval", "0"),
+					CheckResourceAttrNot("keycloak_realm.realm", "oauth2_device_polling_interval", "0"),
 				),
 			},
 		},

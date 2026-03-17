@@ -107,7 +107,7 @@ func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keyc
 	}
 }
 
-func TestCheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
+func CheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		err := resource.TestCheckResourceAttr(name, key, value)(s)
 		if err == nil {
