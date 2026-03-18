@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -152,7 +153,6 @@ func resourceKeycloakRealm() *schema.Resource {
 		"passwordless_passkeys_enabled": {
 			Type:     schema.TypeBool,
 			Optional: true,
-			Default:  false,
 		},
 	}
 	return &schema.Resource{
@@ -1254,6 +1254,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 				passkeysEnabled := false
 				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
 			}
+		} else if _, ok := data.GetOk("web_authn_passwordless_policy.0.passwordless_passkeys_enabled"); ok {
+			return nil, fmt.Errorf("passwordless_passkeys_enabled in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= 26.3.5)", realm.Id)
 		}
 
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
@@ -1485,15 +1487,17 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
-	if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
-		webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
-	} else {
-		if minVersion, err := version.NewVersion("26.3.5"); err == nil {
-			if keycloakVersion.GreaterThanOrEqual(minVersion) {
+
+	if minVersion, err := version.NewVersion("26.3.5"); err == nil {
+		if keycloakVersion.GreaterThanOrEqual(minVersion) {
+			if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+			} else {
 				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = false
 			}
 		}
 	}
+
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
