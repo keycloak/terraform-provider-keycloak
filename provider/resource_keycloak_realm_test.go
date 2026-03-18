@@ -1087,7 +1087,7 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	passwordlessPasskeysEnabled := randomBool()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
