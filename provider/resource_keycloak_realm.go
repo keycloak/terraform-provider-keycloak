@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -158,6 +160,7 @@ func resourceKeycloakRealm() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: resourceKeycloakRealmCustomizeDiff,
 		Schema: map[string]*schema.Schema{
 			"realm": {
 				Type:     schema.TypeString,
@@ -517,10 +520,15 @@ func resourceKeycloakRealm() *schema.Resource {
 				},
 			},
 
+			"security_defenses_configured": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			// Security Defenses
 			"security_defenses": {
 				Type:     schema.TypeList,
 				Optional: true,
+				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -1074,7 +1082,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 
 	//security defenses
-	if v, ok := data.GetOk("security_defenses"); ok {
+	if securityDefensesInRawConfig(data.GetRawConfig()) {
+		v, _ := data.GetOk("security_defenses")
 		securityDefensesSettings := v.([]interface{})[0].(map[string]interface{})
 
 		headersConfig := securityDefensesSettings["headers"].([]interface{})
@@ -1506,6 +1515,34 @@ func getHeaderSettings(realm *keycloak.Realm) map[string]interface{} {
 	return headersSettings
 }
 
+func securityDefensesInRawConfig(rawConfig cty.Value) bool {
+	if rawConfig.IsNull() {
+		return false
+	}
+	sd := rawConfig.GetAttr("security_defenses")
+	return sd.IsKnown() && !sd.IsNull() && sd.LengthInt() > 0
+}
+
+func resourceKeycloakRealmCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	if !securityDefensesInRawConfig(diff.GetRawConfig()) {
+		if configured, ok := diff.GetOk("security_defenses_configured"); ok && configured.(bool) {
+			// User previously configured security_defenses and removed it from config
+			if err := diff.SetNew("security_defenses_configured", false); err != nil {
+				return fmt.Errorf("failed to set security_defenses_configured: %w", err)
+			}
+			if err := diff.SetNew("security_defenses", []interface{}{}); err != nil {
+				return fmt.Errorf("failed to clear security_defenses: %w", err)
+			}
+		} else {
+			// Never configured by user (e.g. populated by import), suppress diff
+			if err := diff.Clear("security_defenses"); err != nil {
+				return fmt.Errorf("failed to clear security_defenses diff: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
 func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	keycloakVersion, err := keycloakClient.Version(ctx)
@@ -1533,6 +1570,7 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	data.Set("security_defenses_configured", securityDefensesInRawConfig(data.GetRawConfig()))
 	setRealmData(data, realm, keycloakVersion)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
@@ -1559,7 +1597,20 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		data.Set("terraform_deletion_protection", false)
 	}
 
+	// Detect import: only situation when the realm can be missing in the state is import
+	_, isExistingState := data.GetOk("realm")
+
 	setRealmData(data, realm, keycloakVersion)
+
+	if !isExistingState {
+		// Import: populate security_defenses from API response to avoid drift
+		securityDefensesSettings := make(map[string]interface{})
+		securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
+		if realm.BruteForceProtected {
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
+		}
+		data.Set("security_defenses", []interface{}{securityDefensesSettings})
+	}
 
 	return nil
 }
@@ -1586,6 +1637,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	data.Set("security_defenses_configured", securityDefensesInRawConfig(data.GetRawConfig()))
 	setRealmData(data, realm, keycloakVersion)
 
 	return nil
