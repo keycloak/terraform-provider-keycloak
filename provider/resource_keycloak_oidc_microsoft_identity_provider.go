@@ -83,11 +83,11 @@ func getOidcMicrosoftIdentityProviderFromData(data *schema.ResourceData, keycloa
 	}
 
 	microsoftIdentityProviderConfig := &keycloak.IdentityProviderConfig{
-		ClientId:                    data.Get("client_id").(string),
-		ClientSecret:                data.Get("client_secret").(string),
-		TenantId:                    data.Get("tenant_id").(string),
-		Prompt:                      data.Get("prompt").(string),
-		DefaultScope:                data.Get("default_scopes").(string),
+		ClientId:     data.Get("client_id").(string),
+		ClientSecret: data.Get("client_secret").(string),
+		TenantId:     data.Get("tenant_id").(string),
+		Prompt:       data.Get("prompt").(string),
+		DefaultScope: data.Get("default_scopes").(string),
 	}
 
 	if err := mergo.Merge(microsoftIdentityProviderConfig, defaultConfig); err != nil {
