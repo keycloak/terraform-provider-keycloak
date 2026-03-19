@@ -180,6 +180,7 @@ func TestAccKeycloakOidcMicrosoftIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     firstEnabled,
 		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
+			AcceptsPromptNoneForwFrmClt: false,
 			ClientId:     acctest.RandString(10),
 			ClientSecret: acctest.RandString(10),
 			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
@@ -192,6 +193,7 @@ func TestAccKeycloakOidcMicrosoftIdentityProvider_basicUpdateAll(t *testing.T) {
 		Enabled:     !firstEnabled,
 		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
+			AcceptsPromptNoneForwFrmClt: false,
 			ClientId:     acctest.RandString(10),
 			ClientSecret: acctest.RandString(10),
 			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
@@ -347,15 +349,16 @@ data "keycloak_realm" "realm" {
 }
 
 resource "keycloak_oidc_microsoft_identity_provider" "microsoft" {
-	realm             						= data.keycloak_realm.realm.id
-	enabled           						= %t
-	client_id         						= "%s"
-	client_secret     						= "%s"
-	gui_order                     = %s
-	sync_mode                     = "%s"
-	hide_on_login_page            = %t
+	realm             						          = data.keycloak_realm.realm.id
+	enabled           						          = %t
+	accepts_prompt_none_forward_from_client	= %t
+	client_id         						          = "%s"
+	client_secret     						          = "%s"
+	gui_order                               = %s
+	sync_mode                               = "%s"
+	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
 }
 
 func testKeycloakOidcMicrosoftIdentityProvider_linkOrganization(organizationName string) string {

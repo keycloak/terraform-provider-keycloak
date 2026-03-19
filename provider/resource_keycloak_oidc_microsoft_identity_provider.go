@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
@@ -56,6 +57,18 @@ func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
 			Default:     "openid profile email",
 			Description: "The scopes to be sent when asking for authorization. See the documentation for possible values, separator and default value'. Default: 'openid profile email'",
 		},
+		"accepts_prompt_none_forward_from_client": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "This is just used together with Identity Provider Authenticator or when kc_idp_hint points to this identity provider. In case that client sends a request with prompt=none and user is not yet authenticated, the error will not be directly returned to client, but the request with prompt=none will be forwarded to this identity provider.",
+		},
+		"disable_user_info": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Disable usage of User Info service to obtain additional user information?  Default is to use this OIDC service.",
+		},
 		"hide_on_login_page": {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -88,6 +101,8 @@ func getOidcMicrosoftIdentityProviderFromData(data *schema.ResourceData, keycloa
 		TenantId:     data.Get("tenant_id").(string),
 		Prompt:       data.Get("prompt").(string),
 		DefaultScope: data.Get("default_scopes").(string),
+		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
+		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
 	}
 
 	if err := mergo.Merge(microsoftIdentityProviderConfig, defaultConfig); err != nil {
@@ -107,6 +122,8 @@ func setOidcMicrosoftIdentityProviderData(data *schema.ResourceData, identityPro
 	data.Set("tenant_id", identityProvider.Config.TenantId)
 	data.Set("prompt", identityProvider.Config.Prompt)
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
+	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
+	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
 
 	return nil
 }
