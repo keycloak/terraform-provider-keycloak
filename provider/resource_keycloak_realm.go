@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,6 +17,8 @@ var (
 	keycloakRealmValidOTPTypes      = []string{"totp", "hotp"}
 	keycloakRealmValidOTPAlgorithms = []string{"HmacSHA1", "HmacSHA256", "HmacSHA512"}
 )
+
+const minKeycloakPasskeysVersion = "26.3.5"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -150,11 +153,16 @@ func resourceKeycloakRealm() *schema.Resource {
 			Default:      "not specified",
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
-		"passwordless_passkeys_enabled": {
-			Type:     schema.TypeBool,
-			Optional: true,
-		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	maps.Copy(webAuthnPasswordlessSchema, webAuthnSchema)
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "Enable passkeys for passwordless WebAuthn authentication",
+		Optional:    true,
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
 		ReadContext:   resourceKeycloakRealmRead,
@@ -743,7 +751,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 		},
@@ -1240,7 +1248,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 
 		supportsPasskeys := true
-		if minSupportedVersion, err := version.NewVersion("26.3.5"); err == nil {
+		if minSupportedVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
 			if keycloakVersion.LessThan(minSupportedVersion) {
 				supportsPasskeys = false
 			}
@@ -1488,7 +1496,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 
-	if minVersion, err := version.NewVersion("26.3.5"); err == nil {
+	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
 		if keycloakVersion.GreaterThanOrEqual(minVersion) {
 			if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
 				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled

@@ -1069,7 +1069,7 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 }
 
 func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_3); !ok {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, minKeycloakPasskeysVersion); !ok {
 		t.Skip()
 	}
 
