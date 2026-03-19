@@ -111,6 +111,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_oidc_github_identity_provider":                     resourceKeycloakOidcGithubIdentityProvider(),
 			"keycloak_oidc_openshift_v4_identity_provider":               resourceKeycloakOidcOpenshiftV4IdentityProvider(),
 			"keycloak_oidc_identity_provider":                            resourceKeycloakOidcIdentityProvider(),
+			"keycloak_oidc_microsoft_identity_provider":                  resourceKeycloakOidcMicrosoftIdentityProvider(),
 			"keycloak_openid_client_authorization_resource":              resourceKeycloakOpenidClientAuthorizationResource(),
 			"keycloak_openid_client_group_policy":                        resourceKeycloakOpenidClientAuthorizationGroupPolicy(),
 			"keycloak_openid_client_role_policy":                         resourceKeycloakOpenidClientAuthorizationRolePolicy(),
