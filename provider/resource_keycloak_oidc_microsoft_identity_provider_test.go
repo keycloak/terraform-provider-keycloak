@@ -181,10 +181,10 @@ func TestAccKeycloakOidcMicrosoftIdentityProvider_basicUpdateAll(t *testing.T) {
 		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			AcceptsPromptNoneForwFrmClt: false,
-			ClientId:     acctest.RandString(10),
-			ClientSecret: acctest.RandString(10),
-			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:     randomStringInSlice(syncModes),
+			ClientId:                    acctest.RandString(10),
+			ClientSecret:                acctest.RandString(10),
+			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:                    randomStringInSlice(syncModes),
 		},
 	}
 
@@ -194,10 +194,10 @@ func TestAccKeycloakOidcMicrosoftIdentityProvider_basicUpdateAll(t *testing.T) {
 		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			AcceptsPromptNoneForwFrmClt: false,
-			ClientId:     acctest.RandString(10),
-			ClientSecret: acctest.RandString(10),
-			GuiOrder:     strconv.Itoa(acctest.RandIntRange(1, 3)),
-			SyncMode:     randomStringInSlice(syncModes),
+			ClientId:                    acctest.RandString(10),
+			ClientSecret:                acctest.RandString(10),
+			GuiOrder:                    strconv.Itoa(acctest.RandIntRange(1, 3)),
+			SyncMode:                    randomStringInSlice(syncModes),
 		},
 	}
 
