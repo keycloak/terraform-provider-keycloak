@@ -41,6 +41,8 @@ type IdentityProviderConfig struct {
 	LogoutUrl                       string                    `json:"logoutUrl,omitempty"`
 	DefaultScope                    string                    `json:"defaultScope,omitempty"`
 	AcceptsPromptNoneForwFrmClt     types.KeycloakBoolQuoted  `json:"acceptsPromptNoneForwardFromClient,omitempty"`
+	TenantId                        string                    `json:"tenantId,omitempty"`
+	Prompt                          string                    `json:"prompt,omitempty"`
 	HostedDomain                    string                    `json:"hostedDomain,omitempty"`
 	UserIp                          types.KeycloakBoolQuoted  `json:"userIp,omitempty"`
 	OfflineAccess                   types.KeycloakBoolQuoted  `json:"offlineAccess,omitempty"`
