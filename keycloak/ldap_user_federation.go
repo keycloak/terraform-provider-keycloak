@@ -32,6 +32,7 @@ type LdapUserFederation struct {
 	KrbPrincipalAttribute  string
 	Debug                  string
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
+	Referral               string // api expects "1" or "2", but that means "follow" or "ignore"
 
 	StartTls                    bool
 	UsePasswordModifyExtendedOp bool
