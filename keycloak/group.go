@@ -3,7 +3,7 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"net/url"
+	neturl "net/url"
 	"strings"
 )
 
@@ -34,7 +34,7 @@ func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *
 	rawPath := strings.TrimPrefix(parentPath, "/")
 	segments := strings.Split(rawPath, "/")
 	for i, segment := range segments {
-		segments[i] = url.PathEscape(segment)
+		segments[i] = neturl.PathEscape(segment)
 	}
 	encodedPath := strings.Join(segments, "/")
 
