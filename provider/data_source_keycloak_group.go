@@ -22,7 +22,11 @@ func dataSourceKeycloakGroup() *schema.Resource {
 			},
 			"name": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+			},
+			"group_path": {
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"description": {
 				Type:     schema.TypeString,
@@ -49,9 +53,23 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 
 	realmId := data.Get("realm_id").(string)
 	organizationId := data.Get("organization_id").(string)
-	groupName := data.Get("name").(string)
+	name := data.Get("name").(string)
+	groupPath := data.Get("group_path").(string)
 
-	group, err := keycloakClient.GetOrganizationGroupByName(ctx, realmId, organizationId, groupName)
+	if name == "" && groupPath == "" {
+		return diag.Errorf("one of `name` or `group_path` must be specified")
+	}
+	if name != "" && groupPath != "" {
+		return diag.Errorf("only one of `name` or `group_path` may be specified")
+	}
+
+	var group *keycloak.Group
+	var err error
+	if groupPath != "" {
+		group, err = keycloakClient.GetGroupByPath(ctx, realmId, groupPath)
+	} else {
+		group, err = keycloakClient.GetOrganizationGroupByName(ctx, realmId, organizationId, name)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
