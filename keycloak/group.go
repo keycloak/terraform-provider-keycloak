@@ -162,6 +162,38 @@ func getGroupByDFS(groupName string, groups []*Group) *Group {
 	return nil
 }
 
+/*
+GetGroupByPath fetches a group by its full path using the Keycloak /group-by-path endpoint.
+This is more reliable than GetGroupByName for nested groups (avoids ambiguity when multiple groups have the same name).
+*/
+func (keycloakClient *KeycloakClient) GetGroupByPath(ctx context.Context, realmId, path string) (*Group, error) {
+	var group Group
+
+	trimmedPath := strings.TrimPrefix(path, "/")
+	if trimmedPath == "" {
+		return nil, fmt.Errorf("group path cannot be empty")
+	}
+
+	urlPath := fmt.Sprintf("/realms/%s/group-by-path/%s", realmId, trimmedPath)
+
+	err := keycloakClient.get(ctx, urlPath, &group, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return nil, fmt.Errorf("group not found at path: %s", path)
+		}
+		return nil, fmt.Errorf("failed to get group by path %s: %w", path, err)
+	}
+
+	group.RealmId = realmId
+	parentId, err := keycloakClient.groupParentId(ctx, &group)
+	if err != nil {
+		return nil, err
+	}
+	group.ParentId = parentId
+
+	return &group, nil
+}
+
 func (keycloakClient *KeycloakClient) UpdateGroup(ctx context.Context, group *Group) error {
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/groups/%s", group.RealmId, group.Id), group)
 }
