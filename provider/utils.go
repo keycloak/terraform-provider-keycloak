@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -123,6 +125,18 @@ func stringSliceContains(s []string, e string) bool {
 
 func stringPointer(s string) *string {
 	return &s
+}
+
+// suppressDiffForMultivalueAttributeOrder returns a DiffSuppressFunc that
+// suppresses diffs when the order of multiple attribute values changed.
+func suppressDiffForMultivalueAttributeOrder() schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		oldParts := strings.Split(old, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		newParts := strings.Split(new, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		slices.Sort(oldParts)
+		slices.Sort(newParts)
+		return strings.Join(oldParts, MULTIVALUE_ATTRIBUTE_SEPARATOR) == strings.Join(newParts, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	}
 }
 
 // suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
