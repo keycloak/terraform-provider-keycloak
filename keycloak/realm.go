@@ -100,7 +100,7 @@ type Realm struct {
 	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
 	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
-	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
+	AdminPermissionsEnabled *bool `json:"adminPermissionsEnabled,omitempty"`
 
 	PasswordPolicy string `json:"passwordPolicy"`
 
