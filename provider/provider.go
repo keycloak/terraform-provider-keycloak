@@ -118,6 +118,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_authorization_client_scope_policy":   resourceKeycloakOpenidClientAuthorizationClientScopePolicy(),
 			"keycloak_openid_client_authorization_scope":                 resourceKeycloakOpenidClientAuthorizationScope(),
 			"keycloak_openid_client_authorization_permission":            resourceKeycloakOpenidClientAuthorizationPermission(),
+			"keycloak_openid_client_authorization_permission_scope":      resourceKeycloakOpenidClientAuthorizationPermissionScope(),
 			"keycloak_openid_client_service_account_role":                resourceKeycloakOpenidClientServiceAccountRole(),
 			"keycloak_openid_client_service_account_realm_role":          resourceKeycloakOpenidClientServiceAccountRealmRole(),
 			"keycloak_role":                                              resourceKeycloakRole(),
