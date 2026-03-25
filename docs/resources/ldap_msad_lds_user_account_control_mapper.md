@@ -36,6 +36,7 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
   users_dn                = "dc=example,dc=org"
   bind_dn                 = "cn=admin,dc=example,dc=org"
   bind_credential         = "admin"
+    referral                     = "ignore"
 }
 
 resource "keycloak_ldap_msad_lds_user_account_control_mapper" "msad_lds_user_account_control_mapper" {
