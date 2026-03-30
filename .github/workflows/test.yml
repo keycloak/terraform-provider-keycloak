@@ -79,7 +79,7 @@ jobs:
           terraform_version: 1.14.3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # version v5.0.2
+        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # version v6.0.1
       - name: Build user-federation-example with Gradle
         run:  make user-federation-example
 
