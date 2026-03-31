@@ -26,6 +26,7 @@ type LdapUserFederation struct {
 	UserObjectClasses      []string // api expects comma + space separated for some reason
 	ConnectionUrl          string
 	UsersDn                string
+	RelativeCreateDn       string
 	BindDn                 string
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
@@ -100,6 +101,9 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"usersDn": {
 			ldap.UsersDn,
+		},
+		"relativeCreateDn": {
+			ldap.RelativeCreateDn,
 		},
 		"krbPrincipalAttribute": {
 			ldap.KrbPrincipalAttribute,
@@ -334,6 +338,7 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		UserObjectClasses:      userObjectClasses,
 		ConnectionUrl:          component.getConfig("connectionUrl"),
 		UsersDn:                component.getConfig("usersDn"),
+		RelativeCreateDn:       component.getConfig("relativeCreateDn"),
 		BindDn:                 component.getConfig("bindDn"),
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),

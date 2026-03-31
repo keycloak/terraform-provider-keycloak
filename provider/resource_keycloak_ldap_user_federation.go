@@ -115,6 +115,11 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Required:    true,
 				Description: "Full DN of LDAP tree where your users are.",
 			},
+			"relative_create_dn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Relative DN of LDAP tree where new users will be created. Keycloak will use the Users DN as the base for the new user's DN.",
+			},
 			"bind_dn": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -355,6 +360,7 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		UserObjectClasses:      userObjectClasses,
 		ConnectionUrl:          data.Get("connection_url").(string),
 		UsersDn:                data.Get("users_dn").(string),
+		RelativeCreateDn:       data.Get("relative_create_dn").(string),
 		BindDn:                 data.Get("bind_dn").(string),
 		BindCredential:         data.Get("bind_credential").(string),
 		CustomUserSearchFilter: data.Get("custom_user_search_filter").(string),
@@ -429,6 +435,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("user_object_classes", ldap.UserObjectClasses)
 	data.Set("connection_url", ldap.ConnectionUrl)
 	data.Set("users_dn", ldap.UsersDn)
+	data.Set("relative_create_dn", ldap.RelativeCreateDn)
 	data.Set("bind_dn", ldap.BindDn)
 	data.Set("bind_credential", ldap.BindCredential)
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)

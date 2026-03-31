@@ -63,6 +63,7 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `user_object_classes` - (Required) Array of all values of LDAP objectClass attribute for users in LDAP. Must contain at least one.
 - `connection_url` - (Required) Connection URL to the LDAP server.
 - `users_dn` - (Required) Full DN of LDAP tree where your users are.
+- `relative_create_dn` - (Optional) Relative DN of LDAP tree where new users will be created. Keycloak will use the Users DN as the base for the new user's DN.
 - `bind_dn` - (Optional) DN of LDAP admin, which will be used by Keycloak to access LDAP server. This attribute must be set if `bind_credential` is set.
 - `bind_credential` - (Optional) Password of LDAP admin. This attribute must be set if `bind_dn` is set.
 - `custom_user_search_filter` - (Optional) Additional LDAP filter for filtering searched users. Must begin with `(` and end with `)`.
