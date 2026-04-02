@@ -85,6 +85,7 @@ resource "keycloak_ldap_user_federation" "ldap_user_federation" {
 - `connection_timeout` - (Optional) LDAP connection timeout in the format of a [Go duration string](https://golang.org/pkg/time/#Duration.String).
 - `read_timeout` - (Optional) LDAP read timeout in the format of a [Go duration string](https://golang.org/pkg/time/#Duration.String).
 - `pagination` - (Optional) When true, Keycloak assumes the LDAP server supports pagination. Defaults to `true`.
+- `remove_invalid_users_enabled` - (Optional) When `true`, Keycloak removes users from its local database that no longer exist in LDAP during sync. Defaults to `false`.
 - `batch_size_for_sync` - (Optional) The number of users to sync within a single transaction. Defaults to `1000`.
 - `full_sync_period` - (Optional) How frequently Keycloak should sync all LDAP users, in seconds. Omit this property to disable periodic full sync.
 - `changed_sync_period` - (Optional) How frequently Keycloak should sync changed LDAP users, in seconds. Omit this property to disable periodic changed users sync.
