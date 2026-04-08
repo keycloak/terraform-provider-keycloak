@@ -91,6 +91,7 @@ func getRealmKeystoreJavaKeystoreFromData(data *schema.ResourceData) (*keycloak.
 		Active:           data.Get("active").(bool),
 		Enabled:          data.Get("enabled").(bool),
 		Priority:         data.Get("priority").(int),
+		Algorithm:        data.Get("algorithm").(string),
 		Keystore:         data.Get("keystore").(string),
 		KeystorePassword: data.Get("keystore_password").(string),
 		KeyAlias:         data.Get("key_alias").(string),
@@ -109,6 +110,7 @@ func setRealmKeystoreJavaKeystoreData(data *schema.ResourceData, realmKey *keycl
 	data.Set("active", realmKey.Active)
 	data.Set("enabled", realmKey.Enabled)
 	data.Set("priority", realmKey.Priority)
+	data.Set("algorithm", realmKey.Algorithm)
 	data.Set("keystore", realmKey.Keystore)
 	data.Set("key_alias", realmKey.KeyAlias)
 	if realmKey.KeystorePassword != "**********" {
