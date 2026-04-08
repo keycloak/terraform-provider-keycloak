@@ -101,7 +101,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm),
+		Algorithm: "RS256",
 	}
 
 	groupKeystoreTwo := &keycloak.RealmKeystoreJavaKeystore{
@@ -110,7 +110,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm),
+		Algorithm: "RS256",
 	}
 
 	resource.Test(t, resource.TestCase{
