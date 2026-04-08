@@ -33,6 +33,11 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"parent_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+				ForceNew: true,
+			},
 			"active": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -84,9 +89,10 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 
 func getRealmKeystoreJavaKeystoreFromData(data *schema.ResourceData) (*keycloak.RealmKeystoreJavaKeystore, error) {
 	keystore := &keycloak.RealmKeystoreJavaKeystore{
-		Id:      data.Id(),
-		Name:    data.Get("name").(string),
-		RealmId: data.Get("realm_id").(string),
+		Id:       data.Id(),
+		Name:     data.Get("name").(string),
+		RealmId:  data.Get("realm_id").(string),
+		ParentId: data.Get("parent_id").(string),
 
 		Active:           data.Get("active").(bool),
 		Enabled:          data.Get("enabled").(bool),
@@ -106,6 +112,7 @@ func setRealmKeystoreJavaKeystoreData(data *schema.ResourceData, realmKey *keycl
 
 	data.Set("name", realmKey.Name)
 	data.Set("realm_id", realmKey.RealmId)
+	data.Set("parent_id", realmKey.ParentId)
 
 	data.Set("active", realmKey.Active)
 	data.Set("enabled", realmKey.Enabled)
