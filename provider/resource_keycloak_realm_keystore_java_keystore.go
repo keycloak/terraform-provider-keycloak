@@ -36,7 +36,6 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 			"parent_id": {
 				Type:     schema.TypeString,
 				Computed: true,
-				ForceNew: true,
 			},
 			"active": {
 				Type:        schema.TypeBool,
