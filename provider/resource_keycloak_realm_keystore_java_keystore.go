@@ -11,6 +11,7 @@ import (
 
 var (
 	keycloakRealmKeystoreJavaKeystoreAlgorithm = []string{"AES", "EdDSA", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "RSA1_5", "RSA-OAEP", "RSA-OAEP-256", "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW"}
+	keycloakRealmKeystoreJavaKeystoreKeyUse    = []string{"sig", "enc"}
 )
 
 func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
@@ -62,6 +63,13 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 				Default:      "RS256",
 				Description:  "Intended algorithm for the key",
 			},
+			"key_use": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice(keycloakRealmKeystoreJavaKeystoreKeyUse, false),
+				Default:      "sig",
+				Description:  "Intended use for the key",
+			},
 			"keystore": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -97,6 +105,7 @@ func getRealmKeystoreJavaKeystoreFromData(data *schema.ResourceData) (*keycloak.
 		Enabled:          data.Get("enabled").(bool),
 		Priority:         data.Get("priority").(int),
 		Algorithm:        data.Get("algorithm").(string),
+		KeyUse:           data.Get("key_use").(string),
 		Keystore:         data.Get("keystore").(string),
 		KeystorePassword: data.Get("keystore_password").(string),
 		KeyAlias:         data.Get("key_alias").(string),
@@ -117,6 +126,7 @@ func setRealmKeystoreJavaKeystoreData(data *schema.ResourceData, realmKey *keycl
 	data.Set("enabled", realmKey.Enabled)
 	data.Set("priority", realmKey.Priority)
 	data.Set("algorithm", realmKey.Algorithm)
+	data.Set("key_use", realmKey.KeyUse)
 	data.Set("keystore", realmKey.Keystore)
 	data.Set("key_alias", realmKey.KeyAlias)
 	if realmKey.KeystorePassword != "**********" {
