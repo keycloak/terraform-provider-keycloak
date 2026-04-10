@@ -17,6 +17,16 @@ By default, Keycloak sets the `profile`, `email`, `roles`, and `web-origins` sco
 created client. If you create this resource for the first time and do not include these scopes, a following run of
 `terraform plan` will result in changes.
 
+Additionally, if a scope is set as optional, this resource will remove and re-add it as a default scope.
+
+Warning: Configuring the same scope in both this resource and `keycloak_openid_client_optional_scopes` for the same client
+is an error. When the client and scope names are known during planning, the plan fails with
+`scopes [...] are configured as both default and optional scopes`. Apply-time validation only sees resources that
+reconcile during that apply. If one resource is unchanged and the other resource's scope names or client identity are
+unknown until apply, the changed resource can move a scope managed by the unchanged resource without reporting a
+conflict. This also applies when applying a saved plan. See
+[Validating default and optional scopes](#validating-default-and-optional-scopes) for a workaround.
+
 ## Example Usage
 
 ```hcl
@@ -51,6 +61,57 @@ resource "keycloak_openid_client_default_scopes" "client_default_scopes" {
 }
 
 ```
+
+## Validating default and optional scopes
+
+When managing both scope types for the same client, use shared desired scope sets and add the same lifecycle
+precondition to **both** resources. This requires Terraform 1.2 or later. Terraform checks known conditions during
+planning and defers unknown conditions until apply, before changing the scope assignments.
+
+Use the following pattern instead of the standalone scope resource above. Replace the example lists with your desired
+scope names or expressions, including values that are only known during apply:
+
+```hcl
+locals {
+  default_scopes  = ["profile", "email", "roles", "web-origins", keycloak_openid_client_scope.client_scope.name]
+  optional_scopes = ["address", "phone", "offline_access", "microprofile-jwt"]
+
+  scopes_disjoint = length(setintersection(
+    toset(local.default_scopes),
+    toset(local.optional_scopes),
+  )) == 0
+}
+
+resource "keycloak_openid_client_default_scopes" "client_default_scopes" {
+  realm_id       = keycloak_realm.realm.id
+  client_id      = keycloak_openid_client.client.id
+  default_scopes = local.default_scopes
+
+  lifecycle {
+    precondition {
+      condition     = local.scopes_disjoint
+      error_message = "A client scope cannot be both default and optional for the same client."
+    }
+  }
+}
+
+resource "keycloak_openid_client_optional_scopes" "client_optional_scopes" {
+  realm_id        = keycloak_realm.realm.id
+  client_id       = keycloak_openid_client.client.id
+  optional_scopes = local.optional_scopes
+
+  lifecycle {
+    precondition {
+      condition     = local.scopes_disjoint
+      error_message = "A client scope cannot be both default and optional for the same client."
+    }
+  }
+}
+```
+
+The condition must compare the same desired values passed to the resource arguments, not the scope resources'
+attributes. Referencing the resources from each other's preconditions can create a dependency cycle. An explicit
+`depends_on` alone does not close the validation gap, because it does not make an unchanged resource reconcile.
 
 ## Argument Reference
 

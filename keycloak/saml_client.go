@@ -152,6 +152,10 @@ func (keycloakClient *KeycloakClient) GetSamlClientDefaultScopes(ctx context.Con
 	return keycloakClient.getSamlClientScopes(ctx, realmId, clientId, "default")
 }
 
+func (keycloakClient *KeycloakClient) GetSamlClientOptionalScopes(ctx context.Context, realmId, clientId string) ([]*SamlClientScope, error) {
+	return keycloakClient.getSamlClientScopes(ctx, realmId, clientId, "optional")
+}
+
 func (keycloakClient *KeycloakClient) attachSamlClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
 	_, err := keycloakClient.GetSamlClient(ctx, realmId, clientId)
 	if err != nil && ErrorIs404(err) {
@@ -175,7 +179,42 @@ func (keycloakClient *KeycloakClient) attachSamlClientScopes(ctx context.Context
 		}
 	}
 
+	currentScopes, err := keycloakClient.getSamlClientScopes(ctx, realmId, clientId, t)
+	if err != nil {
+		return err
+	}
+
+	// Keycloak does not allow a client scope to be attached as a default and an optional scope at the same time, so
+	// detach it from the conflicting type first, mirroring the behavior of the Keycloak admin console.
+	conflictingType := otherScopeType(t)
+	conflictingScopes, err := keycloakClient.getSamlClientScopes(ctx, realmId, clientId, conflictingType)
+	if err != nil {
+		return err
+	}
+
+	attached := make(map[string]bool, len(currentScopes))
+	for _, s := range currentScopes {
+		attached[s.Id] = true
+	}
+	conflicting := make(map[string]bool, len(conflictingScopes))
+	for _, s := range conflictingScopes {
+		conflicting[s.Id] = true
+	}
+
 	for _, samlClientScope := range allSamlClientScopes {
+		if attached[samlClientScope.Id] {
+			continue
+		}
+
+		// Keycloak ignores the scope type on DELETE, so only delete scopes that are attached as the conflicting type.
+		// Deleting any other scope would detach it whatever its type.
+		if conflicting[samlClientScope.Id] {
+			err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, conflictingType, samlClientScope.Id), nil)
+			if err != nil && !ErrorIs404(err) {
+				return err
+			}
+		}
+
 		err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, t, samlClientScope.Id), nil)
 		if err != nil {
 			return err
@@ -189,15 +228,40 @@ func (keycloakClient *KeycloakClient) AttachSamlClientDefaultScopes(ctx context.
 	return keycloakClient.attachSamlClientScopes(ctx, realmId, clientId, "default", scopeNames)
 }
 
+func (keycloakClient *KeycloakClient) AttachSamlClientOptionalScopes(ctx context.Context, realmId, clientId string, scopeNames []string) error {
+	return keycloakClient.attachSamlClientScopes(ctx, realmId, clientId, "optional", scopeNames)
+}
+
 func (keycloakClient *KeycloakClient) detachSamlClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
-	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, IncludeSamlClientScopesMatchingNames(scopeNames))
+	// Keycloak ignores the scope type on DELETE and removes the assignment whatever its type, so only detach scopes
+	// that are currently attached as this type to avoid undoing a scope that has since moved to the other type.
+	currentScopes, err := keycloakClient.getSamlClientScopes(ctx, realmId, clientId, t)
+	if ErrorIs404(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	currentNames := make(map[string]bool, len(currentScopes))
+	for _, s := range currentScopes {
+		currentNames[s.Name] = true
+	}
+
+	var namesToDetach []string
+	for _, name := range scopeNames {
+		if currentNames[name] {
+			namesToDetach = append(namesToDetach, name)
+		}
+	}
+
+	allSamlClientScopes, err := keycloakClient.ListSamlClientScopesWithFilter(ctx, realmId, IncludeSamlClientScopesMatchingNames(namesToDetach))
 	if err != nil {
 		return err
 	}
 
 	for _, samlClientScope := range allSamlClientScopes {
 		err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, t, samlClientScope.Id), nil)
-		if err != nil {
+		if err != nil && !ErrorIs404(err) {
 			return err
 		}
 	}

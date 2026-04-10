@@ -17,6 +17,21 @@ By default, Keycloak sets the `address`, `phone`, `offline_access`, and `micropr
 every newly created client. If you create this resource for the first time and do not include these scopes, a following
 run of `terraform plan` will result in changes.
 
+Additionally, if a scope is set as default, this resource will remove and re-add it as an optional scope.
+
+Warning: Configuring the same scope in both this resource and `keycloak_openid_client_default_scopes` for the same client
+is an error. When the client and scope names are known during planning, the plan fails with
+`scopes [...] are configured as both default and optional scopes`. Apply-time validation only sees resources that
+reconcile during that apply. If one resource is unchanged and the other resource's scope names or client identity are
+unknown until apply, the changed resource can move a scope managed by the unchanged resource without reporting a
+conflict. This also applies when applying a saved plan.
+
+To prevent this, use shared desired scope sets and add the same lifecycle precondition to **both** resources
+(Terraform 1.2 or later). See the
+[paired-resource example](openid_client_default_scopes.md#validating-default-and-optional-scopes).
+Terraform evaluates the condition during planning when possible, or during apply before changing the scope assignments
+when the values become known.
+
 ## Example Usage
 
 ```hcl
