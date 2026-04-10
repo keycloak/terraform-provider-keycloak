@@ -114,11 +114,16 @@ func (serverInfo *ServerInfo) providerInstalled(providerType, providerName strin
 // resource operation. Only successful lookups are cached, so a transient
 // error does not poison the cache.
 func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool, error) {
-	keycloakClient.fgapv2Mu.Lock()
-	defer keycloakClient.fgapv2Mu.Unlock()
+	c := keycloakClient.cache
+	if c == nil {
+		c = &serverCache{}
+	}
 
-	if keycloakClient.fgapv2Cached != nil {
-		return *keycloakClient.fgapv2Cached, nil
+	c.fgapv2Mu.Lock()
+	defer c.fgapv2Mu.Unlock()
+
+	if c.fgapv2Cached != nil {
+		return *c.fgapv2Cached, nil
 	}
 
 	serverInfo, err := keycloakClient.GetServerInfo(ctx)
@@ -134,7 +139,7 @@ func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool
 		}
 	}
 
-	keycloakClient.fgapv2Cached = &enabled
+	c.fgapv2Cached = &enabled
 	return enabled, nil
 }
 

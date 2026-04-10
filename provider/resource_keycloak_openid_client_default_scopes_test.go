@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -280,27 +281,183 @@ func TestAccKeycloakOpenidClientDefaultScopes_noImportNeeded(t *testing.T) {
 	})
 }
 
-// Keycloak throws a 500 if you attempt to attach an optional scope that is already attached as an optional scope
+// Keycloak silently ignores an attempt to attach a default scope that is already attached as an optional scope,
+// but the provider will remove the existing scope and re-attach as a default scope
 func TestAccKeycloakOpenidClientDefaultScopes_validateDuplicateScopeAssignment(t *testing.T) {
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
-	optionalClientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
+	expectedDefaultClientScopes := append(preAssignedDefaultClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			// attach optional scopes, including the custom scope
 			{
-				Config: testKeycloakOpenidClientOptionalScopes_basic(client, clientScope),
-				Check:  testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", optionalClientScopes),
+				Config: testKeycloakOpenidClientOptionalScopes_noOptionalScopes(client, clientScope),
 			},
-			// attach default scopes with the custom scope, expect an error since it is already in use
+			// attach the custom scope as optional outside of terraform, so no resource owns it and cleans it up
 			{
-				Config:      testKeycloakOpenidClientDefaultScopes_duplicateScopeAssignment(client, clientScope),
-				ExpectError: regexp.MustCompile("validation error: scope .+ is already attached to client as an optional scope"),
+				PreConfig: func() {
+					openidClient, err := keycloakClient.GetOpenidClientByClientId(testCtx, testAccRealm.Realm, client)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.AttachOpenidClientOptionalScopes(testCtx, testAccRealm.Realm, openidClient.Id, []string{clientScope})
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakOpenidClientDefaultScopes_duplicateScopeAssignment(client, clientScope),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", expectedDefaultClientScopes),
+					testAccCheckKeycloakOpenidClientOptionalScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClientDefaultScopes_conflictWithOptionalScopesResource(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope,
+					append(preAssignedDefaultClientScopes, clientScope),
+					append(getPreAssignedOptionalClientScopes(), clientScope)),
+				ExpectError: regexp.MustCompile(fmt.Sprintf("scopes \\[%s\\] are configured as both default and optional scopes", clientScope)),
+			},
+		},
+	})
+}
+
+// Adding a scope to the optional scopes resource that an already applied default scopes resource reconciles must fail
+// the plan, even though the default scopes resource itself does not change.
+func TestAccKeycloakOpenidClientDefaultScopes_conflictWithAppliedResourceFailsPlan(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	defaultWithScope := append(slices.Clone(preAssignedDefaultClientScopes), clientScope)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, defaultWithScope, getPreAssignedOptionalClientScopes()),
+				Check:  testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", defaultWithScope),
+			},
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, defaultWithScope,
+					append(getPreAssignedOptionalClientScopes(), clientScope)),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(fmt.Sprintf("scopes \\[%s\\] are configured as both default and optional scopes", clientScope)),
+			},
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, defaultWithScope, getPreAssignedOptionalClientScopes()),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", defaultWithScope),
+					testAccCheckKeycloakOpenidClientOptionalScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
+			},
+		},
+	})
+}
+
+// A scope that is moved to optional outside of Terraform after the default scopes resource was applied is moved back
+// to default by the next apply, and the optional scopes resource does not take it over.
+func TestAccKeycloakOpenidClientDefaultScopes_overridesOptionalAssignmentAfterApply(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	defaultWithScope := append(slices.Clone(preAssignedDefaultClientScopes), clientScope)
+	config := testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, defaultWithScope, getPreAssignedOptionalClientScopes())
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+			},
+			{
+				PreConfig: func() {
+					openidClient, err := keycloakClient.GetOpenidClientByClientId(testCtx, testAccRealm.Realm, client)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.AttachOpenidClientOptionalScopes(testCtx, testAccRealm.Realm, openidClient.Id, []string{clientScope})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					optionalScopes, err := keycloakClient.GetOpenidClientOptionalScopes(testCtx, testAccRealm.Realm, openidClient.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !slices.ContainsFunc(optionalScopes, func(s *keycloak.OpenidClientScope) bool { return s.Name == clientScope }) {
+						t.Fatalf("expected %s to be moved to optional outside of terraform", clientScope)
+					}
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", defaultWithScope),
+					testAccCheckKeycloakOpenidClientOptionalScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
+			},
+		},
+	})
+}
+
+// The default and optional scopes resources are not ordered against each other, so moving a scope between them has to
+// work whichever resource reconciles first.
+func TestAccKeycloakOpenidClientDefaultScopes_moveBetweenResourcesWithoutDependency(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	defaultWithScope := append(preAssignedDefaultClientScopes, clientScope)
+	optionalWithScope := append(getPreAssignedOptionalClientScopes(), clientScope)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, preAssignedDefaultClientScopes, optionalWithScope),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", optionalWithScope),
+					testAccCheckKeycloakOpenidClientDefaultScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
+			},
+			// optional to default
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, defaultWithScope, getPreAssignedOptionalClientScopes()),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", defaultWithScope),
+					testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", getPreAssignedOptionalClientScopes()),
+					testAccCheckKeycloakOpenidClientOptionalScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
+			},
+			// and back to optional
+			{
+				Config: testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope, preAssignedDefaultClientScopes, optionalWithScope),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", preAssignedDefaultClientScopes),
+					testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", optionalWithScope),
+					testAccCheckKeycloakOpenidClientDefaultScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
 			},
 		},
 	})
@@ -574,6 +731,67 @@ resource "keycloak_openid_client_default_scopes" "default_scopes" {
 	`, testAccRealm.Realm, client, clientScopeResources.String(), arrayOfStringsForTerraformResource(attachedClientScopesInterpolated))
 }
 
+// Keycloak removes a scope assignment whatever its type, so detaching a stale optional scope must not remove the scope
+// once it has moved to default.
+//
+// This tests the API client rather than the resources: it calls the attach and detach functions directly (from Check,
+// after applying a config that only creates the client and scope) so that the default attach always runs before the
+// stale optional detach. Terraform does not guarantee this order when a scope moves between the resources, so
+// moveBetweenResourcesWithoutDependency cannot reliably cover it.
+func TestAccKeycloakOpenidClientDefaultScopes_apiClientStaleOptionalDetachKeepsDefaultScope(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClientOptionalScopes_noOptionalScopes(client, clientScope),
+				Check: func(s *terraform.State) error {
+					openidClient, err := keycloakClient.GetOpenidClientByClientId(testCtx, testAccRealm.Realm, client)
+					if err != nil {
+						return err
+					}
+
+					if err = keycloakClient.AttachOpenidClientDefaultScopes(testCtx, testAccRealm.Realm, openidClient.Id, []string{clientScope}); err != nil {
+						return err
+					}
+
+					if err = keycloakClient.DetachOpenidClientOptionalScopes(testCtx, testAccRealm.Realm, openidClient.Id, []string{clientScope}); err != nil {
+						return err
+					}
+
+					return testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client.client", append(slices.Clone(preAssignedDefaultClientScopes), clientScope))(s)
+				},
+			},
+		},
+	})
+}
+
+func testKeycloakOpenidClientScopes_defaultAndOptional(client, clientScope string, defaultScopes, optionalScopes []string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "keycloak_openid_client_default_scopes" "default_scopes" {
+	realm_id       = data.keycloak_realm.realm.id
+	client_id      = keycloak_openid_client.client.id
+	default_scopes = %s
+
+	depends_on = [keycloak_openid_client_scope.client_scope]
+}
+
+resource "keycloak_openid_client_optional_scopes" "optional_scopes" {
+	realm_id        = data.keycloak_realm.realm.id
+	client_id       = keycloak_openid_client.client.id
+	optional_scopes = %s
+
+	depends_on = [keycloak_openid_client_scope.client_scope]
+}
+	`, testKeycloakOpenidClientOptionalScopes_noOptionalScopes(client, clientScope), arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
+}
+
 func testKeycloakOpenidClientDefaultScopes_duplicateScopeAssignment(client, clientScope string) string {
 	return fmt.Sprintf(`
 %s
@@ -589,5 +807,5 @@ resource "keycloak_openid_client_default_scopes" "default_scopes" {
 		"${keycloak_openid_client_scope.client_scope.name}"
 	]
 }
-	`, testKeycloakOpenidClientOptionalScopes_basic(client, clientScope))
+	`, testKeycloakOpenidClientOptionalScopes_noOptionalScopes(client, clientScope))
 }

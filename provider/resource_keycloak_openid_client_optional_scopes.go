@@ -14,6 +14,7 @@ func resourceKeycloakOpenidClientOptionalScopes() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceKeycloakOpenidClientOptionalScopesReconcile,
 		ReadContext:   resourceKeycloakOpenidClientOptionalScopesRead,
+		CustomizeDiff: claimScopesOnPlan("optional", "optional_scopes", openidClientScopeOwnerKeyOnPlan),
 		DeleteContext: resourceKeycloakOpenidClientOptionalScopesDelete,
 		UpdateContext: resourceKeycloakOpenidClientOptionalScopesReconcile,
 		Importer: &schema.ResourceImporter{
@@ -73,6 +74,12 @@ func resourceKeycloakOpenidClientOptionalScopesReconcile(ctx context.Context, da
 	clientId := data.Get("client_id").(string)
 	tfOpenidClientOptionalScopes := data.Get("optional_scopes").(*schema.Set)
 
+	defer keycloakClient.LockScopeOwner(keycloak.OpenidClientScopeOwnerKey(realmId, clientId))()
+
+	if err := keycloakClient.ClaimScopes(keycloak.OpenidClientScopeOwnerKey(realmId, clientId), "optional", interfaceSliceToStringSlice(tfOpenidClientOptionalScopes.List())); err != nil {
+		return diag.FromErr(err)
+	}
+
 	keycloakOpenidClientOptionalScopes, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId)
 	if err != nil {
 		if keycloak.ErrorIs404(err) {
@@ -116,6 +123,9 @@ func resourceKeycloakOpenidClientOptionalScopesDelete(ctx context.Context, data 
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 	optionalScopes := data.Get("optional_scopes").(*schema.Set)
+
+	defer keycloakClient.LockScopeOwner(keycloak.OpenidClientScopeOwnerKey(realmId, clientId))()
+	defer keycloakClient.ReleaseScopes(keycloak.OpenidClientScopeOwnerKey(realmId, clientId), "optional")
 
 	return diag.FromErr(keycloakClient.DetachOpenidClientOptionalScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(optionalScopes.List())))
 }
