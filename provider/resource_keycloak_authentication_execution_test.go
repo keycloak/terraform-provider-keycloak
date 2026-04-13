@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -15,9 +15,9 @@ func TestAccKeycloakAuthenticationExecution_basic(t *testing.T) {
 	parentAuthFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationExecution_basic(parentAuthFlowAlias),
@@ -40,9 +40,9 @@ func TestAccKeycloakAuthenticationExecution_createAfterManualDestroy(t *testing.
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationExecution_basic(authParentFlowAlias),
@@ -70,9 +70,9 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationExecution_basic(authParentFlowAlias),
@@ -102,16 +102,12 @@ func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionRequire
 func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriority(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
-
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationExecution_multipleExecutionsWithPriority(authParentFlowAlias, 112, 111),
@@ -131,16 +127,12 @@ func TestAccKeycloakAuthenticationExecution_createAuthenticationExecutionPriorit
 func TestAccKeycloakAuthenticationExecution_updateAuthenticationExecutionPriority(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); !ok {
-		t.Skip()
-	}
-
 	authParentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakAuthenticationExecution_multipleExecutions(authParentFlowAlias),

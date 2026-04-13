@@ -2,19 +2,20 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmEvents_basic(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basic(realmName),
@@ -28,8 +29,8 @@ func TestAccKeycloakRealmEvents_destroy(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basic(realmName),
@@ -88,8 +89,8 @@ func TestAccKeycloakRealmEvents_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basicFromInterface(realmName, before),
@@ -110,11 +111,11 @@ func TestAccKeycloakRealmEvents_update(t *testing.T) {
 						}
 
 						if len(realmEventsConfig.EnabledEventTypes) != 1 {
-							return fmt.Errorf("exptected to enabled_event_types to contain exactly one element")
+							return fmt.Errorf("expected enabled_event_types to contain exactly one element")
 						}
 
 						if len(realmEventsConfig.EventsListeners) != 2 {
-							return fmt.Errorf("exptected to event_listeners to contain exactly two element elements")
+							return fmt.Errorf("expected event_listeners to contain exactly two element elements")
 						}
 
 						return nil
@@ -147,8 +148,8 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basicFromInterface(realmName, before),
@@ -164,45 +165,16 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 							return err
 						}
 
-						//keycloak versions < 7.0.0 have 63 events, versions >=7.0.0 have 67 events, versions >=12.0.0 have 69 events
-						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 91 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_25); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 87 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(87) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 83 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(83) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_23); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 80 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(80) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_14); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 79 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(79) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_13); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 77 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(77) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ = keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_12); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 69 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(69) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
-						} else if ok, _ = keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_7); ok {
-							if len(realmEventsConfig.EnabledEventTypes) != 67 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(67) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+						//different Keycloak versions have different number of default saved events
+						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_3); ok {
+							if len(realmEventsConfig.EnabledEventTypes) != 93 {
+								return fmt.Errorf("expected enabled_event_types to contain all(93) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
 						} else {
-							if len(realmEventsConfig.EnabledEventTypes) != 63 {
-								return fmt.Errorf("exptected to enabled_event_types to contain all(63) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							if len(realmEventsConfig.EnabledEventTypes) != 91 {
+								return fmt.Errorf("expected enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
 						}
-
 						return nil
 					},
 				),

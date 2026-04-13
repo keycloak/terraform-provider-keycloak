@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccKeycloakDataSourceSamlClient_basic(t *testing.T) {
@@ -16,8 +16,8 @@ func TestAccKeycloakDataSourceSamlClient_basic(t *testing.T) {
 	resourceName := "keycloak_saml_client.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakSamlClientConfig(clientId),
@@ -31,6 +31,10 @@ func TestAccKeycloakDataSourceSamlClient_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(dataSourceName, "sign_documents", resourceName, "sign_documents"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "sign_assertions", resourceName, "sign_assertions"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "encrypt_assertions", resourceName, "encrypt_assertions"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "encryption_algorithm", resourceName, "encryption_algorithm"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "encryption_key_algorithm", resourceName, "encryption_key_algorithm"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "encryption_digest_method", resourceName, "encryption_digest_method"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "encryption_mask_generation_function", resourceName, "encryption_mask_generation_function"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "client_signature_required", resourceName, "client_signature_required"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "signature_key_name", resourceName, "signature_key_name"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "force_post_binding", resourceName, "force_post_binding"),

@@ -2,16 +2,18 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -49,6 +51,10 @@ func arrayOfStringsForTerraformResource(parts []string) string {
 
 func randomDurationString() string {
 	return (time.Duration(acctest.RandIntRange(1, 604800)) * time.Second).String()
+}
+
+func durationString(seconds int) string {
+	return (time.Duration(seconds) * time.Second).String()
 }
 
 func skipIfEnvSet(t *testing.T, envs ...string) {
@@ -101,7 +107,7 @@ func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keyc
 	}
 }
 
-func TestCheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
+func CheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		err := resource.TestCheckResourceAttr(name, key, value)(s)
 		if err == nil {
@@ -110,4 +116,25 @@ func TestCheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func equalsIgnoreType(want, got interface{}) bool {
+	if reflect.DeepEqual(want, got) {
+		return true
+	}
+
+	// TODO this should be replaced with an actual comparison the json == json is a quick fix.
+	wantJSON, _ := json.Marshal(want)
+	gotJSON, _ := json.Marshal(got)
+
+	if string(wantJSON) == string(gotJSON) {
+		return true
+	}
+
+	// compare as strings (this handles "false" == false and "0" == 0)
+	if fmt.Sprintf("%v", want) == fmt.Sprintf("%v", got) {
+		return true
+	}
+
+	return false
 }

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -127,6 +128,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"admin_permissions_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 
 			// Login Config
 
@@ -225,6 +230,36 @@ func dataSourceKeycloakRealm() *schema.Resource {
 										Type:      schema.TypeString,
 										Computed:  true,
 										Sensitive: true,
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"client_id": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"client_secret": {
+										Type:      schema.TypeString,
+										Computed:  true,
+										Sensitive: true,
+									},
+									"scope": {
+										Type:     schema.TypeString,
+										Computed: true,
 									},
 								},
 							},
@@ -416,6 +451,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 								Schema: map[string]*schema.Schema{
 									"permanent_lockout": { //Permanent Lockout
 										Type:     schema.TypeBool,
+										Computed: true,
+									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
 										Computed: true,
 									},
 									"max_login_failures": { //failureFactor

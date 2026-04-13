@@ -2,13 +2,14 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmKeystoreEcdsaGenerated_basic(t *testing.T) {
@@ -17,9 +18,9 @@ func TestAccKeycloakRealmKeystoreEcdsaGenerated_basic(t *testing.T) {
 	ecdsaName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreEcdsaGenerated_basic(ecdsaName),
@@ -43,9 +44,9 @@ func TestAccKeycloakRealmKeystoreEcdsaGenerated_createAfterManualDestroy(t *test
 	fullNameKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreEcdsaGenerated_basic(fullNameKeystoreName),
@@ -72,9 +73,9 @@ func TestAccKeycloakRealmKeystoreEcdsaGenerated_ellipticCurveValidation(t *testi
 	ellipticCurve := randomStringInSlice(keycloakRealmKeystoreEcdsaGeneratedEllipticCurve)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakRealmKeystoreEcdsaGenerated_basicWithAttrValidation(ecdsaName, "elliptic_curve_key", acctest.RandString(10)),
@@ -113,9 +114,9 @@ func TestAccKeycloakRealmKeystoreEcdsaGenerated_updateRealmKeystoreEcdsaGenerate
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreEcdsaGenerated_basicFromInterface(groupKeystoreOne),

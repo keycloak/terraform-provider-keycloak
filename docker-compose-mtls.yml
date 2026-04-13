@@ -1,0 +1,5 @@
+services:
+  keycloak:
+    environment:
+    - KC_HTTPS_CLIENT_AUTH=required
+    - KC_TRUSTSTORE_PATHS=/opt/keycloak/testdata/tls/ca-cert.pem,/opt/keycloak/testdata/tls/client-cert.pem

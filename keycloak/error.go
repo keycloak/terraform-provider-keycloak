@@ -1,8 +1,9 @@
 package keycloak
 
 import (
-	"github.com/hashicorp/errwrap"
 	"net/http"
+
+	"github.com/hashicorp/errwrap"
 )
 
 type ApiError struct {

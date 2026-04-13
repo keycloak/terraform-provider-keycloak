@@ -2,11 +2,11 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -21,9 +21,9 @@ func TestAccKeycloakAuthenticationExecutionConfig_basic(t *testing.T) {
 	var config1, config2 keycloak.AuthenticationExecutionConfig
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAlias, configProviderOne),
@@ -61,9 +61,9 @@ func TestAccKeycloakAuthenticationExecutionConfig_updateForcesNew(t *testing.T) 
 	var config1, config2 keycloak.AuthenticationExecutionConfig
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAliasOne, configProvider),
@@ -98,9 +98,9 @@ func TestAccKeycloakAuthenticationExecutionConfig_import(t *testing.T) {
 	configProvider := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAlias, configProvider),

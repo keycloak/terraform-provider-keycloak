@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_basic(t *testing.T) {
@@ -18,9 +19,9 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_basic(t *testing.T) {
 	webappClientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakIdpTokenExchangeScopePermission_basic(providerAlias, providerClientId, webappClientId),
@@ -40,9 +41,9 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_createAfterManualDestroy(t *
 	webappClientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakIdpTokenExchangeScopePermission_basic(providerAlias, providerClientId, webappClientId),
@@ -73,9 +74,9 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_import(t *testing.T) {
 	webappClientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakIdpTokenExchangeScopePermission_basic(providerAlias, providerClientId, webappClientId),
@@ -100,9 +101,9 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_updatePolicyMultipleClients(
 	webappClientId2 := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakIdpTokenExchangeScopePermission_basic(providerAlias, providerClientId, webappClientId),
@@ -131,9 +132,9 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_rolePolicy(t *testing.T) {
 	webappClientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakIdpTokenExchangeScopePermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakIdpTokenExchangeScopePermission_rolePolicy(providerAlias, providerClientId, webappClientId),

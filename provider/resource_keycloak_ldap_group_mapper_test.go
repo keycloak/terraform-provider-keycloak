@@ -2,23 +2,25 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakLdapGroupMapper_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapGroupMapper_basic(groupMapperName),
@@ -42,9 +44,9 @@ func TestAccKeycloakLdapGroupMapper_createAfterManualDestroy(t *testing.T) {
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapGroupMapper_basic(groupMapperName),
@@ -72,9 +74,9 @@ func TestAccKeycloakLdapGroupMapper_modeValidation(t *testing.T) {
 	mode := randomStringInSlice(keycloakLdapGroupMapperModes)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapGroupMapper_basicWithAttrValidation(groupMapperName, "mode", acctest.RandString(10)),
@@ -95,9 +97,9 @@ func TestAccKeycloakLdapGroupMapper_membershipAttributeTypeValidation(t *testing
 	membershipAttributeType := randomStringInSlice(keycloakLdapGroupMapperMembershipAttributeTypes)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapGroupMapper_basicWithAttrValidation(groupMapperName, "membership_attribute_type", acctest.RandString(10)),
@@ -118,9 +120,9 @@ func TestAccKeycloakLdapGroupMapper_userRolesRetrieveStrategyValidation(t *testi
 	userRolesRetrieveStrategy := randomStringInSlice(keycloakLdapGroupMapperUserRolesRetrieveStrategies)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapGroupMapper_basicWithAttrValidation(groupMapperName, "user_roles_retrieve_strategy", acctest.RandString(10)),
@@ -141,9 +143,9 @@ func TestAccKeycloakLdapGroupMapper_groupsLdapFilterValidation(t *testing.T) {
 	groupsLdapFilter := "(" + acctest.RandString(10) + ")"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapGroupMapper_basicWithAttrValidation(groupMapperName, "groups_ldap_filter", acctest.RandString(10)),
@@ -163,9 +165,9 @@ func TestAccKeycloakLdapGroupMapper_groupInheritanceValidation(t *testing.T) {
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapGroupMapper_groupInheritanceValidation(groupMapperName),
@@ -181,9 +183,9 @@ func TestAccKeycloakLdapGroupMapper_updateLdapUserFederationForceNew(t *testing.
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapGroupMapper_updateLdapUserFederationBefore(groupMapperName),
@@ -243,9 +245,9 @@ func TestAccKeycloakLdapGroupMapper_updateLdapUserFederationInPlace(t *testing.T
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapGroupMapper_basicFromInterface(groupMapperOne),
@@ -262,17 +264,13 @@ func TestAccKeycloakLdapGroupMapper_updateLdapUserFederationInPlace(t *testing.T
 func TestAccKeycloakLdapGroupMapper_groupsPath(t *testing.T) {
 	t.Parallel()
 
-	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_11); !ok {
-		t.Skip()
-	}
-
 	groupName := acctest.RandomWithPrefix("tf-acc")
 	groupMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapGroupMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapGroupMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapGroupMapper_groupsPath(groupName, groupMapperName),
@@ -367,6 +365,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -410,6 +409,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -455,6 +455,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -501,6 +502,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -553,6 +555,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -572,6 +575,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -620,6 +624,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -639,6 +644,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -687,6 +693,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {

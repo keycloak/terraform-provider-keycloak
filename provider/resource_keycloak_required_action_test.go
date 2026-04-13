@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakRequiredAction_basic(t *testing.T) {
@@ -15,8 +15,8 @@ func TestAccKeycloakRequiredAction_basic(t *testing.T) {
 	requiredActionAlias := "CONFIGURE_TOTP"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRequiredAction_basic(realmName, requiredActionAlias, 37),
@@ -32,8 +32,8 @@ func TestAccKeycloakRequiredAction_withConfig(t *testing.T) {
 	maxAuthAgeConfig := "3600"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRequiredAction_withConfig(realmName, requiredActionAlias, 37, maxAuthAgeConfig),
@@ -53,8 +53,8 @@ func TestAccKeycloakRequiredAction_unregisteredAction(t *testing.T) {
 	requiredActionAlias := "webauthn-register"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRequiredAction_basic(realmName, requiredActionAlias, 37),
@@ -69,8 +69,8 @@ func TestAccKeycloakRequiredAction_invalidAlias(t *testing.T) {
 	randomReqActionAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakRequiredAction_basic(realmName, randomReqActionAlias, 37),
@@ -85,8 +85,8 @@ func TestAccKeycloakRequiredAction_import(t *testing.T) {
 	requiredActionAlias := "VERIFY_EMAIL"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRequiredAction_import(realmName, requiredActionAlias),
@@ -107,8 +107,8 @@ func TestAccKeycloakRequiredAction_disabledDefault(t *testing.T) {
 	requiredActionAlias := "VERIFY_EMAIL"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakRequiredAction_disabledDefault(realmName, requiredActionAlias),
@@ -122,8 +122,8 @@ func TestAccKeycloakRequiredAction_computedPriority(t *testing.T) {
 	requiredActionAlias := "UPDATE_PROFILE"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRequiredAction_computedPriority(realmName, requiredActionAlias, 37, 14),

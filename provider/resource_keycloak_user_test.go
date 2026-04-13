@@ -2,10 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,6 +9,11 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakUser_basic_wo_attribute(t *testing.T) {
@@ -21,9 +22,9 @@ func TestAccKeycloakUser_basic_wo_attribute(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_basic_wo_attribute(username),
@@ -47,9 +48,9 @@ func TestAccKeycloakUser_basic(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_basic(username, attributeName, attributeValue),
@@ -73,9 +74,9 @@ func TestAccKeycloakUser_withInitialPassword(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_initialPassword(username, password, clientId),
@@ -97,9 +98,9 @@ func TestAccKeycloakUser_createAfterManualDestroy(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_basic(username, attributeName, attributeValue),
@@ -131,9 +132,9 @@ func TestAccKeycloakUser_updateUsername(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_basic(usernameOne, attributeName, attributeValue),
@@ -160,9 +161,9 @@ func TestAccKeycloakUser_updateWithInitialPasswordChangeDoesNotReset(t *testing.
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_initialPassword(username, passwordOne, clientId),
@@ -204,9 +205,9 @@ func TestAccKeycloakUser_updateInPlace(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_fromInterface(userOne),
@@ -240,9 +241,9 @@ func TestAccKeycloakUser_unsetOptionalAttributes(t *testing.T) {
 	resourceName := "keycloak_user.user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_fromInterface(userWithOptionalAttributes),
@@ -267,9 +268,9 @@ func TestAccKeycloakUser_validateLowercaseUsernames(t *testing.T) {
 	attributeValue := acctest.RandString(250)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakUser_basic(username, attributeName, attributeValue),
@@ -287,9 +288,9 @@ func TestAccKeycloakUser_federatedLink(t *testing.T) {
 	resourceName := "keycloak_user.destination_user"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUser_FederationLink(sourceUserName, destinationRealmName),
@@ -307,9 +308,9 @@ func TestAccKeycloakUser_import(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakUserNotDestroyed(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserNotDestroyed(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakUser_import("master", "non-existing-username"),
@@ -318,6 +319,58 @@ func TestAccKeycloakUser_import(t *testing.T) {
 			{
 				Config: testKeycloakUser_import("master", "service-account-terraform"),
 				Check:  testAccCheckKeycloakUserExistsWithUsername("keycloak_user.user", "service-account-terraform"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakUser_multiValuedAttributeNoDrift(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
+
+	attributeValue := "role-1##role-2##role-3##role-4##role-5##role-6##role-7##role-8##role-9##role-10"
+	resourceName := "keycloak_user.user"
+
+	var user keycloak.User
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakUser_basic(username, attributeName, attributeValue),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "attributes."+attributeName, attributeValue),
+					testAccCheckKeycloakUserFetch(resourceName, &user),
+				),
+			},
+			{
+				PreConfig: func() {
+					// right now, Keycloak won't persist different order of items in a collection
+					// if existing collection with roles has same items, so in order to achieve a different order
+					// we need to first put there a different attribute and then the original items in a different order
+					fullUser, err := keycloakClient.GetUser(testCtx, user.RealmId, user.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					fullUser.Attributes = map[string][]string{
+						attributeName: {"dummy"},
+					}
+					if err = keycloakClient.UpdateUser(testCtx, fullUser); err != nil {
+						t.Fatal(err)
+					}
+					fullUser.Attributes = map[string][]string{
+						attributeName: {"role-5", "role-3", "role-10", "role-1", "role-8", "role-2", "role-9", "role-4", "role-7", "role-6"},
+					}
+					if err = keycloakClient.UpdateUser(testCtx, fullUser); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakUser_basic(username, attributeName, attributeValue),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -410,7 +463,7 @@ func testAccCheckKeycloakUserFetch(resourceName string, user *keycloak.User) res
 
 func testAccCheckKeycloakUserInitialPasswordLogin(username, password, clientId string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		httpClient := &http.Client{}
+		httpClient := keycloakClient.GetHttpClient()
 
 		resourceUrl := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/token", os.Getenv("KEYCLOAK_URL"), testAccRealm.Realm)
 
@@ -491,11 +544,7 @@ resource "keycloak_user" "user" {
 	`, testAccRealm.Realm, username)
 }
 
-func userProfileIfKeycloakHasSupport(realmRef string) (string, string) {
-	ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_24)
-	if !ok {
-		return "", ""
-	}
+func userProfile(realmRef string) (string, string) {
 
 	return fmt.Sprintf(`
 resource "keycloak_realm_user_profile" "realm_user_profile" {
@@ -531,7 +580,7 @@ depends_on = [
 }
 
 func testKeycloakUser_basic(username, attributeName, attributeValue string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -554,7 +603,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_initialPassword(username string, password string, clientId string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -587,7 +636,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_fromInterface(user *keycloak.User) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("data.keycloak_realm.realm.id")
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -610,7 +659,7 @@ resource "keycloak_user" "user" {
 }
 
 func testKeycloakUser_FederationLink(sourceRealmUserName, destinationRealmId string) string {
-	userProfile, dependsOn := userProfileIfKeycloakHasSupport("keycloak_realm.source_realm.id")
+	userProfile, dependsOn := userProfile("keycloak_realm.source_realm.id")
 	return fmt.Sprintf(`
 resource "keycloak_realm" "source_realm" {
   realm   = "source_test_realm"

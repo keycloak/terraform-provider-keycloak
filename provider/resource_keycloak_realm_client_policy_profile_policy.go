@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -65,6 +67,8 @@ func resourceKeycloakRealmClientPolicyProfilePolicyUpdate(ctx context.Context, d
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 	realmId := policy.RealmId
+	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyUpdate:%s", realmId))
+	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyUpdate:%s", realmId))
 	realmClientPolicyProfilePolicies, err := keycloakClient.GetAllRealmClientPolicyProfilePolices(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -89,6 +93,8 @@ func resourceKeycloakRealmClientPolicyProfilePolicyDelete(ctx context.Context, d
 	slicedPolicies := []keycloak.RealmClientPolicyProfilePolicy{}
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 	realmId := policy.RealmId
+	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyDelete:%s", realmId))
+	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyDelete:%s", realmId))
 	realmClientPolicyProfilePolicies, err := keycloakClient.GetAllRealmClientPolicyProfilePolices(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,6 +121,8 @@ func resourceKeycloakRealmClientPolicyProfilePolicyCreate(ctx context.Context, d
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 
 	realmId := policy.RealmId
+	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyCreate:%s", realmId))
+	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyCreate:%s", realmId))
 	name := policy.Name
 	data.SetId(fmt.Sprintf("%s/realm-client-policy-profile-policies/%s", realmId, name))
 
@@ -169,7 +177,14 @@ func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *key
 		if v, ok := conditionMap["configuration"]; ok {
 			configurations := make(map[string]interface{})
 			for key, value := range v.(map[string]interface{}) {
-				configurations[key] = value.(string)
+				// handle json objects and arrays with exception of the attributes field as that needs to stay json-encoded, see https://github.com/keycloak/keycloak/blob/ca205272ba6360bc808d19b5f8e2af119fa37c5a/services/src/main/java/org/keycloak/services/clientpolicy/condition/ClientAttributesCondition.java#L138-L141
+				if cond.Name != "client-attributes" && (strings.HasPrefix(value.(string), "{") || strings.HasPrefix(value.(string), "[")) {
+					var t interface{}
+					json.Unmarshal([]byte(value.(string)), &t)
+					configurations[key] = t
+					continue
+				}
+				configurations[key] = value
 			}
 			cond.Configuration = configurations
 		}
@@ -208,7 +223,14 @@ func mapFromRealmClientPolicyProfilePolicyToData(data *schema.ResourceData, poli
 		if cond.Configuration != nil {
 			configurations := make(map[string]interface{})
 			for k, v := range cond.Configuration {
-				configurations[k] = v
+				switch v.(type) {
+				// handle json objects and arrays
+				case map[string]interface{}, []interface{}:
+					s, _ := json.Marshal(v)
+					configurations[k] = string(s)
+				default:
+					configurations[k] = v
+				}
 			}
 			conditionMap["configuration"] = configurations
 		}

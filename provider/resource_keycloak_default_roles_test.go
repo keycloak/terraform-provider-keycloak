@@ -2,19 +2,20 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakDefaultRoles_basic(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakDefaultRoles_basic(realmName),
@@ -42,8 +43,8 @@ func TestAccKeycloakDefaultRoles_updateDefaultRoles(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakDefaultRoles_basicFromInterface(realmName, groupDefaultRolesOne),
@@ -84,12 +85,8 @@ func testAccCheckKeycloakDefaultRolesDestroy(realmId string) resource.TestCheckF
 			return fmt.Errorf("error getting defaultRoles with id %s: %s", realm.DefaultRole.Id, err)
 		}
 
-		defaultRoles := getDefaultRoleNames(composites)
-		if err != nil {
-			return err
-		}
-		if len(defaultRoles) != 0 {
-			return fmt.Errorf("realm %s still has %d default roles, expected zero", realmId, len(defaultRoles))
+		if len(composites) != 0 {
+			return fmt.Errorf("realm %s still has %d default roles, expected zero", realmId, len(composites))
 		}
 
 		return nil
@@ -110,7 +107,14 @@ func getKeycloakDefaultRolesFromState(s *terraform.State, resourceName string) (
 		return nil, fmt.Errorf("error getting defaultRoles with id %s: %s", id, err)
 	}
 
-	defaultRoleNamesList := getDefaultRoleNames(composites)
+	var defaultRoleNamesList []string
+	for _, composite := range composites {
+		name, err := keycloakClient.GetQualifiedRoleName(testCtx, realm, composite)
+		if err != nil {
+			return nil, fmt.Errorf("error getting qualified name for role id %s: %s", composite.Id, err)
+		}
+		defaultRoleNamesList = append(defaultRoleNamesList, name)
+	}
 
 	defaultRoles := &keycloak.DefaultRoles{
 		Id:           id,

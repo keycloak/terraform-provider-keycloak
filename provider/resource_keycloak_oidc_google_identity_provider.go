@@ -110,9 +110,6 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVe
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		UseJwksUrl:                  true,
 		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
-
-		//since keycloak v26 moved to IdentityProvider - still here fore backward compatibility
-		HideOnLoginPage: types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 	}
 
 	if err := mergo.Merge(googleOidcIdentityProviderConfig, defaultConfig); err != nil {
@@ -134,12 +131,6 @@ func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvid
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
 	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
-
-	if keycloakVersion.LessThan(keycloak.Version_26.AsVersion()) {
-		// Since keycloak v26 the attribute "hideOnLoginPage" is not part of the identity provider config anymore!
-		data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
-		return nil
-	}
 
 	return nil
 }

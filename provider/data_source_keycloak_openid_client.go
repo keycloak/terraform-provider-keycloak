@@ -104,6 +104,10 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"require_dpop_bound_tokens": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"access_token_lifespan": {
 				Type:     schema.TypeString,
 				Computed: true,

@@ -4,21 +4,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccKeycloakDataSourceOrganization_basic(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	orgName := acctest.RandomWithPrefix("tf-acc-test")
 	domainName := acctest.RandomWithPrefix("tf-acc-test")
 	dataSourceName := "data.keycloak_organization.test"
 	resourceName := "keycloak_organization.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakOrganizationConfig(orgName, domainName),

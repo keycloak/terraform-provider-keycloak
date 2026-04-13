@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakRealmKeystoreJava_basic(t *testing.T) {
 	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreJavaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreJava_basic(javaKeystoreName),
@@ -44,9 +44,9 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 	fullNameKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreJavaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreJava_basic(fullNameKeystoreName),
@@ -72,9 +72,9 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreJavaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(algorithm, "algorithm",
@@ -114,9 +114,9 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreJavaDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreOne),
@@ -204,7 +204,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"
@@ -225,7 +225,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"
@@ -245,7 +245,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/misc/keystore.jks"
+    keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "test"
     key_password = "12345678"

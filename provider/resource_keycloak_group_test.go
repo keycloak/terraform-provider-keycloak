@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakGroup_basic(t *testing.T) {
 	t.Parallel()
 
-	groupName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
@@ -24,7 +24,7 @@ func TestAccKeycloakGroup_basic(t *testing.T) {
 func TestAccKeycloakGroup_basicGroupNameContainsBackSlash(t *testing.T) {
 	t.Parallel()
 
-	groupName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/\\")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
@@ -33,9 +33,9 @@ func TestAccKeycloakGroup_basicGroupNameContainsBackSlash(t *testing.T) {
 
 func runTestBasicGroup(t *testing.T, groupName, attributeName, attributeValue string) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_basic(groupName, attributeName, attributeValue),
@@ -56,14 +56,14 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 
 	var group = &keycloak.Group{}
 
-	groupName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_basic(groupName, attributeName, attributeValue),
@@ -89,15 +89,15 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 	t.Parallel()
 
-	groupNameBefore := acctest.RandomWithPrefix("tf-acc")
-	groupNameAfter := acctest.RandomWithPrefix("tf-acc")
+	groupNameBefore := acctest.RandomWithPrefix("tf-acc/")
+	groupNameAfter := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_basic(groupNameBefore, attributeName, attributeValue),
@@ -120,12 +120,12 @@ func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 func TestAccKeycloakGroup_updateRealm(t *testing.T) {
 	t.Parallel()
 
-	group := acctest.RandomWithPrefix("tf-acc")
+	group := acctest.RandomWithPrefix("tf-acc/")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_updateRealmBefore(group),
@@ -148,9 +148,9 @@ func TestAccKeycloakGroup_updateRealm(t *testing.T) {
 func TestAccKeycloakGroup_nested(t *testing.T) {
 	t.Parallel()
 
-	parentGroupName := acctest.RandomWithPrefix("tf-acc")
-	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
-	secondChildGroupName := acctest.RandomWithPrefix("tf-acc")
+	parentGroupName := acctest.RandomWithPrefix("tf-acc/")
+	firstChildGroupName := acctest.RandomWithPrefix("tf-acc/")
+	secondChildGroupName := acctest.RandomWithPrefix("tf-acc/")
 
 	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
 }
@@ -158,9 +158,9 @@ func TestAccKeycloakGroup_nested(t *testing.T) {
 func TestAccKeycloakGroup_nestedGroupNameContainsBackSlash(t *testing.T) {
 	t.Parallel()
 
-	parentGroupName := acctest.RandomWithPrefix("tf-acc")
-	firstChildGroupName := acctest.RandomWithPrefix("tf-acc")
-	secondChildGroupName := acctest.RandomWithPrefix("tf-acc")
+	parentGroupName := acctest.RandomWithPrefix("tf-acc/\\")
+	firstChildGroupName := acctest.RandomWithPrefix("tf-acc/\\")
+	secondChildGroupName := acctest.RandomWithPrefix("tf-acc/\\")
 
 	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
 }
@@ -171,9 +171,9 @@ func runTestNestedGroup(t *testing.T, parentGroupName, firstChildGroupName, seco
 	secondChildGroupResource := "keycloak_group.second_child_group"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_nested(parentGroupName, firstChildGroupName, secondChildGroupName, firstChildGroupResource),
@@ -257,9 +257,9 @@ func TestAccKeycloakGroup_unsetOptionalAttributes(t *testing.T) {
 	resourceName := "keycloak_group.group"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_fromInterface(groupWithOptionalAttributes),
@@ -366,7 +366,7 @@ resource "keycloak_group" "group" {
 		"%s" = "%s"
 	}
 }
-	`, testAccRealm.Realm, group, attributeName, attributeValue)
+	`, testAccRealm.Realm, strings.ReplaceAll(group, "\\", "\\\\"), attributeName, attributeValue)
 }
 
 func testKeycloakGroup_updateRealmBefore(group string) string {
@@ -383,7 +383,7 @@ resource "keycloak_group" "group" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm_1.id
 }
-	`, testAccRealm.Realm, testAccRealmTwo.Realm, group)
+	`, testAccRealm.Realm, testAccRealmTwo.Realm, strings.ReplaceAll(group, "\\", "\\\\"))
 }
 
 func testKeycloakGroup_updateRealmAfter(group string) string {
@@ -400,7 +400,7 @@ resource "keycloak_group" "group" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm_2.id
 }
-	`, testAccRealm.Realm, testAccRealmTwo.Realm, group)
+	`, testAccRealm.Realm, testAccRealmTwo.Realm, strings.ReplaceAll(group, "\\", "\\\\"))
 }
 
 func testKeycloakGroup_nested(parentGroup, firstChildGroup, secondChildGroup, secondChildGroupParent string) string {
@@ -425,7 +425,7 @@ resource "keycloak_group" "second_child_group" {
 	realm_id  = data.keycloak_realm.realm.id
 	parent_id = %s.id
 }
-	`, testAccRealm.Realm, parentGroup, firstChildGroup, secondChildGroup, secondChildGroupParent)
+	`, testAccRealm.Realm, strings.ReplaceAll(parentGroup, "\\", "\\\\"), strings.ReplaceAll(firstChildGroup, "\\", "\\\\"), strings.ReplaceAll(secondChildGroup, "\\", "\\\\"), strings.ReplaceAll(secondChildGroupParent, "\\", "\\\\"))
 }
 
 func testKeycloakGroup_fromInterface(group *keycloak.Group) string {
@@ -438,5 +438,59 @@ resource "keycloak_group" "group" {
 	realm_id = data.keycloak_realm.realm.id
 	name     = "%s"
 }
-	`, testAccRealm.Realm, group.Name)
+	`, testAccRealm.Realm, strings.ReplaceAll(group.Name, "\\", "\\\\"))
+}
+
+func TestAccKeycloakGroup_descriptionCanBeCleared(t *testing.T) {
+
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_3)
+	t.Parallel()
+
+	groupName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_group.group"
+
+	configWithDescription := testAccKeycloakGroupWithDescription(groupName, "Test description")
+	configWithEmptyDescription := testAccKeycloakGroupWithDescription(groupName, "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", groupName),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test description"),
+				),
+			},
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable
+			{
+				Config: configWithEmptyDescription,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakGroupWithDescription(name, description string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+  realm = "%s"
+}
+
+resource "keycloak_group" "group" {
+  realm_id    = data.keycloak_realm.realm.id
+  name        = "%s"
+  description = "%s"
+}
+`, testAccRealm.Realm, name, description)
 }

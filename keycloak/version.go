@@ -2,6 +2,7 @@ package keycloak
 
 import (
 	"context"
+
 	"github.com/hashicorp/go-version"
 )
 
@@ -31,6 +32,9 @@ const (
 	Version_26   Version = "26.0.0"
 	Version_26_1 Version = "26.1.0"
 	Version_26_2 Version = "26.2.0"
+	Version_26_3 Version = "26.3.0"
+	Version_26_4 Version = "26.4.0"
+	Version_26_5 Version = "26.5.0"
 )
 
 func (v Version) AsVersion() *version.Version {

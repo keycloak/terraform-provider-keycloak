@@ -3,11 +3,12 @@ package provider
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -16,9 +17,9 @@ func TestAccKeycloakSamlClientScope_basic(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientScope_basic(clientScopeName),
@@ -41,9 +42,9 @@ func TestAccKeycloakSamlClientScope_createAfterManualDestroy(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientScope_basic(clientScopeName),
@@ -71,9 +72,9 @@ func TestAccKeycloakSamlClientScope_updateRealm(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientScope_updateRealmBefore(clientScopeName),
@@ -98,9 +99,9 @@ func TestAccKeycloakSamlClientScope_consentScreenText(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientScope_basic(clientScopeName),
@@ -124,9 +125,9 @@ func TestAccKeycloakSamlClientScope_guiOrder(t *testing.T) {
 	guiOrder := acctest.RandIntRange(0, 1000)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientScope_basic(clientScopeName),
@@ -142,6 +143,40 @@ func TestAccKeycloakSamlClientScope_guiOrder(t *testing.T) {
 			{
 				Config: testKeycloakSamlClientScope_basic(clientScopeName),
 				Check:  testAccCheckKeycloakSamlClientScopeExistsWithCorrectProtocol("keycloak_saml_client_scope.client_scope"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakSamlClientScope_extraConfig(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientScopeExistsWithCorrectProtocol("keycloak_saml_client_scope.client_scope"),
+					testAccCheckKeycloakSamlClientScopeExtraConfigHasValue("keycloak_saml_client_scope.client_scope", "key1", "value1"),
+					testAccCheckKeycloakSamlClientScopeExtraConfigHasValue("keycloak_saml_client_scope.client_scope", "key2", "value2"),
+				),
+			},
+			{
+				Config: testKeycloakSamlClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientScopeExistsWithCorrectProtocol("keycloak_saml_client_scope.client_scope"),
+					testAccCheckKeycloakSamlClientScopeExtraConfigHasValue("keycloak_saml_client_scope.client_scope", "key2", "value2"),
+					testAccCheckKeycloakSamlClientScopeExtraConfigMissing("keycloak_saml_client_scope.client_scope", "key1"),
+				),
 			},
 		},
 	})
@@ -227,8 +262,6 @@ func testAccCheckKeycloakSamlClientScopeDestroy() resource.TestCheckFunc {
 }
 
 func getSamlClientScopeFromState(s *terraform.State, resourceName string) (*keycloak.SamlClientScope, error) {
-	keycloakClientScope := testAccProvider.Meta().(*keycloak.KeycloakClient)
-
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, fmt.Errorf("resource not found: %s", resourceName)
@@ -237,7 +270,7 @@ func getSamlClientScopeFromState(s *terraform.State, resourceName string) (*keyc
 	id := rs.Primary.ID
 	realm := rs.Primary.Attributes["realm_id"]
 
-	clientScope, err := keycloakClientScope.GetSamlClientScope(testCtx, realm, id)
+	clientScope, err := keycloakClient.GetSamlClientScope(testCtx, realm, id)
 	if err != nil {
 		return nil, fmt.Errorf("error getting saml client scope %s: %s", id, err)
 	}
@@ -326,4 +359,68 @@ resource "keycloak_saml_client_scope" "client_scope" {
 	realm_id  = data.keycloak_realm.realm_2.id
 }
 	`, testAccRealm.Realm, testAccRealmTwo.Realm, clientScopeName)
+}
+
+// check that a particular extra config key is missing
+func testAccCheckKeycloakSamlClientScopeExtraConfigMissing(resourceName string, key string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getSamlClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if val, ok := clientScope.Attributes.ExtraConfig[key]; ok {
+			// an empty string value is treated as removed (see setExtraConfigData)
+			if val == "" {
+				return nil
+			}
+
+			return fmt.Errorf("expected saml client scope to not have attribute %v, but got %v", key, val)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakSamlClientScopeExtraConfigHasValue(resourceName, key, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getSamlClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		value, ok := clientScope.Attributes.ExtraConfig[key]
+		if !ok {
+			return fmt.Errorf("expected extra_config to contain key %q, but it was not found", key)
+		}
+
+		if value != expectedValue {
+			return fmt.Errorf("expected extra_config key %q to have value %q, but got %q", key, expectedValue, value)
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakSamlClientScope_withExtraConfigMap(clientScopeName string, extraConfig map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("{\n")
+	for k, v := range extraConfig {
+		sb.WriteString(fmt.Sprintf("\t\t\"%s\" = \"%s\"\n", k, v))
+	}
+	sb.WriteString("\t}")
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_saml_client_scope" "client_scope" {
+	name        = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	description = "test description"
+
+	extra_config = %s
+}
+	`, testAccRealm.Realm, clientScopeName, sb.String())
 }

@@ -3,21 +3,26 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type OpenidClientScope struct {
-	Id          string `json:"id,omitempty"`
-	RealmId     string `json:"-"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Protocol    string `json:"protocol"`
-	Attributes  struct {
-		DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
-		ConsentScreenText      string                   `json:"consent.screen.text"`
-		GuiOrder               string                   `json:"gui.order"`
-		IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
-	} `json:"attributes"`
+	Id          string                      `json:"id,omitempty"`
+	RealmId     string                      `json:"-"`
+	Name        string                      `json:"name"`
+	Description string                      `json:"description"`
+	Protocol    string                      `json:"protocol"`
+	Attributes  OpenidClientScopeAttributes `json:"attributes"`
+}
+
+type OpenidClientScopeAttributes struct {
+	DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
+	ConsentScreenText      string                   `json:"consent.screen.text"`
+	GuiOrder               string                   `json:"gui.order"`
+	IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
+	ExtraConfig            map[string]interface{}   `json:"-"`
 }
 
 type OpenidClientScopeFilterFunc func(*OpenidClientScope) bool
@@ -121,4 +126,12 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 
 		return false
 	}
+}
+
+func (f *OpenidClientScopeAttributes) UnmarshalJSON(data []byte) error {
+	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
+}
+
+func (f *OpenidClientScopeAttributes) MarshalJSON() ([]byte, error) {
+	return marshalExtraConfig(reflect.ValueOf(f).Elem(), f.ExtraConfig)
 }

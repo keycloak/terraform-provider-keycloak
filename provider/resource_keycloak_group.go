@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
@@ -36,6 +36,11 @@ func resourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"description": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+			},
 			"path": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -56,12 +61,20 @@ func mapFromDataToGroup(data *schema.ResourceData) *keycloak.Group {
 		}
 	}
 
+	// Use GetOkExists to preserve empty strings
+	description, descriptionOk := data.GetOkExists("description")
+
 	group := &keycloak.Group{
 		Id:         data.Id(),
 		RealmId:    data.Get("realm_id").(string),
 		ParentId:   data.Get("parent_id").(string),
 		Name:       data.Get("name").(string),
 		Attributes: attributes,
+	}
+
+	// Set description only if explicitly provided, preserving empty strings
+	if descriptionOk {
+		group.Description = description.(string)
 	}
 
 	return group
@@ -75,6 +88,7 @@ func mapFromGroupToData(data *schema.ResourceData, group *keycloak.Group) {
 	data.SetId(group.Id)
 	data.Set("realm_id", group.RealmId)
 	data.Set("name", group.Name)
+	data.Set("description", group.Description)
 	data.Set("path", group.Path)
 	data.Set("attributes", attributes)
 	if group.ParentId != "" {
@@ -86,6 +100,10 @@ func resourceKeycloakGroupCreate(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	group := mapFromDataToGroup(data)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
 
 	err := keycloakClient.NewGroup(ctx, group)
 	if err != nil {
@@ -117,6 +135,10 @@ func resourceKeycloakGroupUpdate(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	group := mapFromDataToGroup(data)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_3); ok {
+		group.Description = ""
+	}
 
 	err := keycloakClient.UpdateGroup(ctx, group)
 	if err != nil {

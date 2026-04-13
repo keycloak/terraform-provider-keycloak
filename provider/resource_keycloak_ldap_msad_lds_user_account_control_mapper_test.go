@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_basic(t *testing.T) {
@@ -15,9 +16,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_basic(t *testing.T) {
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_basic(msadLdsUacMapperName),
@@ -41,9 +42,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_createAfterManualDestroy
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_basic(msadLdsUacMapperName),
@@ -69,9 +70,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_updateLdapUserFederation
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_updateLdapUserFederationBefore(msadLdsUacMapperName),
@@ -168,6 +169,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_msad_lds_user_account_control_mapper" "uac_mapper" {
@@ -203,6 +205,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -220,6 +223,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_msad_lds_user_account_control_mapper" "uac_mapper" {
@@ -255,6 +259,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -272,6 +277,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+  referral                = "ignore"
 }
 
 resource "keycloak_ldap_msad_lds_user_account_control_mapper" "uac_mapper" {

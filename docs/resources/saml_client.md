@@ -43,6 +43,10 @@ resource "keycloak_saml_client" "saml_client" {
 - `sign_documents` - (Optional) When `true`, the SAML document will be signed by Keycloak using the realm's private key. Defaults to `true`.
 - `sign_assertions` - (Optional) When `true`, the SAML assertions will be signed by Keycloak using the realm's private key, and embedded within the SAML XML Auth response. Defaults to `false`.
 - `encrypt_assertions` - (Optional) When `true`, the SAML assertions will be encrypted by Keycloak using the client's public key. Defaults to `false`.
+- `encryption_algorithm` - (Optional) Algorithm used to encrypt SAML assertions. Allowed values: `AES_256_GCM`, `AES_192_GCM`, `AES_128_GCM`, `AES_256_CBC`, `AES_192_CBC`, or `AES_128_CBC`.
+- `encryption_key_algorithm` - (Optional) Key transport algorithm used by the client to encrypt the secret key for SAML assertion encryption. Allowed values: `RSA-OAEP-11`, `RSA-OAEP-MGF1P`, or `RSA1_5`. Default is `RSA-OAEP-11`.
+- `encryption_digest_method` - (Optional) Digest method used with SAML encryption. Allowed values: `SHA-512`, `SHA-256`, or `SHA-1`. Only valid when `encryption_key_algorithm` is `RSA-OAEP-11` or `RSA-OAEP-MGF1P`. Default is `SHA-256`.
+- `encryption_mask_generation_function` - (Optional) Mask generation function used with SAML encryption. Allowed values: `mgf1sha1`, `mgf1sha224`, `mgf1sha256`, `mgf1sha384`, or `mgf1sha512`. Only valid when `encryption_key_algorithm` is `RSA-OAEP-11`. Default is `mgf1sha256`.
 - `client_signature_required` - (Optional) When `true`, Keycloak will expect that documents originating from a client will be signed using the certificate and/or key configured via `signing_certificate` and `signing_private_key`. Defaults to `true`.
 - `force_post_binding` - (Optional) When `true`, Keycloak will always respond to an authentication request via the SAML POST Binding. Defaults to `true`.
 - `front_channel_logout` - (Optional) When `true`, this client will require a browser redirect in order to perform a logout. Defaults to `true`.

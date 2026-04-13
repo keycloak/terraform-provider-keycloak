@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClient(t *testing.T) {
@@ -17,9 +18,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClient(t *testing.T
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_basic_client(clientId, mapperName),
@@ -37,9 +38,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_basicClientScope(t *test
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -59,9 +60,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -111,9 +112,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_fromInterface(mapperOne),
@@ -137,9 +138,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_createAfterManualDestroy
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_basic_client(clientId, mapperName),
@@ -168,9 +169,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateMapperNameForceNew
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_basic_client(clientId, mapperNameOne),
@@ -192,9 +193,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateClientIdForceNew(t
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_updateClientForceNew(clientIdOne, clientIdTwo, "openid_client_one"),
@@ -216,9 +217,9 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_updateClientScopeForceNe
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_updateClientScopeForceNew(clientScopeOne, clientScopeTwo, "client_scope_one"),

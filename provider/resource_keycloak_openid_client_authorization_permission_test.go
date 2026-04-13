@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_basic(t *testing.T) {
 	scopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientAuthorizationPermission_basic(clientId, resourceName, permissionName, scopeName),
@@ -39,9 +39,9 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_resourceType(t *testing.
 	scopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientAuthorizationPermission_resourceType(clientId, resourceName, resourceType, permissionName, scopeName),
@@ -61,9 +61,9 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_createAfterManualDestroy
 	scopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientAuthorizationPermission_basic(clientId, resourceName, permissionName, scopeName),
@@ -101,9 +101,9 @@ func TestAccKeycloakOpenidClientAuthorizationPermission_basicUpdateAll(t *testin
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientAuthorizationPermissionDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientAuthorizationPermission_basicFromInterface(clientId, firstAuthorizationPermission, acctest.RandString(10), scopeName),
@@ -198,10 +198,15 @@ resource keycloak_openid_client test {
 	}
 }
 
-data keycloak_openid_client_authorization_policy default {
-	realm_id           = data.keycloak_realm.realm.id
-	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
-	name               = "default"
+resource keycloak_openid_client_client_policy testpolicy {
+    resource_server_id = keycloak_openid_client.test.id
+    realm_id           = data.keycloak_realm.realm.id
+    name               = "testpolicy"
+    logic              = "POSITIVE"
+    decision_strategy  = "UNANIMOUS"
+    clients            = [
+        keycloak_openid_client.test.id
+    ]
 }
 
 resource keycloak_openid_client_authorization_resource test {
@@ -224,7 +229,7 @@ resource keycloak_openid_client_authorization_permission test {
 	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
 	realm_id           = data.keycloak_realm.realm.id
 	name               = "%s"
-	policies           = ["${data.keycloak_openid_client_authorization_policy.default.id}"]
+	policies           = ["${resource.keycloak_openid_client_client_policy.testpolicy.id}"]
 	resources          = ["${keycloak_openid_client_authorization_resource.test.id}"]
 
 }
@@ -247,10 +252,15 @@ resource keycloak_openid_client test {
 	}
 }
 
-data keycloak_openid_client_authorization_policy default {
-	realm_id           = data.keycloak_realm.realm.id
-	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
-	name               = "default"
+resource keycloak_openid_client_client_policy testpolicy {
+    resource_server_id = keycloak_openid_client.test.id
+    realm_id           = data.keycloak_realm.realm.id
+    name               = "testpolicy"
+    logic              = "POSITIVE"
+    decision_strategy  = "UNANIMOUS"
+    clients            = [
+        keycloak_openid_client.test.id
+    ]
 }
 
 resource keycloak_openid_client_authorization_resource test {
@@ -275,7 +285,7 @@ resource keycloak_openid_client_authorization_permission test {
 	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
 	realm_id           = data.keycloak_realm.realm.id
 	name               = "%s"
-	policies           = ["${data.keycloak_openid_client_authorization_policy.default.id}"]
+	policies           = ["${keycloak_openid_client_client_policy.testpolicy.id}"]
 	resource_type      = "%s"
 
 }
@@ -298,10 +308,15 @@ resource keycloak_openid_client test {
 	}
 }
 
-data keycloak_openid_client_authorization_policy default {
-	realm_id           = data.keycloak_realm.realm.id
-	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
-	name               = "default"
+resource keycloak_openid_client_client_policy testpolicy {
+    resource_server_id = keycloak_openid_client.test.id
+    realm_id           = data.keycloak_realm.realm.id
+    name               = "testpolicy"
+    logic              = "POSITIVE"
+    decision_strategy  = "UNANIMOUS"
+    clients            = [
+        keycloak_openid_client.test.id
+    ]
 }
 
 resource keycloak_openid_client_authorization_resource resource {
@@ -324,7 +339,7 @@ resource keycloak_openid_client_authorization_permission test {
 	resource_server_id = "${keycloak_openid_client.test.resource_server_id}"
 	realm_id           = data.keycloak_realm.realm.id
 	name               = "%s"
-	policies           = ["${data.keycloak_openid_client_authorization_policy.default.id}"]
+	policies           = ["${keycloak_openid_client_client_policy.testpolicy.id}"]
 	resources          = ["${keycloak_openid_client_authorization_resource.resource.id}"]
 	description        = "%s"
 	scopes = ["${keycloak_openid_client_authorization_scope.test.id}"]

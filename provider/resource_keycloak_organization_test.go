@@ -5,20 +5,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOrganization_basic(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOrganizationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOrganization_basic(organizationName),
@@ -29,7 +28,6 @@ func TestAccKeycloakOrganization_basic(t *testing.T) {
 }
 
 func TestAccKeycloakOrganization_basicUpdate(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 	firstEnabled := randomBool()
 	domainOne := acctest.RandomWithPrefix("tf-acc")
@@ -66,9 +64,9 @@ func TestAccKeycloakOrganization_basicUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOrganizationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOrganization_all(firstOrg),
@@ -87,15 +85,14 @@ func TestAccKeycloakOrganization_basicUpdate(t *testing.T) {
 }
 
 func TestAccKeycloakOrganization_createAfterManualDestroy(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	var organization = &keycloak.Organization{}
 
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOrganizationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOrganization_basic(organizationName),
@@ -119,14 +116,13 @@ func TestAccKeycloakOrganization_createAfterManualDestroy(t *testing.T) {
 }
 
 func TestAccKeycloakOrganization_basicWithMultipleDomains(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 	extraDomain := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOrganizationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOrganization_multipleDomains(organizationName, extraDomain),
@@ -140,15 +136,14 @@ func TestAccKeycloakOrganization_basicWithMultipleDomains(t *testing.T) {
 }
 
 func TestAccKeycloakOrganization_basicWithAttributes(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26)
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc")
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOrganizationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOrganization_attributes(organizationName, attributeName, attributeValue),

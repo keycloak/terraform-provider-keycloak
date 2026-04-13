@@ -2,6 +2,7 @@ package keycloak
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -25,7 +26,7 @@ type OpenidClientSecret struct {
 type OpenidClientAuthorizationSettings struct {
 	PolicyEnforcementMode         string `json:"policyEnforcementMode,omitempty"`
 	DecisionStrategy              string `json:"decisionStrategy,omitempty"`
-	AllowRemoteResourceManagement bool   `json:"allowRemoteResourceManagement,omitempty"`
+	AllowRemoteResourceManagement bool   `json:"allowRemoteResourceManagement"`
 	KeepDefaults                  bool   `json:"-"`
 }
 
@@ -62,6 +63,7 @@ type OpenidClient struct {
 
 type OpenidClientAttributes struct {
 	PkceCodeChallengeMethod                  string                           `json:"pkce.code.challenge.method"`
+	RequireDPoPBoundTokens                   types.KeycloakBoolQuoted         `json:"dpop.bound.access.tokens,omitempty"`
 	ExcludeSessionStateFromAuthResponse      types.KeycloakBoolQuoted         `json:"exclude.session.state.from.auth.response"`
 	ExcludeIssuerFromAuthResponse            types.KeycloakBoolQuoted         `json:"exclude.issuer.from.auth.response"`
 	AccessTokenLifespan                      string                           `json:"access.token.lifespan"`
@@ -150,9 +152,13 @@ func (keycloakClient *KeycloakClient) NewOpenidClient(ctx context.Context, clien
 			if err != nil {
 				return err
 			}
-			err = keycloakClient.DeleteOpenidClientAuthorizationResource(ctx, resource.RealmId, resource.ResourceServerId, resource.Id)
-			if err != nil {
-				return err
+			// Only attempt to delete if the default resource exists
+			// (Keycloak 26.5+ doesn't create default resources automatically)
+			if resource != nil {
+				err = keycloakClient.DeleteOpenidClientAuthorizationResource(ctx, resource.RealmId, resource.ResourceServerId, resource.Id)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -202,6 +208,15 @@ func (keycloakClient *KeycloakClient) GetOpenidClient(ctx context.Context, realm
 
 	client.RealmId = realmId
 	client.ClientSecret = clientSecret.Value
+
+	if client.AuthorizationServicesEnabled {
+		var authSettings OpenidClientAuthorizationSettings
+		err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server", realmId, id), &authSettings, nil)
+		if err != nil {
+			return nil, err
+		}
+		client.AuthorizationSettings = &authSettings
+	}
 
 	return &client, nil
 }
@@ -282,6 +297,16 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 		return err
 	}
 
+	foundNames := make(map[string]bool, len(allOpenidClientScopes))
+	for _, s := range allOpenidClientScopes {
+		foundNames[s.Name] = true
+	}
+	for _, name := range scopeNames {
+		if !foundNames[name] {
+			return fmt.Errorf("validation error: scope %s does not exist", name)
+		}
+	}
+
 	var attachedClientScopes []*OpenidClientScope
 	var duplicateScopeAssignmentErrorMessage string
 	switch t {
@@ -315,6 +340,20 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 	}
 
 	return nil
+}
+
+func (keycloakClient *KeycloakClient) RegenerateOpenIdClientSecret(ctx context.Context, client *OpenidClient) (*OpenidClientSecret, error) {
+	body, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", client.RealmId, client.Id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var clientSecret OpenidClientSecret
+	if err := json.Unmarshal(body, &clientSecret); err != nil {
+		return nil, err
+	}
+
+	return &clientSecret, nil
 }
 
 func (keycloakClient *KeycloakClient) AttachOpenidClientDefaultScopes(ctx context.Context, realmId, clientId string, scopeNames []string) error {
