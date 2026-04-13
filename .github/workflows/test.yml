@@ -120,7 +120,7 @@ jobs:
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
 
       - name: Get Keycloak Version
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: keycloak-version
         env:
           KEYCLOAK_VERSION: ${{ matrix.keycloak-version }}
