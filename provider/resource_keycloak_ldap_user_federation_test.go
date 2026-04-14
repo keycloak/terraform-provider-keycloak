@@ -843,7 +843,6 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
-	referral                = "ignore"
 
 	full_sync_period        = %d
 	changed_sync_period     = %d
@@ -905,7 +904,6 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "%s"
-	referral                = "ignore"
 }
 	`, testAccRealmUserFederation.Realm, ldap, bindCredential)
 }
