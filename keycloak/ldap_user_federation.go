@@ -111,6 +111,9 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		"searchScope": {
 			ldap.SearchScope,
 		},
+		"referral": {
+			ldap.Referral,
+		},
 		"startTls": {
 			strconv.FormatBool(ldap.StartTls),
 		},
@@ -169,6 +172,11 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		componentConfig["searchScope"] = []string{"1"}
 	} else {
 		componentConfig["searchScope"] = []string{"2"}
+	}
+	if ldap.Referral == "follow" {
+		componentConfig["referral"] = []string{"1"}
+	} else {
+		componentConfig["referral"] = []string{"2"}
 	}
 
 	if ldap.CustomUserSearchFilter != "" {
@@ -379,6 +387,11 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		ldap.SearchScope = "ONE_LEVEL"
 	} else {
 		ldap.SearchScope = "SUBTREE"
+	}
+	if component.getConfig("referral") == "1" {
+		ldap.SearchScope = "follow"
+	} else {
+		ldap.SearchScope = "ignore"
 	}
 
 	if useTruststoreSpi := component.getConfig("useTruststoreSpi"); useTruststoreSpi == "ldapsOnly" {
