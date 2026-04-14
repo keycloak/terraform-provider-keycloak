@@ -389,9 +389,9 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		ldap.SearchScope = "SUBTREE"
 	}
 	if component.getConfig("referral") == "1" {
-		ldap.SearchScope = "follow"
+		ldap.Referral = "follow"
 	} else {
-		ldap.SearchScope = "ignore"
+		ldap.Referral = "ignore"
 	}
 
 	if useTruststoreSpi := component.getConfig("useTruststoreSpi"); useTruststoreSpi == "ldapsOnly" {
