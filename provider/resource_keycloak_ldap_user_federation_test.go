@@ -300,7 +300,6 @@ func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
-		Referral:                             "ignore",
 	}
 
 	evictionDay = acctest.RandIntRange(0, 6)
@@ -343,7 +342,6 @@ func TestAccKeycloakLdapUserFederation_basicUpdateAll(t *testing.T) {
 		EvictionHour:                         &evictionHour,
 		EvictionMinute:                       &evictionMinute,
 		EditMode:                             "WRITABLE",
-		Referral:                             "ignore",
 	}
 
 	resource.Test(t, resource.TestCase{
