@@ -556,6 +556,32 @@ resource "keycloak_saml_identity_provider" "saml" {
 	`, testAccRealm.Realm, organizationName, saml)
 }
 
+func TestAccKeycloakSamlIdentityProvider_wantAuthnRequestsSignedImplied(t *testing.T) {
+	t.Parallel()
+
+	samlName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(samlName, "RSA_SHA256"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlIdentityProviderHasWantAuthnRequestsSigned("keycloak_saml_identity_provider.saml", true),
+				),
+			},
+			{
+				Config: testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(samlName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlIdentityProviderHasWantAuthnRequestsSigned("keycloak_saml_identity_provider.saml", false),
+				),
+			},
+		},
+	})
+}
+
 func testKeycloakSamlIdentityProvider_wantAuthnRequestsSigned(alias string, want bool, sigAlg string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -571,4 +597,23 @@ resource "keycloak_saml_identity_provider" "saml" {
 	want_authn_requests_signed     = %t
 }
 	`, testAccRealm.Realm, alias, sigAlg, want)
+}
+
+func testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(alias, sigAlg string) string {
+	signatureAlgorithmLine := ""
+	if sigAlg != "" {
+		signatureAlgorithmLine = fmt.Sprintf("\tsignature_algorithm = \"%s\"\n", sigAlg)
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_saml_identity_provider" "saml" {
+	realm                      = data.keycloak_realm.realm.id
+	alias                      = "%s"
+	entity_id                  = "https://example.com/entity_id"
+	single_sign_on_service_url = "https://example.com/auth"
+%s}
+	`, testAccRealm.Realm, alias, signatureAlgorithmLine)
 }

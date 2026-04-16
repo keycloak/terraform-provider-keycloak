@@ -2,6 +2,7 @@ package provider
 
 import (
 	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -149,6 +150,7 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 		"want_authn_requests_signed": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			Computed:    true,
 			Description: "Want Authn Requests Signed.",
 		},
 		"principal_type": {
@@ -230,9 +232,12 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		AuthnContextDeclRefs:            authnContextDeclRefs,
 	}
 
-	if _, explicitlySet := data.GetOkExists("want_authn_requests_signed"); !explicitlySet {
+	rawWantAuthnRequestsSigned, _ := data.GetRawConfigAt(cty.GetAttrPath("want_authn_requests_signed"))
+	if rawWantAuthnRequestsSigned.IsNull() {
 		if _, ok := data.GetOk("signature_algorithm"); ok {
 			samlIdentityProviderConfig.WantAuthnRequestsSigned = true
+		} else {
+			samlIdentityProviderConfig.WantAuthnRequestsSigned = false
 		}
 	}
 
