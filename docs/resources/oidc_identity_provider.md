@@ -57,7 +57,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
   authorization_url        = "https://authorizationurl.com"
   client_id                = "clientID"
   client_secret_wo         = ephemeral.random_password.openid_client_secret.result
-  client_secret_wo_version = 1
+  client_secret_wo_version = "version1"
   token_url                = "https://tokenurl.com"
 
   extra_config = {

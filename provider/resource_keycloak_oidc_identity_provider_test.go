@@ -240,7 +240,7 @@ func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnly(t *testing.T) {
 
 	oidcName := acctest.RandomWithPrefix("tf-acc")
 	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
-	clientSecretWOVersion := 1
+	clientSecretWOVersion := "someString"
 
 	// the keycloak client is obfuscating the client_secret value, therefore we can't assert its value
 	resource.Test(t, resource.TestCase{
@@ -257,7 +257,7 @@ func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnly(t *testing.T) {
 
 					// assert openid client against the Terraform state (client_secret value SHOULD NOT be stored in state)
 					resource.TestCheckNoResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret"),
-					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", clientSecretWOVersion),
 				),
 			},
 		},
@@ -506,7 +506,7 @@ func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(
 }
 
 func testKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(oidc string) string {
-	// 'client_secret_wo_version' is always 1
+	// 'client_secret_wo_version' is always "version1"
 	// we are making it conditional to make the value unknown during the validation
 	// which is the same situation as when the value is not hardcoded, but comes from other module
 	return fmt.Sprintf(`
@@ -527,12 +527,12 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	token_url                = "https://example.com/token"
 	client_id                = "example_id"
 	client_secret_wo         = keycloak_openid_client.secret_source.client_secret
-	client_secret_wo_version = keycloak_openid_client.secret_source.id != "" ? 1 : 0
+	client_secret_wo_version = keycloak_openid_client.secret_source.id != "" ? "version1" : "version0"
 }
 	`, testAccRealm.Realm, oidc, oidc)
 }
 
-func testKeycloakOidcIdentityProvider_clientSecretWriteOnly(oidc, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int) string {
+func testKeycloakOidcIdentityProvider_clientSecretWriteOnly(oidc, clientSecretWriteOnly string, clientSecretWriteOnlyVersion string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -545,7 +545,7 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	token_url         		 = "https://example.com/token"
 	client_id         		 = "example_id"
 	client_secret_wo         = "%s"
-	client_secret_wo_version = "%d"
+	client_secret_wo_version = "%s"
 
 	issuer = "hello"
 }
