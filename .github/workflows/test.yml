@@ -79,7 +79,7 @@ jobs:
           terraform_version: 1.14.3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # version v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # version v6.1.0
       - name: Build user-federation-example with Gradle
         run:  make user-federation-example
 
@@ -120,7 +120,7 @@ jobs:
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
 
       - name: Get Keycloak Version
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: keycloak-version
         env:
           KEYCLOAK_VERSION: ${{ matrix.keycloak-version }}
