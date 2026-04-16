@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -17,9 +17,9 @@ func TestAccKeycloakRole_basicRealm(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicRealm(roleName),
@@ -40,9 +40,9 @@ func TestAccKeycloakRole_basicRealmUrlRoleName(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicRealm(roleName),
@@ -64,9 +64,9 @@ func TestAccKeycloakRole_basicClient(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicClient(clientId, roleName),
@@ -88,9 +88,9 @@ func TestAccKeycloakRole_basicSamlClient(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicSamlClient(clientId, roleName),
@@ -113,9 +113,9 @@ func TestAccKeycloakRole_basicRealmUpdate(t *testing.T) {
 	descriptionTwo := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicRealmWithDescription(roleName, descriptionOne),
@@ -152,9 +152,9 @@ func TestAccKeycloakRole_basicClientUpdate(t *testing.T) {
 	descriptionTwo := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicClientWithDescription(clientId, roleName, descriptionOne),
@@ -179,9 +179,9 @@ func TestAccKeycloakRole_createAfterManualDestroy(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicRealm(roleName),
@@ -216,9 +216,9 @@ func TestAccKeycloakRole_composites(t *testing.T) {
 	roleWithCompositesResourceName := "keycloak_role.role_with_composites"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			// initial setup - no composites attached
 			{
@@ -284,9 +284,9 @@ func TestAccKeycloakRole_basicWithAttributes(t *testing.T) {
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicWithAttributes(roleName, attributeName, attributeValue),
@@ -312,9 +312,9 @@ func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
 	attributeValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRole_basicWithAttributes(roleName, attributeName, attributeValue),
@@ -345,9 +345,9 @@ func TestAccKeycloakRole_import(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRoleNotDestroyed(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleNotDestroyed(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakRole_importRealmRole("non-existing-role"),
