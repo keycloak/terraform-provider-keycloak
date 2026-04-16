@@ -490,7 +490,7 @@ func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(
 	oidcName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
