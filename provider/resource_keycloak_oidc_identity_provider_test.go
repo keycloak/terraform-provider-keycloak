@@ -491,8 +491,8 @@ func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(oidcName),
