@@ -96,9 +96,9 @@ func TestAccKeycloakGroup_multiValuedAttributeNoDrift(t *testing.T) {
 	var group keycloak.Group
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGroupDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroup_basic(groupName, attributeName, attributeValue),
