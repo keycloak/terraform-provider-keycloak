@@ -97,6 +97,16 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Computed:    true,
 		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	for k, v := range webAuthnSchema {
+		webAuthnPasswordlessSchema[k] = v
+	}
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:     schema.TypeBool,
+		Computed: true,
+	}
+
 	return &schema.Resource{
 		ReadContext: dataSourceKeycloakRealmRead,
 		Schema: map[string]*schema.Schema{
@@ -578,7 +588,7 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 		},
