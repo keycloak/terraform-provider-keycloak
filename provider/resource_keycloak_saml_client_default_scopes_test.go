@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -23,8 +23,8 @@ func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
@@ -49,8 +49,8 @@ func TestAccKeycloakSamlClientDefaultScopes_updateClientForceNew(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_basic(clientOne, clientScope),
@@ -80,8 +80,8 @@ func TestAccKeycloakSamlClientDefaultScopes_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// init
 			{
@@ -108,8 +108,8 @@ func TestAccKeycloakSamlClientDefaultScopes_validateClientDoesNotExist(t *testin
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakSamlClientDefaultScopes_validationNoClient(client, clientScope),
@@ -130,8 +130,8 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeAdd(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, clientScopes, clientScopes),
@@ -178,8 +178,8 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, allClientScopes, attachedClientScopes),
@@ -207,6 +207,22 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakSamlClientDefaultScopes_validateScopeDoesNotExist(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakSamlClientDefaultScopes_listOfScopes(client, acctest.RandomWithPrefix("tf-acc"), []string{"role_list", "non_existent_scope_that_should_fail"}),
+				ExpectError: regexp.MustCompile("scope .+ does not exist"),
+			},
+		},
+	})
+}
+
 // this resource doesn't support import because it can be created even if the desired state already exists in keycloak
 func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 	t.Parallel()
@@ -216,8 +232,8 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_noDefaultScopes(client, clientScope),
@@ -253,8 +269,8 @@ func TestAccKeycloakSamlClientDefaultScopes_profileAndEmailDefaultScopes(t *test
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:             testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, []string{clientScope}),

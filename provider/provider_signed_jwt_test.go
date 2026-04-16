@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -44,12 +43,8 @@ func TestAccKeycloakProvider_signedJWT_provided(t *testing.T) {
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: map[string]func() (*schema.Provider, error){
-			"keycloak": func() (*schema.Provider, error) {
-				return testAccProvider, nil
-			},
-		},
-		PreCheck: func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -72,12 +67,8 @@ func TestAccKeycloakProvider_signedJWT(t *testing.T) {
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: map[string]func() (*schema.Provider, error){
-			"keycloak": func() (*schema.Provider, error) {
-				return testAccProvider, nil
-			},
-		},
-		PreCheck: func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),
@@ -116,12 +107,8 @@ func TestAccKeycloakProvider_signedJWT_file_provided(t *testing.T) {
 
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: map[string]func() (*schema.Provider, error){
-			"keycloak": func() (*schema.Provider, error) {
-				return testAccProvider, nil
-			},
-		},
-		PreCheck: func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClient_basic(clientId),

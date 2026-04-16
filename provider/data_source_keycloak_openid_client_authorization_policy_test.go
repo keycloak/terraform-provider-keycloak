@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -17,8 +17,8 @@ func TestAccKeycloakDataSourceOpenidClientAuthorizationPolicy_basic(t *testing.T
 	dataSourceName := "data.keycloak_openid_client_authorization_policy.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakOpenidClientAuthorizationPolicyConfig(clientId),

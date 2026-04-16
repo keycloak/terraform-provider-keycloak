@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
@@ -20,9 +20,9 @@ func TestAccKeycloakOpenIdSubProtocolMapper_basicClient(t *testing.T) {
 	resourceName := "keycloak_openid_sub_protocol_mapper.sub_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdSubProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdSubProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdSubProtocolMapper_basic_client(clientId, mapperName),
@@ -41,9 +41,9 @@ func TestAccKeycloakOpenIdSubProtocolMapper_basicClientScope(t *testing.T) {
 	resourceName := "keycloak_openid_sub_protocol_mapper.sub_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdSubProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdSubProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdSubProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -64,9 +64,9 @@ func TestAccKeycloakOpenIdSubProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_sub_protocol_mapper.sub_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdSubProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdSubProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdSubProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -111,9 +111,9 @@ func TestAccKeycloakOpenIdSubProtocolMapper_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdSubProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdSubProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdSubProtocolMapper_fromInterface(mapperOne),
@@ -138,9 +138,9 @@ func TestAccKeycloakOpenIdSubProtocolMapper_createAfterManualDestroy(t *testing.
 	resourceName := "keycloak_openid_sub_protocol_mapper.sub_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdSubProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdSubProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdSubProtocolMapper_basic_client(clientId, mapperName),

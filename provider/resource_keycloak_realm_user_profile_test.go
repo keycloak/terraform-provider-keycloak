@@ -10,9 +10,9 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -21,9 +21,9 @@ func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
@@ -41,9 +41,9 @@ func TestAccKeycloakRealmUserProfile_basicEmpty(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, realmUserProfile),
@@ -98,9 +98,9 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, realmUserProfile),
@@ -133,9 +133,9 @@ func TestAccKeycloakRealmUserProfile_group(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, withoutGroup),
@@ -208,9 +208,9 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, withoutValidator),
@@ -312,9 +312,9 @@ func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, withoutPermissions),
@@ -394,9 +394,9 @@ func TestAccKeycloakRealmUserProfile_unmanagedPolicyEnabled(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakRealmUserProfileDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmUserProfile_template(realmName, unmanagedPolicyEnabled),

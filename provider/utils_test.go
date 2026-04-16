@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -107,7 +107,7 @@ func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keyc
 	}
 }
 
-func TestCheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
+func CheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		err := resource.TestCheckResourceAttr(name, key, value)(s)
 		if err == nil {
