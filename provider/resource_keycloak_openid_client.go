@@ -358,6 +358,25 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 	}
 }
 
+// realmDefaultableFieldFromData reads an Optional+Computed string field from ResourceData,
+// preferring the raw config value when it is explicitly set.
+func realmDefaultableFieldFromData(data *schema.ResourceData, field string) string {
+	rawConfig := data.GetRawConfig()
+	rawAttr := rawConfig.GetAttr(field)
+	if rawAttr.IsKnown() && !rawAttr.IsNull() {
+		return rawAttr.AsString()
+	}
+	return data.Get(field).(string)
+}
+
+var realmDefaultableFields = []string{
+	"access_token_lifespan",
+	"client_session_idle_timeout",
+	"client_session_max_lifespan",
+	"client_offline_session_idle_timeout",
+	"client_offline_session_max_lifespan",
+}
+
 func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 	return customdiff.All(
 		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
@@ -366,6 +385,20 @@ func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			return d.HasChange("client_secret_regenerate_when_changed")
 		}),
+		func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			// Computed+Optional fields treat "" as "not provided", preventing users from
+			// explicitly clearing an override to revert to the realm default.
+			rawConfig := d.GetRawConfig()
+			for _, field := range realmDefaultableFields {
+				rawAttr := rawConfig.GetAttr(field)
+				if rawAttr.IsKnown() && !rawAttr.IsNull() && rawAttr.Equals(cty.StringVal("")).True() {
+					if err := d.SetNew(field, ""); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
 	)
 }
 
@@ -419,12 +452,12 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 			RequireDPoPBoundTokens:                   types.KeycloakBoolQuoted(data.Get("require_dpop_bound_tokens").(bool)),
 			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
 			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
-			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
+			AccessTokenLifespan:                      realmDefaultableFieldFromData(data, "access_token_lifespan"),
 			LoginTheme:                               data.Get("login_theme").(string),
-			ClientOfflineSessionIdleTimeout:          data.Get("client_offline_session_idle_timeout").(string),
-			ClientOfflineSessionMaxLifespan:          data.Get("client_offline_session_max_lifespan").(string),
-			ClientSessionIdleTimeout:                 data.Get("client_session_idle_timeout").(string),
-			ClientSessionMaxLifespan:                 data.Get("client_session_max_lifespan").(string),
+			ClientOfflineSessionIdleTimeout:          realmDefaultableFieldFromData(data, "client_offline_session_idle_timeout"),
+			ClientOfflineSessionMaxLifespan:          realmDefaultableFieldFromData(data, "client_offline_session_max_lifespan"),
+			ClientSessionIdleTimeout:                 realmDefaultableFieldFromData(data, "client_session_idle_timeout"),
+			ClientSessionMaxLifespan:                 realmDefaultableFieldFromData(data, "client_session_max_lifespan"),
 			UseRefreshTokens:                         types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool)),
 			UseRefreshTokensClientCredentials:        types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
 			StandardTokenExchangeEnabled:             types.KeycloakBoolQuoted(data.Get("standard_token_exchange_enabled").(bool)),
