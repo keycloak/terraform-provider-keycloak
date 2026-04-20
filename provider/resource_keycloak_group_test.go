@@ -90,7 +90,18 @@ func TestAccKeycloakGroup_multiValuedAttributeNoDrift(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("tf-acc/")
 	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
 
-	attributeValue := "role-1##role-2##role-3##role-4##role-5##role-6##role-7##role-8##role-9##role-10"
+	attributeValue := strings.Join([]string{
+		"role-1",
+		"role-2",
+		"role-3",
+		"role-4",
+		"role-5",
+		"role-6",
+		"role-7",
+		"role-8",
+		"role-9",
+		"role-10",
+	}, keycloak.MULTIVALUE_ATTRIBUTE_SEPARATOR)
 	resourceName := "keycloak_group.group"
 
 	var group keycloak.Group
