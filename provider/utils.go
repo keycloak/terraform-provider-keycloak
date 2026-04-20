@@ -158,7 +158,7 @@ func requiredWithoutAll(key cty.Path, checkExists []cty.Path) schema.ValidateRaw
 		anyExists := false
 		for _, path := range checkExists {
 			val, err := path.Apply(req.RawConfig)
-			if err == nil && !val.IsNull() && val.IsKnown() {
+			if err == nil && !val.IsNull() {
 				anyExists = true
 				break
 			}
