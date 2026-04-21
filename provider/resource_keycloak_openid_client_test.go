@@ -1003,6 +1003,74 @@ func TestAccKeycloakOpenidClient_descriptionCanBeCleared(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_clearableStringFieldsCanBeCleared(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	configWithValues := testAccKeycloakOpenidClientWithClearableFields(realmName, clientId,
+		"Test Client",
+		"https://example.com",
+		"https://example.com/admin",
+		"https://example.com/home",
+		"keycloak",
+		"https://example.com/front-logout",
+		"https://example.com/back-logout",
+		"Consent text",
+	)
+	configWithEmptyValues := testAccKeycloakOpenidClientWithClearableFields(realmName, clientId, "", "", "", "", "", "", "", "")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: configWithValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "client_id", clientId),
+					resource.TestCheckResourceAttr(resourceName, "name", "Test Client"),
+					resource.TestCheckResourceAttr(resourceName, "root_url", "https://example.com"),
+					resource.TestCheckResourceAttr(resourceName, "admin_url", "https://example.com/admin"),
+					resource.TestCheckResourceAttr(resourceName, "base_url", "https://example.com/home"),
+					resource.TestCheckResourceAttr(resourceName, "login_theme", "keycloak"),
+					resource.TestCheckResourceAttr(resourceName, "frontchannel_logout_url", "https://example.com/front-logout"),
+					resource.TestCheckResourceAttr(resourceName, "backchannel_logout_url", "https://example.com/back-logout"),
+					resource.TestCheckResourceAttr(resourceName, "consent_screen_text", "Consent text"),
+				),
+			},
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "admin_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "base_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "login_theme", ""),
+					resource.TestCheckResourceAttr(resourceName, "frontchannel_logout_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "backchannel_logout_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "consent_screen_text", ""),
+				),
+			},
+			// Apply again to ensure empty values are stable and don't produce drift
+			{
+				Config: configWithEmptyValues,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", ""),
+					resource.TestCheckResourceAttr(resourceName, "root_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "admin_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "base_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "login_theme", ""),
+					resource.TestCheckResourceAttr(resourceName, "frontchannel_logout_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "backchannel_logout_url", ""),
+					resource.TestCheckResourceAttr(resourceName, "consent_screen_text", ""),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -2165,7 +2233,6 @@ resource "keycloak_openid_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
 	access_type = "PUBLIC"
-	root_url    = ""
 	enabled     = %t
 	import      = true
 }
@@ -2187,4 +2254,30 @@ resource "keycloak_openid_client" "client" {
   description = "%s"
 }
 `, realm, clientId, description)
+}
+
+func testAccKeycloakOpenidClientWithClearableFields(realm, clientId, name, rootUrl, adminUrl, baseUrl, loginTheme, frontchannelLogoutUrl, backchannelLogoutUrl, consentScreenText string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "test" {
+  realm   = "%s"
+  enabled = true
+}
+
+resource "keycloak_openid_client" "client" {
+  realm_id              = keycloak_realm.test.id
+  client_id             = "%s"
+  access_type           = "CONFIDENTIAL"
+  standard_flow_enabled = true
+  valid_redirect_uris   = ["https://redirect.example.com/*"]
+
+  name                    = "%s"
+  root_url                = "%s"
+  admin_url               = "%s"
+  base_url                = "%s"
+  login_theme             = "%s"
+  frontchannel_logout_url = "%s"
+  backchannel_logout_url  = "%s"
+  consent_screen_text     = "%s"
+}
+`, realm, clientId, name, rootUrl, adminUrl, baseUrl, loginTheme, frontchannelLogoutUrl, backchannelLogoutUrl, consentScreenText)
 }
