@@ -23,7 +23,17 @@ data "keycloak_generic_protocol_mapper" "organization_membership" {
   name            = "organization"
 }
 
-# Use in an import block
+# Declare the resource that will adopt the existing mapper.
+resource "keycloak_generic_protocol_mapper" "organization_membership" {
+  realm_id        = "my-realm"
+  client_scope_id = data.keycloak_openid_client_scope.organization.id
+  name            = "organization"
+  protocol        = data.keycloak_generic_protocol_mapper.organization_membership.protocol
+  protocol_mapper = data.keycloak_generic_protocol_mapper.organization_membership.protocol_mapper
+  config          = data.keycloak_generic_protocol_mapper.organization_membership.config
+}
+
+# Use the data source to compute the import ID.
 import {
   to = keycloak_generic_protocol_mapper.organization_membership
   id = "my-realm/client-scope/${data.keycloak_openid_client_scope.organization.id}/${data.keycloak_generic_protocol_mapper.organization_membership.id}"
