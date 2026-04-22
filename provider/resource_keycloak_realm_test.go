@@ -1048,7 +1048,10 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	if len(signatureAlgorithms) == 0 {
+		signatureAlgorithms = []string{"ES256"}
+	}
 	avoidSameAuthenticatorRegister := randomBool()
 
 	resource.Test(t, resource.TestCase{
