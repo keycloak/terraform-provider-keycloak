@@ -2,6 +2,7 @@ package keycloak
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -82,6 +83,59 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth(t *testing.T) {
 	// then try again to connect with Keycloak but this time via https with mtls client auth
 	mtlsKeycloakClient, err := NewKeycloakClient(ctx, keycloakUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{})
 	keycloakClientChecks(t, err, mtlsKeycloakClient, ctx)
+}
+
+func TestApplyAdditionalHeaders_HostHeader(t *testing.T) {
+	keycloakClient := &KeycloakClient{
+		additionalHeaders: map[string]string{
+			"Host":         "custom.host.example.com",
+			"X-Custom-Key": "custom-value",
+		},
+	}
+
+	request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %s", err)
+	}
+
+	keycloakClient.applyAdditionalHeaders(request)
+
+	if request.Host != "custom.host.example.com" {
+		t.Fatalf("expected request.Host to be 'custom.host.example.com', got '%s'", request.Host)
+	}
+
+	if request.Header.Get("Host") != "" {
+		t.Fatal("expected Host to not be set in request.Header (Go uses request.Host instead)")
+	}
+
+	if request.Header.Get("X-Custom-Key") != "custom-value" {
+		t.Fatalf("expected X-Custom-Key header to be 'custom-value', got '%s'", request.Header.Get("X-Custom-Key"))
+	}
+}
+
+func TestApplyAdditionalHeaders_HostHeaderCaseInsensitive(t *testing.T) {
+	variants := []string{"host", "HOST", "Host", "hOsT"}
+
+	for _, hostKey := range variants {
+		t.Run(hostKey, func(t *testing.T) {
+			keycloakClient := &KeycloakClient{
+				additionalHeaders: map[string]string{
+					hostKey: "custom.host.example.com",
+				},
+			}
+
+			request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+			if err != nil {
+				t.Fatalf("unexpected error creating request: %s", err)
+			}
+
+			keycloakClient.applyAdditionalHeaders(request)
+
+			if request.Host != "custom.host.example.com" {
+				t.Fatalf("expected request.Host to be 'custom.host.example.com' for key '%s', got '%s'", hostKey, request.Host)
+			}
+		})
+	}
 }
 
 func checkClientTimeout(t *testing.T) int {
