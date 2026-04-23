@@ -1159,7 +1159,9 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 	realm.DefaultOptionalClientScopes = defaultOptionalClientScopes
 
-	realm.AdminPermissionsEnabled = data.Get("admin_permissions_enabled").(bool)
+	if isAttributeInConfig(data, "admin_permissions_enabled") {
+		realm.AdminPermissionsEnabled = boolPointer(data.Get("admin_permissions_enabled").(bool))
+	}
 
 	//OTPPolicy
 	if v, ok := data.GetOk("otp_policy"); ok {
