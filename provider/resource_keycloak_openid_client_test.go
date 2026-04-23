@@ -3,7 +3,6 @@ package provider
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -437,7 +436,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
 	clientSecretWOUpdated := acctest.RandomWithPrefix("tf-acc")
 	clientSecretExplicit := acctest.RandomWithPrefix("tf-acc")
-	clientSecretWOVersion := 1
+	clientSecretWOVersion := "someString"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -454,7 +453,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 
 					// assert openid client against the Terraform state (client_secret value SHOULD NOT be stored in state)
 					resource.TestCheckNoResourceAttr("keycloak_openid_client.client", "client_secret"),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", clientSecretWOVersion),
 				),
 			},
 			{
@@ -470,14 +469,14 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 			},
 			{
 				// test UPDATE of client_secret when the client_secret_wo_version is MODIFIED
-				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWOUpdated, clientSecretWOVersion+1),
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWOUpdated, clientSecretWOVersion+"Updated"),
 				Check: resource.ComposeTestCheckFunc(
 					// assert openid client against the Keycloak's API response (value SHOULD be the new one)
 					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWOUpdated),
 
 					// assert openid client against the Terraform state (client_secret value SHOULD NOT be stored in state)
 					resource.TestCheckNoResourceAttr("keycloak_openid_client.client", "client_secret"),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion+1)),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", clientSecretWOVersion+"Updated"),
 				),
 			},
 			{
@@ -489,7 +488,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 
 					// assert openid client against the Terraform state (client_secret value SHOULD be stored in state)
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret", clientSecretExplicit),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", strconv.Itoa(0)),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", ""),
 				),
 			},
 		},
@@ -1908,7 +1907,7 @@ resource "keycloak_openid_client" "client" {
 	`, testAccRealm.Realm, clientId, clientSecret)
 }
 
-func testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int) string {
+func testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1919,7 +1918,7 @@ resource "keycloak_openid_client" "client" {
 	realm_id                 = data.keycloak_realm.realm.id
 	access_type              = "CONFIDENTIAL"
 	client_secret_wo         = "%s"
-	client_secret_wo_version = "%d"
+	client_secret_wo_version = "%s"
 }
 	`, testAccRealm.Realm, clientId, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }

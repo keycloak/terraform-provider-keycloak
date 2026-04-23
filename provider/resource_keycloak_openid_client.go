@@ -82,7 +82,7 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Description:   "Client Secret as write-only argument",
 			},
 			"client_secret_wo_version": {
-				Type:          schema.TypeInt,
+				Type:          schema.TypeString,
 				Optional:      true,
 				ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
 				RequiredWith:  []string{"client_secret_wo"},
@@ -449,7 +449,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
 	}
 
-	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
+	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
 		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
 		if clientSecretWriteOnlyDiags.HasError() {
 			return nil, errors.New("error reading 'client_secret_wo' argument")
@@ -594,7 +594,7 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	}
 
 	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
-		data.Set("client_secret_wo_version", v.(int))
+		data.Set("client_secret_wo_version", v.(string))
 	} else {
 		data.Set("client_secret", client.ClientSecret)
 	}
