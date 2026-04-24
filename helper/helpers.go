@@ -21,12 +21,11 @@ var requiredEnvironmentVariablesForTokenAuth = []string{
 
 func CheckRequiredEnvironmentVariables(t *testing.T) {
 
+	// Per RFC 7523, client_id is optional when a pre-signed JWT is provided via
+	// KEYCLOAK_JWT_TOKEN or KEYCLOAK_JWT_TOKEN_FILE. When using KEYCLOAK_JWT_SIGNING_KEY,
+	// client_id is still required for iss/sub claims.
 	requiredEnvVars := requiredEnvironmentVariables
-	if os.Getenv("KEYCLOAK_ACCESS_TOKEN") != "" {
-		requiredEnvVars = requiredEnvironmentVariablesForTokenAuth
-	} else if os.Getenv("KEYCLOAK_JWT_TOKEN") != "" || os.Getenv("KEYCLOAK_JWT_TOKEN_FILE") != "" {
-		// Per RFC 7523, client_id is optional when a pre-signed JWT is provided.
-		// When using KEYCLOAK_JWT_SIGNING_KEY, client_id is still required for iss/sub claims.
+	if os.Getenv("KEYCLOAK_ACCESS_TOKEN") != "" || os.Getenv("KEYCLOAK_JWT_TOKEN") != "" || os.Getenv("KEYCLOAK_JWT_TOKEN_FILE") != "" {
 		requiredEnvVars = requiredEnvironmentVariablesForTokenAuth
 	}
 
