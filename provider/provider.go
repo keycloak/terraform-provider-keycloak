@@ -136,7 +136,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		},
 		Schema: map[string]*schema.Schema{
 			"client_id": {
-				Required:    true,
+				Optional:    true,
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_CLIENT_ID", nil),
 			},
@@ -291,6 +291,24 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		}
 
 		var diags diag.Diagnostics
+
+		// client_id is only optional when a pre-signed JWT is provided (jwt_token or jwt_token_file).
+		// Password, client_secret, and jwt_signing_key always require client_id, regardless of other settings.
+		hasPreSignedJWT := jwtToken != "" || jwtTokenFile != ""
+		if clientId == "" {
+			if password != "" || username != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required for password grant authentication"}}
+			}
+			if clientSecret != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required for client secret authentication"}}
+			}
+			if jwtSigningKey != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims"}}
+			}
+			if !hasPreSignedJWT && accessToken == "" && initialLogin {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required unless using a pre-signed jwt_token, jwt_token_file, or access_token"}}
+			}
+		}
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
 		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, tlsClientCertificate, tlsClientPrivateKey, userAgent, redHatSSO, additionalHeaders)
