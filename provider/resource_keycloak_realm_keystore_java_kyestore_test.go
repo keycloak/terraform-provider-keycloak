@@ -249,6 +249,11 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 }
 
 func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore, keyAlias string) string {
+	algorithmAttr := ""
+	if keystore.Algorithm != "" {
+		algorithmAttr = fmt.Sprintf(`algorithm = "%s"`, keystore.Algorithm)
+	}
+
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -264,7 +269,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
     key_password = "12345678"
 
     priority  = %s
-    algorithm = "%s"
+    %s
 }
-	`, testAccRealmUserFederation.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), keystore.Algorithm)
+	`, testAccRealmUserFederation.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), algorithmAttr)
 }
