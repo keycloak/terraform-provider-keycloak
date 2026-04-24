@@ -70,7 +70,7 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	algorithm := "RS256"
+	keystoreName := acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -78,12 +78,11 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(algorithm, "algorithm",
-					acctest.RandString(10)),
+				Config:      testKeycloakRealmKeystoreJava_basicWithAttrValidation(keystoreName, "sig-es256", "algorithm", acctest.RandString(10)),
 				ExpectError: regexp.MustCompile("expected algorithm to be one of .+ got .+"),
 			},
 			{
-				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(algorithm, "algorithm", algorithm),
+				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(keystoreName, "sig-es256", "algorithm", "ES256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 		},
@@ -229,7 +228,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	`, testAccRealmUserFederation.Realm, javaKeystoreName)
 }
 
-func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, attr, val string) string {
+func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, keyAlias string, attr, val string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -241,12 +240,12 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 
     keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "sig-rs256"
+    key_alias    = "%s"
     key_password = "12345678"
 
 	%s        = "%s"
 }
-	`, testAccRealmUserFederation.Realm, javaKeystoreName, attr, val)
+	`, testAccRealmUserFederation.Realm, javaKeystoreName, keyAlias, attr, val)
 }
 
 func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore, keyAlias string) string {
