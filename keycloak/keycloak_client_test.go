@@ -2,6 +2,7 @@ package keycloak
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -180,6 +181,59 @@ func TestNewKeycloakClient_clientIdValidation(t *testing.T) {
 				if err != nil && strings.Contains(err.Error(), "client_id is required") {
 					t.Errorf("unexpected client_id validation error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func TestApplyAdditionalHeaders_HostHeader(t *testing.T) {
+	keycloakClient := &KeycloakClient{
+		additionalHeaders: map[string]string{
+			"Host":         "custom.host.example.com",
+			"X-Custom-Key": "custom-value",
+		},
+	}
+
+	request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %s", err)
+	}
+
+	keycloakClient.applyAdditionalHeaders(request)
+
+	if request.Host != "custom.host.example.com" {
+		t.Fatalf("expected request.Host to be 'custom.host.example.com', got '%s'", request.Host)
+	}
+
+	if request.Header.Get("Host") != "" {
+		t.Fatal("expected Host to not be set in request.Header (Go uses request.Host instead)")
+	}
+
+	if request.Header.Get("X-Custom-Key") != "custom-value" {
+		t.Fatalf("expected X-Custom-Key header to be 'custom-value', got '%s'", request.Header.Get("X-Custom-Key"))
+	}
+}
+
+func TestApplyAdditionalHeaders_HostHeaderCaseInsensitive(t *testing.T) {
+	variants := []string{"host", "HOST", "Host", "hOsT"}
+
+	for _, hostKey := range variants {
+		t.Run(hostKey, func(t *testing.T) {
+			keycloakClient := &KeycloakClient{
+				additionalHeaders: map[string]string{
+					hostKey: "custom.host.example.com",
+				},
+			}
+
+			request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+			if err != nil {
+				t.Fatalf("unexpected error creating request: %s", err)
+			}
+
+			keycloakClient.applyAdditionalHeaders(request)
+
+			if request.Host != "custom.host.example.com" {
+				t.Fatalf("expected request.Host to be 'custom.host.example.com' for key '%s', got '%s'", hostKey, request.Host)
 			}
 		})
 	}

@@ -165,9 +165,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 			return err
 		}
 
-		for header, value := range keycloakClient.additionalHeaders {
-			accessTokenRequest.Header.Set(header, value)
-		}
+		keycloakClient.applyAdditionalHeaders(accessTokenRequest)
 
 		accessTokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -270,9 +268,7 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 		return err
 	}
 
-	for header, value := range keycloakClient.additionalHeaders {
-		refreshTokenRequest.Header.Set(header, value)
-	}
+	keycloakClient.applyAdditionalHeaders(refreshTokenRequest)
 
 	refreshTokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -365,13 +361,21 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Cont
 	return authenticationFormData, nil
 }
 
+func (keycloakClient *KeycloakClient) applyAdditionalHeaders(request *http.Request) {
+	for header, value := range keycloakClient.additionalHeaders {
+		if strings.EqualFold(header, "host") {
+			request.Host = value
+		} else {
+			request.Header.Set(header, value)
+		}
+	}
+}
+
 func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 	tokenType := keycloakClient.clientCredentials.TokenType
 	accessToken := keycloakClient.clientCredentials.AccessToken
 
-	for header, value := range keycloakClient.additionalHeaders {
-		request.Header.Set(header, value)
-	}
+	keycloakClient.applyAdditionalHeaders(request)
 
 	request.Header.Set("Authorization", fmt.Sprintf("%s %s", tokenType, accessToken))
 	request.Header.Set("Accept", "application/json")
