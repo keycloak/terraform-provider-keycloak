@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -96,12 +97,11 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	active := randomBool()
 
 	groupKeystoreOne := &keycloak.RealmKeystoreJavaKeystore{
-		Name:      acctest.RandString(10),
-		RealmId:   testAccRealmUserFederation.Realm,
-		Enabled:   enabled,
-		Active:    active,
-		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: "RS256",
+		Name:     acctest.RandString(10),
+		RealmId:  testAccRealmUserFederation.Realm,
+		Enabled:  enabled,
+		Active:   active,
+		Priority: acctest.RandIntRange(0, 100),
 	}
 
 	groupKeystoreTwo := &keycloak.RealmKeystoreJavaKeystore{
@@ -110,7 +110,17 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: "RS256",
+		Algorithm: "ES256",
+	}
+
+	groupKeystoreThree := &keycloak.RealmKeystoreJavaKeystore{
+		Name:      acctest.RandString(10),
+		RealmId:   testAccRealmUserFederation.Realm,
+		Enabled:   enabled,
+		Active:    active,
+		Priority:  acctest.RandIntRange(0, 100),
+		Algorithm: "AES256",
+		KeyUse:    "enc",
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -119,11 +129,15 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreOne),
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreOne, "sig-rs256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 			{
-				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreTwo),
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreTwo, "sig-es256"),
+				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreThree, "enc-aes256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 		},
@@ -206,7 +220,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 
     keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "sig-rs256"
     key_password = "12345678"
 
     priority  = 100
@@ -227,7 +241,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 
     keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "sig-rs256"
     key_password = "12345678"
 
 	%s        = "%s"
@@ -235,7 +249,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	`, testAccRealmUserFederation.Realm, javaKeystoreName, attr, val)
 }
 
-func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore) string {
+func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore, keyAlias string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -247,11 +261,11 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 
     keystore          = "/opt/keycloak/testdata/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "%s"
     key_password = "12345678"
 
     priority  = %s
     algorithm = "%s"
 }
-	`, testAccRealmUserFederation.Realm, keystore.Name, strconv.Itoa(keystore.Priority), keystore.Algorithm)
+	`, testAccRealmUserFederation.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), keystore.Algorithm)
 }
