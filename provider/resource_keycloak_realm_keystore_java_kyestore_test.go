@@ -118,7 +118,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: "AES256",
+		Algorithm: "AES",
 		KeyUse:    "enc",
 	}
 
