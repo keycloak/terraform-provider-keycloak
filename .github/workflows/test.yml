@@ -88,7 +88,7 @@ jobs:
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
           MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
-          if [[ "${{ matrix.keycloak-version }}" == "26.5.5" || "${{ matrix.keycloak-version }}" == "26.4.7"|| "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if dpkg --compare-versions "${{ matrix.keycloak-version }}" ge "26.2.5"; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
 
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
