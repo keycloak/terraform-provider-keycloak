@@ -69,6 +69,11 @@ func resourceKeycloakRealm() *schema.Resource {
 			Default:  30,
 			Optional: true,
 		},
+		"code_reusable": {
+			Type:     schema.TypeBool,
+			Default:  false,
+			Optional: true,
+		},
 	}
 
 	webAuthnSchema := map[string]*schema.Schema{
@@ -1185,6 +1190,10 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.OTPPolicyPeriod = otpPolicyPeriod.(int)
 		}
 
+		if otpPolicyCodeReusable, ok := otpPolicy["code_reusable"]; ok {
+			realm.OTPPolicyCodeReusable = otpPolicyCodeReusable.(bool)
+		}
+
 		if otpPolicyType, ok := otpPolicy["type"]; ok {
 			realm.OTPPolicyType = otpPolicyType.(string)
 		}
@@ -1480,6 +1489,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	otpPolicy["initial_counter"] = realm.OTPPolicyInitialCounter
 	otpPolicy["look_ahead_window"] = realm.OTPPolicyLookAheadWindow
 	otpPolicy["period"] = realm.OTPPolicyPeriod
+	otpPolicy["code_reusable"] = realm.OTPPolicyCodeReusable
 	data.Set("otp_policy", []interface{}{otpPolicy})
 
 	//WebAuthn Passwordless

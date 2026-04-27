@@ -119,6 +119,7 @@ type Realm struct {
 	OTPPolicyInitialCounter  int    `json:"otpPolicyInitialCounter,omitempty"`
 	OTPPolicyLookAheadWindow int    `json:"otpPolicyLookAheadWindow,omitempty"`
 	OTPPolicyPeriod          int    `json:"otpPolicyPeriod,omitempty"`
+	OTPPolicyCodeReusable    bool   `json:"otpPolicyCodeReusable,omitempty"`
 	OTPPolicyType            string `json:"otpPolicyType,omitempty"`
 
 	// WebAuthn

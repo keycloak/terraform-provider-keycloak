@@ -236,6 +236,7 @@ The `otp_policy` block with following arguments can be found in the "OTP Policy"
 - `initial_counter` - (Optional) What should the initial counter value be. Defaults to `2`.
 - `look_ahead_window` - (Optional) How far ahead should the server look just in case the token generator and server are out of time sync or counter sync. Defaults to `1`.
 - `period` - (Optional) How many seconds should an OTP token be valid. Defaults to `30`.
+- `code_reusable` - (Optional) Possibility to use the same OTP code again after successful authentication. Defaults to `false`.
 
 ### WebAuthn
 
