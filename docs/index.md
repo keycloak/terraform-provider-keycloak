@@ -119,6 +119,8 @@ This type of configuration can be either used with the "Signed JWT" or with "Sig
 
 Note: If a Signed JWT Token is provided, it will be used for authentication even if a client_secret or private_key is also configured.
 
+Note: As per [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523), sending the `client_id` is optional when a pre-signed JWT is provided via `jwt_token` or `jwt_token_file`, because the client identity is embedded in the JWT itself. However, when using `jwt_signing_key`, the provider generates the client assertion and still requires `client_id` in order to populate the JWT `iss` and `sub` claims. This distinction is particularly useful in Kubernetes environments where the JWT `sub` claim may not match the Keycloak client ID.
+
 ### Example Usage (password grant)
 
 ```hcl
@@ -157,7 +159,7 @@ provider "keycloak" {
 
 The following arguments are supported:
 
-- `client_id` - (Required) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`.
+- `client_id` - (Optional) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`. Required for client secret, password grant, and `jwt_signing_key` authentication. Per [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523), can be omitted only when a pre-signed `jwt_token` or `jwt_token_file` is supplied.
 - `url` - (Required) The URL of the Keycloak instance, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_URL`.
 - `admin_url` - (Optional) The admin URL of the Keycloak instance if different from the base URL, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_ADMIN_URL`.
 - `client_secret` - (Optional) The secret for the client used by the provider for authentication via the client credentials grant. This can be found or changed using the "Credentials" tab in the client settings. Defaults to the environment variable `KEYCLOAK_CLIENT_SECRET`. This attribute is required when using the client credentials grant, and cannot be set when using the password grant.
