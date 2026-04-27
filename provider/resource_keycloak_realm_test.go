@@ -152,6 +152,25 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		},
 	})
 }
+func TestAccKeycloakRealm_SmtpServerAllowUtf8(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost.com", "My Host", "user"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.allow_utf8", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 	realm := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
@@ -1491,6 +1510,32 @@ resource "keycloak_realm" "realm" {
 		reply_to = "tom@myhost.com"
 		ssl = true
 		starttls = true
+		envelope_from = "nottom@myhost.com"
+		auth {
+			username = "%s"
+			password = "tom"
+		}
+	}
+}
+	`, realm, realm, host, from, user)
+}
+
+func testKeycloakRealm_WithSmtpServerAllowUtf8(realm, host, from, user string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+	enabled = true
+	display_name = "%s"
+	smtp_server {
+		host = "%s"
+		port = 25
+		from_display_name = "Tom"
+		from = "%s"
+		reply_to_display_name = "Tom"
+		reply_to = "tom@myhost.com"
+		ssl = true
+		starttls = true
+		allow_utf8 = true
 		envelope_from = "nottom@myhost.com"
 		auth {
 			username = "%s"

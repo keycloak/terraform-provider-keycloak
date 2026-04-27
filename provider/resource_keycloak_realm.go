@@ -761,7 +761,7 @@ func resourceKeycloakRealm() *schema.Resource {
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
-		authConfig := smtpSettings["auth"].([]interface{})
+		authConfig, _ := smtpSettings["auth"].([]interface{})
 
 		if len(authConfig) == 1 {
 			return authConfig[0].(map[string]interface{})["password"].(string), true
@@ -1352,7 +1352,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	} else {
 		smtpSettings := make(map[string]interface{})
 
-		smtpSettings["starttls"] = realm.SmtpServer.StartTls
+		smtpSettings["starttls"] = bool(realm.SmtpServer.StartTls)
 		smtpSettings["port"] = realm.SmtpServer.Port
 		smtpSettings["host"] = realm.SmtpServer.Host
 		smtpSettings["reply_to"] = realm.SmtpServer.ReplyTo
@@ -1360,8 +1360,8 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["from"] = realm.SmtpServer.From
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
-		smtpSettings["ssl"] = realm.SmtpServer.Ssl
-		smtpSettings["allow_utf8"] = realm.SmtpServer.AllowUtf8
+		smtpSettings["ssl"] = bool(realm.SmtpServer.Ssl)
+		smtpSettings["allow_utf8"] = bool(realm.SmtpServer.AllowUtf8)
 
 		if realm.SmtpServer.Auth {
 			if realm.SmtpServer.AuthType == "token" {
