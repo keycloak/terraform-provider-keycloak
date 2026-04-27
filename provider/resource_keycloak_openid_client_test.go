@@ -403,6 +403,40 @@ func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_JwtAuthorizationGrant_basic(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_6); !ok {
+		t.Skip()
+	}
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	oauth2JwtAuthorizationGrantEnabled := true
+	oauth2JwtAuthorizationGrantIdp := "example-idp"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrant(clientId,
+					oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp,
+				),
+				Check: testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrant("keycloak_openid_client.client",
+					oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp,
+				),
+			},
+			{
+				ResourceName:            "keycloak_openid_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateIdPrefix:     testAccRealm.Realm + "/",
+				ImportStateVerifyIgnore: []string{"exclude_session_state_from_auth_response", "exclude_issuer_from_auth_response"},
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_secret(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -928,6 +962,27 @@ func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testin
 	})
 }
 
+func TestAccKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId, true),
+				Check:  testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled("keycloak_openid_client.client", true),
+			},
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId, false),
+				Check:  testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled("keycloak_openid_client.client", false),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	var client = &keycloak.OpenidClient{}
@@ -1167,6 +1222,26 @@ func testAccCheckKeycloakOpenidClientOauth2Device(resourceName string,
 
 		if client.Attributes.Oauth2DevicePollingInterval != Oauth2DevicePollingInterval {
 			return fmt.Errorf("expected openid client to have device polling interval set to %s, but got %s", Oauth2DevicePollingInterval, client.Attributes.Oauth2DevicePollingInterval)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrant(resourceName string,
+	oauth2JwtAuthorizationGrantEnabled bool, oauth2JwtAuthorizationGrantIdp string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2JwtAuthorizationGrantEnabled) {
+			return fmt.Errorf("expected openid client to have JWT authorization grant enabled set to %t, but got %v", oauth2JwtAuthorizationGrantEnabled, client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantIdp != oauth2JwtAuthorizationGrantIdp {
+			return fmt.Errorf("expected openid client to have JWT authorization grant IDP set to %s, but got %s", oauth2JwtAuthorizationGrantIdp, client.Attributes.Oauth2JwtAuthorizationGrantIdp)
 		}
 
 		return nil
@@ -1474,6 +1549,21 @@ func testAccCheckKeycloakOpenidClientOauth2DeviceAuthorizationGrantEnabled(resou
 
 		if client.Attributes.Oauth2DeviceAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2DeviceAuthorizationGrantEnabled) {
 			return fmt.Errorf("expected openid client to have device authorization grant enabled set to %t, but got %v", oauth2DeviceAuthorizationGrantEnabled, client.Attributes.Oauth2DeviceAuthorizationGrantEnabled)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled(resourceName string, oauth2JwtAuthorizationGrantEnabled bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2JwtAuthorizationGrantEnabled) {
+			return fmt.Errorf("expected openid client to have JWT authorization grant enabled set to %t, but got %v", oauth2JwtAuthorizationGrantEnabled, client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
 		}
 
 		return nil
@@ -2153,6 +2243,39 @@ resource "keycloak_openid_client" "client" {
 	oauth2_device_polling_interval 				= "%s"
 }
 	`, testAccRealm.Realm, clientId, oauth2DeviceAuthorizationGrantEnabled, oauth2DeviceCodeLifespan, oauth2DevicePollingInterval)
+}
+
+func testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId string, oauth2JwtAuthorizationGrantEnabled bool) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   							  					 = "%s"
+	realm_id    							  					 = data.keycloak_realm.realm.id
+	access_type 							  					 = "CONFIDENTIAL"
+	oauth2_jwt_authorization_grant_enabled = %t
+}
+	`, testAccRealm.Realm, clientId, oauth2JwtAuthorizationGrantEnabled)
+}
+
+func testKeycloakOpenidClient_oauth2JwtAuthorizationGrant(clientId string, oauth2JwtAuthorizationGrantEnabled bool, oauth2JwtAuthorizationGrantIdp string) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   							 						 = "%s"
+	realm_id    							 						 = data.keycloak_realm.realm.id
+	access_type 							 						 = "CONFIDENTIAL"
+	oauth2_jwt_authorization_grant_enabled = %t
+	oauth2_jwt_authorization_grant_idp     = "%s"
+}
+	`, testAccRealm.Realm, clientId, oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp)
 }
 
 func testKeycloakOpenidClient_import(clientId string, enabled bool) string {
