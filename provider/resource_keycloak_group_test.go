@@ -101,7 +101,7 @@ func TestAccKeycloakGroup_multiValuedAttributeNoDrift(t *testing.T) {
 		"role-8",
 		"role-9",
 		"role-10",
-	}, keycloak.MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	}, MULTIVALUE_ATTRIBUTE_SEPARATOR)
 	resourceName := "keycloak_group.group"
 
 	var group keycloak.Group
