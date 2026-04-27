@@ -36,6 +36,7 @@ func TestAccKeycloakLdapGroupMapper_basic(t *testing.T) {
 }
 
 func TestAccKeycloakLdapGroupMapper_createAfterManualDestroy(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_24)
 	t.Parallel()
 
 	var mapper = &keycloak.LdapGroupMapper{}
@@ -364,6 +365,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -407,6 +409,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -452,6 +455,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -498,6 +502,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -550,6 +555,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -569,6 +575,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -617,6 +624,7 @@ resource "keycloak_ldap_user_federation" "openldap_one" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_user_federation" "openldap_two" {
@@ -636,6 +644,7 @@ resource "keycloak_ldap_user_federation" "openldap_two" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
@@ -684,6 +693,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                = "dc=example,dc=org"
 	bind_dn                 = "cn=admin,dc=example,dc=org"
 	bind_credential         = "admin"
+	referral                = "ignore"
 }
 
 resource "keycloak_ldap_group_mapper" "group_mapper" {
