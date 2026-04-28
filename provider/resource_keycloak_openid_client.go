@@ -342,6 +342,15 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"oauth2_jwt_authorization_grant_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"oauth2_jwt_authorization_grant_idp": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"always_display_in_console": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -437,6 +446,8 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 			Oauth2DeviceAuthorizationGrantEnabled:    types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
 			Oauth2DeviceCodeLifespan:                 data.Get("oauth2_device_code_lifespan").(string),
 			Oauth2DevicePollingInterval:              data.Get("oauth2_device_polling_interval").(string),
+			Oauth2JwtAuthorizationGrantEnabled:       types.KeycloakBoolQuoted(data.Get("oauth2_jwt_authorization_grant_enabled").(bool)),
+			Oauth2JwtAuthorizationGrantIdp:           data.Get("oauth2_jwt_authorization_grant_idp").(string),
 			ConsentScreenText:                        data.Get("consent_screen_text").(string),
 			DisplayOnConsentScreen:                   types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
 			PostLogoutRedirectUris:                   types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
@@ -554,6 +565,8 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("oauth2_device_authorization_grant_enabled", client.Attributes.Oauth2DeviceAuthorizationGrantEnabled)
 	data.Set("oauth2_device_code_lifespan", client.Attributes.Oauth2DeviceCodeLifespan)
 	data.Set("oauth2_device_polling_interval", client.Attributes.Oauth2DevicePollingInterval)
+	data.Set("oauth2_jwt_authorization_grant_enabled", client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
+	data.Set("oauth2_jwt_authorization_grant_idp", client.Attributes.Oauth2JwtAuthorizationGrantIdp)
 	data.Set("client_offline_session_idle_timeout", client.Attributes.ClientOfflineSessionIdleTimeout)
 	data.Set("client_offline_session_max_lifespan", client.Attributes.ClientOfflineSessionMaxLifespan)
 	data.Set("client_session_idle_timeout", client.Attributes.ClientSessionIdleTimeout)
