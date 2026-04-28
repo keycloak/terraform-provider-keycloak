@@ -23,7 +23,7 @@ func resourceKeycloakSpiffeIdentityProvider() *schema.Resource {
 		"bundle_endpoint": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The SPIFFE bundle endpoint or OpenID Connect JWKS endpoint exposing SPIFFE public keys. Depending your Keycloak Realm \"ssl_required\" setting, this may need to be an HTTPS URL.",
+			Description: "The SPIFFE bundle endpoint or OpenID Connect JWKS endpoint exposing SPIFFE public keys. Depending on your Keycloak Realm \"ssl_required\" setting, this may need to be an HTTPS URL.",
 		},
 		"hide_on_login_page": {
 			Type:        schema.TypeBool,

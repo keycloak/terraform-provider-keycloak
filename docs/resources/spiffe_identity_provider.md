@@ -46,7 +46,7 @@ resource "keycloak_openid_client" "spiffe_client" {
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
 - `trust_domain` - (Required) The SPIFFE trust domain. This must use the `spiffe://` scheme.
-- `bundle_endpoint` - (Required) The SPIFFE bundle endpoint or OpenID Connect JWKS endpoint exposing SPIFFE public keys. Depending your Keycloak Realm `ssl_required` setting, this may need to be an HTTPS URL.
+- `bundle_endpoint` - (Required) The SPIFFE bundle endpoint or OpenID Connect JWKS endpoint exposing SPIFFE public keys. Depending on your Keycloak Realm `ssl_required` setting, this may need to be an HTTPS URL.
 
 ## Import
 
