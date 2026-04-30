@@ -26,6 +26,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
   attribute {
     name         = "field1"
     display_name = "Field 1"
+    default_value = "default field1 value"
     group        = "group1"
 
     multi_valued = false
@@ -46,7 +47,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
     validator {
       name   = "pattern"
       config = {
-        pattern       = "^[a-z]+$"
+        pattern       = "^[a-z0-9 ]+$"
         error-message = "Nope"
       }
     }
@@ -99,6 +100,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
 - `name` - (Required) The name of the attribute.
 - `display_name` - (Optional) The display name of the attribute.
+- `default_value` - (Optional) The default value of the attribute.
 - `multi_valued` - (Optional) If the attribute supports multiple values. Defaults to `false`.
 - `group` - (Optional) The group that the attribute belong to.
 - `enabled_when_scope` - (Optional) A list of scopes. The attribute will only be enabled when these scopes are requested by clients.

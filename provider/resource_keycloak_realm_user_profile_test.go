@@ -83,6 +83,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 					"inputOptionLabels": "{\"a\":\"b\"}",
 				},
 			},
+			{Name: "attribute3", DefaultValue: "default attribute3 value"},
 		},
 		Groups: []*keycloak.RealmUserProfileGroup{
 			{
@@ -478,6 +479,10 @@ resource "keycloak_realm_user_profile" "realm_user_profile" {
         name = "{{ $attribute.Name }}"
 		{{- if $attribute.DisplayName }}
         display_name = "{{ $attribute.DisplayName }}"
+		{{- end }}
+
+		{{- if $attribute.DefaultValue }}
+        default_value = "{{ $attribute.DefaultValue }}"
 		{{- end }}
 
 		{{- if $attribute.MultiValued }}

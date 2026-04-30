@@ -45,6 +45,10 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
+						"default_value": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"multi_valued": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -152,9 +156,10 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 
 func getRealmUserProfileAttributeFromData(m map[string]interface{}) *keycloak.RealmUserProfileAttribute {
 	attribute := &keycloak.RealmUserProfileAttribute{
-		Name:        m["name"].(string),
-		DisplayName: m["display_name"].(string),
-		Group:       m["group"].(string),
+		Name:         m["name"].(string),
+		DefaultValue: m["default_value"].(string),
+		DisplayName:  m["display_name"].(string),
+		Group:        m["group"].(string),
 	}
 
 	if v, ok := m["multi_valued"].(bool); ok {
@@ -333,6 +338,7 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 
 	attributeData["name"] = attr.Name
 
+	attributeData["default_value"] = attr.DefaultValue
 	attributeData["display_name"] = attr.DisplayName
 	attributeData["multi_valued"] = attr.MultiValued
 
