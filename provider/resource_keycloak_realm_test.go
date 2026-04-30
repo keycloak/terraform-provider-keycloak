@@ -217,19 +217,19 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 	realmOne := &keycloak.Realm{
 		Realm:        "terraform-" + acctest.RandString(10),
 		DisplayName:  "terraform-" + acctest.RandString(10),
-		LoginTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		AccountTheme: randomStringInSlice([]string{"base", "keycloak"}),
-		AdminTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		EmailTheme:   randomStringInSlice([]string{"base", "keycloak"}),
+		LoginTheme:   randomStringInSlice([]string{"keycloak", "keycloak.v2"}),
+		AccountTheme: randomStringInSlice([]string{"keycloak.v3"}),
+		AdminTheme:   randomStringInSlice([]string{"keycloak.v2"}),
+		EmailTheme:   randomStringInSlice([]string{"keycloak"}),
 	}
 
 	realmTwo := &keycloak.Realm{
 		Realm:        realmOne.Realm,
 		DisplayName:  realmOne.DisplayName,
-		LoginTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		AccountTheme: randomStringInSlice([]string{"base", "keycloak"}),
-		AdminTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		EmailTheme:   randomStringInSlice([]string{"base", "keycloak"}),
+		LoginTheme:   randomStringInSlice([]string{"keycloak", "keycloak.v2"}),
+		AccountTheme: randomStringInSlice([]string{"keycloak.v3"}),
+		AdminTheme:   randomStringInSlice([]string{"keycloak.v2"}),
+		EmailTheme:   randomStringInSlice([]string{"keycloak"}),
 	}
 
 	resource.Test(t, resource.TestCase{
