@@ -70,6 +70,30 @@ func (keycloakClient *KeycloakClient) GetGenericProtocolMapper(ctx context.Conte
 	return &genericProtocolMapper, nil
 }
 
+func (keycloakClient *KeycloakClient) GetGenericProtocolMapperByName(ctx context.Context, realmId string, clientId string, clientScopeId string, mapperName string) (*GenericProtocolMapper, error) {
+	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, realmId, clientId, clientScopeId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, protocolMapper := range protocolMappers {
+		if protocolMapper.Name == mapperName {
+			return &GenericProtocolMapper{
+				ClientId:       clientId,
+				ClientScopeId:  clientScopeId,
+				RealmId:        realmId,
+				Id:             protocolMapper.Id,
+				Name:           protocolMapper.Name,
+				Protocol:       protocolMapper.Protocol,
+				ProtocolMapper: protocolMapper.ProtocolMapper,
+				Config:         protocolMapper.Config,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no protocol mapper found with name %s for this client", mapperName)
+}
+
 func (keycloakClient *KeycloakClient) UpdateGenericProtocolMapper(ctx context.Context, genericProtocolMapper *GenericProtocolMapper) error {
 	path := individualProtocolMapperPath(genericProtocolMapper.RealmId, genericProtocolMapper.ClientId, genericProtocolMapper.ClientScopeId, genericProtocolMapper.Id)
 
