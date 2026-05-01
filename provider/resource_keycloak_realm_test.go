@@ -122,8 +122,8 @@ func TestAccKeycloakRealm_SmtpServer(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
@@ -142,12 +142,12 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "My Host2", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
 			},
 		},
 	})
@@ -162,8 +162,8 @@ func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
@@ -182,12 +182,12 @@ func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "My Host2", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "admin@myhost2.com", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
 			},
 		},
 	})
@@ -217,19 +217,19 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 	realmOne := &keycloak.Realm{
 		Realm:        "terraform-" + acctest.RandString(10),
 		DisplayName:  "terraform-" + acctest.RandString(10),
-		LoginTheme:   randomStringInSlice([]string{"keycloak", "keycloak.v2"}),
-		AccountTheme: randomStringInSlice([]string{"keycloak.v3"}),
-		AdminTheme:   randomStringInSlice([]string{"keycloak.v2"}),
-		EmailTheme:   randomStringInSlice([]string{"keycloak"}),
+		LoginTheme:   "keycloak",
+		AccountTheme: "keycloak.v3",
+		AdminTheme:   "keycloak.v2",
+		EmailTheme:   "keycloak",
 	}
 
 	realmTwo := &keycloak.Realm{
 		Realm:        realmOne.Realm,
 		DisplayName:  realmOne.DisplayName,
-		LoginTheme:   randomStringInSlice([]string{"keycloak", "keycloak.v2"}),
-		AccountTheme: randomStringInSlice([]string{"keycloak.v3"}),
-		AdminTheme:   randomStringInSlice([]string{"keycloak.v2"}),
-		EmailTheme:   randomStringInSlice([]string{"keycloak"}),
+		LoginTheme:   "keycloak",
+		AccountTheme: "keycloak.v3",
+		AdminTheme:   "keycloak.v2",
+		EmailTheme:   "keycloak",
 	}
 
 	resource.Test(t, resource.TestCase{
