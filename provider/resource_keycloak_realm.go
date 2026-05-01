@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"maps"
 
 	"dario.cat/mergo"
 	"github.com/hashicorp/go-version"
@@ -16,6 +18,8 @@ var (
 	keycloakRealmValidOTPTypes      = []string{"totp", "hotp"}
 	keycloakRealmValidOTPAlgorithms = []string{"HmacSHA1", "HmacSHA256", "HmacSHA512"}
 )
+
+const minKeycloakPasskeysVersion = "26.3.5"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -151,6 +155,15 @@ func resourceKeycloakRealm() *schema.Resource {
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	maps.Copy(webAuthnPasswordlessSchema, webAuthnSchema)
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "Enable passkeys for passwordless WebAuthn authentication",
+		Optional:    true,
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
 		ReadContext:   resourceKeycloakRealmRead,
@@ -739,7 +752,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 
@@ -1243,6 +1256,25 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment = webAuthnPolicyPasswordlessAuthenticatorAttachment.(string)
 		}
 
+		supportsPasskeys := true
+		if minSupportedVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+			if keycloakVersion.LessThan(minSupportedVersion) {
+				supportsPasskeys = false
+			}
+		}
+
+		if supportsPasskeys {
+			if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
+				passkeysEnabled := webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			} else {
+				passkeysEnabled := false
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			}
+		} else if _, ok := data.GetOk("web_authn_passwordless_policy.0.passwordless_passkeys_enabled"); ok {
+			return nil, fmt.Errorf("passwordless_passkeys_enabled in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= 26.3.5)", realm.Id)
+		}
+
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
 			realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister = webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister.(bool)
 		}
@@ -1472,6 +1504,17 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
+
+	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+		if keycloakVersion.GreaterThanOrEqual(minVersion) {
+			if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+			} else {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = false
+			}
+		}
+	}
+
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
