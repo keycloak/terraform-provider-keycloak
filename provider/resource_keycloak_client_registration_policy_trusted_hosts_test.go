@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakClientRegistrationPolicyTrustedHosts_basic(t *testing.T) {
@@ -18,12 +17,12 @@ func TestAccKeycloakClientRegistrationPolicyTrustedHosts_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccCheckClientRegistrationPolicyTrustedHostsDestroy(),
+		CheckDestroy:             crpDestroy("keycloak_client_registration_policy_trusted_hosts"),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientRegistrationPolicyTrustedHosts_basic(name),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckClientRegistrationPolicyTrustedHostsExists("keycloak_client_registration_policy_trusted_hosts.th"),
+					crpExists("keycloak_client_registration_policy_trusted_hosts.th"),
 					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "name", name),
 					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "sub_type", "anonymous"),
 					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "client_uris_must_match", "true"),
@@ -35,13 +34,44 @@ func TestAccKeycloakClientRegistrationPolicyTrustedHosts_basic(t *testing.T) {
 				ResourceName:      "keycloak_client_registration_policy_trusted_hosts.th",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources["keycloak_client_registration_policy_trusted_hosts.th"]
-					if !ok {
-						return "", fmt.Errorf("not found in state")
-					}
-					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["realm_id"], rs.Primary.ID), nil
-				},
+				ImportStateIdFunc: crpImportId("keycloak_client_registration_policy_trusted_hosts.th"),
+			},
+		},
+	})
+}
+
+// TestAccKeycloakClientRegistrationPolicyTrustedHosts_update mutates every
+// per-resource field and verifies the diff is applied.
+func TestAccKeycloakClientRegistrationPolicyTrustedHosts_update(t *testing.T) {
+	t.Parallel()
+
+	name := acctest.RandomWithPrefix("tf-acc-thu")
+	updatedName := name + "-renamed"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             crpDestroy("keycloak_client_registration_policy_trusted_hosts"),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientRegistrationPolicyTrustedHosts_basic(name),
+				Check: resource.ComposeTestCheckFunc(
+					crpExists("keycloak_client_registration_policy_trusted_hosts.th"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "name", name),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "trusted_hosts.#", "2"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "host_sending_registration_request_must_match", "false"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "client_uris_must_match", "true"),
+				),
+			},
+			{
+				Config: testKeycloakClientRegistrationPolicyTrustedHosts_updated(updatedName),
+				Check: resource.ComposeTestCheckFunc(
+					crpExists("keycloak_client_registration_policy_trusted_hosts.th"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "name", updatedName),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "trusted_hosts.#", "1"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "host_sending_registration_request_must_match", "true"),
+					resource.TestCheckResourceAttr("keycloak_client_registration_policy_trusted_hosts.th", "client_uris_must_match", "false"),
+				),
 			},
 		},
 	})
@@ -60,7 +90,7 @@ func TestAccKeycloakClientRegistrationPolicyTrustedHosts_importMismatch(t *testi
 				// Create a max_clients policy, then attempt to import it as
 				// trusted_hosts. The provider_id guard should fail.
 				Config: testKeycloakClientRegistrationPolicyMaxClients_basic(name),
-				Check:  testAccCheckClientRegistrationPolicyMaxClientsExists("keycloak_client_registration_policy_max_clients.mc"),
+				Check:  crpExists("keycloak_client_registration_policy_max_clients.mc"),
 			},
 			{
 				ResourceName: "keycloak_client_registration_policy_trusted_hosts.th",
@@ -71,44 +101,12 @@ resource "keycloak_client_registration_policy_trusted_hosts" "th" {
   sub_type = "anonymous"
 }
 `,
-				ImportState: true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources["keycloak_client_registration_policy_max_clients.mc"]
-					if !ok {
-						return "", fmt.Errorf("not found in state")
-					}
-					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["realm_id"], rs.Primary.ID), nil
-				},
-				ExpectError: regexp.MustCompile(`providerId="max-clients".*expects providerId="trusted-hosts"`),
+				ImportState:       true,
+				ImportStateIdFunc: crpImportId("keycloak_client_registration_policy_max_clients.mc"),
+				ExpectError:       regexp.MustCompile(`providerId="max-clients".*expects providerId="trusted-hosts"`),
 			},
 		},
 	})
-}
-
-func testAccCheckClientRegistrationPolicyTrustedHostsExists(name string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[name]
-		if !ok {
-			return fmt.Errorf("not found in state: %s", name)
-		}
-		_, err := keycloakClient.GetClientRegistrationPolicy(testCtx, rs.Primary.Attributes["realm_id"], rs.Primary.ID)
-		return err
-	}
-}
-
-func testAccCheckClientRegistrationPolicyTrustedHostsDestroy() resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "keycloak_client_registration_policy_trusted_hosts" {
-				continue
-			}
-			policy, _ := keycloakClient.GetClientRegistrationPolicy(testCtx, rs.Primary.Attributes["realm_id"], rs.Primary.ID)
-			if policy != nil {
-				return fmt.Errorf("trusted_hosts policy %s still exists", rs.Primary.ID)
-			}
-		}
-		return nil
-	}
 }
 
 func testKeycloakClientRegistrationPolicyTrustedHosts_basic(name string) string {
@@ -121,6 +119,20 @@ resource "keycloak_client_registration_policy_trusted_hosts" "th" {
   trusted_hosts                                = ["127.0.0.1", "localhost"]
   host_sending_registration_request_must_match = false
   client_uris_must_match                       = true
+}
+`, testAccRealm.Realm, name)
+}
+
+func testKeycloakClientRegistrationPolicyTrustedHosts_updated(name string) string {
+	return fmt.Sprintf(`
+resource "keycloak_client_registration_policy_trusted_hosts" "th" {
+  realm_id = "%s"
+  name     = "%s"
+  sub_type = "anonymous"
+
+  trusted_hosts                                = ["10.0.0.1"]
+  host_sending_registration_request_must_match = true
+  client_uris_must_match                       = false
 }
 `, testAccRealm.Realm, name)
 }
