@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccKeycloakClientRegistrationPolicies_fullStack declares all 8 typed
-// policy resources in a single config (4 anonymous, 4 authenticated) and
+// TestAccKeycloakClientRegistrationPolicies_fullStack declares all 7 typed
+// policy resources in a single config (4 anonymous, 3 authenticated) and
 // verifies that apply + destroy succeed with no resource interfering with
 // any other.
 func TestAccKeycloakClientRegistrationPolicies_fullStack(t *testing.T) {
@@ -25,7 +25,6 @@ func TestAccKeycloakClientRegistrationPolicies_fullStack(t *testing.T) {
 			crpDestroy("keycloak_client_registration_policy_max_clients"),
 			crpDestroy("keycloak_client_registration_policy_allowed_client_scopes"),
 			crpDestroy("keycloak_client_registration_policy_allowed_protocol_mappers"),
-			crpDestroy("keycloak_client_registration_policy_web_origins"),
 			crpDestroy("keycloak_client_registration_policy_consent_required"),
 			crpDestroy("keycloak_client_registration_policy_full_scope_disallowed"),
 			crpDestroy("keycloak_client_registration_policy_client_disabled"),
@@ -38,7 +37,6 @@ func TestAccKeycloakClientRegistrationPolicies_fullStack(t *testing.T) {
 					crpExists("keycloak_client_registration_policy_max_clients.fs"),
 					crpExists("keycloak_client_registration_policy_allowed_client_scopes.fs"),
 					crpExists("keycloak_client_registration_policy_allowed_protocol_mappers.fs"),
-					crpExists("keycloak_client_registration_policy_web_origins.fs"),
 					crpExists("keycloak_client_registration_policy_consent_required.fs"),
 					crpExists("keycloak_client_registration_policy_full_scope_disallowed.fs"),
 					crpExists("keycloak_client_registration_policy_client_disabled.fs"),
@@ -79,13 +77,6 @@ resource "keycloak_client_registration_policy_allowed_protocol_mappers" "fs" {
   name                          = "%[2]s-apm"
   sub_type                      = "anonymous"
   allowed_protocol_mapper_types = ["oidc-usermodel-property-mapper", "oidc-full-name-mapper"]
-}
-
-resource "keycloak_client_registration_policy_web_origins" "fs" {
-  realm_id    = "%[1]s"
-  name        = "%[2]s-wo"
-  sub_type    = "authenticated"
-  web_origins = ["https://app.example.com"]
 }
 
 resource "keycloak_client_registration_policy_consent_required" "fs" {

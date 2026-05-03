@@ -53,7 +53,6 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_client_registration_policy_consent_required":         resourceKeycloakClientRegistrationPolicyConsentRequired(),
 			"keycloak_client_registration_policy_full_scope_disallowed":    resourceKeycloakClientRegistrationPolicyFullScopeDisallowed(),
 			"keycloak_client_registration_policy_client_disabled":          resourceKeycloakClientRegistrationPolicyClientDisabled(),
-			"keycloak_client_registration_policy_web_origins":              resourceKeycloakClientRegistrationPolicyWebOrigins(),
 			"keycloak_realm_user_profile":                                  resourceKeycloakRealmUserProfile(),
 			"keycloak_realm_localization":                                  resourceKeycloakRealmLocalization(),
 			"keycloak_required_action":                                     resourceKeycloakRequiredAction(),
