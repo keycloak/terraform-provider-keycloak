@@ -720,7 +720,7 @@ func TestAccKeycloakOpenidClient_loginTheme(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	loginThemeKeycloak := "keycloak"
-	loginThemeBase := "base"
+	loginThemeKeycloakV2 := "keycloak.v2"
 	loginThemeRandom := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -733,8 +733,8 @@ func TestAccKeycloakOpenidClient_loginTheme(t *testing.T) {
 				Check:  testAccCheckKeycloakOpenidClientLoginTheme("keycloak_openid_client.client", loginThemeKeycloak),
 			},
 			{
-				Config: testKeycloakOpenidClient_loginTheme(clientId, loginThemeBase),
-				Check:  testAccCheckKeycloakOpenidClientLoginTheme("keycloak_openid_client.client", loginThemeBase),
+				Config: testKeycloakOpenidClient_loginTheme(clientId, loginThemeKeycloakV2),
+				Check:  testAccCheckKeycloakOpenidClientLoginTheme("keycloak_openid_client.client", loginThemeKeycloakV2),
 			},
 			{
 				Config:      testKeycloakOpenidClient_loginTheme(clientId, loginThemeRandom),
