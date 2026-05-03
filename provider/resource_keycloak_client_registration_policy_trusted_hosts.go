@@ -49,7 +49,7 @@ func getClientRegistrationPolicyTrustedHostsFromData(d *schema.ResourceData) *ke
 		ProviderId: clientRegistrationPolicyTrustedHostsProviderId,
 		SubType:    d.Get("sub_type").(string),
 		Config: map[string][]string{
-			"trusted-hosts":                                configStringSliceFromSet(d.Get("trusted_hosts").(*schema.Set)),
+			"trusted-hosts": configStringSliceFromSet(d.Get("trusted_hosts").(*schema.Set)),
 			"host-sending-registration-request-must-match": configBoolValue(d.Get("host_sending_registration_request_must_match").(bool)),
 			"client-uris-must-match":                       configBoolValue(d.Get("client_uris_must_match").(bool)),
 		},
