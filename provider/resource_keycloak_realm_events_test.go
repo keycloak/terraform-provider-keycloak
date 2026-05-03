@@ -174,7 +174,7 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 							if len(realmEventsConfig.EnabledEventTypes) != 103 {
 								return fmt.Errorf("expected enabled_event_types to contain all(103) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
-						} else if version.GreaterThanOrEqual(keycloak.Version_26_3.AsVersion()) && len(realmEventsConfig.EnabledEventTypes) != 93 {
+						} else if version.GreaterThanOrEqual(keycloak.Version_26_3.AsVersion()) {
 							if len(realmEventsConfig.EnabledEventTypes) != 93 {
 								return fmt.Errorf("expected enabled_event_types to contain all(93) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
