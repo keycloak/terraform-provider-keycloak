@@ -83,6 +83,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 					"inputOptionLabels": "{\"a\":\"b\"}",
 				},
 			},
+			{Name: "attribute3"},
 		},
 		Groups: []*keycloak.RealmUserProfileGroup{
 			{
@@ -94,6 +95,33 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 					"test": "{\"a2\":\"b2\"}",
 				},
 			},
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, realmUserProfile),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", realmUserProfile,
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmUserProfile_defaultValue(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version(minKeycloakDefaultValueVersion))
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	realmUserProfile := &keycloak.RealmUserProfile{
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+			{Name: "attribute", DefaultValue: "default attribute value"},
 		},
 	}
 
@@ -478,6 +506,10 @@ resource "keycloak_realm_user_profile" "realm_user_profile" {
         name = "{{ $attribute.Name }}"
 		{{- if $attribute.DisplayName }}
         display_name = "{{ $attribute.DisplayName }}"
+		{{- end }}
+
+		{{- if $attribute.DefaultValue }}
+        default_value = "{{ $attribute.DefaultValue }}"
 		{{- end }}
 
 		{{- if $attribute.MultiValued }}

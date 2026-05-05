@@ -20,6 +20,8 @@ const (
 
 const USER_PROFILE_ENABLED string = "userProfileEnabled"
 
+const minKeycloakDefaultValueVersion = "26.4.0"
+
 func resourceKeycloakRealmUserProfile() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmUserProfileCreate,
@@ -42,6 +44,10 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 							Required: true,
 						},
 						"display_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"default_value": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -152,9 +158,10 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 
 func getRealmUserProfileAttributeFromData(m map[string]interface{}) *keycloak.RealmUserProfileAttribute {
 	attribute := &keycloak.RealmUserProfileAttribute{
-		Name:        m["name"].(string),
-		DisplayName: m["display_name"].(string),
-		Group:       m["group"].(string),
+		Name:         m["name"].(string),
+		DefaultValue: m["default_value"].(string),
+		DisplayName:  m["display_name"].(string),
+		Group:        m["group"].(string),
 	}
 
 	if v, ok := m["multi_valued"].(bool); ok {
@@ -333,6 +340,7 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 
 	attributeData["name"] = attr.Name
 
+	attributeData["default_value"] = attr.DefaultValue
 	attributeData["display_name"] = attr.DisplayName
 	attributeData["multi_valued"] = attr.MultiValued
 
@@ -454,6 +462,12 @@ func resourceKeycloakRealmUserProfileCreate(ctx context.Context, data *schema.Re
 		return diag.FromErr(err)
 	}
 
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version(minKeycloakDefaultValueVersion)); ok {
+		for _, attr := range realmUserProfile.Attributes {
+			attr.DefaultValue = ""
+		}
+	}
+
 	err = keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -507,6 +521,12 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 	realmUserProfile, err := getRealmUserProfileFromData(ctx, keycloakClient, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version(minKeycloakDefaultValueVersion)); ok {
+		for _, attr := range realmUserProfile.Attributes {
+			attr.DefaultValue = ""
+		}
 	}
 
 	err = keycloakClient.UpdateRealmUserProfile(ctx, realmId, realmUserProfile)
