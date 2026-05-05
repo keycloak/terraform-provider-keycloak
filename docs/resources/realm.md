@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
   display_name      = "my realm"
   display_name_html = "<b>my realm</b>"
 
-  login_theme = "base"
+  login_theme = "keycloak"
 
   access_code_lifespan = "1h"
 
