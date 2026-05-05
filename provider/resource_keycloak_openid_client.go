@@ -46,9 +46,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				ForceNew: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("name"),
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
@@ -150,19 +150,19 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Computed: true,
 			},
 			"root_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("root_url"),
 			},
 			"admin_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("admin_url"),
 			},
 			"base_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("base_url"),
 			},
 			"service_account_user_id": {
 				Type:     schema.TypeString,
@@ -263,9 +263,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Computed: true,
 			},
 			"consent_screen_text": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("consent_screen_text"),
 			},
 			"authentication_flow_binding_overrides": {
 				Type:     schema.TypeSet,
@@ -285,8 +285,9 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				},
 			},
 			"login_theme": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("login_theme"),
 			},
 			"use_refresh_tokens": {
 				Type:     schema.TypeBool,
@@ -308,12 +309,14 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Optional: true,
 			},
 			"frontchannel_logout_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("frontchannel_logout_url"),
 			},
 			"backchannel_logout_url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("backchannel_logout_url"),
 			},
 			"backchannel_logout_session_required": {
 				Type:     schema.TypeBool,
@@ -379,8 +382,13 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 	webOriginsData, webOriginsOk := data.GetOk("web_origins")
 	validPostLogoutRedirectUrisData, validPostLogoutRedirectUrisOk := data.GetOk("valid_post_logout_redirect_uris")
 	description, descriptionOk := data.GetOkExists("description")
-
-	rootUrlString := rootUrlData.(string)
+	name, nameOk := data.GetOkExists("name")
+	adminUrl, adminUrlOk := data.GetOkExists("admin_url")
+	baseUrl, baseUrlOk := data.GetOkExists("base_url")
+	loginTheme, loginThemeOk := data.GetOkExists("login_theme")
+	frontchannelLogoutUrl, frontchannelLogoutUrlOk := data.GetOkExists("frontchannel_logout_url")
+	backchannelLogoutUrl, backchannelLogoutUrlOk := data.GetOkExists("backchannel_logout_url")
+	consentScreenText, consentScreenTextOk := data.GetOkExists("consent_screen_text")
 
 	if validRedirectUrisOk {
 		for _, validRedirectUri := range validRedirectUrisData.(*schema.Set).List() {
@@ -404,7 +412,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		Id:                        data.Id(),
 		ClientId:                  data.Get("client_id").(string),
 		RealmId:                   data.Get("realm_id").(string),
-		Name:                      data.Get("name").(string),
 		Enabled:                   data.Get("enabled").(bool),
 		ClientSecret:              data.Get("client_secret").(string),
 		ClientAuthenticatorType:   data.Get("client_authenticator_type").(string),
@@ -420,7 +427,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
 			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
 			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
-			LoginTheme:                               data.Get("login_theme").(string),
 			ClientOfflineSessionIdleTimeout:          data.Get("client_offline_session_idle_timeout").(string),
 			ClientOfflineSessionMaxLifespan:          data.Get("client_offline_session_max_lifespan").(string),
 			ClientSessionIdleTimeout:                 data.Get("client_session_idle_timeout").(string),
@@ -429,24 +435,46 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 			UseRefreshTokensClientCredentials:        types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
 			StandardTokenExchangeEnabled:             types.KeycloakBoolQuoted(data.Get("standard_token_exchange_enabled").(bool)),
 			AllowRefreshTokenInStandardTokenExchange: data.Get("allow_refresh_token_in_standard_token_exchange").(string),
-			FrontchannelLogoutUrl:                    data.Get("frontchannel_logout_url").(string),
-			BackchannelLogoutUrl:                     data.Get("backchannel_logout_url").(string),
 			BackchannelLogoutRevokeOfflineTokens:     types.KeycloakBoolQuoted(data.Get("backchannel_logout_revoke_offline_sessions").(bool)),
 			BackchannelLogoutSessionRequired:         types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool)),
 			ExtraConfig:                              getExtraConfigFromData(data),
 			Oauth2DeviceAuthorizationGrantEnabled:    types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
 			Oauth2DeviceCodeLifespan:                 data.Get("oauth2_device_code_lifespan").(string),
 			Oauth2DevicePollingInterval:              data.Get("oauth2_device_polling_interval").(string),
-			ConsentScreenText:                        data.Get("consent_screen_text").(string),
 			DisplayOnConsentScreen:                   types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
 			PostLogoutRedirectUris:                   types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
 		},
 		ValidRedirectUris:      validRedirectUris,
 		WebOrigins:             webOrigins,
-		AdminUrl:               data.Get("admin_url").(string),
-		BaseUrl:                data.Get("base_url").(string),
 		ConsentRequired:        data.Get("consent_required").(bool),
 		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
+	}
+
+	// preserve empty strings for clearable string fields: only set when explicitly in config
+	if nameOk {
+		openidClient.Name = name.(string)
+	}
+	if rootUrlOk {
+		rootUrl := rootUrlData.(string)
+		openidClient.RootUrl = &rootUrl
+	}
+	if adminUrlOk {
+		openidClient.AdminUrl = adminUrl.(string)
+	}
+	if baseUrlOk {
+		openidClient.BaseUrl = baseUrl.(string)
+	}
+	if loginThemeOk {
+		openidClient.Attributes.LoginTheme = loginTheme.(string)
+	}
+	if frontchannelLogoutUrlOk {
+		openidClient.Attributes.FrontchannelLogoutUrl = frontchannelLogoutUrl.(string)
+	}
+	if backchannelLogoutUrlOk {
+		openidClient.Attributes.BackchannelLogoutUrl = backchannelLogoutUrl.(string)
+	}
+	if consentScreenTextOk {
+		openidClient.Attributes.ConsentScreenText = consentScreenText.(string)
 	}
 
 	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
@@ -456,10 +484,6 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		}
 
 		openidClient.ClientSecret = clientSecretWriteOnly.AsString()
-	}
-
-	if rootUrlOk {
-		openidClient.RootUrl = &rootUrlString
 	}
 
 	if !openidClient.ImplicitFlowEnabled && !openidClient.StandardFlowEnabled {
