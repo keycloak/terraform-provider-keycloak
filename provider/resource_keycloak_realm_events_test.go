@@ -165,15 +165,21 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 							return err
 						}
 
+						version, err := keycloakClient.Version(testCtx)
+						if err != nil {
+							return err
+						}
 						//different Keycloak versions have different number of default saved events
-						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_3); ok {
+						if version.GreaterThanOrEqual(keycloak.Version_26_6.AsVersion()) {
+							if len(realmEventsConfig.EnabledEventTypes) != 103 {
+								return fmt.Errorf("expected enabled_event_types to contain all(103) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if version.GreaterThanOrEqual(keycloak.Version_26_3.AsVersion()) {
 							if len(realmEventsConfig.EnabledEventTypes) != 93 {
 								return fmt.Errorf("expected enabled_event_types to contain all(93) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
-						} else {
-							if len(realmEventsConfig.EnabledEventTypes) != 91 {
-								return fmt.Errorf("expected enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
+						} else if len(realmEventsConfig.EnabledEventTypes) != 91 {
+							return fmt.Errorf("expected enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 						}
 						return nil
 					},
