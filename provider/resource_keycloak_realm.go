@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 
+	"dario.cat/mergo"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -753,6 +754,14 @@ func resourceKeycloakRealm() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: webAuthnPasswordlessSchema,
 				},
+			},
+
+			// others
+			"import": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				ForceNew: true,
 			},
 		},
 	}
@@ -1566,9 +1575,25 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	err = keycloakClient.NewRealm(ctx, realm)
-	if err != nil {
-		return diag.FromErr(err)
+	if data.Get("import").(bool) {
+		existingRealm, err := keycloakClient.GetRealm(ctx, realm.Realm)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err = mergo.Merge(realm, existingRealm); err != nil {
+			return diag.FromErr(err)
+		}
+
+		err = keycloakClient.UpdateRealm(ctx, realm)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		err = keycloakClient.NewRealm(ctx, realm)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	err = meta.(*keycloak.KeycloakClient).Refresh(ctx)
@@ -1600,6 +1625,10 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 
 	if _, ok := data.GetOk("terraform_deletion_protection"); !ok {
 		data.Set("terraform_deletion_protection", false)
+	}
+
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
 	}
 
 	setRealmData(data, realm, keycloakVersion)
@@ -1635,6 +1664,10 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if data.Get("import").(bool) {
+		return nil
+	}
+
 	if data.Get("terraform_deletion_protection").(bool) {
 		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `terraform_deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
 	}
