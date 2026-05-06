@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
   display_name      = "my realm"
   display_name_html = "<b>my realm</b>"
 
-  login_theme = "base"
+  login_theme = "keycloak"
 
   access_code_lifespan = "1h"
 
@@ -259,6 +259,7 @@ Each of these attributes are blocks with the following attributes:
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
 - `extra_origins` - (Optional) A set of extra origins for non-web applications.
+- `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. This attribute is only valid inside a `web_authn_passwordless_policy` block and requires a Keycloak version that supports passwordless passkeys. Defaults to `false`.
 
 ## Default Client Scopes
 

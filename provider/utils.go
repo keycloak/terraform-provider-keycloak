@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -125,6 +127,18 @@ func stringPointer(s string) *string {
 	return &s
 }
 
+// suppressDiffForMultivalueAttributeOrder returns a DiffSuppressFunc that
+// suppresses diffs when the order of multiple attribute values changed.
+func suppressDiffForMultivalueAttributeOrder() schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		oldParts := strings.Split(old, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		newParts := strings.Split(new, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		slices.Sort(oldParts)
+		slices.Sort(newParts)
+		return strings.Join(oldParts, MULTIVALUE_ATTRIBUTE_SEPARATOR) == strings.Join(newParts, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	}
+}
+
 // suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
 // when the specified attribute is not present in the config (null).
 // This allows:
@@ -158,7 +172,7 @@ func requiredWithoutAll(key cty.Path, checkExists []cty.Path) schema.ValidateRaw
 		anyExists := false
 		for _, path := range checkExists {
 			val, err := path.Apply(req.RawConfig)
-			if err == nil && !val.IsNull() && val.IsKnown() {
+			if err == nil && !val.IsNull() {
 				anyExists = true
 				break
 			}

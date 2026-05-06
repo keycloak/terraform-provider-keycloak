@@ -86,6 +86,69 @@ func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakGroup_multiValuedAttributeNoDrift(t *testing.T) {
+	groupName := acctest.RandomWithPrefix("tf-acc/")
+	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
+
+	attributeValue := strings.Join([]string{
+		"role-1",
+		"role-2",
+		"role-3",
+		"role-4",
+		"role-5",
+		"role-6",
+		"role-7",
+		"role-8",
+		"role-9",
+		"role-10",
+	}, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	resourceName := "keycloak_group.group"
+
+	var group keycloak.Group
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroup_basic(groupName, attributeName, attributeValue),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "attributes."+attributeName, attributeValue),
+					testAccCheckKeycloakGroupFetch(resourceName, &group),
+				),
+			},
+			{
+				PreConfig: func() {
+					// right now, Keycloak won't persist different order of items in a collection
+					// if existing collection with roles has same items, so in order to achieve a different order
+					// we need to first put there a different attribute and then the original items in a different order
+					fullGroup, err := keycloakClient.GetGroup(testCtx, group.RealmId, group.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					fullGroup.Attributes = map[string][]string{
+						attributeName: {"dummy"},
+					}
+					if err = keycloakClient.UpdateGroup(testCtx, fullGroup); err != nil {
+						t.Fatal(err)
+					}
+					fullGroup.Attributes = map[string][]string{
+						attributeName: {"role-5", "role-3", "role-10", "role-1", "role-8", "role-2", "role-9", "role-4", "role-7", "role-6"},
+					}
+					if err = keycloakClient.UpdateGroup(testCtx, fullGroup); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakGroup_basic(groupName, attributeName, attributeValue),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakGroup_updateGroupName(t *testing.T) {
 	t.Parallel()
 
