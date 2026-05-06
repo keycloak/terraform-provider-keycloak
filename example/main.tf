@@ -39,7 +39,7 @@ resource "keycloak_realm" "test" {
     }
   }
 
-  account_theme        = "base"
+  account_theme        = "keycloak.v3"
   access_code_lifespan = "30m"
 
   internationalization {
