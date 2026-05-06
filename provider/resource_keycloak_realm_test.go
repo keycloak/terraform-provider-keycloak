@@ -1493,7 +1493,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realm, host, from, user)
 }
 
-func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int, code_reusable bool) string {
+func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int, codeReusable bool) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm   = "%s"
@@ -1506,7 +1506,7 @@ resource "keycloak_realm" "realm" {
         code_reusable = %t
 	}
 }
-	`, realm, otpType, algorithm, period, code_reusable)
+	`, realm, otpType, algorithm, period, codeReusable)
 }
 
 func testKeycloakRealm_WithSmtpServerWithoutHost(realm, from string) string {
