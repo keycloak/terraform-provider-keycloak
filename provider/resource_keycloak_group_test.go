@@ -228,6 +228,16 @@ func TestAccKeycloakGroup_nestedGroupNameContainsBackSlash(t *testing.T) {
 	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
 }
 
+func TestAccKeycloakGroup_nestedGroupNameContainsSpaces(t *testing.T) {
+	t.Parallel()
+
+	parentGroupName := acctest.RandomWithPrefix("tf acc")
+	firstChildGroupName := acctest.RandomWithPrefix("tf acc")
+	secondChildGroupName := acctest.RandomWithPrefix("tf acc")
+
+	runTestNestedGroup(t, parentGroupName, firstChildGroupName, secondChildGroupName)
+}
+
 func runTestNestedGroup(t *testing.T, parentGroupName, firstChildGroupName, secondChildGroupName string) {
 	parentGroupResource := "keycloak_group.parent_group"
 	firstChildGroupResource := "keycloak_group.first_child_group"

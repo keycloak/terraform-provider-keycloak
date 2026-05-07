@@ -2,7 +2,7 @@ resource keycloak_realm test_authorization {
   realm                = "test_authorization"
   enabled              = true
   display_name         = "foo"
-  account_theme        = "base"
+  account_theme        = "keycloak.v3"
   access_code_lifespan = "30m"
 }
 

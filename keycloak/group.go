@@ -3,6 +3,7 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	neturl "net/url"
 	"strings"
 )
 
@@ -29,9 +30,17 @@ func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *
 		return "", nil
 	}
 
+	// URL-encode each path segment individually to handle group names with spaces or special characters
+	rawPath := strings.TrimPrefix(parentPath, "/")
+	segments := strings.Split(rawPath, "/")
+	for i, segment := range segments {
+		segments[i] = neturl.PathEscape(segment)
+	}
+	encodedPath := strings.Join(segments, "/")
+
 	var parentGroup Group
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, strings.TrimPrefix(parentPath, "/")), &parentGroup, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, encodedPath), &parentGroup, nil)
 	if err != nil {
 		return "", err
 	}
