@@ -20,7 +20,7 @@ const (
 
 const USER_PROFILE_ENABLED string = "userProfileEnabled"
 
-const minKeycloakDefaultValueVersion = "26.4.0"
+const minKeycloakDefaultValueVersion = keycloak.Version_26_4
 
 func resourceKeycloakRealmUserProfile() *schema.Resource {
 	return &schema.Resource{
