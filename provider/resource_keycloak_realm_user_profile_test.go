@@ -76,7 +76,7 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 				},
 				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
 					"person-name-prohibited-characters": map[string]interface{}{},
-					"pattern":                           map[string]interface{}{"pattern": "\"^[a-z]+$\"", "error_message": "\"Error!\""},
+					"pattern":                           map[string]interface{}{"pattern": "\"^[a-z]+$\"", "error-message": "\"Error!\""},
 				},
 				Annotations: map[string]interface{}{
 					"foo":               "\"bar\"",

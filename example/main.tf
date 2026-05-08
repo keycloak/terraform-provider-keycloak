@@ -1178,7 +1178,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
       name = "pattern"
       config = {
         pattern       = "^[a-z0-9 ]+$"
-        error_message = "Nope"
+        error-message = "Nope"
       }
     }
 
