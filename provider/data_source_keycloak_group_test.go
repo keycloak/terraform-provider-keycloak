@@ -118,6 +118,37 @@ data "keycloak_group" "group" {
 	`, testAccRealm.Realm, group, group)
 }
 
+func TestAccKeycloakDataSourceGroup_nestedWithSpaces(t *testing.T) {
+	t.Parallel()
+
+	group := acctest.RandomWithPrefix("tf acc")
+	groupNested := acctest.RandomWithPrefix("tf acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakGroup_nested(group, groupNested),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExists("keycloak_group.group"),
+					testAccCheckKeycloakGroupExists("keycloak_group.group_nested"),
+					// realm role
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "id", "data.keycloak_group.group_nested", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "realm_id", "data.keycloak_group.group_nested", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "name", "data.keycloak_group.group_nested", "name"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group_nested"),
+				),
+			},
+		},
+	})
+}
+
 func testDataSourceKeycloakGroup_nested(group, groupNested string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {

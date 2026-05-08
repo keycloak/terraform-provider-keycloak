@@ -1157,6 +1157,7 @@ resource "keycloak_realm_user_profile" "userprofile" {
   attribute {
     name         = "field1"
     display_name = "Field 1"
+    default_value = "default field1 value"
     group        = "group1"
 
     enabled_when_scope = ["offline_access"]
@@ -1176,8 +1177,8 @@ resource "keycloak_realm_user_profile" "userprofile" {
     validator {
       name = "pattern"
       config = {
-        pattern       = "^[a-z]+$"
-        error_message = "Nope"
+        pattern       = "^[a-z0-9 ]+$"
+        error-message = "Nope"
       }
     }
 
