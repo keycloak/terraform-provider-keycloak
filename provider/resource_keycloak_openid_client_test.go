@@ -963,6 +963,9 @@ func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testin
 }
 
 func TestAccKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_6); !ok {
+		t.Skip()
+	}
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 

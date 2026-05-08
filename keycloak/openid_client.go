@@ -84,7 +84,7 @@ type OpenidClientAttributes struct {
 	Oauth2DeviceAuthorizationGrantEnabled    types.KeycloakBoolQuoted         `json:"oauth2.device.authorization.grant.enabled"`
 	Oauth2DeviceCodeLifespan                 string                           `json:"oauth2.device.code.lifespan,omitempty"`
 	Oauth2DevicePollingInterval              string                           `json:"oauth2.device.polling.interval,omitempty"`
-	Oauth2JwtAuthorizationGrantEnabled       types.KeycloakBoolQuoted         `json:"oauth2.jwt.authorization.grant.enabled,omitempty"`
+	Oauth2JwtAuthorizationGrantEnabled       types.KeycloakBoolQuoted         `json:"oauth2.jwt.authorization.grant.enabled"`
 	Oauth2JwtAuthorizationGrantIdp           string                           `json:"oauth2.jwt.authorization.grant.idp,omitempty"`
 	PostLogoutRedirectUris                   types.KeycloakSliceHashDelimited `json:"post.logout.redirect.uris,omitempty"`
 	StandardTokenExchangeEnabled             types.KeycloakBoolQuoted         `json:"standard.token.exchange.enabled,omitempty"`
