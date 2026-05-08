@@ -52,7 +52,8 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.5.5'
+          - '26.6.1'
+          - '26.5.7'
           - '26.4.7'
           - '26.3.5'
           - '26.2.5'
@@ -145,7 +146,7 @@ jobs:
         timeout-minutes: 60
 # Only run mtls test for the later versions
       - name: Test (auth with mtls client certificate)
-        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.6.1' || matrix.keycloak-version == '26.5.7' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download
@@ -167,7 +168,7 @@ jobs:
         timeout-minutes: 60
 
       - name: Test (auth with provided access token)
-        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.6.1' || matrix.keycloak-version == '26.5.7' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download

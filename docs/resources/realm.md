@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
   display_name      = "my realm"
   display_name_html = "<b>my realm</b>"
 
-  login_theme = "base"
+  login_theme = "keycloak"
 
   access_code_lifespan = "1h"
 
@@ -159,6 +159,7 @@ This block supports the following arguments:
 - `envelope_from` - (Optional) The email address uses for bounces.
 - `starttls` - (Optional) When `true`, enables StartTLS. Defaults to `false`.
 - `ssl` - (Optional) When `true`, enables SSL. Defaults to `false`.
+- `allow_utf8` - (Optional) When `true`, allows UTF-8 in the local part of the email address. Defaults to `false`.
 - `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `password` - (Required) The SMTP server password.
@@ -236,6 +237,7 @@ The `otp_policy` block with following arguments can be found in the "OTP Policy"
 - `initial_counter` - (Optional) What should the initial counter value be. Defaults to `2`.
 - `look_ahead_window` - (Optional) How far ahead should the server look just in case the token generator and server are out of time sync or counter sync. Defaults to `1`.
 - `period` - (Optional) How many seconds should an OTP token be valid. Defaults to `30`.
+- `code_reusable` - (Optional) Possibility to use the same OTP code again after successful authentication. Defaults to `false`.
 
 ### WebAuthn
 
