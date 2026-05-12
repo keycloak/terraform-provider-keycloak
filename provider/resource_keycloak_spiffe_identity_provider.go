@@ -63,6 +63,7 @@ func getSpiffeIdentityProviderFromData(data *schema.ResourceData, keycloakVersio
 func setSpiffeIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
 	setIdentityProviderData(data, identityProvider, keycloakVersion)
 
+	data.Set("provider_id", identityProvider.ProviderId)
 	data.Set("trust_domain", identityProvider.Config.TrustDomain)
 	data.Set("bundle_endpoint", identityProvider.Config.BundleEndpoint)
 

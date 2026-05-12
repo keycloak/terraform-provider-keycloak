@@ -118,7 +118,15 @@ func testAccCheckKeycloakSpiffeIdentityProviderDestroy() resource.TestCheckFunc 
 			id := rs.Primary.ID
 			realm := rs.Primary.Attributes["realm"]
 
-			spiffe, _ := keycloakClient.GetIdentityProvider(testCtx, realm, id)
+			spiffe, err := keycloakClient.GetIdentityProvider(testCtx, realm, id)
+			if err != nil {
+				if keycloak.ErrorIs404(err) {
+					continue
+				}
+
+				return fmt.Errorf("error checking if spiffe config with id %s was destroyed: %w", id, err)
+			}
+
 			if spiffe != nil {
 				return fmt.Errorf("spiffe config with id %s still exists", id)
 			}
