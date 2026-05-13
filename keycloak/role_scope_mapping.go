@@ -61,19 +61,16 @@ func (keycloakClient *KeycloakClient) GetRoleScopeMapping(ctx context.Context, r
 
 func (keycloakClient *KeycloakClient) DeleteRoleScopeMapping(ctx context.Context, realmId string, clientId string, clientScopeId string, role *Role) error {
 	roleUrl := roleScopeMappingUrl(realmId, clientId, clientScopeId, role)
-	if role.ClientRole {
-		return keycloakClient.delete(ctx, roleUrl, nil)
-	} else {
-		body := [1]RealmRoleRepresentation{
-			{
-				Id:          role.Id,
-				Name:        role.Name,
-				Description: role.Description,
-				Composite:   role.Composite,
-				ClientRole:  role.ClientRole,
-				ContainerId: role.ContainerId,
-			},
-		}
-		return keycloakClient.delete(ctx, roleUrl, body)
+
+	body := [1]RealmRoleRepresentation{
+		{
+			Id:          role.Id,
+			Name:        role.Name,
+			Description: role.Description,
+			Composite:   role.Composite,
+			ClientRole:  role.ClientRole,
+			ContainerId: role.ContainerId,
+		},
 	}
+	return keycloakClient.delete(ctx, roleUrl, body)
 }
