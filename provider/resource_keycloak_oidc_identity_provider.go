@@ -64,7 +64,7 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Description:   "Client Secret as write-only argument",
 		},
 		"client_secret_wo_version": {
-			Type:          schema.TypeInt,
+			Type:          schema.TypeString,
 			Optional:      true,
 			ConflictsWith: []string{"client_secret"},
 			RequiredWith:  []string{"client_secret_wo"},
@@ -174,7 +174,7 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		DisableTypeClaimCheck:       types.KeycloakBoolQuoted(data.Get("disable_type_claim_check").(bool)),
 	}
 
-	if data.Get("client_secret_wo_version").(int) != 0 && data.HasChange("client_secret_wo_version") {
+	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
 		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
 		if clientSecretWriteOnlyDiags.HasError() {
 			return nil, errors.New("error reading 'client_secret_wo' argument")
@@ -209,7 +209,7 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("disable_type_claim_check", identityProvider.Config.DisableTypeClaimCheck)
 
 	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
-		data.Set("client_secret_wo_version", v.(int))
+		data.Set("client_secret_wo_version", v.(string))
 	}
 	return nil
 }
