@@ -307,29 +307,48 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 		}
 	}
 
-	var attachedClientScopes []*OpenidClientScope
-	var duplicateScopeAssignmentErrorMessage string
+	var attachedClientScopes []struct {
+		scope *OpenidClientScope
+		typ   string
+	}
+
 	switch t {
 	case "optional":
 		attachedDefaultClientScopes, err := keycloakClient.GetOpenidClientDefaultScopes(ctx, realmId, clientId)
 		if err != nil {
 			return err
 		}
-		attachedClientScopes = append(attachedClientScopes, attachedDefaultClientScopes...)
-		duplicateScopeAssignmentErrorMessage = "validation error: scope %s is already attached to client as a default scope"
+		for _, v := range attachedDefaultClientScopes {
+			attachedClientScopes = append(attachedClientScopes, struct {
+				scope *OpenidClientScope
+				typ   string
+			}{scope: v, typ: "default"})
+		}
 	case "default":
 		attachedOptionalClientScopes, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId)
 		if err != nil {
 			return err
 		}
-		attachedClientScopes = append(attachedClientScopes, attachedOptionalClientScopes...)
-		duplicateScopeAssignmentErrorMessage = "validation error: scope %s is already attached to client as an optional scope"
+		for _, v := range attachedOptionalClientScopes {
+			attachedClientScopes = append(attachedClientScopes, struct {
+				scope *OpenidClientScope
+				typ   string
+			}{scope: v, typ: "optional"})
+		}
 	}
 
 	for _, openidClientScope := range allOpenidClientScopes {
 		for _, attachedClientScope := range attachedClientScopes {
-			if openidClientScope.Id == attachedClientScope.Id {
-				return fmt.Errorf(duplicateScopeAssignmentErrorMessage, attachedClientScope.Name)
+			if openidClientScope.Id == attachedClientScope.scope.Id {
+				err := keycloakClient.delete(ctx,
+					fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s",
+						realmId,
+						clientId,
+						attachedClientScope.typ,
+						attachedClientScope.scope.Id), nil)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
