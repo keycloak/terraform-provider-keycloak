@@ -49,9 +49,10 @@ type LdapUserFederation struct {
 	KeyTab                               string
 	KerberosRealm                        string
 
-	BatchSizeForSync  int
-	FullSyncPeriod    int // either a number, in milliseconds, or -1 if full sync is disabled
-	ChangedSyncPeriod int // either a number, in milliseconds, or -1 if changed sync is disabled
+	BatchSizeForSync           int
+	FullSyncPeriod             int // either a number, in milliseconds, or -1 if full sync is disabled
+	ChangedSyncPeriod          int // either a number, in milliseconds, or -1 if changed sync is disabled
+	RemoveInvalidUsersEnabled  bool
 
 	CachePolicy    string
 	MaxLifespan    string // duration string (ex: 1h30m)
@@ -136,6 +137,9 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		},
 		"changedSyncPeriod": {
 			strconv.Itoa(ldap.ChangedSyncPeriod),
+		},
+		"removeInvalidUsers": {
+			strconv.FormatBool(ldap.RemoveInvalidUsersEnabled),
 		},
 
 		"serverPrincipal": {
@@ -305,6 +309,11 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		return nil, err
 	}
 
+	removeInvalidUsersEnabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("removeInvalidUsers"))
+	if err != nil {
+		return nil, err
+	}
+
 	useKerberosForPasswordAuthentication, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("useKerberosForPasswordAuthentication"))
 	if err != nil {
 		return nil, err
@@ -355,9 +364,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		KeyTab:                               component.getConfig("keyTab"),
 		KerberosRealm:                        component.getConfig("kerberosRealm"),
 
-		BatchSizeForSync:  batchSizeForSync,
-		FullSyncPeriod:    fullSyncPeriod,
-		ChangedSyncPeriod: changedSyncPeriod,
+		BatchSizeForSync:          batchSizeForSync,
+		FullSyncPeriod:            fullSyncPeriod,
+		ChangedSyncPeriod:         changedSyncPeriod,
+		RemoveInvalidUsersEnabled: removeInvalidUsersEnabled,
 
 		CachePolicy: component.getConfig("cachePolicy"),
 	}
