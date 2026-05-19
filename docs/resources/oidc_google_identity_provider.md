@@ -50,6 +50,7 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 - `request_refresh_token` - (Optional) Sets the "access_type" query parameter to "offline" when redirecting to google authorization endpoint,to get a refresh token back. This is useful for using Token Exchange to retrieve a Google token to access Google APIs when the user is offline.
 - `default_scopes` - (Optional) The scopes to be sent when asking for authorization. It can be a space-separated list of scopes. Defaults to `openid profile email`.
 - `accepts_prompt_none_forward_from_client` - (Optional) When `true`, unauthenticated requests with `prompt=none` will be forwarded to Google instead of returning an error. Defaults to `false`.
+- `login_hint` - (Optional) Pass `login_hint` to the Google identity provider. Set to `"true"` to forward the `login_hint` query parameter from the inbound OIDC request to Google. The underlying Keycloak attribute `loginHint` is a boolean string, so the value should be `"true"` or `"false"`.
 - `disable_user_info` - (Optional) When `true`, disables the usage of the user info service to obtain additional user information. Defaults to `false`.
 - `hide_on_login_page` - (Optional) When `true`, this identity provider will be hidden on the login page. Defaults to `false`.
 - `sync_mode` - (Optional) The default sync mode to use for all mappers attached to this identity provider. Can be once of `IMPORT`, `FORCE`, or `LEGACY`.
