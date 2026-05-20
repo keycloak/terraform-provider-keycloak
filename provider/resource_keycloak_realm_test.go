@@ -163,12 +163,12 @@ func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "", "", "", "", "", "", ""),
 			},
 		},
 	})
@@ -183,12 +183,12 @@ func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "admin@myhost2.com", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "admin@myhost2.com", "user2", "wibble2.com", "wibble2", "wobble2", "wiggle2"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2", "wibble2.com", "wibble2", "wobble2", "wiggle2"),
 			},
 		},
 	})
@@ -1239,6 +1239,40 @@ func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resour
 		if realm.SmtpServer.User != user {
 			return fmt.Errorf("expected realm %s to have smtp user set to %s, but was %s", realm.Realm, user, realm.SmtpServer.User)
 		}
+func testAccCheckKeycloakRealmSmtpOauth(resourceName, host, from, user, url, client_id, client_secret, scope string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.SmtpServer.Host != host {
+			return fmt.Errorf("expected realm %s to have smtp host set to %s, but was %s", realm.Realm, host, realm.SmtpServer.Host)
+		}
+
+		if realm.SmtpServer.From != from {
+			return fmt.Errorf("expected realm %s to have smtp from set to %s, but was %s", realm.Realm, from, realm.SmtpServer.From)
+		}
+
+		if realm.SmtpServer.User != user {
+			return fmt.Errorf("expected realm %s to have smtp user set to %s, but was %s", realm.Realm, user, realm.SmtpServer.User)
+		}
+
+		if realm.SmtpServer.AuthTokenUrl != url {
+			return fmt.Errorf("expected realm %s to have smtp url set to %s, but was %s", realm.Realm, url, realm.SmtpServer.AuthTokenUrl)
+		}
+
+		if realm.SmtpServer.AuthTokenClientId != client_id {
+			return fmt.Errorf("expected realm %s to have smtp client id set to %s, but was %s", realm.Realm, client_id, realm.SmtpServer.AuthTokenClientId)
+		}
+
+		if realm.SmtpServer.AuthTokenClientSecret != client_secret {
+			return fmt.Errorf("expected realm %s to have smtp client secret set to %s, but was %s", realm.Realm, client_secret, realm.SmtpServer.AuthTokenClientSecret)
+		}
+
+		if realm.SmtpServer.AuthTokenScope != scope {
+			return fmt.Errorf("expected realm %s to have smtp scope set to %s, but was %s", realm.Realm, scope, realm.SmtpServer.AuthTokenScope)
+		}
 
 		return nil
 	}
@@ -1506,7 +1540,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realm, host, from, user)
 }
 
-func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user string) string {
+func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user, url, client_id, client_secret, scope string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1524,14 +1558,14 @@ resource "keycloak_realm" "realm" {
 		envelope_from = "nottom@myhost.com"
 		token_auth {
 			username      = "%s"
-			url           = "wibble.com"
-			client_id     = "wibble"
-			client_secret = "wobble"
-			scope         = "wiggle"
+			url           = "%s"
+			client_id     = "%s"
+			client_secret = "%s"
+			scope         = "%s"
 		}
 	}
 }
-	`, realm, realm, host, from, user)
+	`, realm, realm, host, from, user, url, client_id, client_secret, scope)
 }
 
 func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int, codeReusable bool) string {
