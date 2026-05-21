@@ -2,7 +2,8 @@ package provider
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -52,7 +53,7 @@ func resourceKeycloakUserPassword() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			// value_hash stores a SHA-256 hash of the currently applied
+			// value_hash stores a SHA-512 digest of the currently applied
 			// password so that the provider can detect changes to the
 			// WriteOnly value argument across Terraform runs.
 			"value_hash": {
@@ -64,12 +65,12 @@ func resourceKeycloakUserPassword() *schema.Resource {
 }
 
 func hashValue(value string) string {
-	sum := sha256.Sum256([]byte(value))
-	return fmt.Sprintf("%x", sum)
+	sum := sha512.Sum512([]byte(value))
+	return hex.EncodeToString(sum[:])
 }
 
 // resourceKeycloakUserPasswordDiff detects changes to the WriteOnly
-// value argument by comparing its SHA-256 hash with the value_hash
+// value argument by comparing its SHA-512 digest with the value_hash
 // stored in state. When they differ, value_hash is set to the new hash,
 // producing a plan diff that triggers an update.
 func resourceKeycloakUserPasswordDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {

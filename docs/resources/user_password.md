@@ -41,7 +41,7 @@ resource "keycloak_user_password" "user_password" {
 
 ## Attribute Reference
 
-- `value_hash` - A SHA-256 hash of the currently applied password, used internally to detect when `value` changes across Terraform runs.
+- `value_hash` - A SHA-512 digest of the currently applied password, used internally to detect when `value` changes across Terraform runs.
 - `credential_id` - The UUID of the Keycloak password credential. Used internally to detect out-of-band password resets.
 
 ## Import
