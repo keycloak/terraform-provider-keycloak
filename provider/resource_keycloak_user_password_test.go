@@ -72,7 +72,8 @@ func TestAccKeycloakUserPassword_temporary(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakUserPassword_temporary(username, password),
+				Config:             testKeycloakUserPassword_temporary(username, password),
+				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakUserPasswordExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "temporary", "true"),
@@ -157,8 +158,11 @@ resource "keycloak_openid_client" "client" {
 }
 
 resource "keycloak_user" "user" {
-	realm_id = data.keycloak_realm.realm.id
-	username = "%s"
+	realm_id   = data.keycloak_realm.realm.id
+	username   = "%s"
+	email      = "%s@test.local"
+	first_name = "Test"
+	last_name  = "User"
 }
 
 resource "keycloak_user_password" "user_password" {
@@ -167,7 +171,7 @@ resource "keycloak_user_password" "user_password" {
 	value     = "%s"
 	temporary = false
 }
-`, testAccRealm.Realm, clientId, username, password)
+`, testAccRealm.Realm, clientId, username, username, password)
 }
 
 func testKeycloakUserPassword_temporary(username, password string) string {
@@ -177,8 +181,11 @@ data "keycloak_realm" "realm" {
 }
 
 resource "keycloak_user" "user" {
-	realm_id = data.keycloak_realm.realm.id
-	username = "%s"
+	realm_id   = data.keycloak_realm.realm.id
+	username   = "%s"
+	email      = "%s@test.local"
+	first_name = "Test"
+	last_name  = "User"
 }
 
 resource "keycloak_user_password" "user_password" {
@@ -187,5 +194,5 @@ resource "keycloak_user_password" "user_password" {
 	value     = "%s"
 	temporary = true
 }
-`, testAccRealm.Realm, username, password)
+`, testAccRealm.Realm, username, username, password)
 }

@@ -7,11 +7,14 @@ page_title: "keycloak_user_password Resource"
 Manages a user's password credential in Keycloak. This resource is separate from `keycloak_user` so that password
 changes can be planned and applied independently of the user resource.
 
-~> This resource is not compatible with `initial_password` on the `keycloak_user` resource. Use one or the other,
-not both.
+~> When the user managed by `keycloak_user` is created without `initial_password`, Keycloak automatically
+sets `required_actions = ["UPDATE_PASSWORD"]` on the user. Applying a `keycloak_user_password` clears this
+required action, causing a permanent diff on the `keycloak_user` resource. To avoid this, either set
+`initial_password` on the `keycloak_user` resource, or add `lifecycle { ignore_changes = [required_actions] }`
+to the `keycloak_user` resource.
 
 The password value is write-only: it is never stored in Terraform state and never appears in plan output. Change
-detection is handled by comparing a SHA-256 hash of the configured value with a hash stored in state.
+detection is handled by comparing a SHA-512 hash of the configured value with a hash stored in state.
 
 ## Example Usage
 

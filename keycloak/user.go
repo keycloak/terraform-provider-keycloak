@@ -252,7 +252,7 @@ type UserCredential struct {
 	Id          string `json:"id,omitempty"`
 	Type        string `json:"type,omitempty"`
 	CreatedDate int64  `json:"createdDate,omitempty"`
-	Temporary   bool   `json:"temporary,omitempty"`
+	Temporary   *bool  `json:"temporary,omitempty"`
 	// additional fields omitted
 }
 

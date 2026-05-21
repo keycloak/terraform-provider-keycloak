@@ -185,7 +185,9 @@ func resourceKeycloakUserPasswordRead(ctx context.Context, data *schema.Resource
 	}
 
 	data.Set("credential_id", cred.Id)
-	data.Set("temporary", cred.Temporary)
+	if cred.Temporary != nil {
+		data.Set("temporary", *cred.Temporary)
+	}
 
 	return nil
 }
