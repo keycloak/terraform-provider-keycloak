@@ -123,12 +123,12 @@ func TestAccKeycloakRealm_SmtpServer(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user", "password"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "password"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "", "", "", ""),
 			},
 		},
 	})
@@ -143,12 +143,12 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user", "password"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "password"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2", "password2"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2", "password2"),
 			},
 		},
 	})
@@ -1221,7 +1221,7 @@ func testAccCheckKeycloakRealmDisplayNameHtml(resourceName string, displayNameHt
 	}
 }
 
-func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resource.TestCheckFunc {
+func testAccCheckKeycloakRealmSmtpPassword(resourceName, host, from, user, password string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
 		if err != nil {
@@ -1239,6 +1239,15 @@ func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resour
 		if realm.SmtpServer.User != user {
 			return fmt.Errorf("expected realm %s to have smtp user set to %s, but was %s", realm.Realm, user, realm.SmtpServer.User)
 		}
+
+		if realm.SmtpServer.Password != password {
+			return fmt.Errorf("expected realm %s to have smtp password set to %s, but was %s", realm.Realm, password, realm.SmtpServer.Password)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakRealmSmtpOauth(resourceName, host, from, user, url, client_id, client_secret, scope string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
@@ -1515,7 +1524,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realmDisplayName, realmDisplayNameHtml)
 }
 
-func testKeycloakRealm_WithSmtpServer(realm, host, from, user string) string {
+func testKeycloakRealm_WithSmtpServer(realm, host, from, user, password string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1533,11 +1542,11 @@ resource "keycloak_realm" "realm" {
 		envelope_from = "nottom@myhost.com"
 		auth {
 			username = "%s"
-			password = "tom"
+			password = "%s"
 		}
 	}
 }
-	`, realm, realm, host, from, user)
+	`, realm, realm, host, from, user, password)
 }
 
 func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user, url, client_id, client_secret, scope string) string {
