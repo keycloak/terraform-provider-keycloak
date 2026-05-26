@@ -748,7 +748,10 @@ func resourceKeycloakRealm() *schema.Resource {
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
-		authConfig, _ := smtpSettings["auth"].([]interface{})
+		authConfig, ok := smtpSettings["auth"].([]interface{})
+		if !ok {
+			return "", false
+		}
 
 		if len(authConfig) == 1 {
 			return authConfig[0].(map[string]interface{})["password"].(string), true

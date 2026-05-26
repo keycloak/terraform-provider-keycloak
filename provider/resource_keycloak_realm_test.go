@@ -161,9 +161,16 @@ func TestAccKeycloakRealm_SmtpServerAllowUtf8(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost.com", "tom@myhost.com", "user"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+					testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "tom@myhost.com", "user"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.allow_utf8", "true"),
+				),
+			},
+			{
+				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost2.com", "tom@myhost2.com", "user2"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "tom@myhost2.com", "user2"),
 					resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.allow_utf8", "true"),
 				),
 			},
