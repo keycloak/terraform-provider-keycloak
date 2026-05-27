@@ -24,8 +24,8 @@ type Theme struct {
 }
 
 type FeatureRepresentation struct {
-	Name      string `json:"name"`
-	IsEnabled bool   `json:"isEnabled"`
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
 }
 
 type ServerInfo struct {
@@ -86,7 +86,7 @@ func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool
 	}
 	for _, f := range serverInfo.Features {
 		if f.Name == "ADMIN_FINE_GRAINED_AUTHZ_V2" {
-			return f.IsEnabled, nil
+			return f.Enabled, nil
 		}
 	}
 	return false, nil
