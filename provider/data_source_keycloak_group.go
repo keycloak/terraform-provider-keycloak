@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -46,7 +47,15 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 	realmId := data.Get("realm_id").(string)
 	groupName := data.Get("name").(string)
 
-	group, err := keycloakClient.GetGroupByName(ctx, realmId, groupName)
+	var group *keycloak.Group
+	var err error
+
+	if strings.HasPrefix(groupName, "/") {
+		group, err = keycloakClient.GetGroupByPath(ctx, realmId, groupName)
+	} else {
+		group, err = keycloakClient.GetGroupByName(ctx, realmId, groupName)
+	}
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
