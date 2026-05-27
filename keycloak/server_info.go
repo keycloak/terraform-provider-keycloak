@@ -23,11 +23,17 @@ type Theme struct {
 	Locales []string `json:"locales,omitempty"`
 }
 
+type FeatureRepresentation struct {
+	Name      string `json:"name"`
+	IsEnabled bool   `json:"isEnabled"`
+}
+
 type ServerInfo struct {
 	SystemInfo     SystemInfo                 `json:"systemInfo"`
 	ComponentTypes map[string][]ComponentType `json:"componentTypes"`
 	ProviderTypes  map[string]ProviderType    `json:"providers"`
 	Themes         map[string][]Theme         `json:"themes"`
+	Features       []FeatureRepresentation    `json:"features"`
 }
 
 func (serverInfo *ServerInfo) ThemeIsInstalled(t, themeName string) bool {
@@ -71,6 +77,19 @@ func (serverInfo *ServerInfo) providerInstalled(providerType, providerName strin
 		}
 	}
 	return false
+}
+
+func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool, error) {
+	serverInfo, err := keycloakClient.GetServerInfo(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, f := range serverInfo.Features {
+		if f.Name == "ADMIN_FINE_GRAINED_AUTHZ_V2" {
+			return f.IsEnabled, nil
+		}
+	}
+	return false, nil
 }
 
 func (keycloakClient *KeycloakClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {

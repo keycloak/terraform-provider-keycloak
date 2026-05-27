@@ -11,6 +11,9 @@ import (
 )
 
 func TestAccKeycloakRolePermissions_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_2)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
 	roleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
@@ -31,6 +34,9 @@ func TestAccKeycloakRolePermissions_basic(t *testing.T) {
 }
 
 func TestAccKeycloakRolePermissions_withScopes(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_2)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
 	roleName := acctest.RandomWithPrefix("tf-acc")
 	groupName := acctest.RandomWithPrefix("tf-acc")
 

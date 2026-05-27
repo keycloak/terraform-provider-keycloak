@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccKeycloakDataSourceOpenidClientAuthorizationScope_basic(t *testing.T) {
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	scopeName := acctest.RandomWithPrefix("tf-acc")

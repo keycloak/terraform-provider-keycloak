@@ -11,6 +11,9 @@ import (
 )
 
 func TestAccKeycloakIdentityProviderPermissions_basic(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_2)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
 	providerAlias := acctest.RandomWithPrefix("tf-acc")
 	providerClientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -32,6 +35,9 @@ func TestAccKeycloakIdentityProviderPermissions_basic(t *testing.T) {
 }
 
 func TestAccKeycloakIdentityProviderPermissions_withScopes(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_2)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
 	providerAlias := acctest.RandomWithPrefix("tf-acc")
 	providerClientId := acctest.RandomWithPrefix("tf-acc")
 	groupName := acctest.RandomWithPrefix("tf-acc")
