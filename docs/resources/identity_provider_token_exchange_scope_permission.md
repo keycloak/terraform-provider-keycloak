@@ -4,6 +4,11 @@ page_title: "keycloak_identity_provider_token_exchange_scope_permission Resource
 
 # keycloak\_identity\_provider\_token\_exchange\_scope\_permission Resource
 
+~> **This resource requires Fine-Grained Admin Permissions v1.** It is not compatible with Keycloak instances
+that have `ADMIN_FINE_GRAINED_AUTHZ_V2` enabled (Keycloak 26.2+, where v2 is the default).
+If you are running Keycloak 26.2 or later, use [`keycloak_identity_provider_permissions`](identity_provider_permissions.md) instead,
+which supports the `token_exchange_scope` attribute and the v2 API.
+
 Allows you to manage Identity Provider "Token exchange" Scope Based Permissions.
 
 This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource.
@@ -19,6 +24,27 @@ The only thing that is missing is a policy set on the permission.
 As the policy lives within the context of the realm-management client, you cannot create a policy resource and link to from with your _.tf_ file. This would also cause an implicit cycle dependency.
 Thus, the only way to manage this in terraform is to create and manage the policy internally from within this terraform resource itself.
 At the moment only a client policy type is supported. The client policy will automatically be created for the `clients` parameter.
+
+## Migration to v2
+
+If you are upgrading your Keycloak instance to 26.2 or later (where Fine-Grained Admin Permissions v2 is enabled by default),
+this resource will return an error. To migrate:
+
+1. Remove the resource from Terraform state:
+   ```bash
+   terraform state rm keycloak_identity_provider_token_exchange_scope_permission.<name>
+   ```
+2. Replace it with a [`keycloak_identity_provider_permissions`](identity_provider_permissions.md) resource using the `token_exchange_scope` block:
+   ```hcl
+   resource "keycloak_identity_provider_permissions" "example" {
+     realm_id       = keycloak_realm.example.id
+     provider_alias = keycloak_oidc_identity_provider.example.alias
+     token_exchange_scope {
+       policies          = [keycloak_openid_client_group_policy.example.id]
+       decision_strategy = "UNANIMOUS"
+     }
+   }
+   ```
 
 ## Example Usage
 

@@ -182,12 +182,41 @@ func unsetIdentityProviderTokenExchangeScopePermissionPolicy(ctx context.Context
 	return nil
 }
 
+func fgapV2NotSupportedError() diag.Diagnostics {
+	return diag.Diagnostics{{
+		Severity: diag.Error,
+		Summary:  "Fine-Grained Admin Permissions v2 is not supported by this resource",
+		Detail: "keycloak_identity_provider_token_exchange_scope_permission only works with Fine-Grained Admin " +
+			"Permissions v1 (admin-fine-grained-authz:v1). Your Keycloak instance has v2 enabled " +
+			"(ADMIN_FINE_GRAINED_AUTHZ_V2), which uses a different API that is incompatible with this resource.\n\n" +
+			"Migrate to keycloak_identity_provider_permissions, which supports v2 and exposes the same " +
+			"token_exchange_scope attribute. Remove this resource from your state with:\n\n" +
+			"  terraform state rm <resource_address>\n\n" +
+			"See the keycloak_identity_provider_permissions documentation for migration guidance.",
+	}}
+}
+
+func checkFGAPv2NotEnabled(ctx context.Context, keycloakClient *keycloak.KeycloakClient) (diag.Diagnostics, bool) {
+	enabled, err := keycloakClient.FGAPv2IsEnabled(ctx)
+	if err != nil {
+		return diag.FromErr(err), false
+	}
+	if enabled {
+		return fgapV2NotSupportedError(), false
+	}
+	return nil, true
+}
+
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx, data, meta)
 }
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient); !ok {
+		return diags
+	}
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 	policyType := data.Get("policy_type").(string)
@@ -216,6 +245,11 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx cont
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient); !ok {
+		return diags
+	}
+
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 
@@ -279,6 +313,10 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx contex
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient); !ok {
+		return diags
+	}
+
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 	policyId := data.Get("policy_id").(string)
@@ -292,6 +330,12 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx cont
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if _, ok := checkFGAPv2NotEnabled(ctx, keycloakClient); !ok {
+		return nil, fmt.Errorf("keycloak_identity_provider_token_exchange_scope_permission is not supported when " +
+			"Fine-Grained Admin Permissions v2 (ADMIN_FINE_GRAINED_AUTHZ_V2) is enabled. " +
+			"Use keycloak_identity_provider_permissions instead")
+	}
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
