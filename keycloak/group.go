@@ -8,16 +8,17 @@ import (
 )
 
 type Group struct {
-	Id          string              `json:"id,omitempty"`
-	RealmId     string              `json:"-"`
-	ParentId    string              `json:"-"`
-	Name        string              `json:"name"`
-	Description string              `json:"description,omitempty"`
-	Path        string              `json:"path,omitempty"`
-	SubGroups   []*Group            `json:"subGroups,omitempty"`
-	RealmRoles  []string            `json:"realmRoles,omitempty"`
-	ClientRoles map[string][]string `json:"clientRoles,omitempty"`
-	Attributes  map[string][]string `json:"attributes"`
+	Id             string              `json:"id,omitempty"`
+	RealmId        string              `json:"-"`
+	ParentId       string              `json:"-"`
+	OrganizationId string              `json:"-"`
+	Name           string              `json:"name"`
+	Description    string              `json:"description,omitempty"`
+	Path           string              `json:"path,omitempty"`
+	SubGroups      []*Group            `json:"subGroups,omitempty"`
+	RealmRoles     []string            `json:"realmRoles,omitempty"`
+	ClientRoles    map[string][]string `json:"clientRoles,omitempty"`
+	Attributes     map[string][]string `json:"attributes"`
 }
 
 /*
@@ -40,7 +41,14 @@ func (keycloakClient *KeycloakClient) groupParentId(ctx context.Context, group *
 
 	var parentGroup Group
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, encodedPath), &parentGroup, nil)
+	var groupByPathUrl string
+	if group.OrganizationId != "" {
+		groupByPathUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups/group-by-path/%s", group.RealmId, group.OrganizationId, encodedPath)
+	} else {
+		groupByPathUrl = fmt.Sprintf("/realms/%s/group-by-path/%s", group.RealmId, encodedPath)
+	}
+
+	err := keycloakClient.get(ctx, groupByPathUrl, &parentGroup, nil)
 	if err != nil {
 		return "", err
 	}
@@ -64,10 +72,18 @@ func (keycloakClient *KeycloakClient) ValidateGroupMembers(usernames []interface
 func (keycloakClient *KeycloakClient) NewGroup(ctx context.Context, group *Group) error {
 	var createGroupUrl string
 
-	if group.ParentId == "" {
-		createGroupUrl = fmt.Sprintf("/realms/%s/groups", group.RealmId)
+	if group.OrganizationId != "" {
+		if group.ParentId == "" {
+			createGroupUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups", group.RealmId, group.OrganizationId)
+		} else {
+			createGroupUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s/children", group.RealmId, group.OrganizationId, group.ParentId)
+		}
 	} else {
-		createGroupUrl = fmt.Sprintf("/realms/%s/groups/%s/children", group.RealmId, group.ParentId)
+		if group.ParentId == "" {
+			createGroupUrl = fmt.Sprintf("/realms/%s/groups", group.RealmId)
+		} else {
+			createGroupUrl = fmt.Sprintf("/realms/%s/groups/%s/children", group.RealmId, group.ParentId)
+		}
 	}
 
 	_, location, err := keycloakClient.post(ctx, createGroupUrl, group)
@@ -96,14 +112,26 @@ func (keycloakClient *KeycloakClient) GetGroups(ctx context.Context, realmId str
 }
 
 func (keycloakClient *KeycloakClient) GetGroup(ctx context.Context, realmId, id string) (*Group, error) {
+	return keycloakClient.GetOrganizationGroup(ctx, realmId, "", id)
+}
+
+func (keycloakClient *KeycloakClient) GetOrganizationGroup(ctx context.Context, realmId, organizationId, id string) (*Group, error) {
 	var group Group
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/groups/%s", realmId, id), &group, nil)
+	var getGroupUrl string
+	if organizationId != "" {
+		getGroupUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s", realmId, organizationId, id)
+	} else {
+		getGroupUrl = fmt.Sprintf("/realms/%s/groups/%s", realmId, id)
+	}
+
+	err := keycloakClient.get(ctx, getGroupUrl, &group, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	group.RealmId = realmId // it's important to set RealmId here because fetching the ParentId depends on it
+	group.OrganizationId = organizationId
 
 	parentId, err := keycloakClient.groupParentId(ctx, &group)
 	if err != nil {
@@ -116,6 +144,10 @@ func (keycloakClient *KeycloakClient) GetGroup(ctx context.Context, realmId, id 
 }
 
 func (keycloakClient *KeycloakClient) GetGroupByName(ctx context.Context, realmId, name string) (*Group, error) {
+	return keycloakClient.GetOrganizationGroupByName(ctx, realmId, "", name)
+}
+
+func (keycloakClient *KeycloakClient) GetOrganizationGroupByName(ctx context.Context, realmId, organizationId, name string) (*Group, error) {
 	var groups []Group
 
 	// We can't get a group by name, so we have to search for it
@@ -123,7 +155,14 @@ func (keycloakClient *KeycloakClient) GetGroupByName(ctx context.Context, realmI
 		"search": name,
 	}
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/groups", realmId), &groups, params)
+	var getGroupsUrl string
+	if organizationId != "" {
+		getGroupsUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups", realmId, organizationId)
+	} else {
+		getGroupsUrl = fmt.Sprintf("/realms/%s/groups", realmId)
+	}
+
+	err := keycloakClient.get(ctx, getGroupsUrl, &groups, params)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +179,7 @@ func (keycloakClient *KeycloakClient) GetGroupByName(ctx context.Context, realmI
 	group := getGroupByDFS(name, groupsPtr)
 	if group != nil {
 		group.RealmId = realmId // it's important to set RealmId here because fetching the ParentId depends on it
+		group.OrganizationId = organizationId
 
 		parentId, err := keycloakClient.groupParentId(ctx, group)
 		if err != nil {
@@ -172,11 +212,27 @@ func getGroupByDFS(groupName string, groups []*Group) *Group {
 }
 
 func (keycloakClient *KeycloakClient) UpdateGroup(ctx context.Context, group *Group) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/groups/%s", group.RealmId, group.Id), group)
+	var updateGroupUrl string
+	if group.OrganizationId != "" {
+		updateGroupUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s", group.RealmId, group.OrganizationId, group.Id)
+	} else {
+		updateGroupUrl = fmt.Sprintf("/realms/%s/groups/%s", group.RealmId, group.Id)
+	}
+	return keycloakClient.put(ctx, updateGroupUrl, group)
 }
 
 func (keycloakClient *KeycloakClient) DeleteGroup(ctx context.Context, realmId, id string) error {
-	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/groups/%s", realmId, id), nil)
+	return keycloakClient.DeleteOrganizationGroup(ctx, realmId, "", id)
+}
+
+func (keycloakClient *KeycloakClient) DeleteOrganizationGroup(ctx context.Context, realmId, organizationId, id string) error {
+	var deleteGroupUrl string
+	if organizationId != "" {
+		deleteGroupUrl = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s", realmId, organizationId, id)
+	} else {
+		deleteGroupUrl = fmt.Sprintf("/realms/%s/groups/%s", realmId, id)
+	}
+	return keycloakClient.delete(ctx, deleteGroupUrl, nil)
 }
 
 func (keycloakClient *KeycloakClient) ListGroupsWithName(ctx context.Context, realmId, name string) ([]*Group, error) {
