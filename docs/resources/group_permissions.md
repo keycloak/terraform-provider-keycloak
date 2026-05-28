@@ -6,6 +6,8 @@ page_title: "keycloak_group_permissions Resource"
 
 Allows you to manage all group Scope Based Permissions https://www.keycloak.org/docs/latest/server_admin/#group.
 
+This resource requires Fine-Grained Admin Permissions **v1** (`admin-fine-grained-authz:v1`). It is **not compatible** with v2 (`admin-fine-grained-authz:v2`, enabled by default in Keycloak 26.2+), which uses a different API and resource server. If your Keycloak instance has v2 enabled, use [`keycloak_group_admin_permissions`](group_admin_permissions.md) instead.
+
 This is part of a preview Keycloak feature: `admin_fine_grained_authz` (see https://www.keycloak.org/docs/latest/server_admin/#_fine_grain_permissions).
 This feature can be enabled with the Keycloak option `-Dkeycloak.profile.feature.admin_fine_grained_authz=enabled`. See the
 example [`docker-compose.yml`](https://github.com/keycloak/terraform-provider-keycloak/blob/898094df6b3e01c3404981ce7ca268142d6ff0e5/docker-compose.yml#L21) file for an example.

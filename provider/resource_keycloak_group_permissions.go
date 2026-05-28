@@ -60,6 +60,10 @@ func resourceKeycloakGroupPermissionsCreate(ctx context.Context, data *schema.Re
 func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", ""); !ok {
+		return diags
+	}
+
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
@@ -69,7 +73,7 @@ func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.Re
 		return diag.FromErr(err)
 	}
 
-	// setting scope permissions requires us to fetch the users permissions details, as well as the realm management client
+	// setting scope permissions requires us to fetch the group permissions details, as well as the realm management client
 	groupPermissions, err := keycloakClient.GetGroupPermissions(ctx, realmId, groupId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -116,6 +120,11 @@ func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.Re
 
 func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", ""); !ok {
+		return diags
+	}
+
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
@@ -181,6 +190,10 @@ func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.Reso
 func resourceKeycloakGroupPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", ""); !ok {
+		return diags
+	}
+
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
@@ -189,6 +202,10 @@ func resourceKeycloakGroupPermissionsDelete(ctx context.Context, data *schema.Re
 
 func resourceKeycloakGroupPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabledForImport(ctx, keycloakClient, "keycloak_group_permissions", ""); err != nil {
+		return nil, err
+	}
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
