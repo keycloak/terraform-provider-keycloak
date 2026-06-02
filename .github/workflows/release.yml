@@ -58,7 +58,7 @@ jobs:
           echo "name=NOTES::${tmp}/release-notes.md" >> $GITHUB_OUTPUT
 
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@e24998b8b67b290c2fa8b7c14fcfa7de2c5c9b8c # version v7.1.0
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # version v7.2.2
         with:
           args: release --clean --release-notes=${{ steps.build-release-notes.outputs.NOTES }}
         env:

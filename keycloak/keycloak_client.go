@@ -83,10 +83,19 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 	}
 
 	if password != "" && username != "" {
+		if clientId == "" {
+			return nil, fmt.Errorf("client_id is required for password grant")
+		}
 		clientCredentials.Username = username
 		clientCredentials.Password = password
 		clientCredentials.GrantType = "password"
 	} else if clientSecret != "" || jwtSigningKey != "" || jwtToken != "" || jwtTokenFile != "" {
+		if clientId == "" && clientSecret != "" {
+			return nil, fmt.Errorf("client_id is required for client secret authentication")
+		}
+		if clientId == "" && jwtSigningKey != "" && jwtToken == "" && jwtTokenFile == "" {
+			return nil, fmt.Errorf("client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims")
+		}
 		clientCredentials.GrantType = "client_credentials"
 	} else if accessToken != "" {
 		clientCredentials.AccessToken = accessToken
@@ -302,7 +311,9 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 
 func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Context, kc_url string) (url.Values, error) {
 	authenticationFormData := url.Values{}
-	authenticationFormData.Set("client_id", keycloakClient.clientCredentials.ClientId)
+	if keycloakClient.clientCredentials.ClientId != "" {
+		authenticationFormData.Set("client_id", keycloakClient.clientCredentials.ClientId)
+	}
 	authenticationFormData.Set("grant_type", keycloakClient.clientCredentials.GrantType)
 
 	if keycloakClient.clientCredentials.GrantType == "password" {

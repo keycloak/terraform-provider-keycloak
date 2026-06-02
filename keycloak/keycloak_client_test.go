@@ -85,6 +85,107 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth(t *testing.T) {
 	keycloakClientChecks(t, err, mtlsKeycloakClient, ctx)
 }
 
+func TestNewKeycloakClient_clientIdValidation(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name          string
+		clientId      string
+		clientSecret  string
+		username      string
+		password      string
+		accessToken   string
+		jwtSigningKey string
+		jwtToken      string
+		jwtTokenFile  string
+		initialLogin  bool
+		expectError   string
+	}{
+		{
+			name:        "password grant without client_id",
+			username:    "admin",
+			password:    "password",
+			expectError: "client_id is required for password grant",
+		},
+		{
+			name:         "client secret without client_id",
+			clientSecret: "secret",
+			expectError:  "client_id is required for client secret authentication",
+		},
+		{
+			name:          "jwt_signing_key without client_id",
+			jwtSigningKey: "some-key",
+			expectError:   "client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims",
+		},
+		{
+			name:         "no credentials with initial_login",
+			initialLogin: true,
+			expectError:  "must specify client id",
+		},
+		{
+			name:     "jwt_token without client_id succeeds",
+			jwtToken: "some-jwt-token",
+		},
+		{
+			name:         "jwt_token_file without client_id succeeds",
+			jwtTokenFile: "/tmp/nonexistent",
+		},
+		{
+			name:        "access_token without client_id succeeds",
+			accessToken: "some-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := NewKeycloakClient(
+				ctx,
+				"http://localhost:8080", // url
+				"",                      // basePath
+				"",                      // adminUrl
+				tt.clientId,
+				tt.clientSecret,
+				"master",    // realm
+				tt.username, // username
+				tt.password, // password
+				tt.accessToken,
+				"RS256", // jwtSigningAlg
+				tt.jwtSigningKey,
+				tt.jwtToken,
+				tt.jwtTokenFile,
+				tt.initialLogin,
+				5,     // clientTimeout
+				"",    // caCert
+				true,  // tlsInsecureSkipVerify
+				"",    // tlsClientCert
+				"",    // tlsClientPrivateKey
+				"",    // userAgent
+				false, // redHatSSO
+				map[string]string{},
+			)
+
+			if tt.expectError != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q but got nil", tt.expectError)
+				}
+				if !strings.Contains(err.Error(), tt.expectError) {
+					t.Errorf("expected error containing %q, got: %v", tt.expectError, err)
+				}
+			} else {
+				// For success cases, we expect either no error or a connection error
+				// (since there's no real Keycloak). The point is that validation passed.
+				if err != nil && strings.Contains(err.Error(), "client_id is required") {
+					t.Errorf("unexpected client_id validation error: %v", err)
+				}
+			}
+		})
+	}
+}
+
 func TestApplyAdditionalHeaders_HostHeader(t *testing.T) {
 	keycloakClient := &KeycloakClient{
 		additionalHeaders: map[string]string{
