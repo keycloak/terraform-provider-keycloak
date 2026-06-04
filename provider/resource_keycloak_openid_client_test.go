@@ -2107,7 +2107,7 @@ resource "keycloak_openid_client" "client" {
 	access_type              = "CONFIDENTIAL"
 	name                     = "%s"
 	client_secret_wo         = "%s"
-	client_secret_wo_version = "%d"
+	client_secret_wo_version = %d
 }
 	`, testAccRealm.Realm, clientId, name, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }
