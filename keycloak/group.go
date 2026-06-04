@@ -67,8 +67,10 @@ func (keycloakClient *KeycloakClient) ValidateGroupMembers(usernames []interface
 }
 
 // NewGroup creates a new group based on the following rules:
-// Top level groups are created via POST /realms/${realm_id}/groups
-// Child groups are created via POST /realms/${realm_id}/groups/${parent_id}/children
+// Realm top-level groups are created via POST /realms/${realm_id}/groups.
+// Realm child groups are created via POST /realms/${realm_id}/groups/${parent_id}/children.
+// Organization top-level groups are created via POST /realms/${realm_id}/organizations/${organization_id}/groups.
+// Organization child groups are created via POST /realms/${realm_id}/organizations/${organization_id}/groups/${parent_id}/children.
 func (keycloakClient *KeycloakClient) NewGroup(ctx context.Context, group *Group) error {
 	var createGroupUrl string
 
