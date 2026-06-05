@@ -232,7 +232,10 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		AuthnContextDeclRefs:            authnContextDeclRefs,
 	}
 
-	rawWantAuthnRequestsSigned, _ := data.GetRawConfigAt(cty.GetAttrPath("want_authn_requests_signed"))
+	rawWantAuthnRequestsSigned, diags := data.GetRawConfigAt(cty.GetAttrPath("want_authn_requests_signed"))
+	if diags.HasError() {
+		return nil, diags.Err()
+	}
 	if rawWantAuthnRequestsSigned.IsNull() {
 		if _, ok := data.GetOk("signature_algorithm"); ok {
 			samlIdentityProviderConfig.WantAuthnRequestsSigned = true
