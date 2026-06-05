@@ -495,6 +495,10 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		}
 
 		openidClient.ClientSecret = clientSecretWriteOnly.AsString()
+	} else if data.Get("client_secret_wo_version").(int) != 0 {
+		// write-only mode, version unchanged: discard any stale client_secret from state
+		// so it is not sent to Keycloak and does not overwrite the existing secret
+		openidClient.ClientSecret = ""
 	}
 
 	if !openidClient.ImplicitFlowEnabled && !openidClient.StandardFlowEnabled {

@@ -530,6 +530,104 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_secretWriteOnlyNotClearedAfterExplicitSwitch(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	clientSecretExplicit := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// step 1: create with an explicit client_secret; value lands in Terraform state
+				Config: testKeycloakOpenidClient_secret(clientId, clientSecretExplicit),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretExplicit),
+				),
+			},
+			{
+				// step 2: switch to write-only; version changes 0→1 so new secret is applied;
+				// the stale explicit secret remains in state (setOpenidClientData does not clear it)
+				// — this is the precondition for the bug this test guards against
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+				),
+			},
+			{
+				// step 3: update an unrelated field, version unchanged — stale explicit secret
+				// in state must NOT overwrite the write-only secret in Keycloak
+				Config: testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWO, 1, clientId+"-named"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+				),
+			},
+			{
+				// step 4: re-apply same config — plan must be empty (no secret drift after migration)
+				Config:             testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWO, 1, clientId+"-named"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+// TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift covers the case where a
+// CONFIDENTIAL client was created without an explicit client_secret. Keycloak generates a
+// secret automatically and the provider stores it as a computed value in state. When the user
+// later switches to client_secret_wo (no explicit client_secret ever in config), that computed
+// Keycloak-generated secret must not overwrite the write-only secret on subsequent applies.
+func TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// step 1: CONFIDENTIAL client, no explicit client_secret in config
+				// Keycloak generates a secret; provider stores it as computed client_secret in state
+				Config: testKeycloakOpenidClient_basic(clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					resource.TestCheckResourceAttrSet("keycloak_openid_client.client", "client_secret"),
+				),
+			},
+			{
+				// step 2: switch to write-only; version 0→1 so new secret is applied
+				// the Keycloak-generated computed secret remains in state (never cleared by provider)
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+				),
+			},
+			{
+				// step 3: change extra_config only; version unchanged
+				// stale computed client_secret in state must NOT overwrite the write-only secret
+				Config: testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWO, 1, map[string]string{"key1": "value1"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+				),
+			},
+			{
+				// step 4: re-apply same config — plan must be empty (no secret drift)
+				Config:             testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWO, 1, map[string]string{"key1": "value1"}),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_redirectUrisValidation(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -2088,6 +2186,49 @@ resource "keycloak_openid_client" "client" {
 	client_secret_wo_version = "%d"
 }
 	`, testAccRealm.Realm, clientId, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
+}
+
+func testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int, name string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	name                     = "%s"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = %d
+}
+	`, testAccRealm.Realm, clientId, name, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
+}
+
+func testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int, extraConfig map[string]string) string {
+	var extraConfigBlock string
+	if len(extraConfig) > 0 {
+		var sb strings.Builder
+		sb.WriteString("\textra_config = {\n")
+		for k, v := range extraConfig {
+			sb.WriteString(fmt.Sprintf("\t\t\"%s\" = \"%s\"\n", k, v))
+		}
+		sb.WriteString("\t}\n")
+		extraConfigBlock = sb.String()
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = %d
+%s}
+	`, testAccRealm.Realm, clientId, clientSecretWriteOnly, clientSecretWriteOnlyVersion, extraConfigBlock)
 }
 
 func testKeycloakOpenidClient_invalidRedirectUris(clientId, accessType string, standardFlowEnabled, implicitFlowEnabled bool) string {
