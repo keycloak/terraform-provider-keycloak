@@ -24,7 +24,7 @@ resource "keycloak_oidc_microsoft_identity_provider" "microsoft" {
   sync_mode     = "IMPORT"
 
   extra_config = {
-    "myCustomConfigKey" = "myValue"
+    "myCustomConfigKey" = "value"
   }
 }
 ```
