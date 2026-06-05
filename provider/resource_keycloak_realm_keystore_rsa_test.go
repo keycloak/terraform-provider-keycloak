@@ -336,14 +336,13 @@ func testAccCheckRealmKeystoreRsaFoundInRealmKeys(resourceName string) resource.
 		}
 
 		for _, k := range keys.Keys {
-			if k.Algorithm != nil && *k.Algorithm == fetchedKeystore.Algorithm &&
-				k.Certificate != nil && *k.Certificate == fetchedKeystore.Certificate {
+			if k.ProviderId != nil && *k.ProviderId == fetchedKeystore.Id {
 				return nil
 			}
 		}
 
-		return fmt.Errorf("keystore with algorithm %s was not found in realm %s keys — parentId may be wrong",
-			fetchedKeystore.Algorithm, fetchedKeystore.RealmId)
+		return fmt.Errorf("keystore component %s was not found in realm %s active keys — parentId may be wrong",
+			fetchedKeystore.Id, fetchedKeystore.RealmId)
 	}
 }
 
