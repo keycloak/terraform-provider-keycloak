@@ -55,11 +55,6 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 		},
 	}
 
-	parentId := realmKey.RealmId
-	if realmKey.ParentId != "" {
-		parentId = realmKey.ParentId
-	}
-
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
