@@ -52,7 +52,8 @@ jobs:
     strategy:
       matrix:
         keycloak-version:
-          - '26.5.5'
+          - '26.6.1'
+          - '26.5.7'
           - '26.4.7'
           - '26.3.5'
           - '26.2.5'
@@ -73,13 +74,13 @@ jobs:
           cache: true
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # version v4.0.0
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # version v4.0.1
         with:
           terraform_wrapper: false
           terraform_version: 1.14.3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # version v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # version v6.1.0
       - name: Build user-federation-example with Gradle
         run:  make user-federation-example
 
@@ -88,7 +89,7 @@ jobs:
           MOUNT_FEDERATION_EXAMPLE_VOLUME=""
           EXTRA_FEATURES=""
           MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
-          if [[ "${{ matrix.keycloak-version }}" == "26.5.5" || "${{ matrix.keycloak-version }}" == "26.4.7"|| "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "${{ matrix.keycloak-version }}" == "26.6.1" || "${{ matrix.keycloak-version }}" == "26.5.7" || "${{ matrix.keycloak-version }}" == "26.4.7"|| "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
 
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
@@ -120,7 +121,7 @@ jobs:
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
 
       - name: Get Keycloak Version
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: keycloak-version
         env:
           KEYCLOAK_VERSION: ${{ matrix.keycloak-version }}
@@ -145,7 +146,7 @@ jobs:
         timeout-minutes: 60
 # Only run mtls test for the later versions
       - name: Test (auth with mtls client certificate)
-        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.6.1' || matrix.keycloak-version == '26.5.7' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download
@@ -167,7 +168,7 @@ jobs:
         timeout-minutes: 60
 
       - name: Test (auth with provided access token)
-        if: matrix.keycloak-version == '26.5.5' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
+        if: matrix.keycloak-version == '26.6.1' || matrix.keycloak-version == '26.5.7' || matrix.keycloak-version == '26.4.7' || matrix.keycloak-version == '26.3.5' || matrix.keycloak-version == '26.2.5'
         run: |
           terraform version
           go mod download

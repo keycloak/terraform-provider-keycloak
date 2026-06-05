@@ -53,6 +53,7 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Sensitive:     true,
 			Description:   "Client Secret.",
 			ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version"},
+			AtLeastOneOf:  []string{"client_secret", "client_secret_wo"},
 		},
 		"client_secret_wo": {
 			Type:          schema.TypeString,
@@ -61,6 +62,7 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			WriteOnly:     true,
 			ConflictsWith: []string{"client_secret"},
 			RequiredWith:  []string{"client_secret_wo_version"},
+			AtLeastOneOf:  []string{"client_secret", "client_secret_wo"},
 			Description:   "Client Secret as write-only argument",
 		},
 		"client_secret_wo_version": {
@@ -142,10 +144,6 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
-	oidcResource.ValidateRawResourceConfigFuncs = []schema.ValidateRawResourceConfigFunc{
-		// validate that argument is required if none of the checkExists attributes exist
-		requiredWithoutAll(cty.GetAttrPath("client_secret"), []cty.Path{cty.GetAttrPath("client_secret_wo"), cty.GetAttrPath("client_secret_wo_version")}),
-	}
 	return oidcResource
 }
 

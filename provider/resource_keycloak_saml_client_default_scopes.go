@@ -12,10 +12,10 @@ import (
 
 func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakSamlClientDefaultScopesCreate,
+		CreateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
 		ReadContext:   resourceKeycloakSamlClientDefaultScopesRead,
 		DeleteContext: resourceKeycloakSamlClientDefaultScopesDelete,
-		UpdateContext: resourceKeycloakSamlClientDefaultScopesUpdate,
+		UpdateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -35,45 +35,6 @@ func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 			},
 		},
 	}
-}
-
-func resourceKeycloakSamlClientDefaultScopesCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	keycloakClient := meta.(*keycloak.KeycloakClient)
-	realmId := data.Get("realm_id").(string)
-	clientId := data.Get("client_id").(string)
-	defaultScopes := data.Get("default_scopes").(*schema.Set)
-
-	err := keycloakClient.AttachSamlClientDefaultScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(defaultScopes.List()))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	data.SetId(samlClientDefaultScopesId(realmId, clientId))
-
-	// when creating a new SAML client in 25, the saml_organisation scope is automagically added by KC
-	// if it's not specified in the defaultScopes, we are deleting it here
-	_ = resourceKeycloakSamlClientDefaultScopesRead(ctx, data, meta)
-	newDefaultScopes := data.Get("default_scopes").(*schema.Set)
-	samlOrganization := "saml_organization"
-
-	if setContainsString(newDefaultScopes, samlOrganization) && !setContainsString(defaultScopes, samlOrganization) {
-		err = keycloakClient.DetachSamlClientDefaultScopes(ctx, realmId, clientId, []string{samlOrganization})
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return resourceKeycloakSamlClientDefaultScopesRead(ctx, data, meta)
-}
-
-func setContainsString(slice *schema.Set, s string) bool {
-	for _, sliceElement := range interfaceSliceToStringSlice(slice.List()) {
-		if sliceElement == s {
-			return true
-		}
-	}
-	return false
-
 }
 
 func samlClientDefaultScopesId(realmId string, clientId string) string {
@@ -102,7 +63,7 @@ func resourceKeycloakSamlClientDefaultScopesRead(ctx context.Context, data *sche
 	return nil
 }
 
-func resourceKeycloakSamlClientDefaultScopesUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKeycloakSamldClientDefaultScopesReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
@@ -111,6 +72,9 @@ func resourceKeycloakSamlClientDefaultScopesUpdate(ctx context.Context, data *sc
 
 	keycloakSamlClientDefaultScopes, err := keycloakClient.GetSamlClientDefaultScopes(ctx, realmId, clientId)
 	if err != nil {
+		if keycloak.ErrorIs404(err) {
+			return diag.FromErr(fmt.Errorf("validation error: client with id %s does not exist", clientId))
+		}
 		return diag.FromErr(err)
 	}
 
