@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakOpenidClientAuthorizationClientScopePolicy_basic(t *testing.
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testResourceKeycloakOpenidClientAuthorizationClientScopePolicyDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testResourceKeycloakOpenidClientAuthorizationClientScopePolicyDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceKeycloakOpenidClientAuthorizationClientScopePolicy_basic(clientScopeName, clientId),
@@ -40,9 +40,9 @@ func TestAccKeycloakOpenidClientAuthorizationClientScopePolicy_multiple(t *testi
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testResourceKeycloakOpenidClientAuthorizationClientScopePolicyDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testResourceKeycloakOpenidClientAuthorizationClientScopePolicyDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceKeycloakOpenidClientAuthorizationClientScopePolicy_multipleClientScopes(clientScopeNames, clientId),

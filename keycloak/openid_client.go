@@ -84,6 +84,8 @@ type OpenidClientAttributes struct {
 	Oauth2DeviceAuthorizationGrantEnabled    types.KeycloakBoolQuoted         `json:"oauth2.device.authorization.grant.enabled"`
 	Oauth2DeviceCodeLifespan                 string                           `json:"oauth2.device.code.lifespan,omitempty"`
 	Oauth2DevicePollingInterval              string                           `json:"oauth2.device.polling.interval,omitempty"`
+	Oauth2JwtAuthorizationGrantEnabled       types.KeycloakBoolQuoted         `json:"oauth2.jwt.authorization.grant.enabled"`
+	Oauth2JwtAuthorizationGrantIdp           string                           `json:"oauth2.jwt.authorization.grant.idp,omitempty"`
 	PostLogoutRedirectUris                   types.KeycloakSliceHashDelimited `json:"post.logout.redirect.uris,omitempty"`
 	StandardTokenExchangeEnabled             types.KeycloakBoolQuoted         `json:"standard.token.exchange.enabled,omitempty"`
 	AllowRefreshTokenInStandardTokenExchange string                           `json:"standard.token.exchange.enableRefreshRequestedTokenType,omitempty"`
@@ -295,6 +297,16 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 	allOpenidClientScopes, err := keycloakClient.ListOpenidClientScopesWithFilter(ctx, realmId, IncludeOpenidClientScopesMatchingNames(scopeNames))
 	if err != nil {
 		return err
+	}
+
+	foundNames := make(map[string]bool, len(allOpenidClientScopes))
+	for _, s := range allOpenidClientScopes {
+		foundNames[s.Name] = true
+	}
+	for _, name := range scopeNames {
+		if !foundNames[name] {
+			return fmt.Errorf("validation error: scope %s does not exist", name)
+		}
 	}
 
 	var attachedClientScopes []*OpenidClientScope

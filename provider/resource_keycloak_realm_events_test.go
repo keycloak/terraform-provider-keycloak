@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -14,8 +14,8 @@ func TestAccKeycloakRealmEvents_basic(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basic(realmName),
@@ -29,8 +29,8 @@ func TestAccKeycloakRealmEvents_destroy(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basic(realmName),
@@ -89,8 +89,8 @@ func TestAccKeycloakRealmEvents_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basicFromInterface(realmName, before),
@@ -148,8 +148,8 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmEvents_basicFromInterface(realmName, before),
@@ -165,15 +165,21 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 							return err
 						}
 
+						version, err := keycloakClient.Version(testCtx)
+						if err != nil {
+							return err
+						}
 						//different Keycloak versions have different number of default saved events
-						if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_3); ok {
+						if version.GreaterThanOrEqual(keycloak.Version_26_6.AsVersion()) {
+							if len(realmEventsConfig.EnabledEventTypes) != 103 {
+								return fmt.Errorf("expected enabled_event_types to contain all(103) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
+							}
+						} else if version.GreaterThanOrEqual(keycloak.Version_26_3.AsVersion()) {
 							if len(realmEventsConfig.EnabledEventTypes) != 93 {
 								return fmt.Errorf("expected enabled_event_types to contain all(93) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 							}
-						} else {
-							if len(realmEventsConfig.EnabledEventTypes) != 91 {
-								return fmt.Errorf("expected enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
-							}
+						} else if len(realmEventsConfig.EnabledEventTypes) != 91 {
+							return fmt.Errorf("expected enabled_event_types to contain all(91) event types, but it contains %d", len(realmEventsConfig.EnabledEventTypes))
 						}
 						return nil
 					},

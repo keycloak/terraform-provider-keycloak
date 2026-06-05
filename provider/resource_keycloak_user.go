@@ -64,6 +64,8 @@ func resourceKeycloakUser() *schema.Resource {
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,
+				// ignore ordering of multi-valued attributes
+				DiffSuppressFunc: suppressDiffForMultivalueAttributeOrder(),
 			},
 			"required_actions": {
 				Type:     schema.TypeSet,

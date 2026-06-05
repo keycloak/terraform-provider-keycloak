@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,9 +18,9 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_basic(t *testing.T) {
 	group := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakHardcodedGroupIdentityProviderMapper_basic(alias, mapperName, group),
@@ -39,9 +39,9 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig(t *test
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig(alias, mapperName, group, syncMode),
@@ -61,9 +61,9 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_createAfterManualDestro
 	group := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakHardcodedGroupIdentityProviderMapper_basic(alias, mapperName, group),
@@ -94,9 +94,9 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig_createA
 	syncMode := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakHardcodedGroupIdentityProviderMapper_withExtraConfig(alias, mapperName, group, syncMode),
@@ -140,9 +140,9 @@ func TestAccKeycloakHardcodedGroupIdentityProviderMapper_basicUpdateAll(t *testi
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakHardcodedGroupIdentityProviderMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakHardcodedGroupIdentityProviderMapper_basicFromInterface(firstMapper),

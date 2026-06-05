@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -19,9 +19,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_basicClient(t *testing.T) 
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_basic_client(clientId, mapperName),
@@ -39,9 +39,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_basicClientScope(t *testin
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -61,9 +61,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -99,9 +99,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_update(t *testing.T) {
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_claim(clientId, mapperName, claimName),
@@ -125,9 +125,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_createAfterManualDestroy(t
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_basic_client(clientId, mapperName),
@@ -153,9 +153,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_validateClaimValueType(t *
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserRealmRoleProtocolMapper_validateClaimValueType(mapperName, invalidClaimValueType),
@@ -175,9 +175,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_updateClientIdForceNew(t *
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_claim(clientId, mapperName, claimName),
@@ -199,9 +199,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_updateClientScopeForceNew(
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -224,9 +224,9 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_updateRealmIdForceNew(t *t
 	resourceName := "keycloak_openid_user_realm_role_protocol_mapper.user_realm_role_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserRealmRoleProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserRealmRoleProtocolMapper_claim(clientId, mapperName, claimName),

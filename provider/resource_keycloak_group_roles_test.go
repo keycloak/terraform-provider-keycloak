@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -22,8 +22,8 @@ func TestAccKeycloakGroupRoles_basic(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroupRoles_basic(openIdClientName, samlClientName, realmRoleName, openIdRoleName, samlRoleName, groupName),
@@ -56,8 +56,8 @@ func TestAccKeycloakGroupRoles_createAfterManualDestroy(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroupRoles_basic(openIdClientName, samlClientName, realmRoleName, openIdRoleName, samlRoleName, groupName),
@@ -104,8 +104,8 @@ func TestAccKeycloakGroupRoles_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// initial setup, resource is defined but no roles are specified
 			{
@@ -189,8 +189,8 @@ func TestAccKeycloakGroupRoles_basicNonExhaustive(t *testing.T) {
 	// multiple non_exhaustive
 	// no group roles -> nothing.
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroupRoles_nonExhaustive(openIdClientName, samlClientName, realmRoleName, openIdRoleName, samlRoleName, groupName),
@@ -231,8 +231,8 @@ func TestAccKeycloakGroupRoles_updateNonExhaustive(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// initial setup, resource is defined but no roles are specified
 			{
@@ -292,8 +292,8 @@ func TestAccKeycloakGroupRoles_simultaneousRoleAndAssignmentUpdate(t *testing.T)
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroupRoles_simultaneousRoleAndAssignmentUpdate(groupName, 1),

@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"maps"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,6 +17,8 @@ var (
 	keycloakRealmValidOTPTypes      = []string{"totp", "hotp"}
 	keycloakRealmValidOTPAlgorithms = []string{"HmacSHA1", "HmacSHA256", "HmacSHA512"}
 )
+
+const minKeycloakPasskeysVersion = "26.3.5"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -63,6 +67,11 @@ func resourceKeycloakRealm() *schema.Resource {
 				Type: schema.TypeInt,
 			},
 			Default:  30,
+			Optional: true,
+		},
+		"code_reusable": {
+			Type:     schema.TypeBool,
+			Default:  false,
 			Optional: true,
 		},
 	}
@@ -150,6 +159,15 @@ func resourceKeycloakRealm() *schema.Resource {
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	maps.Copy(webAuthnPasswordlessSchema, webAuthnSchema)
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "Enable passkeys for passwordless WebAuthn authentication",
+		Optional:    true,
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
 		ReadContext:   resourceKeycloakRealmRead,
@@ -584,6 +602,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  false,
 									},
+									"brute_force_strategy": { //Strategy to increase wait time
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "MULTIPLE",
+									},
 									"max_temporary_lockouts": { //Max Temporary Lockouts
 										Type:     schema.TypeInt,
 										Optional: true,
@@ -733,7 +756,7 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 		},
@@ -1095,6 +1118,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			bruteForceDetectionSettings := bruteForceDetectionConfig[0].(map[string]interface{})
 			realm.BruteForceProtected = true
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
+			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
 			realm.WaitIncrementSeconds = bruteForceDetectionSettings["wait_increment_seconds"].(int)
 			realm.QuickLoginCheckMilliSeconds = bruteForceDetectionSettings["quick_login_check_milli_seconds"].(int)
@@ -1166,6 +1190,10 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.OTPPolicyPeriod = otpPolicyPeriod.(int)
 		}
 
+		if otpPolicyCodeReusable, ok := otpPolicy["code_reusable"]; ok {
+			realm.OTPPolicyCodeReusable = otpPolicyCodeReusable.(bool)
+		}
+
 		if otpPolicyType, ok := otpPolicy["type"]; ok {
 			realm.OTPPolicyType = otpPolicyType.(string)
 		}
@@ -1228,6 +1256,25 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment = webAuthnPolicyPasswordlessAuthenticatorAttachment.(string)
 		}
 
+		supportsPasskeys := true
+		if minSupportedVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+			if keycloakVersion.LessThan(minSupportedVersion) {
+				supportsPasskeys = false
+			}
+		}
+
+		if supportsPasskeys {
+			if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
+				passkeysEnabled := webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			} else {
+				passkeysEnabled := false
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			}
+		} else if _, ok := data.GetOk("web_authn_passwordless_policy.0.passwordless_passkeys_enabled"); ok {
+			return nil, fmt.Errorf("passwordless_passkeys_enabled in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= 26.3.5)", realm.Id)
+		}
+
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
 			realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister = webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister.(bool)
 		}
@@ -1274,6 +1321,7 @@ func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
 func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keycloakVersion *version.Version) {
 	realm.BruteForceProtected = false
 	realm.PermanentLockout = false
+	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
@@ -1441,6 +1489,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	otpPolicy["initial_counter"] = realm.OTPPolicyInitialCounter
 	otpPolicy["look_ahead_window"] = realm.OTPPolicyLookAheadWindow
 	otpPolicy["period"] = realm.OTPPolicyPeriod
+	otpPolicy["code_reusable"] = realm.OTPPolicyCodeReusable
 	data.Set("otp_policy", []interface{}{otpPolicy})
 
 	//WebAuthn Passwordless
@@ -1456,6 +1505,17 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
+
+	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+		if keycloakVersion.GreaterThanOrEqual(minVersion) {
+			if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+			} else {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = false
+			}
+		}
+	}
+
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
@@ -1475,6 +1535,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *version.Version) map[string]interface{} {
 	bruteForceDetectionSettings := make(map[string]interface{})
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
+	bruteForceDetectionSettings["brute_force_strategy"] = realm.BruteForceStrategy
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
 	bruteForceDetectionSettings["wait_increment_seconds"] = realm.WaitIncrementSeconds
 	bruteForceDetectionSettings["quick_login_check_milli_seconds"] = realm.QuickLoginCheckMilliSeconds
