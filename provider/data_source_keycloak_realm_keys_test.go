@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakDataSourceRealmKeys_basic(t *testing.T) {
@@ -13,8 +13,8 @@ func TestAccKeycloakDataSourceRealmKeys_basic(t *testing.T) {
 	dataSourceName := "data.keycloak_realm_keys.test_keys"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakRealmKeysConfig(),
@@ -29,8 +29,8 @@ func TestAccKeycloakDataSourceRealmKeys_filterByAlgorithms(t *testing.T) {
 	dataSourceName := "data.keycloak_realm_keys.test_keys"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakRealmKeysConfig_filterByAlgorithms(),

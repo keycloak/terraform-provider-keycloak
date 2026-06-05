@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-// All saml clients in Keycloak will automatically have these scopes listed as "default client scopes".
+// All saml clients in Keycloak will automatically have these scopes listed as "default client scopes". Note this list is not exhaustive and doesn't have to be for the sake of these tests.
 var preAssignedDefaultSamlClientScopes = []string{"role_list"}
 
 func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
@@ -23,8 +23,8 @@ func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
@@ -49,8 +49,8 @@ func TestAccKeycloakSamlClientDefaultScopes_updateClientForceNew(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_basic(clientOne, clientScope),
@@ -80,8 +80,8 @@ func TestAccKeycloakSamlClientDefaultScopes_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// init
 			{
@@ -108,8 +108,8 @@ func TestAccKeycloakSamlClientDefaultScopes_validateClientDoesNotExist(t *testin
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakSamlClientDefaultScopes_validationNoClient(client, clientScope),
@@ -130,8 +130,8 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeAdd(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, clientScopes, clientScopes),
@@ -178,8 +178,8 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, allClientScopes, attachedClientScopes),
@@ -207,6 +207,22 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakSamlClientDefaultScopes_validateScopeDoesNotExist(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakSamlClientDefaultScopes_listOfScopes(client, acctest.RandomWithPrefix("tf-acc"), []string{"role_list", "non_existent_scope_that_should_fail"}),
+				ExpectError: regexp.MustCompile("scope .+ does not exist"),
+			},
+		},
+	})
+}
+
 // this resource doesn't support import because it can be created even if the desired state already exists in keycloak
 func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 	t.Parallel()
@@ -216,8 +232,8 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClientDefaultScopes_noDefaultScopes(client, clientScope),
@@ -237,29 +253,6 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 				},
 				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
-			},
-		},
-	})
-}
-
-// by default, keycloak saml clients have the default scopes "role_list",
-// attached. if you create this resource with only one scope, it
-// won't remove these two scopes, because the creation of a new resource should not
-// result in anything destructive. thus, a following plan will not be empty, as terraform
-// will think it needs to remove these scopes, which is okay to do during an update
-func TestAccKeycloakSamlClientDefaultScopes_profileAndEmailDefaultScopes(t *testing.T) {
-	t.Parallel()
-	client := acctest.RandomWithPrefix("tf-acc")
-	clientScope := acctest.RandomWithPrefix("tf-acc")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config:             testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, []string{clientScope}),
-				Check:              testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client.client", append(preAssignedDefaultSamlClientScopes, clientScope)),
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -18,8 +18,8 @@ func TestAccKeycloakGenericRoleMapper_basic(t *testing.T) {
 	childClientName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basic(parentClientName, parentRoleName, childClientName),
@@ -40,8 +40,8 @@ func TestAccKeycloakGenericRoleMapper_createAfterManualDestroy(t *testing.T) {
 	childClientName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basic(parentClientName, parentRoleName, childClientName),
@@ -75,8 +75,8 @@ func TestAccKeycloakGenericRoleMapper_import(t *testing.T) {
 	resourceName := "keycloak_generic_role_mapper.child-client-with-parent-client-role"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basic(parentClientName, parentRoleName, childClientName),
@@ -100,8 +100,8 @@ func TestAccKeycloakGenericRoleMapper_basicClientScope(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basicClientScope(clientName, roleName, clientScopeName),
@@ -121,8 +121,8 @@ func TestAccKeycloakGenericRoleMapper_importClientScope(t *testing.T) {
 	resourceName := "keycloak_generic_role_mapper.clientscope-with-client-role"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basicClientScope(clientName, roleName, clientScopeName),
@@ -145,8 +145,8 @@ func TestAccKeycloakGenericRoleMapper_basicClientScopeRealmRole(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basicClientScopeRealmRole(roleName, clientScopeName),
@@ -168,9 +168,9 @@ func TestAccKeycloakGenericRoleMapper_deleteIndividualMappers(t *testing.T) {
 	someOtherRoleName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakGenericRoleMapperDestroy("keycloak_generic_role_mapper.client-with-some-role"),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGenericRoleMapperDestroy("keycloak_generic_role_mapper.client-with-some-role"),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGenericRoleMapper_basicClientDedicatedAllRealmRoles(clientName, someRoleName, someOtherRoleName),

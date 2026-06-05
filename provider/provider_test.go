@@ -8,14 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/keycloak/terraform-provider-keycloak/helper"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-var testAccProviderFactories map[string]func() (*schema.Provider, error)
+var testAccProtoV5ProviderFactories map[string]func() (tfprotov5.ProviderServer, error)
 var testAccProvider *schema.Provider
 var keycloakClient *keycloak.KeycloakClient
 var testAccRealm *keycloak.Realm
@@ -34,16 +35,20 @@ func init() {
 	helper.UpdateEnvFromTestEnvIfPresent()
 
 	initialLogin := os.Getenv("KEYCLOAK_ACCESS_TOKEN") == ""
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
 	})
 	if err != nil {
 		panic(err)
 	}
 	testAccProvider = KeycloakProvider(keycloakClient)
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
-		"keycloak": func() (*schema.Provider, error) {
-			return testAccProvider, nil
+	testAccProtoV5ProviderFactories = protoV5ProviderFactories(testAccProvider)
+}
+
+func protoV5ProviderFactories(provider *schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		"keycloak": func() (tfprotov5.ProviderServer, error) {
+			return provider.GRPCProvider(), nil
 		},
 	}
 }

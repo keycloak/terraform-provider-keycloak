@@ -165,6 +165,16 @@ func (keycloakClient *KeycloakClient) attachSamlClientScopes(ctx context.Context
 		return err
 	}
 
+	foundNames := make(map[string]bool, len(allSamlClientScopes))
+	for _, s := range allSamlClientScopes {
+		foundNames[s.Name] = true
+	}
+	for _, name := range scopeNames {
+		if !foundNames[name] {
+			return fmt.Errorf("validation error: scope %s does not exist", name)
+		}
+	}
+
 	for _, samlClientScope := range allSamlClientScopes {
 		err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, t, samlClientScope.Id), nil)
 		if err != nil {

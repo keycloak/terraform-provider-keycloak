@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakDataSourceAuthenticationSubFlow_byAlias(t *testing.T) {
@@ -17,9 +17,9 @@ func TestAccKeycloakDataSourceAuthenticationSubFlow_byAlias(t *testing.T) {
 	subflowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKeycloakAuthenticationSubFlow_byAlias(parentFlowAlias, subflowAlias),
@@ -47,9 +47,9 @@ func TestAccKeycloakDataSourceAuthenticationSubFlow_byId(t *testing.T) {
 	subflowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKeycloakAuthenticationSubFlow_byId(parentFlowAlias, subflowAlias),
@@ -71,9 +71,9 @@ func TestAccKeycloakDataSourceAuthenticationSubFlow_wrongAlias(t *testing.T) {
 	subflowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationSubFlowDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationSubFlowDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSourceKeycloakAuthenticationSubFlow_wrongAlias(parentFlowAlias, subflowAlias),

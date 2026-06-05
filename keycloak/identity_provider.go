@@ -53,6 +53,8 @@ type IdentityProviderConfig struct {
 	AuthnContextComparisonType      string                    `json:"authnContextComparisonType,omitempty"`
 	AuthnContextDeclRefs            types.KeycloakSliceQuoted `json:"authnContextDeclRefs,omitempty"`
 	Issuer                          string                    `json:"issuer,omitempty"`
+	TrustDomain                     string                    `json:"trustDomain,omitempty"`
+	BundleEndpoint                  string                    `json:"bundleEndpoint,omitempty"`
 	OrgRedirectModeEmailMatches     types.KeycloakBoolQuoted  `json:"kc.org.broker.redirect.mode.email-matches,omitempty"`
 	OrgDomain                       string                    `json:"kc.org.domain,omitempty"`
 	ApiUrl                          string                    `json:"apiUrl,omitempty"`

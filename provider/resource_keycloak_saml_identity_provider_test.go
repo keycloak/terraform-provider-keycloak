@@ -8,9 +8,9 @@ import (
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -20,9 +20,9 @@ func TestAccKeycloakSamlIdentityProvider_basic(t *testing.T) {
 	samlName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_basic(samlName),
@@ -38,9 +38,9 @@ func TestAccKeycloakSamlIdentityProvider_customProviderId(t *testing.T) {
 	samlName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_customProviderId(samlName, "saml"), //actually needs to be something that exists
@@ -56,9 +56,9 @@ func TestAccKeycloakSamlIdentityProvider_nameIdPolicyFormatTransient(t *testing.
 	samlName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_withNameIdPolicyFormat(samlName, "Transient"),
@@ -75,9 +75,9 @@ func TestAccKeycloakSamlIdentityProvider_extraConfig(t *testing.T) {
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_extra_config(samlName, "dummyConfig", customConfigValue),
@@ -103,9 +103,9 @@ func TestAccKeycloakSamlIdentityProvider_extraConfigInvalid(t *testing.T) {
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakSamlIdentityProvider_extra_config(samlName, "syncMode", customConfigValue),
@@ -125,9 +125,9 @@ func TestAccKeycloakSamlIdentityProvider_wantAuthnRequestsSignedOverride(t *test
 	samlName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_wantAuthnRequestsSigned(samlName, false, "RSA_SHA256"),
@@ -152,9 +152,9 @@ func TestAccKeycloakSamlIdentityProvider_linkOrganization(t *testing.T) {
 	organizationName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_linkOrganization(samlName, organizationName),
@@ -175,9 +175,9 @@ func TestAccKeycloakSamlIdentityProvider_createAfterManualDestroy(t *testing.T) 
 	samlName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_basic(samlName),
@@ -274,9 +274,9 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlIdentityProvider_basicFromInterface(firstSaml),
@@ -556,6 +556,32 @@ resource "keycloak_saml_identity_provider" "saml" {
 	`, testAccRealm.Realm, organizationName, saml)
 }
 
+func TestAccKeycloakSamlIdentityProvider_wantAuthnRequestsSignedImplied(t *testing.T) {
+	t.Parallel()
+
+	samlName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(samlName, "RSA_SHA256"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlIdentityProviderHasWantAuthnRequestsSigned("keycloak_saml_identity_provider.saml", true),
+				),
+			},
+			{
+				Config: testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(samlName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlIdentityProviderHasWantAuthnRequestsSigned("keycloak_saml_identity_provider.saml", false),
+				),
+			},
+		},
+	})
+}
+
 func testKeycloakSamlIdentityProvider_wantAuthnRequestsSigned(alias string, want bool, sigAlg string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -571,4 +597,23 @@ resource "keycloak_saml_identity_provider" "saml" {
 	want_authn_requests_signed     = %t
 }
 	`, testAccRealm.Realm, alias, sigAlg, want)
+}
+
+func testKeycloakSamlIdentityProvider_withOptionalSignatureAlgorithm(alias, sigAlg string) string {
+	signatureAlgorithmLine := ""
+	if sigAlg != "" {
+		signatureAlgorithmLine = fmt.Sprintf("\tsignature_algorithm = \"%s\"\n", sigAlg)
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_saml_identity_provider" "saml" {
+	realm                      = data.keycloak_realm.realm.id
+	alias                      = "%s"
+	entity_id                  = "https://example.com/entity_id"
+	single_sign_on_service_url = "https://example.com/auth"
+%s}
+	`, testAccRealm.Realm, alias, signatureAlgorithmLine)
 }

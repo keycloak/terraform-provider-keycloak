@@ -89,15 +89,16 @@ type Realm struct {
 
 	BrowserSecurityHeaders BrowserSecurityHeaders `json:"browserSecurityHeaders"`
 
-	BruteForceProtected          bool `json:"bruteForceProtected"`
-	PermanentLockout             bool `json:"permanentLockout"`
-	MaxTemporaryLockouts         int  `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
-	FailureFactor                int  `json:"failureFactor"`                  //Max Login Failures
-	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
-	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
-	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
-	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
-	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+	BruteForceProtected          bool   `json:"bruteForceProtected"`
+	PermanentLockout             bool   `json:"permanentLockout"`
+	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`   // Strategy to increase wait time
+	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
+	FailureFactor                int    `json:"failureFactor"`                  //Max Login Failures
+	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
+	QuickLoginCheckMilliSeconds  int    `json:"quickLoginCheckMilliSeconds"`
+	MinimumQuickLoginWaitSeconds int    `json:"minimumQuickLoginWaitSeconds"`
+	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
+	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
 	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
 
@@ -118,6 +119,7 @@ type Realm struct {
 	OTPPolicyInitialCounter  int    `json:"otpPolicyInitialCounter,omitempty"`
 	OTPPolicyLookAheadWindow int    `json:"otpPolicyLookAheadWindow,omitempty"`
 	OTPPolicyPeriod          int    `json:"otpPolicyPeriod,omitempty"`
+	OTPPolicyCodeReusable    bool   `json:"otpPolicyCodeReusable"`
 	OTPPolicyType            string `json:"otpPolicyType,omitempty"`
 
 	// WebAuthn
@@ -145,6 +147,7 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
 	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
 	WebAuthnPolicyPasswordlessUserVerificationRequirement     string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
+	WebAuthnPolicyPasswordlessPasskeysEnabled                 *bool    `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -25,8 +25,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_basic(t *testing.T) {
 	clientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientOptionalScopes_basic(client, clientScope),
@@ -51,8 +51,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_updateClientForceNew(t *testing.T
 	clientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientOptionalScopes_basic(clientOne, clientScope),
@@ -82,8 +82,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_updateInPlace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// init
 			{
@@ -110,8 +110,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_validateClientDoesNotExist(t *tes
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClientOptionalScopes_validationNoClient(client, clientScope),
@@ -127,8 +127,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_validateClientAccessType(t *testi
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenidClientOptionalScopes_validationBearerOnlyClient(client, clientScope),
@@ -149,8 +149,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_authoritativeAdd(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientOptionalScopes_multipleClientScopes(client, clientScopes, clientScopes),
@@ -197,8 +197,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_authoritativeRemove(t *testing.T)
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientOptionalScopes_multipleClientScopes(client, allClientScopes, attachedClientScopes),
@@ -235,8 +235,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_noImportNeeded(t *testing.T) {
 	clientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientOptionalScopes_noOptionalScopes(client, clientScope),
@@ -270,8 +270,8 @@ func TestAccKeycloakOpenidClientOptionalScopes_validateDuplicateScopeAssignment(
 	defaultClientScopes := append(preAssignedDefaultClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// attach default scopes, including the custom scope
 			{
