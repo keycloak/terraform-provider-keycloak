@@ -170,14 +170,14 @@ func TestAccKeycloakRealmKeystoreRsa_parentIdMatchesRealmUUID(t *testing.T) {
 				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaName, privateKey, certificate),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
-					testAccCheckRealmKeystoreRsaFoundInRealmKeys("keycloak_realm_keystore_rsa.realm_rsa"),
+					testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID("keycloak_realm_keystore_rsa.realm_rsa"),
 				),
 			},
 			{
 				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaNameUpdated, privateKey, certificate),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
-					testAccCheckRealmKeystoreRsaFoundInRealmKeys("keycloak_realm_keystore_rsa.realm_rsa"),
+					testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID("keycloak_realm_keystore_rsa.realm_rsa"),
 				),
 			},
 		},
@@ -323,26 +323,27 @@ func parsePemRealmKeystoreRsa(input string) string {
 	return output
 }
 
-func testAccCheckRealmKeystoreRsaFoundInRealmKeys(resourceName string) resource.TestCheckFunc {
+// testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID directly verifies the fix for #1368:
+// the keystore component's parentId stored in Keycloak must equal the realm's internal UUID,
+// not the realm name string.
+func testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedKeystore, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
 		if err != nil {
 			return err
 		}
 
-		keys, err := keycloakClient.GetRealmKeys(testCtx, fetchedKeystore.RealmId)
+		realm, err := keycloakClient.GetRealm(testCtx, fetchedKeystore.RealmId)
 		if err != nil {
-			return fmt.Errorf("error fetching realm keys: %w", err)
+			return fmt.Errorf("error fetching realm %s: %w", fetchedKeystore.RealmId, err)
 		}
 
-		for _, k := range keys.Keys {
-			if k.ProviderId != nil && *k.ProviderId == fetchedKeystore.Id {
-				return nil
-			}
+		if fetchedKeystore.ParentId != realm.Id {
+			return fmt.Errorf("keystore parentId %q does not match realm UUID %q — fix for #1368 may be broken",
+				fetchedKeystore.ParentId, realm.Id)
 		}
 
-		return fmt.Errorf("keystore component %s was not found in realm %s active keys — parentId may be wrong",
-			fetchedKeystore.Id, fetchedKeystore.RealmId)
+		return nil
 	}
 }
 

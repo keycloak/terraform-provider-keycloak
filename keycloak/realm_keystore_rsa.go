@@ -87,9 +87,10 @@ func convertFromComponentToRealmKeystoreRsa(component *component, realmId string
 	}
 
 	realmKey := &RealmKeystoreRsa{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:      active,
 		Enabled:     enabled,
