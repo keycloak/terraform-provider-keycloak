@@ -6,7 +6,7 @@ page_title: "keycloak_oidc_openshift_v4_identity_provider Resource"
 
 Allows for creating and managing **OpenShift v4**-based OIDC Identity Providers within Keycloak.
 
-OIDC (OpenID Connect) identity providers allows users to authenticate through a third party system using the OIDC standard.
+OIDC (OpenID Connect) identity providers allow users to authenticate through a third party system using the OIDC standard.
 
 The OpenShift v4 variant is specialized for OpenShift 4 / OKD clusters. It automatically derives the OAuth authorization, token, and user info endpoints from the provided base URL.
 
