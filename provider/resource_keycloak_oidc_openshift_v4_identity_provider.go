@@ -25,7 +25,7 @@ func resourceKeycloakOidcOpenshiftV4IdentityProvider() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "openshift-v4",
-            Description: "Provider ID; always openshift-v4 unless you have an extended custom implementation.",
+			Description: "Provider ID; always openshift-v4 unless you have an extended custom implementation.",
 		},
 		"client_id": {
 			Type:        schema.TypeString,
