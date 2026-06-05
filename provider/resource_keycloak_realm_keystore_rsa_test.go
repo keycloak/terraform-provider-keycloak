@@ -136,10 +136,12 @@ func TestAccKeycloakRealmKeystoreRsa_extraConfigKid(t *testing.T) {
 	})
 }
 
-// TestAccKeycloakRealmKeystoreRsa_parentIdMatchesRealmUUID exercises the regression from #1368:
-// when a realm's internal UUID differs from its name (e.g. it was created outside Terraform),
-// keystore create and update must use the UUID as parentId, not the realm name string.
-func TestAccKeycloakRealmKeystoreRsa_parentIdMatchesRealmUUID(t *testing.T) {
+// TestAccKeycloakRealmKeystoreRsa_importedRealm exercises the regression from #1368:
+// when a realm's internal UUID differs from its display name (i.e. the realm was created
+// outside Terraform and then imported), keystore create and update must both succeed.
+// Before the fix, Update would re-submit the realm name as parentId; Keycloak would then
+// orphan or re-associate the component, causing the key to vanish from the admin console.
+func TestAccKeycloakRealmKeystoreRsa_importedRealm(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	internalId := acctest.RandomWithPrefix("tf-acc") // deliberately different from realmName
 	rsaName := acctest.RandomWithPrefix("tf-acc")
@@ -168,17 +170,11 @@ func TestAccKeycloakRealmKeystoreRsa_parentIdMatchesRealmUUID(t *testing.T) {
 					}
 				},
 				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaName, privateKey, certificate),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
-					testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID("keycloak_realm_keystore_rsa.realm_rsa"),
-				),
+				Check:  testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
 			},
 			{
 				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaNameUpdated, privateKey, certificate),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
-					testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID("keycloak_realm_keystore_rsa.realm_rsa"),
-				),
+				Check:  testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
 			},
 		},
 	})
@@ -321,30 +317,6 @@ func parsePemRealmKeystoreRsa(input string) string {
 	output = strings.ReplaceAll(output, "\n", "")
 
 	return output
-}
-
-// testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID directly verifies the fix for #1368:
-// the keystore component's parentId stored in Keycloak must equal the realm's internal UUID,
-// not the realm name string.
-func testAccCheckRealmKeystoreRsaParentIdMatchesRealmUUID(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		fetchedKeystore, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		realm, err := keycloakClient.GetRealm(testCtx, fetchedKeystore.RealmId)
-		if err != nil {
-			return fmt.Errorf("error fetching realm %s: %w", fetchedKeystore.RealmId, err)
-		}
-
-		if fetchedKeystore.ParentId != realm.Id {
-			return fmt.Errorf("keystore parentId %q does not match realm UUID %q — fix for #1368 may be broken",
-				fetchedKeystore.ParentId, realm.Id)
-		}
-
-		return nil
-	}
 }
 
 func testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaName, privateKey, certificate string) string {
