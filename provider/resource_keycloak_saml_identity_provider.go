@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"fmt"
+
 	"dario.cat/mergo"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
@@ -234,7 +236,7 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 
 	rawWantAuthnRequestsSigned, diags := data.GetRawConfigAt(cty.GetAttrPath("want_authn_requests_signed"))
 	if diags.HasError() {
-		return nil, diags.Err()
+		return nil, fmt.Errorf("Error reading want_auth_requests_signed: %s", diags[0].Summary)
 	}
 	if rawWantAuthnRequestsSigned.IsNull() {
 		if _, ok := data.GetOk("signature_algorithm"); ok {
