@@ -35,6 +35,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Type:     schema.TypeInt,
 			Computed: true,
 		},
+		"code_reusable": {
+			Type:     schema.TypeBool,
+			Computed: true,
+		},
 	}
 
 	webAuthnSchema := map[string]*schema.Schema{
@@ -95,6 +99,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Type:        schema.TypeString,
 			Description: "Either required, preferred or discouraged",
 			Computed:    true,
+		},
+		"passwordless_passkeys_enabled": {
+			Type:     schema.TypeBool,
+			Computed: true,
 		},
 	}
 	return &schema.Resource{
