@@ -14,7 +14,8 @@ func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
-			Description: "The alias uniquely identifies an identity provider and it is also used to build the redirect uri. In case of microsoft this is computed and always microsoft",
+			ForceNew:    true,
+			Description: "The alias uniquely identifies an identity provider and is also used to build the redirect URI. Defaults to microsoft.",
 		},
 		"display_name": {
 			Type:        schema.TypeString,
@@ -98,11 +99,14 @@ func getOidcMicrosoftIdentityProviderFromData(data *schema.ResourceData, keycloa
 	microsoftIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
 		ClientSecret:                data.Get("client_secret").(string),
-		TenantId:                    data.Get("tenant_id").(string),
-		Prompt:                      data.Get("prompt").(string),
 		DefaultScope:                data.Get("default_scopes").(string),
+		UseJwksUrl:                  true,
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
+		ExtraConfig: map[string]interface{}{
+			"tenantId": data.Get("tenant_id").(string),
+			"prompt":   data.Get("prompt").(string),
+		},
 	}
 
 	if err := mergo.Merge(microsoftIdentityProviderConfig, defaultConfig); err != nil {
@@ -119,8 +123,8 @@ func setOidcMicrosoftIdentityProviderData(data *schema.ResourceData, identityPro
 
 	data.Set("provider_id", identityProvider.ProviderId)
 	data.Set("client_id", identityProvider.Config.ClientId)
-	data.Set("tenant_id", identityProvider.Config.TenantId)
-	data.Set("prompt", identityProvider.Config.Prompt)
+	data.Set("tenant_id", identityProvider.Config.ExtraConfig["tenantId"])
+	data.Set("prompt", identityProvider.Config.ExtraConfig["prompt"])
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
 	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)

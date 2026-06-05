@@ -6,7 +6,7 @@ page_title: "keycloak_oidc_microsoft_identity_provider Resource"
 
 Allows for creating and managing OIDC Identity Providers within Keycloak.
 
-OIDC (OpenID Connect) identity providers allows users to authenticate through a third party system using the OIDC standard.
+OIDC (OpenID Connect) identity providers allow users to authenticate through a third party system using the OIDC standard.
 
 ## Example Usage
 
@@ -47,10 +47,10 @@ resource "keycloak_oidc_microsoft_identity_provider" "microsoft" {
 - `post_broker_login_flow_alias` - (Optional) The authentication flow to use after users have successfully logged in, which can be used to perform additional user verification (such as OTP checking). Defaults to an empty string, which means no post login flow will be used.
 - `provider_id` - (Optional) The ID of the identity provider to use. Defaults to `microsoft`, which should be used unless you have extended Keycloak and provided your own implementation.
 - `default_scopes` - (Optional) The scopes to be sent when asking for authorization. It can be a space-separated list of scopes. Defaults to `openid profile email`.
-- `accepts_prompt_none_forward_from_client` - (Optional) When `true`, unauthenticated requests with `prompt=none` will be forwarded to Google instead of returning an error. Defaults to `false`.
+- `accepts_prompt_none_forward_from_client` - (Optional) When `true`, unauthenticated requests with `prompt=none` will be forwarded to Microsoft instead of returning an error. Defaults to `false`.
 - `disable_user_info` - (Optional) When `true`, disables the usage of the user info service to obtain additional user information. Defaults to `false`.
 - `hide_on_login_page` - (Optional) When `true`, this identity provider will be hidden on the login page. Defaults to `false`.
-- `sync_mode` - (Optional) The default sync mode to use for all mappers attached to this identity provider. Can be once of `IMPORT`, `FORCE`, or `LEGACY`.
+- `sync_mode` - (Optional) The default sync mode to use for all mappers attached to this identity provider. Can be one of `IMPORT`, `FORCE`, or `LEGACY`.
 - `gui_order` - (Optional) A number defining the order of this identity provider in the GUI.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration to this identity provider. This can be used for custom oidc provider implementations, or to add configuration that is not yet supported by this Terraform provider. Use this attribute at your own risk, as custom attributes may conflict with top-level configuration attributes in future provider updates.
 
@@ -65,5 +65,5 @@ Microsoft Identity providers can be imported using the format {{realm_id}}/{{idp
 Example:
 
 ```bash
-$ terraform import keycloak_oidc_microsoft_identity_provider.microsoft.microsoft_identity_provider my-realm/my-microsoft-idp
+$ terraform import keycloak_oidc_microsoft_identity_provider.microsoft my-realm/my-microsoft-idp
 ```
