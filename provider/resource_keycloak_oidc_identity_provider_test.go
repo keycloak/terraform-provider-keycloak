@@ -570,6 +570,60 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	`, testAccRealm.Realm, oidc, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }
 
+// TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyNotClearedOnUpdate covers the bug
+// where updating any attribute without changing client_secret_wo_version would send an explicit
+// empty clientSecret to Keycloak, clearing the configured secret (#1576).
+func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyNotClearedOnUpdate(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWOVersion := 1
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_clientSecretWriteOnlyWithBackchannel(oidcName, clientSecretWO, clientSecretWOVersion, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					testAccCheckKeycloakOidcIdentityProviderClientSecretSet("keycloak_oidc_identity_provider.oidc"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+				),
+			},
+			{
+				// change unrelated field, version unchanged — secret must not be cleared
+				Config: testKeycloakOidcIdentityProvider_clientSecretWriteOnlyWithBackchannel(oidcName, clientSecretWO, clientSecretWOVersion, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
+					testAccCheckKeycloakOidcIdentityProviderClientSecretSet("keycloak_oidc_identity_provider.oidc"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "client_secret_wo_version", strconv.Itoa(clientSecretWOVersion)),
+				),
+			},
+			{
+				// no perpetual diff after update
+				Config:   testKeycloakOidcIdentityProvider_clientSecretWriteOnlyWithBackchannel(oidcName, clientSecretWO, clientSecretWOVersion, true),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakOidcIdentityProviderClientSecretSet(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		idp, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+		if idp.Config.ClientSecret == "" {
+			return fmt.Errorf("expected client secret to be set on identity provider %s, but it was empty", idp.Alias)
+		}
+		return nil
+	}
+}
+
 func testKeycloakOidcIdentityProvider_noClientSecret(oidc string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -586,4 +640,24 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	issuer = "hello"
 }
 	`, testAccRealm.Realm, oidc)
+}
+
+func testKeycloakOidcIdentityProvider_clientSecretWriteOnlyWithBackchannel(oidc, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int, backchannelSupported bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             		 = data.keycloak_realm.realm.id
+	alias             		 = "%s"
+	authorization_url 		 = "https://example.com/auth"
+	token_url         		 = "https://example.com/token"
+	client_id         		 = "example_id"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = %d
+
+	backchannel_supported = %t
+}
+	`, testAccRealm.Realm, oidc, clientSecretWriteOnly, clientSecretWriteOnlyVersion, backchannelSupported)
 }
