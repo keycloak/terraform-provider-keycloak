@@ -53,8 +53,8 @@ jobs:
       matrix:
         include:
           # Newest version: run once with v2 (the default) and once with v1 explicitly enabled
-          - keycloak-version: '26.6.1'
-          - keycloak-version: '26.6.1'
+          - keycloak-version: '26.6.3'
+          - keycloak-version: '26.6.3'
             fgap-version: 'v1'
           # Older versions that do not have v2 as the default: enable v1 explicitly
           - keycloak-version: '26.5.7'
@@ -120,7 +120,7 @@ jobs:
           if [[ "$KC_26_2_OR_LATER" == "true" ]]; then
             EXTRA_FEATURES=",admin-fine-grained-authz:v1"
           fi
-          if [[ "${{ matrix.keycloak-version }}" == "26.6.1" || "${{ matrix.keycloak-version }}" == "26.5.7" || "${{ matrix.keycloak-version }}" == "26.4.7" || "${{ matrix.keycloak-version }}" == "26.3.5" || "${{ matrix.keycloak-version }}" == "26.2.5" ]]; then
+          if [[ "$KC_26_2_OR_LATER" == "true" ]]; then
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
             EXTRA_HTTPS_CERT="-e KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/testdata/tls/server-cert.pem"
             EXTRA_HTTPS_KEY="-e KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem"
