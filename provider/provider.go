@@ -131,7 +131,6 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_authentication_execution":                          resourceKeycloakAuthenticationExecution(),
 			"keycloak_authentication_execution_config":                   resourceKeycloakAuthenticationExecutionConfig(),
 			"keycloak_identity_provider_token_exchange_scope_permission": resourceKeycloakIdentityProviderTokenExchangeScopePermission(),
-			"keycloak_identity_provider_permissions":                     resourceKeycloakIdentityProviderPermissions(),
 			"keycloak_openid_client_permissions":                         resourceKeycloakOpenidClientPermissions(),
 			"keycloak_users_permissions":                                 resourceKeycloakUsersPermissions(),
 			"keycloak_user_groups":                                       resourceKeycloakUserGroups(),
