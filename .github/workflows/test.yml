@@ -51,17 +51,26 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        keycloak-version:
-          - '26.6.3'
-          - '26.5.7'
-          - '26.4.7'
-          - '26.3.5'
-          - '26.2.5'
-          - '26.1.4'
-          - '26.0.8'
+        include:
+          # Newest version: run once with v2 (the default) and once with v1 explicitly enabled
+          - keycloak-version: '26.6.1'
+          - keycloak-version: '26.6.1'
+            fgap-version: 'v1'
+          # Older versions that do not have v2 as the default: enable v1 explicitly
+          - keycloak-version: '26.5.7'
+            fgap-version: 'v1'
+          - keycloak-version: '26.4.7'
+            fgap-version: 'v1'
+          - keycloak-version: '26.3.5'
+            fgap-version: 'v1'
+          - keycloak-version: '26.2.5'
+            fgap-version: 'v1'
+          # Versions without FGAP support
+          - keycloak-version: '26.1.4'
+          - keycloak-version: '26.0.8'
       fail-fast: false
     concurrency:
-      group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}
+      group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}-${{ matrix.fgap-version || 'default' }}
       cancel-in-progress: true
     steps:
       - name: Checkout Code
