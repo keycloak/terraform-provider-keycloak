@@ -21,8 +21,7 @@ Note: if you only need to manage the `token-exchange` scope and want Keycloak to
 
 ```hcl
 resource "keycloak_realm" "realm" {
-  realm                     = "my-realm"
-  admin_permissions_enabled = true
+  realm = "my-realm"
 }
 
 data "keycloak_openid_client" "realm_management" {
@@ -44,8 +43,11 @@ resource "keycloak_group" "group" {
   name     = "idp-admins"
 }
 
-# With FGAPv2, realm-management authorization is enabled automatically by Keycloak.
-# No explicit keycloak_openid_client_permissions prerequisite is required.
+resource "keycloak_openid_client_permissions" "realm_management" {
+  realm_id  = keycloak_realm.realm.id
+  client_id = data.keycloak_openid_client.realm_management.id
+}
+
 resource "keycloak_openid_client_group_policy" "policy" {
   realm_id           = keycloak_realm.realm.id
   resource_server_id = data.keycloak_openid_client.realm_management.id
@@ -57,6 +59,8 @@ resource "keycloak_openid_client_group_policy" "policy" {
   }
   logic             = "POSITIVE"
   decision_strategy = "UNANIMOUS"
+
+  depends_on = [keycloak_openid_client_permissions.realm_management]
 }
 
 resource "keycloak_identity_provider_permissions" "idp_permissions" {

@@ -64,7 +64,7 @@ resource "keycloak_openid_client_authorization_permission" "read_orders" {
 
 ### FGAPv2 example: role-based map-role permission
 
-The following shows how to use FGAPv2 (`admin-fine-grained-authz:v2`) to grant members of an `hr-managers` group permission to map an `hr-viewer` role. The `map-role` scope lives on the `admin-permissions` resource server; this data source resolves its ID for use in a custom scope-based permission alongside the one managed by `keycloak_role_permissions`.
+The following shows how to use FGAPv2 (`admin-fine-grained-authz:v2`) to grant members of an `hr-managers` group permission to map an `hr-viewer` role. The `map-role` scope lives on the `admin-permissions` resource server; this data source resolves its ID for use in a custom scope-based permission alongside the one managed by `keycloak_role_admin_permissions`.
 
 ```hcl
 resource "keycloak_realm" "realm" {
@@ -82,11 +82,11 @@ resource "keycloak_role" "hr_viewer" {
   name     = "hr-viewer"
 }
 
-# Enabling role permissions creates map-role/map-role-client-scope/map-role-composite
-# scope permissions on the admin-permissions resource server.
-resource "keycloak_role_permissions" "hr_viewer" {
+resource "keycloak_role_admin_permissions" "hr_viewer" {
   realm_id = keycloak_realm.realm.id
-  role_id  = keycloak_role.hr_viewer.id
+  name     = "map-role-hr-viewer"
+  role_ids = [keycloak_role.hr_viewer.id]
+  scopes   = ["map-role"]
 }
 
 # Resolve the map-role scope by name for use in a custom permission.
@@ -94,7 +94,7 @@ data "keycloak_openid_client_authorization_scope" "map_role" {
   realm_id           = keycloak_realm.realm.id
   resource_server_id = data.keycloak_openid_client.admin_permissions.id
   name               = "map-role"
-  depends_on         = [keycloak_role_permissions.hr_viewer]
+  depends_on         = [keycloak_role_admin_permissions.hr_viewer]
 }
 
 resource "keycloak_group" "hr_managers" {

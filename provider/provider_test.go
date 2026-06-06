@@ -91,10 +91,6 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 
 	r.OrganizationsEnabled = true
 
-	if fgapv2, err := keycloakClient.FGAPv2IsEnabled(testCtx); err == nil && fgapv2 {
-		r.AdminPermissionsEnabled = true
-	}
-
 	for i := 0; i < 3; i++ { // on CI this sometimes fails and keycloak can't be reached
 		err = keycloakClient.NewRealm(testCtx, r)
 		if err != nil {

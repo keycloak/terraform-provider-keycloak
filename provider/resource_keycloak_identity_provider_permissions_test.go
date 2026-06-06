@@ -151,8 +151,11 @@ resource "keycloak_group" "group" {
 	name     = "%s"
 }
 
-# In FGAPv2 realm-management authorization is already enabled by the feature flag,
-# so policies can be created without an explicit enablement prerequisite.
+resource "keycloak_openid_client_permissions" "realm_management_permission" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = data.keycloak_openid_client.realm_management.id
+}
+
 resource "keycloak_openid_client_group_policy" "policy" {
 	realm_id           = data.keycloak_realm.realm.id
 	resource_server_id = data.keycloak_openid_client.realm_management.id
@@ -164,6 +167,10 @@ resource "keycloak_openid_client_group_policy" "policy" {
 	}
 	logic             = "POSITIVE"
 	decision_strategy = "UNANIMOUS"
+
+	depends_on = [
+		keycloak_openid_client_permissions.realm_management_permission,
+	]
 }
 
 resource "keycloak_identity_provider_permissions" "test" {

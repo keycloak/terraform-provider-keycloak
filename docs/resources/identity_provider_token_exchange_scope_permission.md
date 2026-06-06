@@ -6,8 +6,7 @@ page_title: "keycloak_identity_provider_token_exchange_scope_permission Resource
 
 ~> **This resource requires Fine-Grained Admin Permissions v1.** It is not compatible with Keycloak instances
 that have `ADMIN_FINE_GRAINED_AUTHZ_V2` enabled (Keycloak 26.2+, where v2 is the default).
-If you are running Keycloak 26.2 or later, use [`keycloak_identity_provider_permissions`](identity_provider_permissions.md) instead,
-which supports the `token_exchange_scope` attribute and the v2 API.
+There is currently no v2 replacement for this resource: the Keycloak v2 permission model does not include a resource type for identity providers.
 
 Allows you to manage Identity Provider "Token exchange" Scope Based Permissions.
 
@@ -28,23 +27,14 @@ At the moment only a client policy type is supported. The client policy will aut
 ## Migration to v2
 
 If you are upgrading your Keycloak instance to 26.2 or later (where Fine-Grained Admin Permissions v2 is enabled by default),
-this resource will return an error. To migrate:
+this resource will return an error. There is currently no v2 replacement resource for identity provider token exchange
+permissions, as the Keycloak v2 permission model does not include a resource type for identity providers.
 
-1. Remove the resource from Terraform state:
-   ```bash
-   terraform state rm keycloak_identity_provider_token_exchange_scope_permission.<name>
-   ```
-2. Replace it with a [`keycloak_identity_provider_permissions`](identity_provider_permissions.md) resource using the `token_exchange_scope` block:
-   ```hcl
-   resource "keycloak_identity_provider_permissions" "example" {
-     realm_id       = keycloak_realm.example.id
-     provider_alias = keycloak_oidc_identity_provider.example.alias
-     token_exchange_scope {
-       policies          = [keycloak_openid_client_group_policy.example.id]
-       decision_strategy = "UNANIMOUS"
-     }
-   }
-   ```
+To stop managing this permission with Terraform, remove it from state:
+
+```bash
+terraform state rm keycloak_identity_provider_token_exchange_scope_permission.<name>
+```
 
 ## Example Usage
 
