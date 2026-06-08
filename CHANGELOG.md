@@ -1,9 +1,5 @@
 ## What's Changed
 
-IMPROVEMENTS:
-
-* fix: no longer fail when the Keycloak server version cannot be read from the restricted `/admin/serverinfo` endpoint (Keycloak 26.4+). The provider now falls back to the optional `keycloak_version` attribute / `KEYCLOAK_VERSION` environment variable, or to the latest tested version with a warning ([#1342](https://github.com/keycloak/terraform-provider-keycloak/issues/1342)).
-
 ## 5.8.0 (June 05, 2026)
 
 FEATURES:

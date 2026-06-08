@@ -198,11 +198,12 @@ func TestResolveServerVersion(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name              string
-		reportedVersion   string
-		configuredVersion string
-		expectVersion     string
-		expectError       bool
+		name                string
+		reportedVersion     string
+		configuredVersion   string
+		expectVersion       string
+		expectError         bool
+		expectErrorContains string
 	}{
 		{
 			name:            "reported version is used as-is",
@@ -237,10 +238,17 @@ func TestResolveServerVersion(t *testing.T) {
 			expectVersion:     "26.2.5",
 		},
 		{
-			name:              "invalid configured version returns an error",
-			reportedVersion:   "",
-			configuredVersion: "not-a-version",
-			expectError:       true,
+			name:                "invalid configured version returns an error that names keycloak_version",
+			reportedVersion:     "",
+			configuredVersion:   "not-a-version",
+			expectError:         true,
+			expectErrorContains: "keycloak_version",
+		},
+		{
+			name:                "invalid reported version returns an error that names the server version",
+			reportedVersion:     "not-a-version",
+			expectError:         true,
+			expectErrorContains: "server version",
 		},
 	}
 
@@ -253,6 +261,9 @@ func TestResolveServerVersion(t *testing.T) {
 			if tt.expectError {
 				if err == nil {
 					t.Fatalf("expected an error but got version %v", v)
+				}
+				if tt.expectErrorContains != "" && !strings.Contains(err.Error(), tt.expectErrorContains) {
+					t.Errorf("expected error to contain %q, got: %v", tt.expectErrorContains, err)
 				}
 				return
 			}

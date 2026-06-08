@@ -211,6 +211,10 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		return err
 	}
 
+	// On Keycloak 26.4+ a service account that cannot read the restricted
+	// /admin/serverinfo endpoint still gets a successful (HTTP 200) response, but
+	// with an empty systemInfo (and therefore an empty version) rather than an
+	// HTTP error. resolveServerVersion handles that empty-version case.
 	v, err := resolveServerVersion(ctx, info.SystemInfo.ServerVersion, keycloakClient.keycloakVersion)
 	if err != nil {
 		return err
@@ -251,8 +255,10 @@ func resolveServerVersion(ctx context.Context, reportedVersion, configuredVersio
 			})
 		} else {
 			serverVersion = string(Version_Latest)
-			tflog.Warn(ctx, "the Keycloak server did not report its version. This happens on Keycloak 26.4+ when the service account cannot read the restricted /admin/serverinfo endpoint. Assuming the latest version this provider was tested against; set the keycloak_version provider attribute (or the KEYCLOAK_VERSION environment variable) to pin it, or grant the service account the manage-realms role (Keycloak 26.5.4+) so the version can be detected automatically.", map[string]interface{}{
+			tflog.Warn(ctx, "the Keycloak server did not report its version; assuming the latest version this provider was tested against", map[string]interface{}{
 				"assumed_keycloak_version": serverVersion,
+				"reason":                   "Keycloak 26.4+ restricts the /admin/serverinfo endpoint when the service account lacks the required role",
+				"hint":                     "set the keycloak_version provider attribute (or the KEYCLOAK_VERSION environment variable) to pin the version, or grant the service account the manage-realms role of the realm-management client (Keycloak 26.5.4+) so the version can be detected automatically",
 			})
 		}
 	}
@@ -271,7 +277,17 @@ func resolveServerVersion(ctx context.Context, reportedVersion, configuredVersio
 		}
 	}
 
-	return version.NewVersion(serverVersion)
+	v, err := version.NewVersion(serverVersion)
+	if err != nil {
+		// Make the failure actionable: the offending value differs depending on
+		// whether it came from the server or from the configured keycloak_version.
+		if reportedVersion == "" && configuredVersion != "" {
+			return nil, fmt.Errorf("the configured keycloak_version %q could not be parsed: %w", configuredVersion, err)
+		}
+		return nil, fmt.Errorf("could not parse the Keycloak server version %q: %w", serverVersion, err)
+	}
+
+	return v, nil
 }
 
 func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
