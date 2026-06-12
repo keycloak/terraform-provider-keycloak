@@ -13,6 +13,7 @@ import (
 func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 	provider := &schema.Provider{
 		DataSourcesMap: map[string]*schema.Resource{
+			"keycloak_generic_protocol_mapper":            dataSourceKeycloakGenericProtocolMapper(),
 			"keycloak_group":                              dataSourceKeycloakGroup(),
 			"keycloak_openid_client":                      dataSourceKeycloakOpenidClient(),
 			"keycloak_openid_client_authorization_policy": dataSourceKeycloakOpenidClientAuthorizationPolicy(),
@@ -103,10 +104,12 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user_template_importer_identity_provider_mapper":   resourceKeycloakUserTemplateImporterIdentityProviderMapper(),
 			"keycloak_custom_identity_provider_mapper":                   resourceKeycloakCustomIdentityProviderMapper(),
 			"keycloak_kubernetes_identity_provider":                      resourceKeycloakKubernetesIdentityProvider(),
+			"keycloak_spiffe_identity_provider":                          resourceKeycloakSpiffeIdentityProvider(),
 			"keycloak_saml_identity_provider":                            resourceKeycloakSamlIdentityProvider(),
 			"keycloak_oidc_google_identity_provider":                     resourceKeycloakOidcGoogleIdentityProvider(),
 			"keycloak_oidc_facebook_identity_provider":                   resourceKeycloakOidcFacebookIdentityProvider(),
 			"keycloak_oidc_github_identity_provider":                     resourceKeycloakOidcGithubIdentityProvider(),
+			"keycloak_oidc_openshift_v4_identity_provider":               resourceKeycloakOidcOpenshiftV4IdentityProvider(),
 			"keycloak_oidc_identity_provider":                            resourceKeycloakOidcIdentityProvider(),
 			"keycloak_openid_client_authorization_resource":              resourceKeycloakOpenidClientAuthorizationResource(),
 			"keycloak_openid_client_group_policy":                        resourceKeycloakOpenidClientAuthorizationGroupPolicy(),

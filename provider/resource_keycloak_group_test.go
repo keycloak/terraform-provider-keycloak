@@ -51,6 +51,76 @@ func runTestBasicGroup(t *testing.T, groupName, attributeName, attributeValue st
 	})
 }
 
+func TestAccKeycloakGroup_basicWithOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc/")
+	attributeName := acctest.RandomWithPrefix("tf-acc")
+	attributeValue := acctest.RandomWithPrefix("tf-acc")
+
+	runTestBasicGroupWithOrganization(t, organizationName, groupName, attributeName, attributeValue)
+}
+
+func TestAccKeycloakGroup_nestedWithOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	parentGroupName := acctest.RandomWithPrefix("tf-acc/")
+	childGroupName := acctest.RandomWithPrefix("tf-acc/")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroup_nestedWithOrganization(organizationName, parentGroupName, childGroupName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExistsWithOrganization("keycloak_group.parent_group"),
+					testAccCheckKeycloakGroupExistsWithOrganization("keycloak_group.child_group"),
+					resource.TestCheckResourceAttrPair("keycloak_group.child_group", "parent_id", "keycloak_group.parent_group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.child_group", "organization_id", "keycloak_organization.organization", "id"),
+				),
+			},
+			{
+				ResourceName:      "keycloak_group.parent_group",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGroupWithOrganizationImportId("keycloak_group.parent_group"),
+			},
+			{
+				ResourceName:      "keycloak_group.child_group",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGroupWithOrganizationImportId("keycloak_group.child_group"),
+			},
+		},
+	})
+}
+
+func runTestBasicGroupWithOrganization(t *testing.T, organizationName, groupName, attributeName, attributeValue string) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroup_basicWithOrganization(organizationName, groupName, attributeName, attributeValue),
+				Check:  testAccCheckKeycloakGroupExistsWithOrganization("keycloak_group.group"),
+			},
+			{
+				ResourceName:      "keycloak_group.group",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGroupWithOrganizationImportId("keycloak_group.group"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakGroup_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -360,6 +430,17 @@ func testAccCheckKeycloakGroupExists(resourceName string) resource.TestCheckFunc
 	}
 }
 
+func testAccCheckKeycloakGroupExistsWithOrganization(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		_, err := getGroupFromStateWithOrganization(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakGroupFetch(resourceName string, group *keycloak.Group) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedGroup, err := getGroupFromState(s, resourceName)
@@ -398,8 +479,9 @@ func testAccCheckKeycloakGroupDestroy() resource.TestCheckFunc {
 
 			id := rs.Primary.ID
 			realm := rs.Primary.Attributes["realm_id"]
+			organizationId := rs.Primary.Attributes["organization_id"]
 
-			group, _ := keycloakClient.GetGroup(testCtx, realm, id)
+			group, _ := keycloakClient.GetOrganizationGroup(testCtx, realm, organizationId, id)
 			if group != nil {
 				return fmt.Errorf("group with id %s still exists", id)
 			}
@@ -426,6 +508,39 @@ func getGroupFromState(s *terraform.State, resourceName string) (*keycloak.Group
 	return group, nil
 }
 
+func getGroupFromStateWithOrganization(s *terraform.State, resourceName string) (*keycloak.Group, error) {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return nil, fmt.Errorf("resource not found: %s", resourceName)
+	}
+
+	id := rs.Primary.ID
+	realm := rs.Primary.Attributes["realm_id"]
+	organizationId := rs.Primary.Attributes["organization_id"]
+
+	group, err := keycloakClient.GetOrganizationGroup(testCtx, realm, organizationId, id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting group with id %s: %s", id, err)
+	}
+
+	return group, nil
+}
+
+func getGroupWithOrganizationImportId(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		realm := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
+		groupId := rs.Primary.ID
+
+		return fmt.Sprintf("%s/%s/%s", realm, organizationId, groupId), nil
+	}
+}
+
 func testKeycloakGroup_basic(group string, attributeName string, attributeValue string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -440,6 +555,62 @@ resource "keycloak_group" "group" {
 	}
 }
 	`, testAccRealm.Realm, strings.ReplaceAll(group, "\\", "\\\\"), attributeName, attributeValue)
+}
+
+func testKeycloakGroup_basicWithOrganization(organization, group string, attributeName string, attributeValue string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s.example.com"
+	}
+}
+
+resource "keycloak_group" "group" {
+	name     = "%s"
+	realm_id = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	attributes = {
+		"%s" = "%s"
+	}
+}
+	`, testAccRealm.Realm, organization, organization, strings.ReplaceAll(group, "\\", "\\\\"), attributeName, attributeValue)
+}
+
+func testKeycloakGroup_nestedWithOrganization(organization, parentGroup, childGroup string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s.example.com"
+	}
+}
+
+resource "keycloak_group" "parent_group" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+}
+
+resource "keycloak_group" "child_group" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	parent_id       = keycloak_group.parent_group.id
+}
+	`, testAccRealm.Realm, organization, organization, strings.ReplaceAll(parentGroup, "\\", "\\\\"), strings.ReplaceAll(childGroup, "\\", "\\\\"))
 }
 
 func testKeycloakGroup_updateRealmBefore(group string) string {

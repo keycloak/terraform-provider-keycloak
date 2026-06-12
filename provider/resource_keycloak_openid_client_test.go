@@ -402,6 +402,40 @@ func TestAccKeycloakOpenidClient_Device_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_JwtAuthorizationGrant_basic(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_6); !ok {
+		t.Skip()
+	}
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	oauth2JwtAuthorizationGrantEnabled := true
+	oauth2JwtAuthorizationGrantIdp := "example-idp"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrant(clientId,
+					oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp,
+				),
+				Check: testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrant("keycloak_openid_client.client",
+					oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp,
+				),
+			},
+			{
+				ResourceName:            "keycloak_openid_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateIdPrefix:     testAccRealm.Realm + "/",
+				ImportStateVerifyIgnore: []string{"exclude_session_state_from_auth_response", "exclude_issuer_from_auth_response"},
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_secret(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -490,6 +524,104 @@ func TestAccKeycloakOpenidClient_secretWriteOnly(t *testing.T) {
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret", clientSecretExplicit),
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", ""),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenidClient_secretWriteOnlyNotClearedAfterExplicitSwitch(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	clientSecretExplicit := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// step 1: create with an explicit client_secret; value lands in Terraform state
+				Config: testKeycloakOpenidClient_secret(clientId, clientSecretExplicit),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretExplicit),
+				),
+			},
+			{
+				// step 2: switch to write-only; version changes 0→1 so new secret is applied;
+				// the stale explicit secret remains in state (setOpenidClientData does not clear it)
+				// — this is the precondition for the bug this test guards against
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+				),
+			},
+			{
+				// step 3: update an unrelated field, version unchanged — stale explicit secret
+				// in state must NOT overwrite the write-only secret in Keycloak
+				Config: testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWO, 1, clientId+"-named"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+				),
+			},
+			{
+				// step 4: re-apply same config — plan must be empty (no secret drift after migration)
+				Config:             testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWO, 1, clientId+"-named"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+// TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift covers the case where a
+// CONFIDENTIAL client was created without an explicit client_secret. Keycloak generates a
+// secret automatically and the provider stores it as a computed value in state. When the user
+// later switches to client_secret_wo (no explicit client_secret ever in config), that computed
+// Keycloak-generated secret must not overwrite the write-only secret on subsequent applies.
+func TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	clientSecretWO := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// step 1: CONFIDENTIAL client, no explicit client_secret in config
+				// Keycloak generates a secret; provider stores it as computed client_secret in state
+				Config: testKeycloakOpenidClient_basic(clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol("keycloak_openid_client.client"),
+					resource.TestCheckResourceAttrSet("keycloak_openid_client.client", "client_secret"),
+				),
+			},
+			{
+				// step 2: switch to write-only; version 0→1 so new secret is applied
+				// the Keycloak-generated computed secret remains in state (never cleared by provider)
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+				),
+			},
+			{
+				// step 3: change extra_config only; version unchanged
+				// stale computed client_secret in state must NOT overwrite the write-only secret
+				Config: testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWO, 1, map[string]string{"key1": "value1"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
+				),
+			},
+			{
+				// step 4: re-apply same config — plan must be empty (no secret drift)
+				Config:             testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWO, 1, map[string]string{"key1": "value1"}),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -927,6 +1059,30 @@ func TestAccKeycloakOpenidClient_oauth2DeviceAuthorizationGrantEnabled(t *testin
 	})
 }
 
+func TestAccKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_6); !ok {
+		t.Skip()
+	}
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId, true),
+				Check:  testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled("keycloak_openid_client.client", true),
+			},
+			{
+				Config: testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId, false),
+				Check:  testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled("keycloak_openid_client.client", false),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenidClient_secretRegenerated(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	var client = &keycloak.OpenidClient{}
@@ -1245,6 +1401,26 @@ func testAccCheckKeycloakOpenidClientOauth2Device(resourceName string,
 	}
 }
 
+func testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrant(resourceName string,
+	oauth2JwtAuthorizationGrantEnabled bool, oauth2JwtAuthorizationGrantIdp string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2JwtAuthorizationGrantEnabled) {
+			return fmt.Errorf("expected openid client to have JWT authorization grant enabled set to %t, but got %v", oauth2JwtAuthorizationGrantEnabled, client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantIdp != oauth2JwtAuthorizationGrantIdp {
+			return fmt.Errorf("expected openid client to have JWT authorization grant IDP set to %s, but got %s", oauth2JwtAuthorizationGrantIdp, client.Attributes.Oauth2JwtAuthorizationGrantIdp)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakOpenidClientFetch(resourceName string, client *keycloak.OpenidClient, withSecret bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		fetchedClient, err := getOpenidClientFromState(s, resourceName)
@@ -1546,6 +1722,21 @@ func testAccCheckKeycloakOpenidClientOauth2DeviceAuthorizationGrantEnabled(resou
 
 		if client.Attributes.Oauth2DeviceAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2DeviceAuthorizationGrantEnabled) {
 			return fmt.Errorf("expected openid client to have device authorization grant enabled set to %t, but got %v", oauth2DeviceAuthorizationGrantEnabled, client.Attributes.Oauth2DeviceAuthorizationGrantEnabled)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakOpenidClientOauth2JwtAuthorizationGrantEnabled(resourceName string, oauth2JwtAuthorizationGrantEnabled bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if client.Attributes.Oauth2JwtAuthorizationGrantEnabled != types.KeycloakBoolQuoted(oauth2JwtAuthorizationGrantEnabled) {
+			return fmt.Errorf("expected openid client to have JWT authorization grant enabled set to %t, but got %v", oauth2JwtAuthorizationGrantEnabled, client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
 		}
 
 		return nil
@@ -1996,6 +2187,49 @@ resource "keycloak_openid_client" "client" {
 	`, testAccRealm.Realm, clientId, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
 }
 
+func testKeycloakOpenidClient_secretWriteOnlyWithName(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int, name string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	name                     = "%s"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = %d
+}
+	`, testAccRealm.Realm, clientId, name, clientSecretWriteOnly, clientSecretWriteOnlyVersion)
+}
+
+func testKeycloakOpenidClient_secretWriteOnlyWithExtraConfig(clientId, clientSecretWriteOnly string, clientSecretWriteOnlyVersion int, extraConfig map[string]string) string {
+	var extraConfigBlock string
+	if len(extraConfig) > 0 {
+		var sb strings.Builder
+		sb.WriteString("\textra_config = {\n")
+		for k, v := range extraConfig {
+			sb.WriteString(fmt.Sprintf("\t\t\"%s\" = \"%s\"\n", k, v))
+		}
+		sb.WriteString("\t}\n")
+		extraConfigBlock = sb.String()
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	client_secret_wo         = "%s"
+	client_secret_wo_version = %d
+%s}
+	`, testAccRealm.Realm, clientId, clientSecretWriteOnly, clientSecretWriteOnlyVersion, extraConfigBlock)
+}
+
 func testKeycloakOpenidClient_invalidRedirectUris(clientId, accessType string, standardFlowEnabled, implicitFlowEnabled bool) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -2225,6 +2459,39 @@ resource "keycloak_openid_client" "client" {
 	oauth2_device_polling_interval 				= "%s"
 }
 	`, testAccRealm.Realm, clientId, oauth2DeviceAuthorizationGrantEnabled, oauth2DeviceCodeLifespan, oauth2DevicePollingInterval)
+}
+
+func testKeycloakOpenidClient_oauth2JwtAuthorizationGrantEnabled(clientId string, oauth2JwtAuthorizationGrantEnabled bool) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   							  					 = "%s"
+	realm_id    							  					 = data.keycloak_realm.realm.id
+	access_type 							  					 = "CONFIDENTIAL"
+	oauth2_jwt_authorization_grant_enabled = %t
+}
+	`, testAccRealm.Realm, clientId, oauth2JwtAuthorizationGrantEnabled)
+}
+
+func testKeycloakOpenidClient_oauth2JwtAuthorizationGrant(clientId string, oauth2JwtAuthorizationGrantEnabled bool, oauth2JwtAuthorizationGrantIdp string) string {
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   							 						 = "%s"
+	realm_id    							 						 = data.keycloak_realm.realm.id
+	access_type 							 						 = "CONFIDENTIAL"
+	oauth2_jwt_authorization_grant_enabled = %t
+	oauth2_jwt_authorization_grant_idp     = "%s"
+}
+	`, testAccRealm.Realm, clientId, oauth2JwtAuthorizationGrantEnabled, oauth2JwtAuthorizationGrantIdp)
 }
 
 func testKeycloakOpenidClient_import(clientId string, enabled bool) string {
