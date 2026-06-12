@@ -56,6 +56,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_default_roles":                                     resourceKeycloakDefaultRoles(),
 			"keycloak_group_roles":                                       resourceKeycloakGroupRoles(),
 			"keycloak_user":                                              resourceKeycloakUser(),
+			"keycloak_user_password":                                     resourceKeycloakUserPassword(),
 			"keycloak_user_roles":                                        resourceKeycloakUserRoles(),
 			"keycloak_openid_client":                                     resourceKeycloakOpenidClient(),
 			"keycloak_openid_client_scope":                               resourceKeycloakOpenidClientScope(),
