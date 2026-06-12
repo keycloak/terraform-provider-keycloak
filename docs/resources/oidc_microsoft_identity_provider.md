@@ -4,9 +4,9 @@ page_title: "keycloak_oidc_microsoft_identity_provider Resource"
 
 # keycloak\_oidc\_microsoft\_identity\_provider Resource
 
-Allows for creating and managing OIDC Identity Providers within Keycloak.
+Allows for creating and managing Microsoft OIDC Identity Providers within Keycloak.
 
-OIDC (OpenID Connect) identity providers allow users to authenticate through a third party system using the OIDC standard.
+Microsoft OIDC (OpenID Connect) identity providers allow users to authenticate through Microsoft using the OIDC standard.
 
 ## Example Usage
 
