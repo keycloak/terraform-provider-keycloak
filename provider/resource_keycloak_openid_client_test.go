@@ -555,7 +555,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnlyNotClearedAfterExplicitSwitch(t 
 				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, "version1"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "version1"),
 				),
 			},
 			{
@@ -606,7 +606,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift(t *testing
 				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, "version1"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
-					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
+					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "version1"),
 				),
 			},
 			{
