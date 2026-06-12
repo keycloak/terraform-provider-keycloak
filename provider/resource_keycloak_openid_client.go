@@ -35,8 +35,22 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOpenidClientImport,
 		},
-		Schema: map[string]*schema.Schema{
-			"client_id": {
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKeycloakOpenidClientV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKeycloakOpenidClientStateUpgradeV0,
+			},
+		},
+		Schema:        resourceKeycloakOpenidClientSchema(),
+		CustomizeDiff: resourceKeycloakOpenidClientDiff(),
+	}
+}
+
+func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"client_id": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -365,9 +379,7 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 				Default:  false,
 				ForceNew: true,
 			},
-		},
-		CustomizeDiff: resourceKeycloakOpenidClientDiff(),
-	}
+		}
 }
 
 func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
@@ -807,4 +819,33 @@ func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.Ke
 	}
 
 	return nil
+}
+
+// resourceKeycloakOpenidClientV0 returns the v0 schema, where client_secret_wo_version was TypeInt.
+func resourceKeycloakOpenidClientV0() *schema.Resource {
+	s := resourceKeycloakOpenidClientSchema()
+	s["client_secret_wo_version"] = &schema.Schema{
+		Type:          schema.TypeInt,
+		Optional:      true,
+		ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+		RequiredWith:  []string{"client_secret_wo"},
+		Description:   "Version of the Client secret write-only argument",
+	}
+	return &schema.Resource{Schema: s}
+}
+
+// resourceKeycloakOpenidClientStateUpgradeV0 migrates client_secret_wo_version from int to string.
+func resourceKeycloakOpenidClientStateUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	if rawState == nil {
+		return nil, fmt.Errorf("cannot migrate nil state")
+	}
+	if v, ok := rawState["client_secret_wo_version"]; ok {
+		switch val := v.(type) {
+		case int:
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", val)
+		case float64: // JSON-decoded state uses float64 for numbers
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", int(val))
+		}
+	}
+	return rawState, nil
 }

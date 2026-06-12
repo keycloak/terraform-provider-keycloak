@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"dario.cat/mergo"
 	"github.com/hashicorp/go-cty/cty"
@@ -12,6 +14,23 @@ import (
 )
 
 func resourceKeycloakOidcIdentityProvider() *schema.Resource {
+	oidcResource := resourceKeycloakIdentityProvider()
+	oidcResource.Schema = resourceKeycloakOidcIdentityProviderSchema()
+	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
+	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.SchemaVersion = 1
+	oidcResource.StateUpgraders = []schema.StateUpgrader{
+		{
+			Version: 0,
+			Type:    resourceKeycloakOidcIdentityProviderV0().CoreConfigSchema().ImpliedType(),
+			Upgrade: resourceKeycloakOidcIdentityProviderStateUpgradeV0,
+		},
+	}
+	return oidcResource
+}
+
+func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 	oidcSchema := map[string]*schema.Schema{
 		"provider_id": {
 			Type:        schema.TypeString,
@@ -139,12 +158,7 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Description: "Disables the validation of the `typ` claim of tokens received from the Identity Provider. If this is `off` the type claim is validated (default).",
 		},
 	}
-	oidcResource := resourceKeycloakIdentityProvider()
-	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcSchema)
-	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
-	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
-	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
-	return oidcResource
+	return mergeSchemas(resourceKeycloakIdentityProvider().Schema, oidcSchema)
 }
 
 func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
@@ -210,4 +224,33 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 		data.Set("client_secret_wo_version", v.(string))
 	}
 	return nil
+}
+
+// resourceKeycloakOidcIdentityProviderV0 returns the v0 schema, where client_secret_wo_version was TypeInt.
+func resourceKeycloakOidcIdentityProviderV0() *schema.Resource {
+	s := resourceKeycloakOidcIdentityProviderSchema()
+	s["client_secret_wo_version"] = &schema.Schema{
+		Type:          schema.TypeInt,
+		Optional:      true,
+		ConflictsWith: []string{"client_secret"},
+		RequiredWith:  []string{"client_secret_wo"},
+		Description:   "Version of the Client secret write-only argument",
+	}
+	return &schema.Resource{Schema: s}
+}
+
+// resourceKeycloakOidcIdentityProviderStateUpgradeV0 migrates client_secret_wo_version from int to string.
+func resourceKeycloakOidcIdentityProviderStateUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	if rawState == nil {
+		return nil, fmt.Errorf("cannot migrate nil state")
+	}
+	if v, ok := rawState["client_secret_wo_version"]; ok {
+		switch val := v.(type) {
+		case int:
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", val)
+		case float64: // JSON-decoded state uses float64 for numbers
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", int(val))
+		}
+	}
+	return rawState, nil
 }
