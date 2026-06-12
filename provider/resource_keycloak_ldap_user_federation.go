@@ -210,6 +210,13 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Description: "When true, Keycloak assumes the LDAP server supports pagination.",
 			},
 
+			"remove_invalid_users_enabled": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, Keycloak removes users from its local database that no longer exist in LDAP during sync.",
+			},
+
 			"batch_size_for_sync": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -372,9 +379,10 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		ReadTimeout:                 data.Get("read_timeout").(string),
 		Pagination:                  data.Get("pagination").(bool),
 
-		BatchSizeForSync:  data.Get("batch_size_for_sync").(int),
-		FullSyncPeriod:    data.Get("full_sync_period").(int),
-		ChangedSyncPeriod: data.Get("changed_sync_period").(int),
+		BatchSizeForSync:          data.Get("batch_size_for_sync").(int),
+		FullSyncPeriod:            data.Get("full_sync_period").(int),
+		ChangedSyncPeriod:         data.Get("changed_sync_period").(int),
+		RemoveInvalidUsersEnabled: data.Get("remove_invalid_users_enabled").(bool),
 	}
 
 	if cache, ok := data.GetOk("cache"); ok {
@@ -462,6 +470,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("batch_size_for_sync", ldap.BatchSizeForSync)
 	data.Set("full_sync_period", ldap.FullSyncPeriod)
 	data.Set("changed_sync_period", ldap.ChangedSyncPeriod)
+	data.Set("remove_invalid_users_enabled", ldap.RemoveInvalidUsersEnabled)
 
 	if _, ok := data.GetOk("cache"); ok {
 		cachePolicySettings := make(map[string]interface{})
