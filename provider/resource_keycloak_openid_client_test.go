@@ -552,7 +552,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnlyNotClearedAfterExplicitSwitch(t 
 				// step 2: switch to write-only; version changes 0→1 so new secret is applied;
 				// the stale explicit secret remains in state (setOpenidClientData does not clear it)
 				// — this is the precondition for the bug this test guards against
-				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, "version1"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
@@ -603,7 +603,7 @@ func TestAccKeycloakOpenidClient_secretWriteOnlyComputedSecretNoDrift(t *testing
 			{
 				// step 2: switch to write-only; version 0→1 so new secret is applied
 				// the Keycloak-generated computed secret remains in state (never cleared by provider)
-				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, 1),
+				Config: testKeycloakOpenidClient_secretWriteOnly(clientId, clientSecretWO, "version1"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOpenidClientHasClientSecret("keycloak_openid_client.client", clientSecretWO),
 					resource.TestCheckResourceAttr("keycloak_openid_client.client", "client_secret_wo_version", "1"),
