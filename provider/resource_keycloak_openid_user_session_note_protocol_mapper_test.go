@@ -142,6 +142,38 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateNote(t *testing.T)
 	})
 }
 
+func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_updateAddToUserinfoAndTokenIntrospection(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserSessionNoteProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_addToUserinfoAndTokenIntrospection(clientId, mapperName, false, false),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdUserSessionNoteProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_userinfo", "false"),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "false"),
+				),
+			},
+			{
+				Config: testKeycloakOpenIdUserSessionNoteProtocolMapper_addToUserinfoAndTokenIntrospection(clientId, mapperName, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdUserSessionNoteProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_userinfo", "true"),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 	var mapper = &keycloak.OpenIdUserSessionNoteProtocolMapper{}
@@ -402,6 +434,28 @@ resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_
 	claim_value_type   = "String"
 	session_note       = "%s"
 }`, testAccRealm.Realm, clientId, mapperName, noteName)
+}
+
+func testKeycloakOpenIdUserSessionNoteProtocolMapper_addToUserinfoAndTokenIntrospection(clientId, mapperName string, addToUserinfo, addToTokenIntrospection bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+resource "keycloak_openid_client" "openid_client" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = "%s"
+	access_type = "BEARER-ONLY"
+}
+resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_mapper" {
+	name                       = "%s"
+	realm_id                   = data.keycloak_realm.realm.id
+	client_id                  = "${keycloak_openid_client.openid_client.id}"
+	claim_name                 = "foo"
+	claim_value_type           = "String"
+	session_note               = "bar"
+	add_to_userinfo            = %t
+	add_to_token_introspection = %t
+}`, testAccRealm.Realm, clientId, mapperName, addToUserinfo, addToTokenIntrospection)
 }
 
 func testKeycloakOpenIdUserSessionNoteProtocolMapper_import(clientId, clientScopeId, mapperName string) string {

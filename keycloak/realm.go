@@ -119,6 +119,7 @@ type Realm struct {
 	OTPPolicyInitialCounter  int    `json:"otpPolicyInitialCounter,omitempty"`
 	OTPPolicyLookAheadWindow int    `json:"otpPolicyLookAheadWindow,omitempty"`
 	OTPPolicyPeriod          int    `json:"otpPolicyPeriod,omitempty"`
+	OTPPolicyCodeReusable    bool   `json:"otpPolicyCodeReusable"`
 	OTPPolicyType            string `json:"otpPolicyType,omitempty"`
 
 	// WebAuthn
@@ -146,6 +147,7 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
 	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
 	WebAuthnPolicyPasswordlessUserVerificationRequirement     string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
+	WebAuthnPolicyPasswordlessPasskeysEnabled                 *bool    `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`

@@ -13,6 +13,7 @@ import (
 func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 	provider := &schema.Provider{
 		DataSourcesMap: map[string]*schema.Resource{
+			"keycloak_generic_protocol_mapper":            dataSourceKeycloakGenericProtocolMapper(),
 			"keycloak_group":                              dataSourceKeycloakGroup(),
 			"keycloak_openid_client":                      dataSourceKeycloakOpenidClient(),
 			"keycloak_openid_client_authorization_policy": dataSourceKeycloakOpenidClientAuthorizationPolicy(),
@@ -103,11 +104,14 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user_template_importer_identity_provider_mapper":   resourceKeycloakUserTemplateImporterIdentityProviderMapper(),
 			"keycloak_custom_identity_provider_mapper":                   resourceKeycloakCustomIdentityProviderMapper(),
 			"keycloak_kubernetes_identity_provider":                      resourceKeycloakKubernetesIdentityProvider(),
+			"keycloak_spiffe_identity_provider":                          resourceKeycloakSpiffeIdentityProvider(),
 			"keycloak_saml_identity_provider":                            resourceKeycloakSamlIdentityProvider(),
 			"keycloak_oidc_google_identity_provider":                     resourceKeycloakOidcGoogleIdentityProvider(),
 			"keycloak_oidc_facebook_identity_provider":                   resourceKeycloakOidcFacebookIdentityProvider(),
 			"keycloak_oidc_github_identity_provider":                     resourceKeycloakOidcGithubIdentityProvider(),
+			"keycloak_oidc_openshift_v4_identity_provider":               resourceKeycloakOidcOpenshiftV4IdentityProvider(),
 			"keycloak_oidc_identity_provider":                            resourceKeycloakOidcIdentityProvider(),
+			"keycloak_oidc_microsoft_identity_provider":                  resourceKeycloakOidcMicrosoftIdentityProvider(),
 			"keycloak_openid_client_authorization_resource":              resourceKeycloakOpenidClientAuthorizationResource(),
 			"keycloak_openid_client_group_policy":                        resourceKeycloakOpenidClientAuthorizationGroupPolicy(),
 			"keycloak_openid_client_role_policy":                         resourceKeycloakOpenidClientAuthorizationRolePolicy(),
@@ -115,6 +119,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_time_policy":                         resourceKeycloakOpenidClientAuthorizationTimePolicy(),
 			"keycloak_openid_client_user_policy":                         resourceKeycloakOpenidClientAuthorizationUserPolicy(),
 			"keycloak_openid_client_client_policy":                       resourceKeycloakOpenidClientAuthorizationClientPolicy(),
+			"keycloak_openid_client_regex_policy":                        resourceKeycloakOpenidClientAuthorizationRegexPolicy(),
 			"keycloak_openid_client_authorization_client_scope_policy":   resourceKeycloakOpenidClientAuthorizationClientScopePolicy(),
 			"keycloak_openid_client_authorization_scope":                 resourceKeycloakOpenidClientAuthorizationScope(),
 			"keycloak_openid_client_authorization_permission":            resourceKeycloakOpenidClientAuthorizationPermission(),
@@ -135,7 +140,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		},
 		Schema: map[string]*schema.Schema{
 			"client_id": {
-				Required:    true,
+				Optional:    true,
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_CLIENT_ID", nil),
 			},
@@ -256,6 +261,12 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 					Type: schema.TypeString,
 				},
 			},
+			"keycloak_version": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("KEYCLOAK_VERSION", ""),
+				Description: "The Keycloak version to assume when the server does not report it via the /admin/serverinfo endpoint. Useful on Keycloak 26.4+ when the service account lacks the view-system (or, since 26.5.4, manage-realms) role. Example: \"26.4.7\".",
+			},
 		},
 	}
 
@@ -284,6 +295,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		tlsClientPrivateKey := data.Get("tls_client_private_key").(string)
 		rootCaCertificate := data.Get("root_ca_certificate").(string)
 		redHatSSO := data.Get("red_hat_sso").(bool)
+		keycloakVersion := data.Get("keycloak_version").(string)
 		additionalHeaders := make(map[string]string)
 		for k, v := range data.Get("additional_headers").(map[string]interface{}) {
 			additionalHeaders[k] = v.(string)
@@ -291,8 +303,26 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 		var diags diag.Diagnostics
 
+		// client_id is only optional when a pre-signed JWT is provided (jwt_token or jwt_token_file).
+		// Password, client_secret, and jwt_signing_key always require client_id, regardless of other settings.
+		hasPreSignedJWT := jwtToken != "" || jwtTokenFile != ""
+		if clientId == "" {
+			if password != "" || username != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required for password grant authentication"}}
+			}
+			if clientSecret != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required for client secret authentication"}}
+			}
+			if jwtSigningKey != "" {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims"}}
+			}
+			if !hasPreSignedJWT && accessToken == "" && initialLogin {
+				return nil, diag.Diagnostics{{Severity: diag.Error, Summary: "client_id is required unless using a pre-signed jwt_token, jwt_token_file, or access_token"}}
+			}
+		}
+
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
-		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, tlsClientCertificate, tlsClientPrivateKey, userAgent, redHatSSO, additionalHeaders)
+		keycloakClient, err := keycloak.NewKeycloakClient(ctx, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, tlsClientCertificate, tlsClientPrivateKey, userAgent, redHatSSO, additionalHeaders, keycloakVersion)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,

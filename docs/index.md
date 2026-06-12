@@ -119,6 +119,8 @@ This type of configuration can be either used with the "Signed JWT" or with "Sig
 
 Note: If a Signed JWT Token is provided, it will be used for authentication even if a client_secret or private_key is also configured.
 
+Note: As per [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523), sending the `client_id` is optional when a pre-signed JWT is provided via `jwt_token` or `jwt_token_file`, because the client identity is embedded in the JWT itself. However, when using `jwt_signing_key`, the provider generates the client assertion and still requires `client_id` in order to populate the JWT `iss` and `sub` claims. This distinction is particularly useful in Kubernetes environments where the JWT `sub` claim may not match the Keycloak client ID.
+
 ### Example Usage (password grant)
 
 ```hcl
@@ -157,7 +159,7 @@ provider "keycloak" {
 
 The following arguments are supported:
 
-- `client_id` - (Required) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`.
+- `client_id` - (Optional) The `client_id` for the client that was created in the "Keycloak Setup" section. Use the `admin-cli` client if you are using the password grant. Defaults to the environment variable `KEYCLOAK_CLIENT_ID`. Required for client secret, password grant, and `jwt_signing_key` authentication. Per [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523), can be omitted only when a pre-signed `jwt_token` or `jwt_token_file` is supplied.
 - `url` - (Required) The URL of the Keycloak instance, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_URL`.
 - `admin_url` - (Optional) The admin URL of the Keycloak instance if different from the base URL, before `/auth/admin`. Defaults to the environment variable `KEYCLOAK_ADMIN_URL`.
 - `client_secret` - (Optional) The secret for the client used by the provider for authentication via the client credentials grant. This can be found or changed using the "Credentials" tab in the client settings. Defaults to the environment variable `KEYCLOAK_CLIENT_SECRET`. This attribute is required when using the client credentials grant, and cannot be set when using the password grant.
@@ -176,4 +178,41 @@ The following arguments are supported:
 - `tls_client_certificate` - (Optional) The TLS client certificate in PEM format when the keycloak server is configured with TLS mutual authentication.
 - `tls_client_private_key` - (Optional) The TLS client pkcs1 private key in PEM format when the keycloak server is configured with TLS mutual authentication.
 - `base_path` - (Optional) The base path used for accessing the Keycloak REST API.  Defaults to the environment variable `KEYCLOAK_BASE_PATH`, or an empty string if the environment variable is not specified. Note that users of the legacy distribution of Keycloak will need to set this attribute to `/auth`.
-- `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API.
+- `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API. The `Host` header is supported and will override the host used for the outgoing request.
+- `keycloak_version` - (Optional) The Keycloak version to assume when the server does not report it via the `/admin/serverinfo` endpoint. Defaults to the environment variable `KEYCLOAK_VERSION`. This is only needed on Keycloak 26.4+ when the service account cannot read `/admin/serverinfo` (see the note below). When the server does report its version, this attribute is ignored and the server-reported version is used. The provider uses the version to enable or disable API behavior that differs between Keycloak releases, so pinning the wrong version may cause incorrect plans. Example: `26.4.7`.
+
+## A note for users of Keycloak 26.4+
+
+Starting with Keycloak 26.4, the `/admin/serverinfo` endpoint only returns system information (including the server
+version) to administrators in the `master` realm or to service accounts that hold the `view-system` role. As of Keycloak
+26.5.4, the `view-system` role is deprecated and the `manage-realms` role grants access to this endpoint instead (see
+[keycloak/keycloak#45934](https://github.com/keycloak/keycloak/pull/45934)). If your service account operates in a
+non-`master` realm without one of these roles, the provider cannot automatically detect the Keycloak version.
+
+When that happens, the provider does **not** fail. Instead it assumes the most recent Keycloak version this provider was
+tested against and logs a warning. Because the version is used to toggle version-specific API behavior, you should resolve
+the warning using one of the following options:
+
+1. **Grant the appropriate role** (recommended for full compatibility): assign the `manage-realms` role (Keycloak 26.5.4+)
+   or the `view-system` role (earlier 26.4.x releases) of the `realm-management` client to your service account so the
+   provider can detect the version automatically.
+
+2. **Set the `keycloak_version` attribute**: explicitly pin the Keycloak version in your provider configuration. Combining
+   this with a tool such as [Renovate](https://docs.renovatebot.com/) lets you keep the pinned version in sync with your
+   Keycloak deployment automatically:
+
+```hcl
+provider "keycloak" {
+  client_id        = "terraform"
+  client_secret    = "your-client-secret"
+  url              = "https://keycloak.example.com"
+  realm            = "my-realm"
+  keycloak_version = "26.4.7" # Pin to the version of your Keycloak server
+}
+```
+
+Or via the environment variable:
+
+```bash
+export KEYCLOAK_VERSION="26.4.7"
+```

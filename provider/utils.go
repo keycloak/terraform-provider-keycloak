@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
+	"slices"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -125,6 +125,18 @@ func stringPointer(s string) *string {
 	return &s
 }
 
+// suppressDiffForMultivalueAttributeOrder returns a DiffSuppressFunc that
+// suppresses diffs when the order of multiple attribute values changed.
+func suppressDiffForMultivalueAttributeOrder() schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		oldParts := strings.Split(old, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		newParts := strings.Split(new, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		slices.Sort(oldParts)
+		slices.Sort(newParts)
+		return strings.Join(oldParts, MULTIVALUE_ATTRIBUTE_SEPARATOR) == strings.Join(newParts, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	}
+}
+
 // suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
 // when the specified attribute is not present in the config (null).
 // This allows:
@@ -143,39 +155,4 @@ func suppressDiffWhenNotInConfig(attrName string) schema.SchemaDiffSuppressFunc 
 
 func intPointer(i int) *int {
 	return &i
-}
-
-// requiredWithoutAll returns a validator which checks that the attribute at `argument` exists
-// if none of the attributes in `checkExists` exist in the configuration
-func requiredWithoutAll(key cty.Path, checkExists []cty.Path) schema.ValidateRawResourceConfigFunc {
-	return func(ctx context.Context, req schema.ValidateResourceConfigFuncRequest, resp *schema.ValidateResourceConfigFuncResponse) {
-		// Skip validation for null or unknown values
-		if req.RawConfig.IsNull() || !req.RawConfig.IsKnown() {
-			return
-		}
-
-		// Check if any of the checkExists attributes exist
-		anyExists := false
-		for _, path := range checkExists {
-			val, err := path.Apply(req.RawConfig)
-			if err == nil && !val.IsNull() && val.IsKnown() {
-				anyExists = true
-				break
-			}
-		}
-
-		// If any exist, the argument is not required
-		if anyExists {
-			return
-		}
-
-		val, err := key.Apply(req.RawConfig)
-		if err != nil || val.IsNull() {
-			resp.Diagnostics = append(resp.Diagnostics, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  "Required attribute not set",
-				Detail:   fmt.Sprintf("The attribute %s is required when none of the following attributes are specified: %v", key, checkExists),
-			})
-		}
-	}
 }
