@@ -27,6 +27,18 @@ func TestAccKeycloakRealmDefaultClientScopes_basic(t *testing.T) {
 					"keycloak_realm_default_client_scopes.default_scopes",
 					[]string{"profile", "email", "web-origins", "roles", "role_list", clientScope}),
 			},
+			{
+				ResourceName:      "keycloak_realm_default_client_scopes.default_scopes",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources["keycloak_realm_default_client_scopes.default_scopes"]
+					if !ok {
+						return "", fmt.Errorf("resource not found: keycloak_realm_default_client_scopes.default_scopes")
+					}
+					return rs.Primary.Attributes["realm_id"], nil
+				},
+			},
 		},
 	})
 }
