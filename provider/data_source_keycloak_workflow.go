@@ -42,6 +42,35 @@ func dataSourceKeycloakWorkflow() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"schedule": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"after": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"batch_size": {
+							Type:     schema.TypeInt,
+							Computed: true,
+						},
+					},
+				},
+			},
+			"state": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"errors": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+					},
+				},
+			},
 			"step": {
 				Type:       schema.TypeList,
 				Computed:   true,
@@ -56,10 +85,22 @@ func dataSourceKeycloakWorkflow() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
+						"priority": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 						"config": {
 							Type:     schema.TypeMap,
 							Computed: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+						"scheduled_at": {
+							Type:     schema.TypeInt,
+							Computed: true,
+						},
+						"status": {
+							Type:     schema.TypeString,
+							Computed: true,
 						},
 					},
 				},
