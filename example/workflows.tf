@@ -63,8 +63,44 @@ resource "keycloak_workflow" "set_attribute_on_group_join" {
   step {
     uses = "set-user-attribute"
     config = {
-      field1     = "bar"
+      field1 = "bar"
     }
+  }
+}
+
+# Scheduled workflow: periodically scan users and progress inactive ones through reminders,
+# then disable them. Mirrors the "Track inactive users" example from the Keycloak docs.
+resource "keycloak_workflow" "track_inactive_users" {
+  realm               = keycloak_realm.workflows.id
+  name                = "track-inactive-users"
+  on                  = "user_authenticated"
+  enabled             = true
+  restart_in_progress = "true"
+
+  schedule {
+    after      = "30s"
+    batch_size = 100
+  }
+
+  step {
+    uses  = "notify-user"
+    after = "180d"
+    config = {
+      message = "It has been a while since your last login. We miss you!"
+    }
+  }
+
+  step {
+    uses  = "notify-user"
+    after = "60d"
+    config = {
+      message = "Your account will be disabled in $${workflow.daysUntilNextStep} days!"
+    }
+  }
+
+  step {
+    uses  = "disable-user"
+    after = "7d"
   }
 }
 
