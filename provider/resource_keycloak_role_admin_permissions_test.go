@@ -102,7 +102,7 @@ resource "keycloak_role_admin_permissions" "test" {
 	role_ids = [keycloak_role.role.id]
 	scopes   = ["map-role"]
 }
-`, testAccRealm.Realm, roleName, roleName)
+`, testAccRealmFGAPv2.Realm, roleName, roleName)
 }
 
 func testKeycloakRoleAdminPermissions_withScopes(roleName, groupName string) string {
@@ -148,5 +148,5 @@ resource "keycloak_role_admin_permissions" "test" {
 	description       = "test permission with multiple scopes"
 	decision_strategy = "UNANIMOUS"
 }
-`, testAccRealm.Realm, roleName, groupName, groupName, roleName)
+`, testAccRealmFGAPv2.Realm, roleName, groupName, groupName, roleName)
 }
