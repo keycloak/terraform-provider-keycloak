@@ -74,6 +74,7 @@ resource "keycloak_openid_group_membership_protocol_mapper" "group_membership_ma
 - `add_to_id_token` - (Optional) Indicates if the property should be added as a claim to the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the property should be added as a claim to the access token. Defaults to `true`.
 - `add_to_userinfo` - (Optional) Indicates if the property should be added as a claim to the UserInfo response body. Defaults to `true`.
+- `add_to_token_introspection` - (Optional) Indicates if the attribute should be added as a claim to the token introspection response. Defaults to `false`.
 
 ## Import
 
