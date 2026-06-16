@@ -113,8 +113,9 @@ data "keycloak_openid_client" "admin_permissions" {
 }
 
 resource "keycloak_openid_client" "target" {
-	realm_id  = data.keycloak_realm.realm.id
-	client_id = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+	access_type = "CONFIDENTIAL"
 }
 
 resource "keycloak_group" "group" {
