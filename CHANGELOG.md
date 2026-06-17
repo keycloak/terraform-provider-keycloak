@@ -6,6 +6,11 @@ FEATURES:
 
 ## 5.8.0 (June 05, 2026)
 
+BREAKING CHANGES:
+
+* Remove support for Keycloak versions older than 26 [#1486](https://github.com/keycloak/terraform-provider-keycloak/pull/1486)
+  * If you want to use this provider for older versions of Keycloak, please use terraform-provider-keycloak < 5.8.0
+
 FEATURES:
 
 * feat: add keycloak_workflow resource by @alexnuttinck in https://github.com/keycloak/terraform-provider-keycloak/pull/1505
