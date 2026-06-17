@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -43,6 +44,11 @@ type KeycloakClient struct {
 	accessTokenProvided bool
 	keycloakVersion     string
 	Mutex               *mutex.KeyValue
+
+	// fgapv2Cached memoises the FGAPv2 feature-flag lookup, which is a
+	// server-level setting that does not change during a Terraform run.
+	fgapv2Mu     sync.Mutex
+	fgapv2Cached *bool
 }
 
 type ClientCredentials struct {

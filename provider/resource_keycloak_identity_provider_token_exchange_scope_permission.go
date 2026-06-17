@@ -189,8 +189,8 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionCreate(ctx cont
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
 	}
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
@@ -221,8 +221,8 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx cont
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -288,8 +288,8 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx contex
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -306,7 +306,7 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx cont
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if err := checkFGAPv2NotEnabledForImport(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
 		return nil, err
 	}
 

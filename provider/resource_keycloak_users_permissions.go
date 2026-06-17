@@ -46,8 +46,8 @@ func resourceKeycloakUsersPermissions() *schema.Resource {
 func resourceKeycloakUsersPermissionsReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -112,8 +112,8 @@ func resourceKeycloakUsersPermissionsReconcile(ctx context.Context, data *schema
 func resourceKeycloakUsersPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -183,8 +183,8 @@ func resourceKeycloakUsersPermissionsRead(ctx context.Context, data *schema.Reso
 func resourceKeycloakUsersPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -195,7 +195,7 @@ func resourceKeycloakUsersPermissionsDelete(ctx context.Context, data *schema.Re
 func resourceKeycloakUsersPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if err := checkFGAPv2NotEnabledForImport(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
 		return nil, err
 	}
 

@@ -59,8 +59,8 @@ func clientPermissionsId(realmId, clientId string) string {
 func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -131,8 +131,8 @@ func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data 
 func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -210,8 +210,8 @@ func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *sche
 func resourceKeycloakOpenidClientPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); !ok {
-		return diags
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
 	}
 
 	realmId := data.Get("realm_id").(string)
@@ -223,7 +223,7 @@ func resourceKeycloakOpenidClientPermissionsDelete(ctx context.Context, data *sc
 func resourceKeycloakOpenidClientPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	if err := checkFGAPv2NotEnabledForImport(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
 		return nil, err
 	}
 

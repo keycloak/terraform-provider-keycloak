@@ -4,22 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 // checkFGAPv2NotEnabled returns a descriptive error when Fine-Grained Admin
-// Permissions v2 is active. resourceType is the Terraform resource name,
-// v2Alternative (if non-empty) is the replacement resource to point users to.
-func checkFGAPv2NotEnabled(ctx context.Context, keycloakClient *keycloak.KeycloakClient, resourceType, v2Alternative string) (diag.Diagnostics, bool) {
+// Permissions v2 is active, and nil otherwise. resourceType is the Terraform
+// resource name, v2Alternative (if non-empty) is the replacement resource to
+// point users to. CRUD callers wrap the error with diag.FromErr; import callers
+// return it directly.
+func checkFGAPv2NotEnabled(ctx context.Context, keycloakClient *keycloak.KeycloakClient, resourceType, v2Alternative string) error {
 	enabled, err := keycloakClient.FGAPv2IsEnabled(ctx)
 	if err != nil {
-		return diag.FromErr(err), false
+		return err
 	}
 	if !enabled {
-		return nil, true
+		return nil
 	}
 
 	detail := fmt.Sprintf(
@@ -36,19 +37,7 @@ func checkFGAPv2NotEnabled(ctx context.Context, keycloakClient *keycloak.Keycloa
 		detail += "\n\nNo direct v2 replacement exists yet. Remove this resource from your state with:\n\n  terraform state rm <resource_address>"
 	}
 
-	return diag.Diagnostics{{
-		Severity: diag.Error,
-		Summary:  "Fine-Grained Admin Permissions v2 is not supported by this resource",
-		Detail:   detail,
-	}}, false
-}
-
-func checkFGAPv2NotEnabledForImport(ctx context.Context, keycloakClient *keycloak.KeycloakClient, resourceType, v2Alternative string) error {
-	diags, ok := checkFGAPv2NotEnabled(ctx, keycloakClient, resourceType, v2Alternative)
-	if !ok {
-		return fmt.Errorf("%s: %s", diags[0].Summary, diags[0].Detail)
-	}
-	return nil
+	return fmt.Errorf("Fine-Grained Admin Permissions v2 is not supported by this resource: %s", detail)
 }
 
 // --- v1 helpers (realm-management, pre-created permissions) ---

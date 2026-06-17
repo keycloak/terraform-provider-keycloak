@@ -79,17 +79,35 @@ func (serverInfo *ServerInfo) providerInstalled(providerType, providerName strin
 	return false
 }
 
+// FGAPv2IsEnabled reports whether the ADMIN_FINE_GRAINED_AUTHZ_V2 feature is
+// enabled on the server. The result is memoised on the client because the
+// feature flag is a server-level setting that does not change during a
+// Terraform run; this avoids a /serverinfo round-trip on every guarded
+// resource operation. Only successful lookups are cached, so a transient
+// error does not poison the cache.
 func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool, error) {
+	keycloakClient.fgapv2Mu.Lock()
+	defer keycloakClient.fgapv2Mu.Unlock()
+
+	if keycloakClient.fgapv2Cached != nil {
+		return *keycloakClient.fgapv2Cached, nil
+	}
+
 	serverInfo, err := keycloakClient.GetServerInfo(ctx)
 	if err != nil {
 		return false, err
 	}
+
+	enabled := false
 	for _, f := range serverInfo.Features {
 		if f.Name == "ADMIN_FINE_GRAINED_AUTHZ_V2" {
-			return f.Enabled, nil
+			enabled = f.Enabled
+			break
 		}
 	}
-	return false, nil
+
+	keycloakClient.fgapv2Cached = &enabled
+	return enabled, nil
 }
 
 func (keycloakClient *KeycloakClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
