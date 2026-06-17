@@ -71,6 +71,12 @@ func resourceKeycloakOpenIdAudienceProtocolMapper() *schema.Resource {
 				Default:     true,
 				Description: "Indicates if this claim should be added to the access token.",
 			},
+			"add_to_token_introspection": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Indicates if the attribute should be a claim in the token introspection response.",
+			},
 		},
 	}
 }
@@ -83,8 +89,9 @@ func mapFromDataToOpenIdAudienceProtocolMapper(data *schema.ResourceData) *keycl
 		ClientId:      data.Get("client_id").(string),
 		ClientScopeId: data.Get("client_scope_id").(string),
 
-		AddToIdToken:     data.Get("add_to_id_token").(bool),
-		AddToAccessToken: data.Get("add_to_access_token").(bool),
+		AddToIdToken:            data.Get("add_to_id_token").(bool),
+		AddToAccessToken:        data.Get("add_to_access_token").(bool),
+		AddToTokenIntrospection: data.Get("add_to_token_introspection").(bool),
 
 		IncludedClientAudience: data.Get("included_client_audience").(string),
 		IncludedCustomAudience: data.Get("included_custom_audience").(string),
@@ -110,6 +117,7 @@ func mapFromOpenIdAudienceMapperToData(mapper *keycloak.OpenIdAudienceProtocolMa
 
 	data.Set("add_to_id_token", mapper.AddToIdToken)
 	data.Set("add_to_access_token", mapper.AddToAccessToken)
+	data.Set("add_to_token_introspection", mapper.AddToTokenIntrospection)
 }
 
 func resourceKeycloakOpenIdAudienceProtocolMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
