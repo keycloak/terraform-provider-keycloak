@@ -24,10 +24,15 @@ func dataSourceKeycloakGroup() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		"group_path": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
+	// group_path enables lookup of nested groups by their full hierarchy path
+	// (e.g. "/parent/child/subgroup"). It is separate from `name` to avoid
+	// overloading semantics and follows Terraform's convention of one field
+	// per concern. Uses the Keycloak /group-by-path endpoint for deterministic,
+	// unambiguous resolution regardless of name collisions.
+	"group_path": {
+		Type:     schema.TypeString,
+		Optional: true,
+	},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -65,6 +70,8 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 
 	var group *keycloak.Group
 	var err error
+	// group_path is set → precise path-based lookup via /group-by-path endpoint.
+	// name is set → legacy name-based lookup (may be ambiguous for nested groups).
 	if groupPath != "" {
 		group, err = keycloakClient.GetGroupByPath(ctx, realmId, groupPath)
 	} else {
