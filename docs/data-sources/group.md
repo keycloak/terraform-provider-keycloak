@@ -34,15 +34,15 @@ resource "keycloak_group_roles" "group_roles" {
     ]
 }
 
-# Using group path support: name starting with '/' is treated as full group path
+# Using group_path to look up nested groups by their full path
 data "keycloak_role" "super_admin" {
     realm_id = keycloak_realm.realm.id
     name     = "super_admin"
 }
 
 data "keycloak_group" "admins" {
-    realm_id = keycloak_realm.realm.id
-    name     = "/Administration/Full Admins"
+    realm_id   = keycloak_realm.realm.id
+    group_path = "/Administration/Full Admins"
 }
 
 resource "keycloak_group_roles" "admins_roles" {
@@ -69,9 +69,8 @@ data "keycloak_group" "organization_group" {
 
 - `realm_id` - (Required) The realm this group exists within.
 - `organization_id` - (Optional) The organization this group exists within. If omitted, the data source looks up realm groups.
-- `name` - (Required) The name of the group or its full path.
-   If the value starts with `/`, it is interpreted as the full group path (e.g. `"/parent/child/subgroup"`).
-   Otherwise, it is treated as a group name (legacy behavior). When multiple groups match the name, the first result is returned.
+- `name` - (Optional) The name of the group. Mutually exclusive with `group_path`. If there are multiple groups matching `name`, the first result is returned.
+- `group_path` - (Optional) The full path of the group (e.g. `"/parent/child/subgroup"`). Mutually exclusive with `name`. This uses the Keycloak `/group-by-path` endpoint for a precise lookup.
 
 ## Attributes Reference
 

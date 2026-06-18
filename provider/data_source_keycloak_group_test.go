@@ -327,8 +327,8 @@ resource "keycloak_group" "similar_group" {
 }
 
 data "keycloak_group" "group" {
-	realm_id = data.keycloak_realm.realm.id
-	name     = "/%s"
+	realm_id   = data.keycloak_realm.realm.id
+	group_path = "/%s"
 
 	depends_on = [
 		keycloak_group.group,
@@ -365,8 +365,8 @@ data "keycloak_group" "group" {
 }
 
 data "keycloak_group" "group_nested_by_path" {
-	realm_id = data.keycloak_realm.realm.id
-	name     = "/%s/%s"
+	realm_id   = data.keycloak_realm.realm.id
+	group_path = "/%s/%s"
 
 	depends_on = [
 		keycloak_group.group_nested

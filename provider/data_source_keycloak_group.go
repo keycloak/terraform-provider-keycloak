@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,11 +19,15 @@ func dataSourceKeycloakGroup() *schema.Resource {
 			"organization_id": {
 				Type:     schema.TypeString,
 				Optional: true,
-			},
-			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
+		},
+		"name": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"group_path": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -50,13 +53,20 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 
 	realmId := data.Get("realm_id").(string)
 	organizationId := data.Get("organization_id").(string)
+	groupPath := data.Get("group_path").(string)
 	groupName := data.Get("name").(string)
+
+	if groupName == "" && groupPath == "" {
+		return diag.Errorf("one of `name` or `group_path` must be specified")
+	}
+	if groupName != "" && groupPath != "" {
+		return diag.Errorf("only one of `name` or `group_path` may be specified")
+	}
 
 	var group *keycloak.Group
 	var err error
-
-	if strings.HasPrefix(groupName, "/") {
-		group, err = keycloakClient.GetGroupByPath(ctx, realmId, groupName)
+	if groupPath != "" {
+		group, err = keycloakClient.GetGroupByPath(ctx, realmId, groupPath)
 	} else {
 		group, err = keycloakClient.GetOrganizationGroupByName(ctx, realmId, organizationId, groupName)
 	}

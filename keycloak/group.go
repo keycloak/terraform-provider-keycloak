@@ -225,7 +225,13 @@ func (keycloakClient *KeycloakClient) GetGroupByPath(ctx context.Context, realmI
 		return nil, fmt.Errorf("group path cannot be empty")
 	}
 
-	urlPath := fmt.Sprintf("/realms/%s/group-by-path/%s", realmId, trimmedPath)
+	segments := strings.Split(trimmedPath, "/")
+	for i, segment := range segments {
+		segments[i] = neturl.PathEscape(segment)
+	}
+	encodedPath := strings.Join(segments, "/")
+
+	urlPath := fmt.Sprintf("/realms/%s/group-by-path/%s", realmId, encodedPath)
 
 	err := keycloakClient.get(ctx, urlPath, &group, nil)
 	if err != nil {
