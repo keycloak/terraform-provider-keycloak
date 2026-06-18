@@ -1239,6 +1239,10 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		if webAuthnPolicyUserVerificationRequirement, ok := webAuthnPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyUserVerificationRequirement = webAuthnPolicyUserVerificationRequirement.(string)
 		}
+	} else if data.HasChange("web_authn_policy") {
+		realm.WebAuthnPolicyAcceptableAaguids = []string{}
+		realm.WebAuthnPolicyExtraOrigins = []string{}
+		realm.WebAuthnPolicySignatureAlgorithms = []string{}
 	}
 
 	//WebAuthn Passwordless
@@ -1300,6 +1304,10 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		if webAuthnPolicyPasswordlessUserVerificationRequirement, ok := webAuthnPasswordlessPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyPasswordlessUserVerificationRequirement = webAuthnPolicyPasswordlessUserVerificationRequirement.(string)
 		}
+	} else if data.HasChange("web_authn_passwordless_policy") {
+		realm.WebAuthnPolicyPasswordlessAcceptableAaguids = []string{}
+		realm.WebAuthnPolicyPasswordlessExtraOrigins = []string{}
+		realm.WebAuthnPolicyPasswordlessSignatureAlgorithms = []string{}
 	}
 
 	return realm, nil
@@ -1468,8 +1476,8 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
-	webAuthnPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyAcceptableAaguids
-	webAuthnPolicy["extra_origins"] = realm.WebAuthnPolicyExtraOrigins
+	webAuthnPolicy["acceptable_aaguids"] = emptySliceIfNil(realm.WebAuthnPolicyAcceptableAaguids)
+	webAuthnPolicy["extra_origins"] = emptySliceIfNil(realm.WebAuthnPolicyExtraOrigins)
 	webAuthnPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyAttestationConveyancePreference
 	webAuthnPolicy["authenticator_attachment"] = realm.WebAuthnPolicyAuthenticatorAttachment
 	webAuthnPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyAvoidSameAuthenticatorRegister
@@ -1477,7 +1485,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPolicy["require_resident_key"] = realm.WebAuthnPolicyRequireResidentKey
 	webAuthnPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyRpEntityName
 	webAuthnPolicy["relying_party_id"] = realm.WebAuthnPolicyRpId
-	webAuthnPolicy["signature_algorithms"] = realm.WebAuthnPolicySignatureAlgorithms
+	webAuthnPolicy["signature_algorithms"] = emptySliceIfNil(realm.WebAuthnPolicySignatureAlgorithms)
 	webAuthnPolicy["user_verification_requirement"] = realm.WebAuthnPolicyUserVerificationRequirement
 	data.Set("web_authn_policy", []interface{}{webAuthnPolicy})
 
@@ -1494,8 +1502,8 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 
 	//WebAuthn Passwordless
 	webAuthnPasswordlessPolicy := make(map[string]interface{})
-	webAuthnPasswordlessPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyPasswordlessAcceptableAaguids
-	webAuthnPasswordlessPolicy["extra_origins"] = realm.WebAuthnPolicyPasswordlessExtraOrigins
+	webAuthnPasswordlessPolicy["acceptable_aaguids"] = emptySliceIfNil(realm.WebAuthnPolicyPasswordlessAcceptableAaguids)
+	webAuthnPasswordlessPolicy["extra_origins"] = emptySliceIfNil(realm.WebAuthnPolicyPasswordlessExtraOrigins)
 	webAuthnPasswordlessPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyPasswordlessAttestationConveyancePreference
 	webAuthnPasswordlessPolicy["authenticator_attachment"] = realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment
 	webAuthnPasswordlessPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister
@@ -1503,7 +1511,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["require_resident_key"] = realm.WebAuthnPolicyPasswordlessRequireResidentKey
 	webAuthnPasswordlessPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyPasswordlessRpEntityName
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
-	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
+	webAuthnPasswordlessPolicy["signature_algorithms"] = emptySliceIfNil(realm.WebAuthnPolicyPasswordlessSignatureAlgorithms)
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 
 	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
@@ -1641,7 +1649,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 
 	setRealmData(data, realm, keycloakVersion)
 
-	return nil
+	return resourceKeycloakRealmRead(ctx, data, meta)
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
