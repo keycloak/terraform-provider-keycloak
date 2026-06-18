@@ -93,6 +93,62 @@ func TestAccKeycloakDataSourceGroup_basicWithOrganization(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakDataSourceGroup_path_topLevel(t *testing.T) {
+	t.Parallel()
+
+	group := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakGroup_path_topLevel(group),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExists("keycloak_group.group"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
+					resource.TestCheckResourceAttr("data.keycloak_group.group", "parent_id", ""),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakDataSourceGroup_path_nested(t *testing.T) {
+	t.Parallel()
+
+	group := acctest.RandomWithPrefix("tf-acc")
+	groupNested := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakGroup_path_nested(group, groupNested),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExists("keycloak_group.group"),
+					testAccCheckKeycloakGroupExists("keycloak_group.group_nested"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "id", "data.keycloak_group.group_nested_by_path", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "realm_id", "data.keycloak_group.group_nested_by_path", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "name", "data.keycloak_group.group_nested_by_path", "name"),
+					resource.TestCheckResourceAttrPair("data.keycloak_group.group_nested_by_path", "parent_id", "keycloak_group.group", "id"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group_nested_by_path"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDataKeycloakGroup(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -252,4 +308,69 @@ data "keycloak_group" "group_nested" {
 	]
 }
 	`, testAccRealm.Realm, group, groupNested)
+}
+
+func testDataSourceKeycloakGroup_path_topLevel(group string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_group" "group" {
+	name     = "%s"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+resource "keycloak_group" "similar_group" {
+	name     = "%s_with_similar_name"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+data "keycloak_group" "group" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = "/%s"
+
+	depends_on = [
+		keycloak_group.group,
+		keycloak_group.similar_group,
+	]
+}
+	`, testAccRealm.Realm, group, group, group)
+}
+
+func testDataSourceKeycloakGroup_path_nested(parent, child string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_group" "group" {
+	name     = "%s"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+resource "keycloak_group" "group_nested" {
+	name     	= "%s"
+	parent_id = keycloak_group.group.id
+	realm_id 	= data.keycloak_realm.realm.id
+}
+
+data "keycloak_group" "group" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = keycloak_group.group.name
+
+	depends_on = [
+		keycloak_group.group
+	]
+}
+
+data "keycloak_group" "group_nested_by_path" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = "/%s/%s"
+
+	depends_on = [
+		keycloak_group.group_nested
+	]
+}
+	`, testAccRealm.Realm, parent, child, parent, child)
 }
