@@ -19,6 +19,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_scope":                dataSourceKeycloakOpenidClientScope(),
 			"keycloak_openid_client_service_account_user": dataSourceKeycloakOpenidClientServiceAccountUser(),
 			"keycloak_realm":                              dataSourceKeycloakRealm(),
+			"keycloak_realm_client_registration_policy":   dataSourceKeycloakRealmClientRegistrationPolicy(),
 			"keycloak_realm_keys":                         dataSourceKeycloakRealmKeys(),
 			"keycloak_role":                               dataSourceKeycloakRole(),
 			"keycloak_user":                               dataSourceKeycloakUser(),
