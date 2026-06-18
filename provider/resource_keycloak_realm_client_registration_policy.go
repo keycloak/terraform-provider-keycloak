@@ -173,7 +173,7 @@ func resourceKeycloakRealmClientRegistrationPolicyImport(ctx context.Context, d 
 		d.Set("realm_id", realmId)
 		d.SetId(matchingPolicy.Id)
 	default:
-		return nil, fmt.Errorf("invalid import format, expected one of:\n  {realmId}/{policyId}\n  {realmId}/{name}/{providerId}/{subType}")
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{policyId}}, {{realmId}}/{{name}}/{{providerId}}/{{subType}}")
 	}
 
 	return []*schema.ResourceData{d}, nil
