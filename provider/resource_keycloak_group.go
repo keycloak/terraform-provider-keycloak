@@ -100,7 +100,9 @@ func mapFromGroupToData(data *schema.ResourceData, group *keycloak.Group) {
 	data.Set("description", group.Description)
 	data.Set("path", group.Path)
 	data.Set("attributes", attributes)
-	data.Set("parent_id", group.ParentId)
+	if group.ParentId != "" {
+		data.Set("parent_id", group.ParentId)
+	}
 }
 
 func resourceKeycloakGroupCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

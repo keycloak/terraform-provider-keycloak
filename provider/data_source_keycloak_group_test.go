@@ -110,7 +110,7 @@ func TestAccKeycloakDataSourceGroup_path_topLevel(t *testing.T) {
 					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
 					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
 					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
-					resource.TestCheckResourceAttr("data.keycloak_group.group", "parent_id", ""),
+					resource.TestCheckNoResourceAttr("data.keycloak_group.group", "parent_id"),
 					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
 				),
 			},
