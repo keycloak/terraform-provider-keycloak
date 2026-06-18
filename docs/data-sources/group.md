@@ -46,11 +46,11 @@ data "keycloak_group" "admins" {
 }
 
 resource "keycloak_group_roles" "admins_roles" {
-    realm_id = data.keycloak_realm.realm.id
+    realm_id = keycloak_realm.realm.id
     group_id = data.keycloak_group.admins.id
 
     role_ids = [
-        keycloak_role.super_admin.id
+        data.keycloak_role.super_admin.id
     ]
 }
 ```
