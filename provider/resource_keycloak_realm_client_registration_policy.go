@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -44,9 +45,10 @@ func resourceKeycloakRealmClientRegistrationPolicy() *schema.Resource {
 				Description:  "Whether this policy applies to anonymous or authenticated client registration.",
 			},
 			"config": {
-				Type:        schema.TypeMap,
-				Optional:    true,
-				Description: "Policy-specific configuration key-value pairs.",
+				Type:             schema.TypeMap,
+				Optional:         true,
+				Description:      "Policy-specific configuration key-value pairs.",
+				DiffSuppressFunc: suppressMultiValueClientRegistrationConfigOrder,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -146,4 +148,58 @@ func resourceKeycloakRealmClientRegistrationPolicyImport(_ context.Context, d *s
 	d.SetId(parts[1])
 
 	return []*schema.ResourceData{d}, nil
+}
+
+// suppressMultiValueClientRegistrationConfigOrder suppresses spurious diffs on
+// multi-value config fields (trusted-hosts, allowed-client-scopes) whose comma-separated
+// old and new values contain the same elements in a different order. Keycloak does not
+// preserve element order across writes, so without this the provider would plan an update
+// on every run even when nothing meaningfully changed.
+//
+// k is the flattened map element key, e.g. "config.trusted-hosts"; the synthetic
+// "config.%" element-count key and any non-multi-value field are never suppressed.
+func suppressMultiValueClientRegistrationConfigOrder(k, old, new string, _ *schema.ResourceData) bool {
+	key := strings.TrimPrefix(k, "config.")
+	if !keycloak.MultiValueClientRegistrationConfigKeys[key] {
+		return false
+	}
+
+	return equalCommaSeparatedSet(old, new)
+}
+
+// equalCommaSeparatedSet reports whether two comma-separated strings contain the same
+// multiset of whitespace-trimmed elements, ignoring order. A differing element count
+// (including added, removed, or duplicated values) is treated as a genuine change.
+func equalCommaSeparatedSet(a, b string) bool {
+	as := splitTrimComma(a)
+	bs := splitTrimComma(b)
+	if len(as) != len(bs) {
+		return false
+	}
+
+	sort.Strings(as)
+	sort.Strings(bs)
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// splitTrimComma splits a comma-separated string into its trimmed elements. An empty
+// or whitespace-only string yields no elements.
+func splitTrimComma(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		out = append(out, strings.TrimSpace(p))
+	}
+
+	return out
 }

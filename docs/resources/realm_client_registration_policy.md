@@ -19,6 +19,20 @@ resource "keycloak_realm_client_registration_policy" "custom" {
   provider_id = "my-client-registration-policy"
   sub_type    = "anonymous"
 }
+
+# A built-in policy with multi-value config (trusted-hosts is an array in Keycloak)
+resource "keycloak_realm_client_registration_policy" "trusted_hosts" {
+  realm_id    = keycloak_realm.realm.id
+  name        = "Trusted Hosts"
+  provider_id = "trusted-hosts"
+  sub_type    = "anonymous"
+
+  config = {
+    "host-sending-registration-request-must-match" = "true"
+    "client-uris-must-match"                        = "true"
+    "trusted-hosts"                                 = "localhost,auth.example.com"
+  }
+}
 ```
 
 ### Attribute Arguments
@@ -28,6 +42,15 @@ resource "keycloak_realm_client_registration_policy" "custom" {
 - `provider_id` - (Required) The ID of the policy provider. NOTE! The provider needs to exist.
 - `sub_type` - (Required) Whether this policy applies to `anonymous` or `authenticated` client registration.
 - `config` - (Optional) A map of provider-specific configuration values.
+
+#### Multi-value configuration
+
+A few built-in policies store their configuration as a list rather than a single value
+(currently `trusted-hosts` and `allowed-client-scopes`). Supply these as a single
+comma-separated string, e.g. `"trusted-hosts" = "localhost,auth.example.com"`. The provider
+splits the value into the array Keycloak expects on write and re-joins it on read. Because
+Keycloak does not preserve element order, a pure reorder of these values is treated as a
+no-op and does not produce a perpetual diff.
 
 ## Import
 

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -78,6 +79,39 @@ func TestAccKeycloakRealmClientRegistrationPolicy_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateIdFunc: testAccRealmClientRegistrationPolicyImportId("keycloak_realm_client_registration_policy.policy"),
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmClientRegistrationPolicy_multiValueConfig(t *testing.T) {
+	t.Parallel()
+
+	policyName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmClientRegistrationPolicyDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmClientRegistrationPolicy_trustedHosts(policyName, "localhost,host-a.example.com,host-b.example.com"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmClientRegistrationPolicyExists("keycloak_realm_client_registration_policy.policy"),
+					// Keycloak does not preserve element order, so compare order-insensitively.
+					testAccCheckRealmClientRegistrationPolicyConfigSetEqual("keycloak_realm_client_registration_policy.policy", "trusted-hosts", []string{"localhost", "host-a.example.com", "host-b.example.com"}),
+				),
+			},
+			{
+				// Re-applying the same config must not produce a diff, even though Keycloak
+				// may return the trusted-hosts array in a different order.
+				Config:   testKeycloakRealmClientRegistrationPolicy_trustedHosts(policyName, "localhost,host-a.example.com,host-b.example.com"),
+				PlanOnly: true,
+			},
+			{
+				// A pure reorder of the same elements is suppressed and is also a no-op plan.
+				Config:   testKeycloakRealmClientRegistrationPolicy_trustedHosts(policyName, "host-b.example.com,localhost,host-a.example.com"),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -180,6 +214,55 @@ func testAccRealmClientRegistrationPolicyImportId(resourceName string) resource.
 
 		return fmt.Sprintf("%s/%s", rs.Primary.Attributes["realm_id"], rs.Primary.ID), nil
 	}
+}
+
+// testAccCheckRealmClientRegistrationPolicyConfigSetEqual asserts that a comma-separated
+// config attribute contains exactly the expected elements, ignoring order. Keycloak does
+// not preserve element order for multi-value config fields like trusted-hosts.
+func testAccCheckRealmClientRegistrationPolicyConfigSetEqual(resourceName, configKey string, expected []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		got := strings.Split(rs.Primary.Attributes["config."+configKey], ",")
+		gotSet := make(map[string]struct{}, len(got))
+		for _, v := range got {
+			gotSet[strings.TrimSpace(v)] = struct{}{}
+		}
+
+		if len(gotSet) != len(expected) {
+			return fmt.Errorf("config.%s = %q, expected elements %v (order-insensitive)", configKey, rs.Primary.Attributes["config."+configKey], expected)
+		}
+		for _, want := range expected {
+			if _, ok := gotSet[want]; !ok {
+				return fmt.Errorf("config.%s = %q, missing expected element %q", configKey, rs.Primary.Attributes["config."+configKey], want)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakRealmClientRegistrationPolicy_trustedHosts(name, trustedHosts string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_realm_client_registration_policy" "policy" {
+	realm_id    = data.keycloak_realm.realm.id
+	name        = "%s"
+	provider_id = "trusted-hosts"
+	sub_type    = "anonymous"
+	config = {
+		"host-sending-registration-request-must-match" = "true"
+		"client-uris-must-match"                        = "true"
+		"trusted-hosts"                                 = "%s"
+	}
+}
+`, testAccRealm.Realm, name, trustedHosts)
 }
 
 func testKeycloakRealmClientRegistrationPolicy_basic(name, subType, maxClients string) string {
