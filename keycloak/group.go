@@ -229,7 +229,7 @@ func (keycloakClient *KeycloakClient) GetGroupByPath(ctx context.Context, realmI
 
 	err := keycloakClient.get(ctx, urlPath, &group, nil)
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if ErrorIs404(err) {
 			return nil, fmt.Errorf("group not found at path: %s", path)
 		}
 		return nil, fmt.Errorf("failed to get group by path %s: %w", path, err)
