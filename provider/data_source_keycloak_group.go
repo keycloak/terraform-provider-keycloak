@@ -19,20 +19,20 @@ func dataSourceKeycloakGroup() *schema.Resource {
 			"organization_id": {
 				Type:     schema.TypeString,
 				Optional: true,
-		},
-		"name": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	// group_path enables lookup of nested groups by their full hierarchy path
-	// (e.g. "/parent/child/subgroup"). It is separate from `name` to avoid
-	// overloading semantics and follows Terraform's convention of one field
-	// per concern. Uses the Keycloak /group-by-path endpoint for deterministic,
-	// unambiguous resolution regardless of name collisions.
-	"group_path": {
-		Type:     schema.TypeString,
-		Optional: true,
-	},
+			},
+			"name": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			// group_path enables lookup of nested groups by their full hierarchy path
+			// (e.g. "/parent/child/subgroup"). It is separate from `name` to avoid
+			// overloading semantics and follows Terraform's convention of one field
+			// per concern. Uses the Keycloak /group-by-path endpoint for deterministic,
+			// unambiguous resolution regardless of name collisions.
+			"group_path": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
