@@ -149,6 +149,35 @@ func TestAccKeycloakClientScope_includeInTokenScope(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakClientScope_includeInOpenidProviderMetadata(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	includeInOpenidProviderMetadata := false
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_basic(clientScopeName),
+				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+			{
+				Config: testKeycloakClientScope_withIncludeInOpenidProviderMetadata(clientScopeName, includeInOpenidProviderMetadata),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInOpenidProviderMetadata("keycloak_openid_client_scope.client_scope", includeInOpenidProviderMetadata),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_basic(clientScopeName),
+				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -236,6 +265,21 @@ func testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInTokenScope(resourc
 
 		if clientScope.Attributes.IncludeInTokenScope != types.KeycloakBoolQuoted(includeInTokenScope) {
 			return fmt.Errorf("expected saml client includeInTokenScope to have %t, but got %t", includeInTokenScope, clientScope.Attributes.IncludeInTokenScope)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInOpenidProviderMetadata(resourceName string, includeInOpenidProviderMetadata bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if clientScope.Attributes.IncludeInOpenidProviderMetadata != types.KeycloakBoolQuoted(includeInOpenidProviderMetadata) {
+			return fmt.Errorf("expected openid client scope includeInOpenidProviderMetadata to have %t, but got %t", includeInOpenidProviderMetadata, clientScope.Attributes.IncludeInOpenidProviderMetadata)
 		}
 
 		return nil
@@ -370,6 +414,23 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	include_in_token_scope = %t
 }
 	`, testAccRealm.Realm, clientScopeName, includeInTokenScope)
+}
+
+func testKeycloakClientScope_withIncludeInOpenidProviderMetadata(clientScopeName string, includeInOpenidProviderMetadata bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	description         = "test description"
+
+	include_in_openid_provider_metadata = %t
+}
+	`, testAccRealm.Realm, clientScopeName, includeInOpenidProviderMetadata)
 }
 
 func testKeycloakClientScope_withGuiOrder(clientScopeName string, guiOrder int) string {

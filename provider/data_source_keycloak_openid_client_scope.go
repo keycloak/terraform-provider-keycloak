@@ -33,6 +33,10 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"include_in_openid_provider_metadata": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"gui_order": {
 				Type:     schema.TypeInt,
 				Computed: true,

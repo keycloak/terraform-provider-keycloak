@@ -221,6 +221,36 @@ func TestAccKeycloakOpenIdAudienceProtocolMapper_updateRealmIdForceNew(t *testin
 	})
 }
 
+func TestAccKeycloakOpenIdAudienceProtocolMapper_addToTokenIntrospection(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_openid_audience_protocol_mapper.audience_mapper"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdAudienceProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenIdAudienceProtocolMapper_addToTokenIntrospection(clientId, mapperName, false),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdAudienceProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "false"),
+				),
+			},
+			{
+				Config: testKeycloakOpenIdAudienceProtocolMapper_addToTokenIntrospection(clientId, mapperName, true),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdAudienceProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -450,6 +480,29 @@ resource "keycloak_openid_audience_protocol_mapper" "audience_mapper" {
 	included_client_audience = "${keycloak_openid_client.openid_client.client_id}"
 	included_custom_audience = "foo"
 }`, testAccRealm.Realm, clientId, mapperName)
+}
+
+func testKeycloakOpenIdAudienceProtocolMapper_addToTokenIntrospection(clientId, mapperName string, addToTokenIntrospection bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "openid_client" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = "%s"
+
+	access_type = "BEARER-ONLY"
+}
+
+resource "keycloak_openid_audience_protocol_mapper" "audience_mapper" {
+	name                       = "%s"
+	realm_id                   = data.keycloak_realm.realm.id
+	client_id                  = "${keycloak_openid_client.openid_client.id}"
+
+	included_custom_audience   = "foo"
+	add_to_token_introspection = %t
+}`, testAccRealm.Realm, clientId, mapperName, addToTokenIntrospection)
 }
 
 func testKeycloakOpenIdAudienceProtocolMapper_validateClientAudienceExists(clientId, mapperName string) string {
