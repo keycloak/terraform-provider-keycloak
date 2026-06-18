@@ -117,6 +117,39 @@ func TestAccKeycloakRealmClientRegistrationPolicy_multiValueConfig(t *testing.T)
 	})
 }
 
+func TestAccKeycloakRealmClientRegistrationPolicy_allowedClientScopes(t *testing.T) {
+	t.Parallel()
+
+	policyName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmClientRegistrationPolicyDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmClientRegistrationPolicy_allowedClientScopes(policyName, "profile,email,roles"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmClientRegistrationPolicyExists("keycloak_realm_client_registration_policy.policy"),
+					// Keycloak stores allowed-client-scopes as an array of individual values and does
+					// not preserve element order, so compare order-insensitively.
+					testAccCheckRealmClientRegistrationPolicyConfigSetEqual("keycloak_realm_client_registration_policy.policy", "allowed-client-scopes", []string{"profile", "email", "roles"}),
+				),
+			},
+			{
+				// Re-applying the same config must not produce a diff.
+				Config:   testKeycloakRealmClientRegistrationPolicy_allowedClientScopes(policyName, "profile,email,roles"),
+				PlanOnly: true,
+			},
+			{
+				// A pure reorder of the same elements is suppressed and is also a no-op plan.
+				Config:   testKeycloakRealmClientRegistrationPolicy_allowedClientScopes(policyName, "roles,profile,email"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmClientRegistrationPolicy_importByAttributes(t *testing.T) {
 	t.Parallel()
 
@@ -303,6 +336,25 @@ resource "keycloak_realm_client_registration_policy" "policy" {
 	}
 }
 `, testAccRealm.Realm, name, trustedHosts)
+}
+
+func testKeycloakRealmClientRegistrationPolicy_allowedClientScopes(name, allowedClientScopes string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_realm_client_registration_policy" "policy" {
+	realm_id    = data.keycloak_realm.realm.id
+	name        = "%s"
+	provider_id = "allowed-client-templates"
+	sub_type    = "anonymous"
+	config = {
+		"allow-default-scopes"  = "false"
+		"allowed-client-scopes" = "%s"
+	}
+}
+`, testAccRealm.Realm, name, allowedClientScopes)
 }
 
 func testKeycloakRealmClientRegistrationPolicy_basic(name, subType, maxClients string) string {
