@@ -99,6 +99,22 @@ func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicy(ctx conte
 	return convertFromComponentToRealmClientRegistrationPolicy(component, realmId), nil
 }
 
+func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicies(ctx context.Context, realmId string) ([]*RealmClientRegistrationPolicy, error) {
+	var components []*component
+
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?parent=%s&type=%s", realmId, realmId, realmClientRegistrationPolicyProviderType), &components, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	policies := make([]*RealmClientRegistrationPolicy, 0, len(components))
+	for _, c := range components {
+		policies = append(policies, convertFromComponentToRealmClientRegistrationPolicy(c, realmId))
+	}
+
+	return policies, nil
+}
+
 func (keycloakClient *KeycloakClient) UpdateRealmClientRegistrationPolicy(ctx context.Context, policy *RealmClientRegistrationPolicy) error {
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", policy.RealmId, policy.Id), convertFromRealmClientRegistrationPolicyToComponent(policy))
 }

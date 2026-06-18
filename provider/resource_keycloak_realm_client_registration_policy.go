@@ -137,15 +137,44 @@ func resourceKeycloakRealmClientRegistrationPolicyDelete(ctx context.Context, da
 	return diag.FromErr(keycloakClient.DeleteRealmClientRegistrationPolicy(ctx, realmId, id))
 }
 
-func resourceKeycloakRealmClientRegistrationPolicyImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+func resourceKeycloakRealmClientRegistrationPolicyImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	parts := strings.Split(d.Id(), "/")
 
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid import format, expected: {realmId}/{policyId}")
-	}
+	switch len(parts) {
+	case 2:
+		// Format: {realmId}/{policyId} — direct import by component ID.
+		d.Set("realm_id", parts[0])
+		d.SetId(parts[1])
+	case 4:
+		// Format: {realmId}/{name}/{providerId}/{subType} — import by attributes.
+		// Keycloak auto-creates the default policies ("Trusted Hosts", etc.) with
+		// server-generated UUIDs that aren't known at plan time, so this format lets
+		// users take ownership of them with static values in an import block.
+		keycloakClient := meta.(*keycloak.KeycloakClient)
+		realmId, name, providerId, subType := parts[0], parts[1], parts[2], parts[3]
 
-	d.Set("realm_id", parts[0])
-	d.SetId(parts[1])
+		policies, err := keycloakClient.GetRealmClientRegistrationPolicies(ctx, realmId)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching client registration policies: %w", err)
+		}
+
+		var matchingPolicy *keycloak.RealmClientRegistrationPolicy
+		for _, policy := range policies {
+			if policy.Name == name && policy.ProviderId == providerId && policy.SubType == subType {
+				matchingPolicy = policy
+				break
+			}
+		}
+
+		if matchingPolicy == nil {
+			return nil, fmt.Errorf("no client registration policy found with name=%q, providerId=%q, subType=%q in realm %q", name, providerId, subType, realmId)
+		}
+
+		d.Set("realm_id", realmId)
+		d.SetId(matchingPolicy.Id)
+	default:
+		return nil, fmt.Errorf("invalid import format, expected one of:\n  {realmId}/{policyId}\n  {realmId}/{name}/{providerId}/{subType}")
+	}
 
 	return []*schema.ResourceData{d}, nil
 }

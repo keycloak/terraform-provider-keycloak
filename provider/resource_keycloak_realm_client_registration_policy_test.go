@@ -117,6 +117,30 @@ func TestAccKeycloakRealmClientRegistrationPolicy_multiValueConfig(t *testing.T)
 	})
 }
 
+func TestAccKeycloakRealmClientRegistrationPolicy_importByAttributes(t *testing.T) {
+	t.Parallel()
+
+	policyName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmClientRegistrationPolicyDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmClientRegistrationPolicy_basic(policyName, "anonymous", "50"),
+				Check:  testAccCheckRealmClientRegistrationPolicyExists("keycloak_realm_client_registration_policy.policy"),
+			},
+			{
+				ResourceName:      "keycloak_realm_client_registration_policy.policy",
+				ImportState:       true,
+				ImportStateIdFunc: testAccRealmClientRegistrationPolicyImportIdByAttributes("keycloak_realm_client_registration_policy.policy"),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmClientRegistrationPolicy_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -242,6 +266,22 @@ func testAccCheckRealmClientRegistrationPolicyConfigSetEqual(resourceName, confi
 		}
 
 		return nil
+	}
+}
+
+func testAccRealmClientRegistrationPolicyImportIdByAttributes(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/%s/%s/%s",
+			rs.Primary.Attributes["realm_id"],
+			rs.Primary.Attributes["name"],
+			rs.Primary.Attributes["provider_id"],
+			rs.Primary.Attributes["sub_type"],
+		), nil
 	}
 }
 

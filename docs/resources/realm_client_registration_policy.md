@@ -54,11 +54,22 @@ no-op and does not produce a perpetual diff.
 
 ## Import
 
-Client registration policies can be imported using the realm name and policy ID:
+Client registration policies can be imported using either of the following formats.
+
+By realm name and policy ID:
 
 ```bash
 $ terraform import keycloak_realm_client_registration_policy.custom my-realm/618cfba7-49aa-4c09-9a19-2f699b576f0b
 ```
 
+By realm name, policy name, provider ID and sub-type (`{realmId}/{name}/{providerId}/{subType}`).
+This is useful for taking ownership of the default policies Keycloak auto-creates, whose
+server-generated UUID is not known ahead of time:
+
+```bash
+$ terraform import keycloak_realm_client_registration_policy.trusted_hosts "my-realm/Trusted Hosts/trusted-hosts/anonymous"
+```
+
 Note: Keycloak automatically creates default policies for every realm (e.g. "Trusted Hosts", "Max Clients Limit").
-These can be managed by importing them first and then removing the resource block to delete them.
+These can be managed by importing them first and then removing the resource block to delete them. The
+`keycloak_realm_client_registration_policy` data source can also be used to look one up dynamically.
