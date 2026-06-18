@@ -3,7 +3,21 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"strings"
 )
+
+const realmClientRegistrationPolicyProviderType = "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy"
+
+// MultiValueClientRegistrationConfigKeys are config fields that Keycloak stores as
+// an array of individual values (map[string][]string). In Terraform they are
+// expressed as a single comma-separated string, split into the array on write and
+// re-joined on read. Keeping the whole comma string as one element would make
+// Keycloak treat e.g. "roles,organization" as a single scope name and reject every
+// dynamic client registration.
+var MultiValueClientRegistrationConfigKeys = map[string]bool{
+	"trusted-hosts":         true,
+	"allowed-client-scopes": true,
+}
 
 type RealmClientRegistrationPolicy struct {
 	Id         string
@@ -17,14 +31,22 @@ type RealmClientRegistrationPolicy struct {
 func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegistrationPolicy) *component {
 	config := map[string][]string{}
 	for k, v := range policy.Config {
-		config[k] = []string{v}
+		if MultiValueClientRegistrationConfigKeys[k] && strings.Contains(v, ",") {
+			parts := strings.Split(v, ",")
+			for i := range parts {
+				parts[i] = strings.TrimSpace(parts[i])
+			}
+			config[k] = parts
+		} else {
+			config[k] = []string{v}
+		}
 	}
 
 	return &component{
 		Id:           policy.Id,
 		Name:         policy.Name,
 		ProviderId:   policy.ProviderId,
-		ProviderType: "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy",
+		ProviderType: realmClientRegistrationPolicyProviderType,
 		ParentId:     policy.RealmId,
 		SubType:      policy.SubType,
 		Config:       config,
@@ -34,7 +56,13 @@ func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegi
 func convertFromComponentToRealmClientRegistrationPolicy(c *component, realmId string) *RealmClientRegistrationPolicy {
 	config := map[string]string{}
 	for k, vals := range c.Config {
-		if len(vals) > 0 {
+		if len(vals) == 0 {
+			continue
+		}
+
+		if MultiValueClientRegistrationConfigKeys[k] && len(vals) > 1 {
+			config[k] = strings.Join(vals, ",")
+		} else {
 			config[k] = vals[0]
 		}
 	}
