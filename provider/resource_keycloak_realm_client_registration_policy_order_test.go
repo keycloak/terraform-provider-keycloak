@@ -3,7 +3,7 @@ package provider
 import "testing"
 
 // TestSuppressMultiValueClientRegistrationConfigOrder verifies that reordering the
-// elements of multi-value config fields (trusted-hosts, allowed-client-scopes) does
+// elements of multi-value config fields (e.g. trusted-hosts, allowed-client-scopes) does
 // not produce spurious diffs, while genuine changes still do. Keycloak returns these
 // arrays in an order that differs from the written order, which previously caused
 // perpetual drift on every plan/apply.
