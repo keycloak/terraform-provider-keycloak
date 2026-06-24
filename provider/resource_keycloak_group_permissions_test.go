@@ -11,6 +11,7 @@ import (
 )
 
 func TestAccKeycloakGroupPermission_basic(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{

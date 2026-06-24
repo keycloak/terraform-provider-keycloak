@@ -2,9 +2,11 @@
 page_title: "keycloak_openid_client_permissions Resource"
 ---
 
-# keycloak\_openid\_client\_permissions Resource
+# keycloak_openid_client_permissions Resource
 
 Allows you to manage all openid client Scope Based Permissions.
+
+This resource requires Fine-Grained Admin Permissions **v1** (`admin-fine-grained-authz:v1`). It is **not compatible** with v2 (`admin-fine-grained-authz:v2`, enabled by default in Keycloak 26.2+), which uses a different API and resource server. If your Keycloak instance has v2 enabled, use [`keycloak_openid_client_admin_permissions`](openid_client_admin_permissions.md) instead.
 
 This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource. More
 information about enabling the preview feature can be found
