@@ -46,11 +46,17 @@ resource "keycloak_realm_client_registration_policy" "trusted_hosts" {
 #### Multi-value configuration
 
 A few built-in policies store their configuration as a list rather than a single value
-(currently `trusted-hosts` and `allowed-client-scopes`). Supply these as a single
-comma-separated string, e.g. `"trusted-hosts" = "localhost,auth.example.com"`. The provider
-splits the value into the array Keycloak expects on write and re-joins it on read. Because
-Keycloak does not preserve element order, a pure reorder of these values is treated as a
-no-op and does not produce a perpetual diff.
+(currently `trusted-hosts`, `allowed-client-scopes` and `allowed-protocol-mapper-types`).
+Supply these as a single comma-separated string, e.g.
+`"trusted-hosts" = "localhost,auth.example.com"`. The provider splits the value into the
+array Keycloak expects on write and re-joins it on read. Because Keycloak does not preserve
+element order, a pure reorder of these values is treated as a no-op and does not produce a
+perpetual diff.
+
+These keys correspond to the policy provider properties that Keycloak reports with a `type`
+of `MultivaluedString` or `MultivaluedList` (see
+`GET /admin/realms/{realm}/client-registration-policy/providers`). Custom client registration
+policy SPIs with multi-valued config are not handled automatically.
 
 ## Import
 

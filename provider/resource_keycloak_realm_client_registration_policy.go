@@ -180,8 +180,8 @@ func resourceKeycloakRealmClientRegistrationPolicyImport(ctx context.Context, d 
 }
 
 // suppressMultiValueClientRegistrationConfigOrder suppresses spurious diffs on
-// multi-value config fields (trusted-hosts, allowed-client-scopes) whose comma-separated
-// old and new values contain the same elements in a different order. Keycloak does not
+// multi-value config fields (those in keycloak.MultiValueClientRegistrationConfigKeys) whose
+// comma-separated old and new values contain the same elements in a different order. Keycloak does not
 // preserve element order across writes, so without this the provider would plan an update
 // on every run even when nothing meaningfully changed.
 //

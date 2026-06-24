@@ -14,9 +14,17 @@ const realmClientRegistrationPolicyProviderType = "org.keycloak.services.clientr
 // re-joined on read. Keeping the whole comma string as one element would make
 // Keycloak treat e.g. "roles,organization" as a single scope name and reject every
 // dynamic client registration.
+//
+// These keys can be discovered from a running Keycloak via
+// GET /admin/realms/{realm}/client-registration-policy/providers: every provider
+// lists its properties; the multi-valued ones have a "type" of "MultivaluedString"
+// or "MultivaluedList". On a stock Keycloak that yields exactly the three keys below.
+// Custom client registration policy SPIs with multi-valued config are not detected
+// automatically and would need to be added here.
 var MultiValueClientRegistrationConfigKeys = map[string]bool{
-	"trusted-hosts":         true,
-	"allowed-client-scopes": true,
+	"trusted-hosts":                 true, // provider: trusted-hosts
+	"allowed-client-scopes":         true, // provider: allowed-client-templates
+	"allowed-protocol-mapper-types": true, // provider: allowed-protocol-mappers
 }
 
 type RealmClientRegistrationPolicy struct {
