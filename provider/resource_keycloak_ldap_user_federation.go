@@ -505,6 +505,10 @@ func resourceKeycloakLdapUserFederationCreate(ctx context.Context, data *schema.
 
 	ldap := getLdapUserFederationFromData(data, realm.Id)
 
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
+		ldap.RelativeCreateDn = ""
+	}
+
 	err = keycloakClient.ValidateLdapUserFederation(ctx, ldap)
 	if err != nil {
 		return diag.FromErr(err)
@@ -555,6 +559,10 @@ func resourceKeycloakLdapUserFederationUpdate(ctx context.Context, data *schema.
 	}
 
 	ldap := getLdapUserFederationFromData(data, realm.Id)
+
+	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
+		ldap.RelativeCreateDn = ""
+	}
 
 	err = keycloakClient.ValidateLdapUserFederation(ctx, ldap)
 	if err != nil {
