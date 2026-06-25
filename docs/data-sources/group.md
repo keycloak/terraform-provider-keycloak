@@ -35,13 +35,23 @@ resource "keycloak_group_roles" "group_roles" {
 }
 ```
 
+Organization groups can be looked up by setting `organization_id`. Organization groups require Keycloak 26.6.0 or later.
+
+```hcl
+data "keycloak_group" "organization_group" {
+    realm_id        = keycloak_realm.realm.id
+    organization_id = keycloak_organization.organization.id
+    name            = "organization-group"
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this group exists within.
+- `organization_id` - (Optional) The organization this group exists within. If omitted, the data source looks up realm groups.
 - `name` - (Required) The name of the group. If there are multiple groups match `name`, the first result will be returned.
 
 ## Attributes Reference
 
 - `id` - (Computed) The unique ID of the group, which can be used as an argument to
   other resources supported by this provider.
-

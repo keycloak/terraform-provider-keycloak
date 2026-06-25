@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakDataSourceGroup_basic(t *testing.T) {
@@ -65,6 +66,33 @@ func TestAccKeycloakDataSourceGroup_nested(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakDataSourceGroup_basicWithOrganization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	group := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakGroup_basicWithOrganization(organizationName, group),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExistsWithOrganization("keycloak_group.group"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "organization_id", "data.keycloak_group.group", "organization_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDataKeycloakGroup(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -74,9 +102,10 @@ func testAccCheckDataKeycloakGroup(resourceName string) resource.TestCheckFunc {
 
 		id := rs.Primary.ID
 		realmId := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
 		name := rs.Primary.Attributes["name"]
 
-		group, err := keycloakClient.GetGroup(testCtx, realmId, id)
+		group, err := keycloakClient.GetOrganizationGroup(testCtx, realmId, organizationId, id)
 		if err != nil {
 			return err
 		}
@@ -116,6 +145,76 @@ data "keycloak_group" "group" {
 	]
 }
 	`, testAccRealm.Realm, group, group)
+}
+
+func testDataSourceKeycloakGroup_basicWithOrganization(organization, group string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s.example.com"
+	}
+}
+
+resource "keycloak_group" "group" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+}
+
+resource "keycloak_group" "realm_group_with_same_name" {
+	name     = "%s"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+data "keycloak_group" "group" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	name            = keycloak_group.group.name
+
+	depends_on = [
+		keycloak_group.group,
+		keycloak_group.realm_group_with_same_name,
+	]
+}
+	`, testAccRealm.Realm, organization, organization, group, group)
+}
+
+func TestAccKeycloakDataSourceGroup_nestedWithSpaces(t *testing.T) {
+	t.Parallel()
+
+	group := acctest.RandomWithPrefix("tf acc")
+	groupNested := acctest.RandomWithPrefix("tf acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakGroupDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakGroup_nested(group, groupNested),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGroupExists("keycloak_group.group"),
+					testAccCheckKeycloakGroupExists("keycloak_group.group_nested"),
+					// realm role
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "id", "data.keycloak_group.group", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_id", "data.keycloak_group.group", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "name", "data.keycloak_group.group", "name"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "id", "data.keycloak_group.group_nested", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "realm_id", "data.keycloak_group.group_nested", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group_nested", "name", "data.keycloak_group.group_nested", "name"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group"),
+					testAccCheckDataKeycloakGroup("data.keycloak_group.group_nested"),
+				),
+			},
+		},
+	})
 }
 
 func testDataSourceKeycloakGroup_nested(group, groupNested string) string {

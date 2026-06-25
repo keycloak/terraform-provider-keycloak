@@ -27,6 +27,11 @@ func resourceKeycloakGroup() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"organization_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
 			"parent_id": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -48,6 +53,8 @@ func resourceKeycloakGroup() *schema.Resource {
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,
+				// ignore ordering of multi-valued attributes
+				DiffSuppressFunc: suppressDiffForMultivalueAttributeOrder(),
 			},
 		},
 	}
@@ -65,11 +72,12 @@ func mapFromDataToGroup(data *schema.ResourceData) *keycloak.Group {
 	description, descriptionOk := data.GetOkExists("description")
 
 	group := &keycloak.Group{
-		Id:         data.Id(),
-		RealmId:    data.Get("realm_id").(string),
-		ParentId:   data.Get("parent_id").(string),
-		Name:       data.Get("name").(string),
-		Attributes: attributes,
+		Id:             data.Id(),
+		RealmId:        data.Get("realm_id").(string),
+		ParentId:       data.Get("parent_id").(string),
+		OrganizationId: data.Get("organization_id").(string),
+		Name:           data.Get("name").(string),
+		Attributes:     attributes,
 	}
 
 	// Set description only if explicitly provided, preserving empty strings
@@ -87,6 +95,7 @@ func mapFromGroupToData(data *schema.ResourceData, group *keycloak.Group) {
 	}
 	data.SetId(group.Id)
 	data.Set("realm_id", group.RealmId)
+	data.Set("organization_id", group.OrganizationId)
 	data.Set("name", group.Name)
 	data.Set("description", group.Description)
 	data.Set("path", group.Path)
@@ -119,9 +128,10 @@ func resourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData, m
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
+	organizationId := data.Get("organization_id").(string)
 	id := data.Id()
 
-	group, err := keycloakClient.GetGroup(ctx, realmId, id)
+	group, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, id)
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
@@ -154,26 +164,36 @@ func resourceKeycloakGroupDelete(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
+	organizationId := data.Get("organization_id").(string)
 	id := data.Id()
 
-	return diag.FromErr(keycloakClient.DeleteGroup(ctx, realmId, id))
+	return diag.FromErr(keycloakClient.DeleteOrganizationGroup(ctx, realmId, organizationId, id))
 }
 
 func resourceKeycloakGroupImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	parts := strings.Split(d.Id(), "/")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{groupId}}")
+	if len(parts) != 2 && len(parts) != 3 {
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{groupId}} or {{realmId}}/{{organizationId}}/{{groupId}}")
 	}
 
-	_, err := keycloakClient.GetGroup(ctx, parts[0], parts[1])
+	realmId := parts[0]
+	groupId := parts[1]
+	organizationId := ""
+	if len(parts) == 3 {
+		organizationId = parts[1]
+		groupId = parts[2]
+	}
+
+	_, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, groupId)
 	if err != nil {
 		return nil, err
 	}
 
-	d.Set("realm_id", parts[0])
-	d.SetId(parts[1])
+	d.Set("realm_id", realmId)
+	d.Set("organization_id", organizationId)
+	d.SetId(groupId)
 
 	diagnostics := resourceKeycloakGroupRead(ctx, d, meta)
 	if diagnostics.HasError() {

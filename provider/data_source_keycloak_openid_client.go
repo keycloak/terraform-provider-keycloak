@@ -250,6 +250,15 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"oauth2_jwt_authorization_grant_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"oauth2_jwt_authorization_grant_idp": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"always_display_in_console": {
 				Type:     schema.TypeBool,
 				Optional: true,

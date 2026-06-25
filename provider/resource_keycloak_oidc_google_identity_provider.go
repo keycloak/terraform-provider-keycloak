@@ -68,6 +68,11 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 			Default:     false,
 			Description: "This is just used together with Identity Provider Authenticator or when kc_idp_hint points to this identity provider. In case that client sends a request with prompt=none and user is not yet authenticated, the error will not be directly returned to client, but the request with prompt=none will be forwarded to this identity provider.",
 		},
+		"login_hint": { //loginHint
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Pass login_hint to identity provider. Set to \"true\" to forward the login_hint client note (the underlying loginHint config attribute is a boolean string).",
+		},
 		"disable_user_info": { //disableUserInfo
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -108,6 +113,7 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVe
 		OfflineAccess:               types.KeycloakBoolQuoted(data.Get("request_refresh_token").(bool)),
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
+		LoginHint:                   data.Get("login_hint").(string),
 		UseJwksUrl:                  true,
 		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
 	}
@@ -130,6 +136,7 @@ func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvid
 	data.Set("request_refresh_token", identityProvider.Config.OfflineAccess)
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
 	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
+	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
 
 	return nil

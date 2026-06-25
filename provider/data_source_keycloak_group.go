@@ -16,6 +16,10 @@ func dataSourceKeycloakGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"organization_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -44,9 +48,10 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
+	organizationId := data.Get("organization_id").(string)
 	groupName := data.Get("name").(string)
 
-	group, err := keycloakClient.GetGroupByName(ctx, realmId, groupName)
+	group, err := keycloakClient.GetOrganizationGroupByName(ctx, realmId, organizationId, groupName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
