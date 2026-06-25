@@ -102,9 +102,6 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		"usersDn": {
 			ldap.UsersDn,
 		},
-		"relativeCreateDn": {
-			ldap.RelativeCreateDn,
-		},
 		"krbPrincipalAttribute": {
 			ldap.KrbPrincipalAttribute,
 		},
@@ -176,6 +173,10 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 
 	if ldap.CustomUserSearchFilter != "" {
 		componentConfig["customUserSearchFilter"] = []string{ldap.CustomUserSearchFilter}
+	}
+
+	if ldap.RelativeCreateDn != "" {
+		componentConfig["relativeCreateDn"] = []string{ldap.RelativeCreateDn}
 	}
 
 	if ldap.UseTruststoreSpi == "ONLY_FOR_LDAPS" {
