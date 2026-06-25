@@ -289,36 +289,6 @@ func getFullNameMapperUsingState(state *terraform.State, resourceName string) (*
 	return keycloakClient.GetOpenIdFullNameProtocolMapper(testCtx, realm, clientId, clientScopeId, id)
 }
 
-func getGenericProtocolMapperIdForClient(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		id := rs.Primary.ID
-		realmId := rs.Primary.Attributes["realm_id"]
-		clientId := rs.Primary.Attributes["client_id"]
-
-		return fmt.Sprintf("%s/client/%s/%s", realmId, clientId, id), nil
-	}
-}
-
-func getGenericProtocolMapperIdForClientScope(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		id := rs.Primary.ID
-		realmId := rs.Primary.Attributes["realm_id"]
-		clientScopeId := rs.Primary.Attributes["client_scope_id"]
-
-		return fmt.Sprintf("%s/client-scope/%s/%s", realmId, clientScopeId, id), nil
-	}
-}
-
 func testKeycloakOpenIdFullNameProtocolMapper_basic_client(clientId, mapperName string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {

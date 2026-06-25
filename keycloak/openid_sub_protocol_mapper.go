@@ -92,7 +92,7 @@ func (keycloakClient *KeycloakClient) ValidateOpenIdSubProtocolMapper(ctx contex
 		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
 	}
 
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
 	if err != nil {
 		return err
 	}

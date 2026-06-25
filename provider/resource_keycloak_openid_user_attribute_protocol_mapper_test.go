@@ -88,6 +88,81 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_import(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenIdUserAttributeProtocolMapper_importFlagClient_success(t *testing.T) {
+	t.Parallel()
+
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+	initialAttributeName := acctest.RandomWithPrefix("tf-acc")
+	updatedAttributeName := acctest.RandomWithPrefix("tf-acc")
+	updatedClaimName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_user_attribute_protocol_mapper.imported_user_attribute_mapper"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createExternalOpenIdUserAttributeProtocolMapperForClient(t, "account", mapperName, initialAttributeName, "bar")
+		},
+		CheckDestroy: testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenIdUserAttributeProtocolMapper_importFlagClient("account", mapperName, updatedAttributeName, updatedClaimName),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdUserAttributeProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "user_attribute", updatedAttributeName),
+					resource.TestCheckResourceAttr(resourceName, "claim_name", updatedClaimName),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenIdUserAttributeProtocolMapper_importFlagClientScope_success(t *testing.T) {
+	t.Parallel()
+
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+	initialAttributeName := acctest.RandomWithPrefix("tf-acc")
+	updatedAttributeName := acctest.RandomWithPrefix("tf-acc")
+	updatedClaimName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_user_attribute_protocol_mapper.imported_user_attribute_mapper"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createExternalOpenIdUserAttributeProtocolMapperForClientScope(t, "profile", mapperName, initialAttributeName, "bar")
+		},
+		CheckDestroy: testAccKeycloakOpenIdUserAttributeProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenIdUserAttributeProtocolMapper_importFlagClientScope("profile", mapperName, updatedAttributeName, updatedClaimName),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdUserAttributeProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "user_attribute", updatedAttributeName),
+					resource.TestCheckResourceAttr(resourceName, "claim_name", updatedClaimName),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOpenIdUserAttributeProtocolMapper_importFlag_notFound(t *testing.T) {
+	t.Parallel()
+
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakOpenIdUserAttributeProtocolMapper_importFlagClient("account", mapperName, "foo", "bar"),
+				ExpectError: regexp.MustCompile(fmt.Sprintf("protocol mapper with name %q not found for import", mapperName)),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOpenIdUserAttributeProtocolMapper_update(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -273,6 +348,74 @@ func getUserAttributeMapperUsingState(state *terraform.State, resourceName strin
 	return keycloakClient.GetOpenIdUserAttributeProtocolMapper(testCtx, realm, clientId, clientScopeId, id)
 }
 
+func createExternalOpenIdUserAttributeProtocolMapperForClient(t *testing.T, clientName, mapperName, userAttribute, claimName string) *keycloak.OpenIdUserAttributeProtocolMapper {
+	t.Helper()
+
+	client, err := keycloakClient.GetOpenidClientByClientId(testCtx, testAccRealm.Realm, clientName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mapper := &keycloak.OpenIdUserAttributeProtocolMapper{
+		Name:                    mapperName,
+		RealmId:                 testAccRealm.Realm,
+		ClientId:                client.Id,
+		AddToIdToken:            true,
+		AddToAccessToken:        true,
+		AddToUserInfo:           true,
+		AddToTokenIntrospection: true,
+		UserAttribute:           userAttribute,
+		ClaimName:               claimName,
+		ClaimValueType:          "String",
+	}
+
+	if err := keycloakClient.NewOpenIdUserAttributeProtocolMapper(testCtx, mapper); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() {
+		_ = keycloakClient.DeleteOpenIdUserAttributeProtocolMapper(testCtx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Id)
+	})
+
+	return mapper
+}
+
+func createExternalOpenIdUserAttributeProtocolMapperForClientScope(t *testing.T, clientScopeName, mapperName, userAttribute, claimName string) *keycloak.OpenIdUserAttributeProtocolMapper {
+	t.Helper()
+
+	clientScopes, err := keycloakClient.ListOpenidClientScopesWithFilter(testCtx, testAccRealm.Realm, keycloak.IncludeOpenidClientScopesMatchingNames([]string{clientScopeName}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(clientScopes) != 1 {
+		t.Fatalf("expected client scope name %q to match 1 scope, matched %d", clientScopeName, len(clientScopes))
+	}
+
+	mapper := &keycloak.OpenIdUserAttributeProtocolMapper{
+		Name:                    mapperName,
+		RealmId:                 testAccRealm.Realm,
+		ClientScopeId:           clientScopes[0].Id,
+		AddToIdToken:            true,
+		AddToAccessToken:        true,
+		AddToUserInfo:           true,
+		AddToTokenIntrospection: true,
+		UserAttribute:           userAttribute,
+		ClaimName:               claimName,
+		ClaimValueType:          "String",
+	}
+
+	if err := keycloakClient.NewOpenIdUserAttributeProtocolMapper(testCtx, mapper); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() {
+		_ = keycloakClient.DeleteOpenIdUserAttributeProtocolMapper(testCtx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Id)
+	})
+
+	return mapper
+}
+
 func testKeycloakOpenIdUserAttributeProtocolMapper_basic_client(clientId, mapperName string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -385,4 +528,48 @@ resource "keycloak_openid_user_attribute_protocol_mapper" "user_attribute_mapper
 	claim_name        = "bar"
 	claim_value_type  = "%s"
 }`, testAccRealm.Realm, mapperName, claimValueType)
+}
+
+func testKeycloakOpenIdUserAttributeProtocolMapper_importFlagClient(clientName, mapperName, attributeName, claimName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "imported_client" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+	access_type = "PUBLIC"
+	import      = true
+}
+
+resource "keycloak_openid_user_attribute_protocol_mapper" "imported_user_attribute_mapper" {
+	name           = "%s"
+	realm_id       = data.keycloak_realm.realm.id
+	client_id      = keycloak_openid_client.imported_client.id
+	import         = true
+	user_attribute = "%s"
+	claim_name     = "%s"
+}`, testAccRealm.Realm, clientName, mapperName, attributeName, claimName)
+}
+
+func testKeycloakOpenIdUserAttributeProtocolMapper_importFlagClientScope(clientScopeName, mapperName, attributeName, claimName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+data "keycloak_openid_client_scope" "imported_client_scope" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = "%s"
+}
+
+resource "keycloak_openid_user_attribute_protocol_mapper" "imported_user_attribute_mapper" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	client_scope_id = data.keycloak_openid_client_scope.imported_client_scope.id
+	import          = true
+	user_attribute  = "%s"
+	claim_name      = "%s"
+}`, testAccRealm.Realm, clientScopeName, mapperName, attributeName, claimName)
 }

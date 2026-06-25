@@ -83,6 +83,19 @@ func (keycloakClient *KeycloakClient) GetOpenIdUserPropertyProtocolMapper(ctx co
 	return protocolMapper.convertToOpenIdUserPropertyProtocolMapper(realmId, clientId, clientScopeId)
 }
 
+func (keycloakClient *KeycloakClient) GetOpenIdUserPropertyProtocolMapperByName(ctx context.Context, realmId, clientId, clientScopeId, name string) (*OpenIdUserPropertyProtocolMapper, error) {
+	foundMapper, err := keycloakClient.getProtocolMapperByName(ctx, realmId, clientId, clientScopeId, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if foundMapper == nil {
+		return nil, nil
+	}
+
+	return foundMapper.convertToOpenIdUserPropertyProtocolMapper(realmId, clientId, clientScopeId)
+}
+
 func (keycloakClient *KeycloakClient) DeleteOpenIdUserPropertyProtocolMapper(ctx context.Context, realmId, clientId, clientScopeId, mapperId string) error {
 	return keycloakClient.delete(ctx, individualProtocolMapperPath(realmId, clientId, clientScopeId, mapperId), nil)
 }
@@ -107,19 +120,13 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdUserPropertyProtocolMapper(ctx
 }
 
 func (mapper *OpenIdUserPropertyProtocolMapper) Validate(ctx context.Context, keycloakClient *KeycloakClient) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	existingMapper, err := keycloakClient.getProtocolMapperByName(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, protocolMapper := range protocolMappers {
-		if protocolMapper.Name == mapper.Name {
-			return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client", mapper.Name)
-		}
+	if existingMapper != nil && existingMapper.Id != mapper.Id {
+		return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client or client scope", mapper.Name)
 	}
 
 	return nil

@@ -109,6 +109,19 @@ func (keycloakClient *KeycloakClient) GetOpenIdUserAttributeProtocolMapper(ctx c
 	return protocolMapper.convertToOpenIdUserAttributeProtocolMapper(realmId, clientId, clientScopeId)
 }
 
+func (keycloakClient *KeycloakClient) GetOpenIdUserAttributeProtocolMapperByName(ctx context.Context, realmId, clientId, clientScopeId, name string) (*OpenIdUserAttributeProtocolMapper, error) {
+	foundMapper, err := keycloakClient.getProtocolMapperByName(ctx, realmId, clientId, clientScopeId, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if foundMapper == nil {
+		return nil, nil
+	}
+
+	return foundMapper.convertToOpenIdUserAttributeProtocolMapper(realmId, clientId, clientScopeId)
+}
+
 func (keycloakClient *KeycloakClient) DeleteOpenIdUserAttributeProtocolMapper(ctx context.Context, realmId, clientId, clientScopeId, mapperId string) error {
 	return keycloakClient.delete(ctx, individualProtocolMapperPath(realmId, clientId, clientScopeId, mapperId), nil)
 }
@@ -133,19 +146,13 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdUserAttributeProtocolMapper(ct
 }
 
 func (keycloakClient *KeycloakClient) ValidateOpenIdUserAttributeProtocolMapper(ctx context.Context, mapper *OpenIdUserAttributeProtocolMapper) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	existingMapper, err := keycloakClient.getProtocolMapperByName(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, protocolMapper := range protocolMappers {
-		if protocolMapper.Name == mapper.Name && protocolMapper.Id != mapper.Id {
-			return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client", mapper.Name)
-		}
+	if existingMapper != nil && existingMapper.Id != mapper.Id {
+		return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client or client scope", mapper.Name)
 	}
 
 	return nil

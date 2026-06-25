@@ -54,6 +54,30 @@ func (keycloakClient *KeycloakClient) GetGenericProtocolMappers(ctx context.Cont
 
 }
 
+func (keycloakClient *KeycloakClient) GetGenericProtocolMapperByName(ctx context.Context, realmId string, clientId string, clientScopeId string, name string) (*GenericProtocolMapper, error) {
+	foundMapper, err := keycloakClient.getProtocolMapperByName(ctx, realmId, clientId, clientScopeId, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if foundMapper == nil {
+		return nil, nil
+	}
+
+	genericProtocolMapper := &GenericProtocolMapper{
+		Id:             foundMapper.Id,
+		Name:           foundMapper.Name,
+		Protocol:       foundMapper.Protocol,
+		ProtocolMapper: foundMapper.ProtocolMapper,
+		Config:         foundMapper.Config,
+		RealmId:        realmId,
+		ClientId:       clientId,
+		ClientScopeId:  clientScopeId,
+	}
+
+	return genericProtocolMapper, nil
+}
+
 func (keycloakClient *KeycloakClient) GetGenericProtocolMapper(ctx context.Context, realmId string, clientId string, clientScopeId string, mapperId string) (*GenericProtocolMapper, error) {
 	var genericProtocolMapper GenericProtocolMapper
 
@@ -88,7 +112,7 @@ func (mapper *GenericProtocolMapper) Validate(ctx context.Context, keycloakClien
 		return fmt.Errorf("validation error: only one of ClientId or ClientScopeId must be set")
 	}
 
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
 	if err != nil {
 		return err
 	}
