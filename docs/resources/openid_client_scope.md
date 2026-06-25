@@ -18,11 +18,12 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_openid_client_scope" "openid_client_scope" {
-  realm_id               = keycloak_realm.realm.id
-  name                   = "groups"
-  description            = "When requested, this scope will map a user's group memberships to a claim"
-  include_in_token_scope = true
-  gui_order              = 1
+  realm_id                            = keycloak_realm.realm.id
+  name                                = "groups"
+  description                         = "When requested, this scope will map a user's group memberships to a claim"
+  include_in_token_scope              = true
+  include_in_openid_provider_metadata = true
+  gui_order                           = 1
 }
 ```
 
@@ -33,6 +34,7 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 - `description` - (Optional) The description of this client scope in the GUI.
 - `consent_screen_text` - (Optional) When set, a consent screen will be displayed to users authenticating to clients with this scope attached. The consent screen will display the string value of this attribute.
 - `include_in_token_scope` - (Optional) When `true`, the name of this client scope will be added to the access token property 'scope' as well as to the Token Introspection Endpoint response. When `false`, this scope will be omitted from the token and from the Token Introspection Endpoint response. Defaults to `true`.
+- `include_in_openid_provider_metadata` - (Optional) When `true`, this client scope will be listed in the `scopes_supported` field of the realm's OpenID Provider Metadata (the `.well-known/openid-configuration` discovery document). When `false`, it will be omitted. Defaults to `true`.
 - `gui_order` - (Optional) Specify order of the client scope in GUI (such as in Consent page) as integer.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration attributes to this client scope. This can be used for custom attributes or to add configuration attributes that are not yet supported by this Terraform provider. Use this attribute at your own risk, as it may conflict with top-level configuration attributes in future provider updates.
   ``` hcl

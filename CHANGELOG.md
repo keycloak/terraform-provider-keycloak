@@ -1,6 +1,15 @@
 ## What's Changed
 
+FEATURES:
+
+* feat: support import for `keycloak_realm_default_client_scopes` and `keycloak_realm_optional_client_scopes` using the realm id
+
 ## 5.8.0 (June 05, 2026)
+
+BREAKING CHANGES:
+
+* Remove support for Keycloak versions older than 26 [#1486](https://github.com/keycloak/terraform-provider-keycloak/pull/1486)
+  * If you want to use this provider for older versions of Keycloak, please use terraform-provider-keycloak < 5.8.0
 
 FEATURES:
 

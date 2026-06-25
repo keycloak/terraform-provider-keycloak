@@ -72,6 +72,11 @@ func resourceKeycloakOpenIdGroupMembershipProtocolMapper() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"add_to_token_introspection": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -84,11 +89,12 @@ func mapFromDataToOpenIdGroupMembershipProtocolMapper(data *schema.ResourceData)
 		ClientId:      data.Get("client_id").(string),
 		ClientScopeId: data.Get("client_scope_id").(string),
 
-		ClaimName:        data.Get("claim_name").(string),
-		FullPath:         data.Get("full_path").(bool),
-		AddToIdToken:     data.Get("add_to_id_token").(bool),
-		AddToAccessToken: data.Get("add_to_access_token").(bool),
-		AddToUserinfo:    data.Get("add_to_userinfo").(bool),
+		ClaimName:               data.Get("claim_name").(string),
+		FullPath:                data.Get("full_path").(bool),
+		AddToIdToken:            data.Get("add_to_id_token").(bool),
+		AddToAccessToken:        data.Get("add_to_access_token").(bool),
+		AddToUserinfo:           data.Get("add_to_userinfo").(bool),
+		AddToTokenIntrospection: data.Get("add_to_token_introspection").(bool),
 	}
 }
 
@@ -108,6 +114,7 @@ func mapFromOpenIdGroupMembershipMapperToData(mapper *keycloak.OpenIdGroupMember
 	data.Set("add_to_id_token", mapper.AddToIdToken)
 	data.Set("add_to_access_token", mapper.AddToAccessToken)
 	data.Set("add_to_userinfo", mapper.AddToUserinfo)
+	data.Set("add_to_token_introspection", mapper.AddToTokenIntrospection)
 }
 
 func resourceKeycloakOpenIdGroupMembershipProtocolMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

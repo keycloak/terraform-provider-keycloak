@@ -13,9 +13,10 @@ type OpenIdGroupMembershipProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	AddToIdToken     bool
-	AddToAccessToken bool
-	AddToUserinfo    bool
+	AddToIdToken            bool
+	AddToAccessToken        bool
+	AddToUserinfo           bool
+	AddToTokenIntrospection bool
 
 	ClaimName string
 	FullPath  bool
@@ -28,11 +29,12 @@ func (mapper *OpenIdGroupMembershipProtocolMapper) convertToGenericProtocolMappe
 		Protocol:       "openid-connect",
 		ProtocolMapper: "oidc-group-membership-mapper",
 		Config: map[string]string{
-			fullPathField:         strconv.FormatBool(mapper.FullPath),
-			addToIdTokenField:     strconv.FormatBool(mapper.AddToIdToken),
-			addToAccessTokenField: strconv.FormatBool(mapper.AddToAccessToken),
-			addToUserInfoField:    strconv.FormatBool(mapper.AddToUserinfo),
-			claimNameField:        mapper.ClaimName,
+			fullPathField:                strconv.FormatBool(mapper.FullPath),
+			addToIdTokenField:            strconv.FormatBool(mapper.AddToIdToken),
+			addToAccessTokenField:        strconv.FormatBool(mapper.AddToAccessToken),
+			addToUserInfoField:           strconv.FormatBool(mapper.AddToUserinfo),
+			addToTokenIntrospectionField: strconv.FormatBool(mapper.AddToTokenIntrospection),
+			claimNameField:               mapper.ClaimName,
 		},
 	}
 }
@@ -58,6 +60,11 @@ func (protocolMapper *protocolMapper) convertToOpenIdGroupMembershipProtocolMapp
 		return nil, err
 	}
 
+	addToTokenIntrospectionClaim, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToTokenIntrospectionField])
+	if err != nil {
+		return nil, err
+	}
+
 	return &OpenIdGroupMembershipProtocolMapper{
 		Id:            protocolMapper.Id,
 		Name:          protocolMapper.Name,
@@ -65,11 +72,12 @@ func (protocolMapper *protocolMapper) convertToOpenIdGroupMembershipProtocolMapp
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		ClaimName:        protocolMapper.Config[claimNameField],
-		FullPath:         fullPath,
-		AddToIdToken:     idTokenClaim,
-		AddToAccessToken: accessTokenClaim,
-		AddToUserinfo:    userinfoTokenClaim,
+		ClaimName:               protocolMapper.Config[claimNameField],
+		FullPath:                fullPath,
+		AddToIdToken:            idTokenClaim,
+		AddToAccessToken:        accessTokenClaim,
+		AddToUserinfo:           userinfoTokenClaim,
+		AddToTokenIntrospection: addToTokenIntrospectionClaim,
 	}, nil
 }
 

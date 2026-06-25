@@ -92,23 +92,25 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_update(t *testing.T) {
 	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper"
 
 	mapperOne := &keycloak.OpenIdGroupMembershipProtocolMapper{
-		Name:             acctest.RandString(10),
-		ClientId:         "terraform-client-" + acctest.RandString(10),
-		ClaimName:        acctest.RandString(10),
-		FullPath:         randomBool(),
-		AddToIdToken:     randomBool(),
-		AddToAccessToken: randomBool(),
-		AddToUserinfo:    randomBool(),
+		Name:                    acctest.RandString(10),
+		ClientId:                "terraform-client-" + acctest.RandString(10),
+		ClaimName:               acctest.RandString(10),
+		FullPath:                randomBool(),
+		AddToIdToken:            randomBool(),
+		AddToAccessToken:        randomBool(),
+		AddToUserinfo:           randomBool(),
+		AddToTokenIntrospection: randomBool(),
 	}
 
 	mapperTwo := &keycloak.OpenIdGroupMembershipProtocolMapper{
-		Name:             mapperOne.Name,
-		ClientId:         mapperOne.ClientId,
-		ClaimName:        acctest.RandString(10),
-		FullPath:         randomBool(),
-		AddToIdToken:     randomBool(),
-		AddToAccessToken: randomBool(),
-		AddToUserinfo:    randomBool(),
+		Name:                    mapperOne.Name,
+		ClientId:                mapperOne.ClientId,
+		ClaimName:               acctest.RandString(10),
+		FullPath:                randomBool(),
+		AddToIdToken:            randomBool(),
+		AddToAccessToken:        randomBool(),
+		AddToUserinfo:           randomBool(),
+		AddToTokenIntrospection: randomBool(),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -380,16 +382,69 @@ resource "keycloak_openid_client" "openid_client" {
 }
 
 resource "keycloak_openid_group_membership_protocol_mapper" "group_membership_mapper" {
-	name                = "%s"
-	realm_id            = data.keycloak_realm.realm.id
-	client_id           = "${keycloak_openid_client.openid_client.id}"
+	name                       = "%s"
+	realm_id                   = data.keycloak_realm.realm.id
+	client_id                  = "${keycloak_openid_client.openid_client.id}"
 
-	claim_name          = "%s"
-	full_path           = %t
-	add_to_id_token     = %t
-	add_to_access_token = %t
-	add_to_userinfo     = %t
-}`, testAccRealm.Realm, mapper.ClientId, mapper.Name, mapper.ClaimName, mapper.FullPath, mapper.AddToIdToken, mapper.AddToAccessToken, mapper.AddToUserinfo)
+	claim_name                 = "%s"
+	full_path                  = %t
+	add_to_id_token            = %t
+	add_to_access_token        = %t
+	add_to_userinfo            = %t
+	add_to_token_introspection = %t
+}`, testAccRealm.Realm, mapper.ClientId, mapper.Name, mapper.ClaimName, mapper.FullPath, mapper.AddToIdToken, mapper.AddToAccessToken, mapper.AddToUserinfo, mapper.AddToTokenIntrospection)
+}
+
+func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_addToTokenIntrospection(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	mapperName := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_openid_group_membership_protocol_mapper.group_membership_mapper_client"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdGroupMembershipProtocolMapperDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_addToTokenIntrospection(clientId, mapperName, false),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdGroupMembershipProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "false"),
+				),
+			},
+			{
+				Config: testKeycloakOpenIdGroupMembershipProtocolMapper_addToTokenIntrospection(clientId, mapperName, true),
+				Check: resource.ComposeTestCheckFunc(
+					testKeycloakOpenIdGroupMembershipProtocolMapperExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "add_to_token_introspection", "true"),
+				),
+			},
+		},
+	})
+}
+
+func testKeycloakOpenIdGroupMembershipProtocolMapper_addToTokenIntrospection(clientId, mapperName string, addToTokenIntrospection bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "openid_client" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+
+	access_type = "BEARER-ONLY"
+}
+
+resource "keycloak_openid_group_membership_protocol_mapper" "group_membership_mapper_client" {
+	name                       = "%s"
+	realm_id                   = data.keycloak_realm.realm.id
+	client_id                  = "${keycloak_openid_client.openid_client.id}"
+	claim_name                 = "bar"
+	add_to_token_introspection = %t
+}`, testAccRealm.Realm, clientId, mapperName, addToTokenIntrospection)
 }
 
 func testKeycloakOpenIdGroupMembershipProtocolMapper_updateClientForceNew(clientIdOne, clientIdTwo, currentClient string) string {
