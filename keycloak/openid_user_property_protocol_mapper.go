@@ -106,20 +106,14 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdUserPropertyProtocolMapper(ctx
 	return keycloakClient.put(ctx, path, mapper.convertToGenericProtocolMapper())
 }
 
-func (mapper *OpenIdUserPropertyProtocolMapper) Validate(ctx context.Context, keycloakClient *KeycloakClient) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+func (keycloakClient *KeycloakClient) ValidateOpenIdUserPropertyProtocolMapper(ctx context.Context, mapper *OpenIdUserPropertyProtocolMapper) error {
+	existingMapper, err := keycloakClient.getProtocolMapperByName(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, protocolMapper := range protocolMappers {
-		if protocolMapper.Name == mapper.Name {
-			return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client", mapper.Name)
-		}
+	if existingMapper != nil && existingMapper.Id != mapper.Id {
+		return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client or client scope", mapper.Name)
 	}
 
 	return nil
