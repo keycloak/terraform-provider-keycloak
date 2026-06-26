@@ -30,6 +30,9 @@ custom-user-federation-example/bin
 custom-user-federation-example/build
 !custom-user-federation-example/build/libs
 
+# custom authz policy example
+custom-authz-policy-example/build
+
 # docs
 site/
 
