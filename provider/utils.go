@@ -91,13 +91,6 @@ func handleNotFoundError(ctx context.Context, err error, data *schema.ResourceDa
 	return diag.FromErr(err)
 }
 
-func emptySliceIfNil(s []string) []string {
-	if s == nil {
-		return []string{}
-	}
-	return s
-}
-
 func interfaceSliceToStringSlice(iv []interface{}) []string {
 	var sv []string
 	for _, i := range iv {
