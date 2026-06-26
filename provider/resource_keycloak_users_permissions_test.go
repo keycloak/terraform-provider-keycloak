@@ -11,6 +11,7 @@ import (
 )
 
 func TestAccKeycloakUsersPermission_basic(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"

@@ -26,6 +26,7 @@ type LdapUserFederation struct {
 	UserObjectClasses      []string // api expects comma + space separated for some reason
 	ConnectionUrl          string
 	UsersDn                string
+	RelativeCreateDn       string
 	BindDn                 string
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
@@ -172,6 +173,10 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 
 	if ldap.CustomUserSearchFilter != "" {
 		componentConfig["customUserSearchFilter"] = []string{ldap.CustomUserSearchFilter}
+	}
+
+	if ldap.RelativeCreateDn != "" {
+		componentConfig["relativeCreateDn"] = []string{ldap.RelativeCreateDn}
 	}
 
 	if ldap.UseTruststoreSpi == "ONLY_FOR_LDAPS" {
@@ -334,6 +339,7 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		UserObjectClasses:      userObjectClasses,
 		ConnectionUrl:          component.getConfig("connectionUrl"),
 		UsersDn:                component.getConfig("usersDn"),
+		RelativeCreateDn:       component.getConfig("relativeCreateDn"),
 		BindDn:                 component.getConfig("bindDn"),
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),

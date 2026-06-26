@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2 # we want the HEAD commit and the previous commit to compare changed files
 
@@ -51,21 +51,30 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        keycloak-version:
-          - '26.6.3'
-          - '26.5.7'
-          - '26.4.7'
-          - '26.3.5'
-          - '26.2.5'
-          - '26.1.4'
-          - '26.0.8'
+        include:
+          # Newest version: run once with v2 (the default) and once with v1 explicitly enabled
+          - keycloak-version: '26.6.3'
+          - keycloak-version: '26.6.3'
+            fgap-version: 'v1'
+          # Older versions that do not have v2 as the default: enable v1 explicitly
+          - keycloak-version: '26.5.7'
+            fgap-version: 'v1'
+          - keycloak-version: '26.4.7'
+            fgap-version: 'v1'
+          - keycloak-version: '26.3.5'
+            fgap-version: 'v1'
+          - keycloak-version: '26.2.5'
+            fgap-version: 'v1'
+          # Versions without FGAP support
+          - keycloak-version: '26.1.4'
+          - keycloak-version: '26.0.8'
       fail-fast: false
     concurrency:
-      group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}
+      group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}-${{ matrix.fgap-version || 'default' }}
       cancel-in-progress: true
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -101,6 +110,7 @@ jobs:
       - name: Start Keycloak Container
         env:
           KC_26_2_OR_LATER: ${{ steps.keycloak-version.outputs.kc_26_2_or_later }}
+          FGAP_VERSION: ${{ matrix.fgap-version }}
         run: |
           EXTRA_FEATURES=""
           EXTRA_HTTP_CLIENT_AUTH=""
@@ -109,8 +119,11 @@ jobs:
           EXTRA_MTLS_CERTS=""
           MOUNT_FEDERATION_EXAMPLE_VOLUME="-v $PWD/custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z"
           if [[ "$KC_26_2_OR_LATER" == "true" ]]; then
-            EXTRA_FEATURES=",admin-fine-grained-authz:v1"
-
+            # When fgap-version is set explicitly use it; otherwise default to v2
+            # (the default since Keycloak 26.2). The feature must be enabled
+            # explicitly so the FGAP acceptance tests run against the intended version.
+            FGAP_FEATURE="${FGAP_VERSION:-v2}"
+            EXTRA_FEATURES=",admin-fine-grained-authz:${FGAP_FEATURE}"
             EXTRA_HTTP_CLIENT_AUTH="-e KC_HTTPS_CLIENT_AUTH=required"
             EXTRA_HTTPS_CERT="-e KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/testdata/tls/server-cert.pem"
             EXTRA_HTTPS_KEY="-e KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/testdata/tls/server-key.pem"
