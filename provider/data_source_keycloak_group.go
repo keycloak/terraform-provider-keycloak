@@ -21,8 +21,9 @@ func dataSourceKeycloakGroup() *schema.Resource {
 				Optional: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ExactlyOneOf: []string{"name", "group_path"},
 			},
 			// group_path enables lookup of nested groups by their full hierarchy path
 			// (e.g. "/parent/child/subgroup"). It is separate from `name` to avoid
@@ -30,8 +31,9 @@ func dataSourceKeycloakGroup() *schema.Resource {
 			// per concern. Uses the Keycloak /group-by-path endpoint for deterministic,
 			// unambiguous resolution regardless of name collisions.
 			"group_path": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ExactlyOneOf: []string{"name", "group_path"},
 			},
 			"description": {
 				Type:     schema.TypeString,
@@ -63,9 +65,6 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 
 	if groupName == "" && groupPath == "" {
 		return diag.Errorf("one of `name` or `group_path` must be specified")
-	}
-	if groupName != "" && groupPath != "" {
-		return diag.Errorf("only one of `name` or `group_path` may be specified")
 	}
 
 	var group *keycloak.Group
