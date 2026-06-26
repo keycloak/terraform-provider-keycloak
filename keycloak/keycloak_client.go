@@ -49,6 +49,22 @@ type KeycloakClient struct {
 	// server-level setting that does not change during a Terraform run.
 	fgapv2Mu     sync.Mutex
 	fgapv2Cached *bool
+
+	serverInfo     *ServerInfo
+	serverInfoErr  error
+	serverInfoOnce sync.Once
+}
+
+// GetServerInfoCached returns the server info, fetching it from Keycloak on first use and
+// caching it for the lifetime of the client. The server info (component types, installed
+// providers, themes) is server-global and static, so it is safe to reuse across operations
+// instead of hitting /serverinfo on every plan/apply.
+func (keycloakClient *KeycloakClient) GetServerInfoCached(ctx context.Context) (*ServerInfo, error) {
+	keycloakClient.serverInfoOnce.Do(func() {
+		keycloakClient.serverInfo, keycloakClient.serverInfoErr = keycloakClient.GetServerInfo(ctx)
+	})
+
+	return keycloakClient.serverInfo, keycloakClient.serverInfoErr
 }
 
 type ClientCredentials struct {

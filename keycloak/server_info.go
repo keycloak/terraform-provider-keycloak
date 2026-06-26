@@ -7,7 +7,13 @@ type SystemInfo struct {
 }
 
 type ComponentType struct {
-	Id string `json:"id"`
+	Id         string                  `json:"id"`
+	Properties []ComponentTypeProperty `json:"properties"`
+}
+
+type ComponentTypeProperty struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 type ProviderType struct {
@@ -46,6 +52,28 @@ func (serverInfo *ServerInfo) ThemeIsInstalled(t, themeName string) bool {
 	}
 
 	return false
+}
+
+// MultiValuedConfigKeys returns the set of config keys that Keycloak models as multi-valued
+// (an array of individual values) for the given component type and provider id. Keycloak
+// reports these as properties with a "type" of "MultivaluedString" or "MultivaluedList" in
+// the server info component-type metadata.
+func (serverInfo *ServerInfo) MultiValuedConfigKeys(componentType, providerId string) map[string]bool {
+	keys := map[string]bool{}
+
+	for _, ct := range serverInfo.ComponentTypes[componentType] {
+		if ct.Id != providerId {
+			continue
+		}
+
+		for _, p := range ct.Properties {
+			if p.Type == "MultivaluedString" || p.Type == "MultivaluedList" {
+				keys[p.Name] = true
+			}
+		}
+	}
+
+	return keys
 }
 
 func (serverInfo *ServerInfo) ComponentTypeIsInstalled(componentType, componentTypeId string) bool {
