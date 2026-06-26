@@ -1,5 +1,86 @@
 ## What's Changed
 
+FEATURES:
+
+* feat: support import for `keycloak_realm_default_client_scopes` and `keycloak_realm_optional_client_scopes` using the realm id
+
+## 5.8.0 (June 05, 2026)
+
+BREAKING CHANGES:
+
+* Remove support for Keycloak versions older than 26 [#1486](https://github.com/keycloak/terraform-provider-keycloak/pull/1486)
+  * If you want to use this provider for older versions of Keycloak, please use terraform-provider-keycloak < 5.8.0
+
+FEATURES:
+
+* feat: add keycloak_workflow resource by @alexnuttinck in https://github.com/keycloak/terraform-provider-keycloak/pull/1505
+* feat: enable passwordless passkeys attribute in realm resource by @8fuhst in https://github.com/keycloak/terraform-provider-keycloak/pull/1498
+* Add openid client authorization regex policy by @ddroessler-ext in https://github.com/keycloak/terraform-provider-keycloak/pull/1463
+* adds keycloak_spiffe_identity_provider resource by @marshallford in https://github.com/keycloak/terraform-provider-keycloak/pull/1569
+* feat(google-idp): expose login_hint as top-level attribute by @springerigor in https://github.com/keycloak/terraform-provider-keycloak/pull/1589
+* feat: Add support for Keycloak organization groups by @dmavrommatis in https://github.com/keycloak/terraform-provider-keycloak/pull/1607
+* Add `keycloak_oidc_openshift_v4_identity_provider` resource by @jonesbusy in https://github.com/keycloak/terraform-provider-keycloak/pull/1536
+* feat: add support for JWT Authorization Grant in openid clients by @maarous in https://github.com/keycloak/terraform-provider-keycloak/pull/1570
+* Add keycloak_generic_protocol_mapper data source by @nlenepveu in https://github.com/keycloak/terraform-provider-keycloak/pull/1436
+
+IMPROVEMENTS:
+
+* 1485 drop support for outdated Keycloak versions by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1486
+* Add `add_to_token_introspection` field to `keycloak_openid_user_attribute_protocol_mapper` by @siegenthalerroger in https://github.com/keycloak/terraform-provider-keycloak/pull/1472
+* supports modifying brute force strategy by @remcojansen in https://github.com/keycloak/terraform-provider-keycloak/pull/1500
+* Update to KC26.5.5 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1506
+* Migrated to terraform-plugin-testing by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1518
+* Make `client_id` optional for Signed JWT authentication by @slaskawi in https://github.com/keycloak/terraform-provider-keycloak/pull/1552
+* 1574 update to KC26.6.1 and KC26.5.7 for KC26.5 branch by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1575
+* add otp policy code reusable flag by @dominiktopp in https://github.com/keycloak/terraform-provider-keycloak/pull/1560
+* Document allow_utf8 parameter for keycloak_realm smtp_server by @ingokuba in https://github.com/keycloak/terraform-provider-keycloak/pull/1583
+* add `default_value` for `keycloak_realm_user_profile` by @matlipowski in https://github.com/keycloak/terraform-provider-keycloak/pull/1578
+* feat: add "add_to_userinfo" and "add_to_token_introspection" to user session note mapper by @rruxandra in https://github.com/keycloak/terraform-provider-keycloak/pull/1610
+* Update to KC26.6.3, dependency updates and minor refactoring by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1613
+
+BUG FIXES:
+
+* Fix/errors on example apply by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1481
+* fix(user): ignore multi-valued attribute ordering to prevent drift by @michalvavrik in https://github.com/keycloak/terraform-provider-keycloak/pull/1511
+* fix(scopes): prevent drift by validating default client scope existence by @michalvavrik in https://github.com/keycloak/terraform-provider-keycloak/pull/1512
+* Fix using of computed values for client_secret_wo by allowing values unknown during the validation phase by @michalvavrik in https://github.com/keycloak/terraform-provider-keycloak/pull/1521
+* fix(provider): set Host header via request.Host for additional_headers by @Newspicel in https://github.com/keycloak/terraform-provider-keycloak/pull/1543
+* Fix algorithm field and parent_id resolution, add key_use field in keycloak_realm_keystore_java_keystore by @dzsibi in https://github.com/keycloak/terraform-provider-keycloak/pull/1544
+* fix: sort multivalue attribute values on keycloak_group resource before diff by @danielnickels in https://github.com/keycloak/terraform-provider-keycloak/pull/1520
+* fix(openid_client): allow clearing empty-string text fields by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1568
+* fix: URL-encode path segments in groupParentId to support group names… by @NargiT in https://github.com/keycloak/terraform-provider-keycloak/pull/1525
+* fix(openid-client): prevent stale client_secret in state from overwriting client_secret_wo by @plafue in https://github.com/keycloak/terraform-provider-keycloak/pull/1603
+* fix: removes custom validation logic by @remcojansen in https://github.com/keycloak/terraform-provider-keycloak/pull/1604
+* Only set want_authn_requests_signed to false when signature_algorithm is not explicitly set by @RichieB2B in https://github.com/keycloak/terraform-provider-keycloak/pull/1496
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [alexnuttinck](https://github.com/alexnuttinck)
+- [8fuhst](https://github.com/8fuhst)
+- [ddroessler-ext](https://github.com/ddroessler-ext)
+- [marshallford](https://github.com/marshallford)
+- [springerigor](https://github.com/springerigor)
+- [dmavrommatis](https://github.com/dmavrommatis)
+- [jonesbusy](https://github.com/jonesbusy)
+- [maarous](https://github.com/maarous)
+- [nlenepveu](https://github.com/nlenepveu)
+- [sschu](https://github.com/sschu)
+- [siegenthalerroger](https://github.com/siegenthalerroger)
+- [remcojansen](https://github.com/remcojansen)
+- [slaskawi](https://github.com/slaskawi)
+- [dominiktopp](https://github.com/dominiktopp)
+- [ingokuba](https://github.com/ingokuba)
+- [matlipowski](https://github.com/matlipowski)
+- [rruxandra](https://github.com/rruxandra)
+- [michalvavrik](https://github.com/michalvavrik)
+- [Newspicel](https://github.com/Newspicel)
+- [dzsibi](https://github.com/dzsibi)
+- [danielnickels](https://github.com/danielnickels)
+- [thomasdarimont](https://github.com/thomasdarimont)
+- [NargiT](https://github.com/NargiT)
+- [plafue](https://github.com/plafue)
+- [RichieB2B](https://github.com/RichieB2B)
+
 ## 5.7.0 (February 20, 2026)
 
 FEATURES:

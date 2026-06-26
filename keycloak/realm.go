@@ -101,6 +101,9 @@ type Realm struct {
 	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
 	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
+	AdminPermissionsClient  *struct {
+		Id string `json:"id"`
+	} `json:"adminPermissionsClient,omitempty"`
 
 	PasswordPolicy string `json:"passwordPolicy"`
 
@@ -119,6 +122,7 @@ type Realm struct {
 	OTPPolicyInitialCounter  int    `json:"otpPolicyInitialCounter,omitempty"`
 	OTPPolicyLookAheadWindow int    `json:"otpPolicyLookAheadWindow,omitempty"`
 	OTPPolicyPeriod          int    `json:"otpPolicyPeriod,omitempty"`
+	OTPPolicyCodeReusable    bool   `json:"otpPolicyCodeReusable"`
 	OTPPolicyType            string `json:"otpPolicyType,omitempty"`
 
 	// WebAuthn

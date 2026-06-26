@@ -23,6 +23,7 @@ var testAccRealm *keycloak.Realm
 var testAccRealmTwo *keycloak.Realm
 var testAccRealmUserFederation *keycloak.Realm
 var testAccRealmOrganization *keycloak.Realm
+var testAccRealmFGAPv2 *keycloak.Realm
 var testCtx context.Context
 
 func init() {
@@ -35,9 +36,9 @@ func init() {
 	helper.UpdateEnvFromTestEnvIfPresent()
 
 	initialLogin := os.Getenv("KEYCLOAK_ACCESS_TOKEN") == ""
-	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
-	})
+	}, os.Getenv("KEYCLOAK_VERSION"))
 	if err != nil {
 		panic(err)
 	}
@@ -57,23 +58,29 @@ func TestMain(m *testing.M) {
 	testAccRealm = createTestRealm(testCtx)
 	testAccRealmTwo = createTestRealm(testCtx)
 	testAccRealmUserFederation = createTestRealm(testCtx)
+	testAccRealmFGAPv2 = createFGAPv2TestRealm(testCtx)
 
 	code := m.Run()
 
 	// Clean up of tests is not fatal if it fails
 	err := keycloakClient.DeleteRealm(testCtx, testAccRealm.Realm)
 	if err != nil {
-		log.Printf("Unable to delete realm %s: %s", testAccRealmUserFederation.Realm, err)
+		log.Printf("Unable to delete realm %s: %s", testAccRealm.Realm, err)
 	}
 
 	err = keycloakClient.DeleteRealm(testCtx, testAccRealmTwo.Realm)
 	if err != nil {
-		log.Printf("Unable to delete realm %s: %s", testAccRealmUserFederation.Realm, err)
+		log.Printf("Unable to delete realm %s: %s", testAccRealmTwo.Realm, err)
 	}
 
 	err = keycloakClient.DeleteRealm(testCtx, testAccRealmUserFederation.Realm)
 	if err != nil {
 		log.Printf("Unable to delete realm %s: %s", testAccRealmUserFederation.Realm, err)
+	}
+
+	err = keycloakClient.DeleteRealm(testCtx, testAccRealmFGAPv2.Realm)
+	if err != nil {
+		log.Printf("Unable to delete realm %s: %s", testAccRealmFGAPv2.Realm, err)
 	}
 
 	os.Exit(code)
@@ -104,6 +111,17 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 		log.Fatalf("Unable to create new realm: %s", err)
 	}
 
+	return r
+}
+
+func createFGAPv2TestRealm(testCtx context.Context) *keycloak.Realm {
+	r := createTestRealm(testCtx)
+	if fgapv2, err := keycloakClient.FGAPv2IsEnabled(testCtx); err == nil && fgapv2 {
+		r.AdminPermissionsEnabled = true
+		if err := keycloakClient.UpdateRealm(testCtx, r); err != nil {
+			log.Fatalf("Unable to enable admin permissions on FGAPv2 test realm %s: %s", r.Realm, err)
+		}
+	}
 	return r
 }
 

@@ -57,6 +57,41 @@ func resourceKeycloakWorkflow() *schema.Resource {
 				Optional:    true,
 				Description: "Event that restarts an in-progress workflow execution.",
 			},
+			"schedule": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Scheduling configuration for the workflow.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"after": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Interval between successive scheduled runs, as a duration string (e.g. 30s, 1d) or milliseconds.",
+						},
+						"batch_size": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of resources processed per scheduled batch.",
+						},
+					},
+				},
+			},
+			"state": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "Runtime state of the workflow, as reported by Keycloak.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"errors": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Errors recorded for the workflow.",
+						},
+					},
+				},
+			},
 			"step": {
 				Type:        schema.TypeList,
 				Required:    true,
@@ -72,13 +107,28 @@ func resourceKeycloakWorkflow() *schema.Resource {
 						"after": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "Delay in milliseconds before executing this step.",
+							Description: "Delay before executing this step, as a duration string (e.g. 7d) or milliseconds (e.g. 2592000000).",
+						},
+						"priority": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Execution priority of the step, used to order steps that would otherwise run at the same time.",
 						},
 						"config": {
 							Type:        schema.TypeMap,
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 							Description: "Key-value configuration for the step.",
+						},
+						"scheduled_at": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "Epoch timestamp in milliseconds at which the step is scheduled to execute.",
+						},
+						"status": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Execution status of the step, as reported by Keycloak.",
 						},
 					},
 				},
@@ -89,14 +139,32 @@ func resourceKeycloakWorkflow() *schema.Resource {
 
 func getWorkflowFromData(data *schema.ResourceData) *keycloak.Workflow {
 	workflow := &keycloak.Workflow{
-		Id:                data.Id(),
-		Realm:             data.Get("realm").(string),
-		Name:              data.Get("name").(string),
-		On:                data.Get("on").(string),
-		Enabled:           data.Get("enabled").(bool),
-		Conditions:        data.Get("conditions").(string),
-		CancelInProgress:  data.Get("cancel_in_progress").(string),
-		RestartInProgress: data.Get("restart_in_progress").(string),
+		Id:         data.Id(),
+		Realm:      data.Get("realm").(string),
+		Name:       data.Get("name").(string),
+		On:         data.Get("on").(string),
+		Enabled:    data.Get("enabled").(bool),
+		Conditions: data.Get("conditions").(string),
+	}
+
+	cancelInProgress := data.Get("cancel_in_progress").(string)
+	restartInProgress := data.Get("restart_in_progress").(string)
+	if cancelInProgress != "" || restartInProgress != "" {
+		workflow.Concurrency = &keycloak.WorkflowConcurrency{
+			CancelInProgress:  cancelInProgress,
+			RestartInProgress: restartInProgress,
+		}
+	}
+
+	if v, ok := data.GetOk("schedule"); ok {
+		scheduleList := v.([]interface{})
+		if len(scheduleList) == 1 && scheduleList[0] != nil {
+			scheduleMap := scheduleList[0].(map[string]interface{})
+			workflow.Schedule = &keycloak.WorkflowSchedule{
+				After:     scheduleMap["after"].(string),
+				BatchSize: scheduleMap["batch_size"].(int),
+			}
+		}
 	}
 
 	steps := make([]keycloak.WorkflowStep, 0)
@@ -104,8 +172,9 @@ func getWorkflowFromData(data *schema.ResourceData) *keycloak.Workflow {
 		for _, raw := range v.([]interface{}) {
 			stepMap := raw.(map[string]interface{})
 			step := keycloak.WorkflowStep{
-				Uses:  stepMap["uses"].(string),
-				After: stepMap["after"].(string),
+				Uses:     stepMap["uses"].(string),
+				After:    stepMap["after"].(string),
+				Priority: stepMap["priority"].(string),
 			}
 			if cfgRaw, ok := stepMap["config"]; ok {
 				config := make(map[string]string)
@@ -129,14 +198,47 @@ func setWorkflowData(data *schema.ResourceData, workflow *keycloak.Workflow) {
 	data.Set("on", workflow.On)
 	data.Set("enabled", workflow.Enabled)
 	data.Set("conditions", workflow.Conditions)
-	data.Set("cancel_in_progress", workflow.CancelInProgress)
-	data.Set("restart_in_progress", workflow.RestartInProgress)
+	if workflow.Concurrency != nil {
+		data.Set("cancel_in_progress", workflow.Concurrency.CancelInProgress)
+		data.Set("restart_in_progress", workflow.Concurrency.RestartInProgress)
+	} else {
+		data.Set("cancel_in_progress", "")
+		data.Set("restart_in_progress", "")
+	}
+
+	if workflow.Schedule != nil {
+		data.Set("schedule", []interface{}{
+			map[string]interface{}{
+				"after":      workflow.Schedule.After,
+				"batch_size": workflow.Schedule.BatchSize,
+			},
+		})
+	} else {
+		data.Set("schedule", []interface{}{})
+	}
+
+	if workflow.State != nil {
+		errors := make([]interface{}, 0, len(workflow.State.Errors))
+		for _, e := range workflow.State.Errors {
+			errors = append(errors, e)
+		}
+		data.Set("state", []interface{}{
+			map[string]interface{}{
+				"errors": errors,
+			},
+		})
+	} else {
+		data.Set("state", []interface{}{})
+	}
 
 	steps := make([]map[string]interface{}, 0, len(workflow.Steps))
 	for _, step := range workflow.Steps {
 		stepMap := map[string]interface{}{
-			"uses":  step.Uses,
-			"after": step.After,
+			"uses":         step.Uses,
+			"after":        step.After,
+			"priority":     step.Priority,
+			"scheduled_at": int(step.ScheduledAt),
+			"status":       step.Status,
 		}
 		if len(step.Config) > 0 {
 			config := make(map[string]interface{})

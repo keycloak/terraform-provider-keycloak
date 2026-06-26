@@ -42,7 +42,13 @@ type KeycloakClient struct {
 	debug               bool
 	redHatSSO           bool
 	accessTokenProvided bool
+	keycloakVersion     string
 	Mutex               *mutex.KeyValue
+
+	// fgapv2Cached memoises the FGAPv2 feature-flag lookup, which is a
+	// server-level setting that does not change during a Terraform run.
+	fgapv2Mu     sync.Mutex
+	fgapv2Cached *bool
 
 	serverInfo     *ServerInfo
 	serverInfoErr  error
@@ -89,7 +95,7 @@ var redHatSSO7VersionMap = map[int]string{
 	4: "9.0.17",
 }
 
-func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, tlsClientCert string, tlsClientPrivateKey string, userAgent string, redHatSSO bool, additionalHeaders map[string]string) (*KeycloakClient, error) {
+func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, clientSecret, realm, username, password, accessToken, jwtSigningAlg, jwtSigningKey, jwtToken, jwtTokenFile string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, tlsClientCert string, tlsClientPrivateKey string, userAgent string, redHatSSO bool, additionalHeaders map[string]string, keycloakVersion string) (*KeycloakClient, error) {
 	clientCredentials := &ClientCredentials{
 		ClientId:      clientId,
 		ClientSecret:  clientSecret,
@@ -100,10 +106,19 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 	}
 
 	if password != "" && username != "" {
+		if clientId == "" {
+			return nil, fmt.Errorf("client_id is required for password grant")
+		}
 		clientCredentials.Username = username
 		clientCredentials.Password = password
 		clientCredentials.GrantType = "password"
 	} else if clientSecret != "" || jwtSigningKey != "" || jwtToken != "" || jwtTokenFile != "" {
+		if clientId == "" && clientSecret != "" {
+			return nil, fmt.Errorf("client_id is required for client secret authentication")
+		}
+		if clientId == "" && jwtSigningKey != "" && jwtToken == "" && jwtTokenFile == "" {
+			return nil, fmt.Errorf("client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims")
+		}
 		clientCredentials.GrantType = "client_credentials"
 	} else if accessToken != "" {
 		clientCredentials.AccessToken = accessToken
@@ -138,6 +153,7 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 		redHatSSO:           redHatSSO,
 		additionalHeaders:   additionalHeaders,
 		accessTokenProvided: accessToken != "",
+		keycloakVersion:     keycloakVersion,
 		Mutex:               mutex.New(),
 	}
 
@@ -217,25 +233,11 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		return err
 	}
 
-	serverVersion := info.SystemInfo.ServerVersion
-	if strings.Contains(serverVersion, ".GA") {
-		serverVersion = strings.ReplaceAll(info.SystemInfo.ServerVersion, ".GA", "")
-	} else {
-		regex, err := regexp.Compile(`\.redhat-\w+`)
-
-		if err != nil {
-			fmt.Println("Error compiling regex:", err)
-			return err
-		}
-
-		// Check if the pattern is found in serverVersion
-		if regex.MatchString(serverVersion) {
-			// Replace the matched pattern with an empty string
-			serverVersion = regex.ReplaceAllString(serverVersion, "")
-		}
-	}
-
-	v, err := version.NewVersion(serverVersion)
+	// On Keycloak 26.4+ a service account that cannot read the restricted
+	// /admin/serverinfo endpoint still gets a successful (HTTP 200) response, but
+	// with an empty systemInfo (and therefore an empty version) rather than an
+	// HTTP error. resolveServerVersion handles that empty-version case.
+	v, err := resolveServerVersion(ctx, info.SystemInfo.ServerVersion, keycloakClient.keycloakVersion)
 	if err != nil {
 		return err
 	}
@@ -252,6 +254,62 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// resolveServerVersion turns the raw version reported by Keycloak's
+// /admin/serverinfo endpoint into a parsed version, normalizing the Red Hat
+// build suffixes (".GA" and ".redhat-*") that some distributions append.
+//
+// Keycloak 26.4+ restricts /admin/serverinfo to master-realm admins and users
+// with the view-system role (since 26.5.4, the manage-realms role grants it
+// too), so service accounts in other realms receive an empty version. When that
+// happens we fall back to the explicitly configured keycloak_version, and
+// failing that to the latest version this provider has been tested against, so
+// the provider keeps working instead of hard-failing. See
+// https://github.com/keycloak/terraform-provider-keycloak/issues/1342.
+func resolveServerVersion(ctx context.Context, reportedVersion, configuredVersion string) (*version.Version, error) {
+	serverVersion := reportedVersion
+	if serverVersion == "" {
+		if configuredVersion != "" {
+			serverVersion = configuredVersion
+			tflog.Info(ctx, "the Keycloak server did not report its version; using the configured keycloak_version", map[string]interface{}{
+				"keycloak_version": serverVersion,
+			})
+		} else {
+			serverVersion = string(Version_Latest)
+			tflog.Warn(ctx, "the Keycloak server did not report its version; assuming the latest version this provider was tested against", map[string]interface{}{
+				"assumed_keycloak_version": serverVersion,
+				"reason":                   "Keycloak 26.4+ restricts the /admin/serverinfo endpoint when the service account lacks the required role",
+				"hint":                     "set the keycloak_version provider attribute (or the KEYCLOAK_VERSION environment variable) to pin the version, or grant the service account the manage-realms role of the realm-management client (Keycloak 26.5.4+) so the version can be detected automatically",
+			})
+		}
+	}
+
+	if strings.Contains(serverVersion, ".GA") {
+		serverVersion = strings.ReplaceAll(serverVersion, ".GA", "")
+	} else {
+		regex, err := regexp.Compile(`\.redhat-\w+`)
+		if err != nil {
+			return nil, fmt.Errorf("error compiling Red Hat SSO version regex: %w", err)
+		}
+
+		// Strip the Red Hat build suffix (e.g. "18.0.0.redhat-00001") if present.
+		if regex.MatchString(serverVersion) {
+			serverVersion = regex.ReplaceAllString(serverVersion, "")
+		}
+	}
+
+	v, err := version.NewVersion(serverVersion)
+	if err != nil {
+		// Make the failure actionable: the offending value differs depending on
+		// whether it came from the server or from the configured keycloak_version.
+		if reportedVersion == "" && configuredVersion != "" {
+			return nil, fmt.Errorf("the configured keycloak_version %q could not be parsed: %w", configuredVersion, err)
+		}
+		return nil, fmt.Errorf("could not parse the Keycloak server version %q: %w", serverVersion, err)
+	}
+
+	return v, nil
 }
 
 func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
@@ -319,7 +377,9 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 
 func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Context, kc_url string) (url.Values, error) {
 	authenticationFormData := url.Values{}
-	authenticationFormData.Set("client_id", keycloakClient.clientCredentials.ClientId)
+	if keycloakClient.clientCredentials.ClientId != "" {
+		authenticationFormData.Set("client_id", keycloakClient.clientCredentials.ClientId)
+	}
 	authenticationFormData.Set("grant_type", keycloakClient.clientCredentials.GrantType)
 
 	if keycloakClient.clientCredentials.GrantType == "password" {

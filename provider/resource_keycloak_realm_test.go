@@ -98,6 +98,7 @@ func TestAccKeycloakRealm_OTP(t *testing.T) {
 	otpType := randomStringInSlice(keycloakRealmValidOTPTypes)
 	otpAlgorithm := randomStringInSlice(keycloakRealmValidOTPAlgorithms)
 	otpPeriod := acctest.RandIntRange(15, 45)
+	otpCodeReusable := randomBool()
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -105,8 +106,8 @@ func TestAccKeycloakRealm_OTP(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithOTP(realm, otpType, otpAlgorithm, otpPeriod),
-				Check:  testAccCheckKeycloakRealmOTP("keycloak_realm.realm", otpType, otpAlgorithm, otpPeriod),
+				Config: testKeycloakRealm_WithOTP(realm, otpType, otpAlgorithm, otpPeriod, otpCodeReusable),
+				Check:  testAccCheckKeycloakRealmOTP("keycloak_realm.realm", otpType, otpAlgorithm, otpPeriod, otpCodeReusable),
 			},
 		},
 	})
@@ -122,8 +123,8 @@ func TestAccKeycloakRealm_SmtpServer(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
@@ -142,12 +143,12 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "My Host2", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
 			},
 		},
 	})
@@ -162,8 +163,8 @@ func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
@@ -182,12 +183,12 @@ func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "My Host", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "My Host", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "My Host2", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "My Host2", "user2"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "admin@myhost2.com", "user2"),
+				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
 			},
 		},
 	})
@@ -217,19 +218,19 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 	realmOne := &keycloak.Realm{
 		Realm:        "terraform-" + acctest.RandString(10),
 		DisplayName:  "terraform-" + acctest.RandString(10),
-		LoginTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		AccountTheme: randomStringInSlice([]string{"base", "keycloak"}),
-		AdminTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		EmailTheme:   randomStringInSlice([]string{"base", "keycloak"}),
+		LoginTheme:   "keycloak",
+		AccountTheme: "keycloak.v3",
+		AdminTheme:   "keycloak.v2",
+		EmailTheme:   "keycloak",
 	}
 
 	realmTwo := &keycloak.Realm{
 		Realm:        realmOne.Realm,
 		DisplayName:  realmOne.DisplayName,
-		LoginTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		AccountTheme: randomStringInSlice([]string{"base", "keycloak"}),
-		AdminTheme:   randomStringInSlice([]string{"base", "keycloak"}),
-		EmailTheme:   randomStringInSlice([]string{"base", "keycloak"}),
+		LoginTheme:   "keycloak",
+		AccountTheme: "keycloak.v3",
+		AdminTheme:   "keycloak.v2",
+		EmailTheme:   "keycloak",
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1048,7 +1049,10 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	if len(signatureAlgorithms) == 0 {
+		signatureAlgorithms = []string{"ES256"}
+	}
 	avoidSameAuthenticatorRegister := randomBool()
 
 	resource.Test(t, resource.TestCase{
@@ -1243,7 +1247,7 @@ func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resour
 	}
 }
 
-func testAccCheckKeycloakRealmOTP(resourceName, otpType, algorithm string, period int) resource.TestCheckFunc {
+func testAccCheckKeycloakRealmOTP(resourceName, otpType, algorithm string, period int, codeReusable bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
 		if err != nil {
@@ -1260,6 +1264,10 @@ func testAccCheckKeycloakRealmOTP(resourceName, otpType, algorithm string, perio
 
 		if realm.OTPPolicyPeriod != period {
 			return fmt.Errorf("expected realm %s to have OTP period set to %d, but was %d", realm.Realm, period, realm.OTPPolicyPeriod)
+		}
+
+		if realm.OTPPolicyCodeReusable != codeReusable {
+			return fmt.Errorf("expected realm %s to have OTP code reusable set to %t, but was %t", realm.Realm, codeReusable, realm.OTPPolicyCodeReusable)
 		}
 
 		return nil
@@ -1529,7 +1537,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realm, host, from, user)
 }
 
-func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int) string {
+func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int, codeReusable bool) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm   = "%s"
@@ -1539,9 +1547,10 @@ resource "keycloak_realm" "realm" {
 		type      = "%s"
 		algorithm = "%s"
 		period    = %d
+        code_reusable = %t
 	}
 }
-	`, realm, otpType, algorithm, period)
+	`, realm, otpType, algorithm, period, codeReusable)
 }
 
 func testKeycloakRealm_WithSmtpServerWithoutHost(realm, from string) string {

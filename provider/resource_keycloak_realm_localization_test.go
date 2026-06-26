@@ -22,6 +22,11 @@ func TestAccKeycloakRealmLocalizationTexts_basic(t *testing.T) {
 				Config: testKeycloakRealmLocalizationTexts_basic(realmName),
 				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "en", map[string]string{"k": "v"}),
 			},
+			{
+				ResourceName:      "keycloak_realm_localization.realm_localization",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -37,6 +42,11 @@ func TestAccKeycloakRealmLocalizationTexts_empty(t *testing.T) {
 			{
 				Config: testKeycloakRealmLocalizationTexts_empty(realmName),
 				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "en", map[string]string{}),
+			},
+			{
+				ResourceName:      "keycloak_realm_localization.realm_localization",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -55,6 +65,34 @@ func TestAccKeycloakRealmLocalizationTexts_noLocalization(t *testing.T) {
 			{
 				Config: testKeycloakRealmLocalizationTexts_noInternationalization(realmName),
 				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "de", map[string]string{"k": "v"}),
+			},
+			{
+				ResourceName:      "keycloak_realm_localization.realm_localization",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Tests importing a realm localization using the documented "{{realm_id}}/{{locale}}" ID format.
+func TestAccKeycloakRealmLocalizationTexts_import(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmLocalizationTextsDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmLocalizationTexts_basic(realmName),
+				Check:  testAccCheckKeycloakRealmLocalizationTextsExist("keycloak_realm_localization.realm_localization", "en", map[string]string{"k": "v"}),
+			},
+			{
+				ResourceName:      "keycloak_realm_localization.realm_localization",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateId:     fmt.Sprintf("%s/%s", realmName, "en"),
 			},
 		},
 	})

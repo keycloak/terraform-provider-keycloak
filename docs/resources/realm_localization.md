@@ -35,4 +35,11 @@ resource "keycloak_realm_localization" "german_texts" {
 
 ## Import
 
-This resource does not currently support importing.
+This resource can be imported using the format `{{realm_id}}/{{locale}}`, where `locale` is the language code the
+localization texts apply to.
+
+Example:
+
+```bash
+$ terraform import keycloak_realm_localization.german_texts my-realm/de
+```

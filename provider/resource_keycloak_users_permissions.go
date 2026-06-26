@@ -46,6 +46,10 @@ func resourceKeycloakUsersPermissions() *schema.Resource {
 func resourceKeycloakUsersPermissionsReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 
 	// the existence of this resource implies that it is enabled.
@@ -107,6 +111,11 @@ func resourceKeycloakUsersPermissionsReconcile(ctx context.Context, data *schema
 
 func resourceKeycloakUsersPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 
 	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
@@ -174,12 +183,22 @@ func resourceKeycloakUsersPermissionsRead(ctx context.Context, data *schema.Reso
 func resourceKeycloakUsersPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 
 	return diag.FromErr(keycloakClient.DisableUsersPermissions(ctx, realmId))
 }
 
-func resourceKeycloakUsersPermissionsImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+func resourceKeycloakUsersPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_users_permissions", "keycloak_users_admin_permissions"); err != nil {
+		return nil, err
+	}
+
 	d.Set("realm_id", d.Id())
 	d.SetId(d.Id())
 

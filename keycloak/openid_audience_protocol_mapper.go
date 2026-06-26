@@ -13,8 +13,9 @@ type OpenIdAudienceProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	AddToIdToken     bool
-	AddToAccessToken bool
+	AddToIdToken            bool
+	AddToAccessToken        bool
+	AddToTokenIntrospection bool
 
 	IncludedClientAudience string
 	IncludedCustomAudience string
@@ -27,10 +28,11 @@ func (mapper *OpenIdAudienceProtocolMapper) convertToGenericProtocolMapper() *pr
 		Protocol:       "openid-connect",
 		ProtocolMapper: "oidc-audience-mapper",
 		Config: map[string]string{
-			addToIdTokenField:           strconv.FormatBool(mapper.AddToIdToken),
-			addToAccessTokenField:       strconv.FormatBool(mapper.AddToAccessToken),
-			includedClientAudienceField: mapper.IncludedClientAudience,
-			includedCustomAudienceField: mapper.IncludedCustomAudience,
+			addToIdTokenField:            strconv.FormatBool(mapper.AddToIdToken),
+			addToAccessTokenField:        strconv.FormatBool(mapper.AddToAccessToken),
+			addToTokenIntrospectionField: strconv.FormatBool(mapper.AddToTokenIntrospection),
+			includedClientAudienceField:  mapper.IncludedClientAudience,
+			includedCustomAudienceField:  mapper.IncludedCustomAudience,
 		},
 	}
 }
@@ -46,6 +48,11 @@ func (protocolMapper *protocolMapper) convertToOpenIdAudienceProtocolMapper(real
 		return nil, err
 	}
 
+	addToTokenIntrospection, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToTokenIntrospectionField])
+	if err != nil {
+		return nil, err
+	}
+
 	return &OpenIdAudienceProtocolMapper{
 		Id:            protocolMapper.Id,
 		Name:          protocolMapper.Name,
@@ -53,8 +60,9 @@ func (protocolMapper *protocolMapper) convertToOpenIdAudienceProtocolMapper(real
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		AddToIdToken:     addToIdToken,
-		AddToAccessToken: addToAccessToken,
+		AddToIdToken:            addToIdToken,
+		AddToAccessToken:        addToAccessToken,
+		AddToTokenIntrospection: addToTokenIntrospection,
 
 		IncludedClientAudience: protocolMapper.Config[includedClientAudienceField],
 		IncludedCustomAudience: protocolMapper.Config[includedCustomAudienceField],

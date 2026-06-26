@@ -71,6 +71,7 @@ resource "keycloak_openid_audience_protocol_mapper" "audience_mapper" {
 - `included_custom_audience` - (Optional) A custom audience to include within the token's `aud` claim. Conflicts with `included_client_audience`. One of `included_client_audience` or `included_custom_audience` must be specified.
 - `add_to_id_token` - (Optional) Indicates if the audience should be included in the `aud` claim for the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the audience should be included in the `aud` claim for the id token. Defaults to `true`.
+- `add_to_token_introspection` - (Optional) Indicates if the attribute should be added as a claim on the token introspection response. Defaults to `true`.
 
 ## Import
 

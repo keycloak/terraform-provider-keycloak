@@ -13,8 +13,10 @@ type OpenIdUserSessionNoteProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	AddToIdToken     bool
-	AddToAccessToken bool
+	AddToIdToken            bool
+	AddToAccessToken        bool
+	AddToUserInfo           bool
+	AddToTokenIntrospection bool
 
 	ClaimName       string
 	ClaimValueType  string
@@ -28,11 +30,13 @@ func (mapper *OpenIdUserSessionNoteProtocolMapper) convertToGenericProtocolMappe
 		Protocol:       "openid-connect",
 		ProtocolMapper: "oidc-usersessionmodel-note-mapper",
 		Config: map[string]string{
-			addToIdTokenField:     strconv.FormatBool(mapper.AddToIdToken),
-			addToAccessTokenField: strconv.FormatBool(mapper.AddToAccessToken),
-			claimNameField:        mapper.ClaimName,
-			claimValueTypeField:   mapper.ClaimValueType,
-			userSessionNoteField:  mapper.UserSessionNote,
+			addToIdTokenField:            strconv.FormatBool(mapper.AddToIdToken),
+			addToAccessTokenField:        strconv.FormatBool(mapper.AddToAccessToken),
+			addToUserInfoField:           strconv.FormatBool(mapper.AddToUserInfo),
+			addToTokenIntrospectionField: strconv.FormatBool(mapper.AddToTokenIntrospection),
+			claimNameField:               mapper.ClaimName,
+			claimValueTypeField:          mapper.ClaimValueType,
+			userSessionNoteField:         mapper.UserSessionNote,
 		},
 	}
 }
@@ -48,6 +52,16 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserSessionNoteProtocolMapp
 		return nil, err
 	}
 
+	addToUserInfo, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToUserInfoField])
+	if err != nil {
+		return nil, err
+	}
+
+	addToTokenIntrospection, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToTokenIntrospectionField])
+	if err != nil {
+		return nil, err
+	}
+
 	return &OpenIdUserSessionNoteProtocolMapper{
 		Id:            protocolMapper.Id,
 		Name:          protocolMapper.Name,
@@ -55,8 +69,10 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserSessionNoteProtocolMapp
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		AddToIdToken:     addToIdToken,
-		AddToAccessToken: addToAccessToken,
+		AddToIdToken:            addToIdToken,
+		AddToAccessToken:        addToAccessToken,
+		AddToUserInfo:           addToUserInfo,
+		AddToTokenIntrospection: addToTokenIntrospection,
 
 		ClaimName:       protocolMapper.Config[claimNameField],
 		ClaimValueType:  protocolMapper.Config[claimValueTypeField],
