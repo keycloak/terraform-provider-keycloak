@@ -17,8 +17,9 @@ func dataSourceKeycloakGroup() *schema.Resource {
 				Required: true,
 			},
 			"organization_id": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"group_path"},
 			},
 			"name": {
 				Type:         schema.TypeString,
@@ -65,6 +66,9 @@ func dataSourceKeycloakGroupRead(ctx context.Context, data *schema.ResourceData,
 
 	if groupName == "" && groupPath == "" {
 		return diag.Errorf("one of `name` or `group_path` must be specified")
+	}
+	if groupPath != "" && organizationId != "" {
+		return diag.Errorf("group_path and organization_id cannot be set together: path-based lookups use the realm-level /group-by-path endpoint and do not support organization scoping")
 	}
 
 	var group *keycloak.Group
