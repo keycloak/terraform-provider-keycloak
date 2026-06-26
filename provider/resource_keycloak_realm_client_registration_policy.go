@@ -21,6 +21,7 @@ func resourceKeycloakRealmClientRegistrationPolicy() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakRealmClientRegistrationPolicyImport,
 		},
+		CustomizeDiff: customizeDiffRealmClientRegistrationPolicyConfigOrder,
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -45,10 +46,12 @@ func resourceKeycloakRealmClientRegistrationPolicy() *schema.Resource {
 				Description:  "Whether this policy applies to anonymous or authenticated client registration.",
 			},
 			"config": {
-				Type:             schema.TypeMap,
-				Optional:         true,
-				Description:      "Policy-specific configuration key-value pairs.",
-				DiffSuppressFunc: suppressMultiValueClientRegistrationConfigOrder,
+				Type:     schema.TypeMap,
+				Optional: true,
+				// Computed so CustomizeDiff can normalise multi-value fields (suppress
+				// order-only changes) via SetNew, which only operates on computed keys.
+				Computed:    true,
+				Description: "Policy-specific configuration key-value pairs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -179,21 +182,59 @@ func resourceKeycloakRealmClientRegistrationPolicyImport(ctx context.Context, d 
 	return []*schema.ResourceData{d}, nil
 }
 
-// suppressMultiValueClientRegistrationConfigOrder suppresses spurious diffs on
-// multi-value config fields (those in keycloak.MultiValueClientRegistrationConfigKeys) whose
-// comma-separated old and new values contain the same elements in a different order. Keycloak does not
-// preserve element order across writes, so without this the provider would plan an update
-// on every run even when nothing meaningfully changed.
+// customizeDiffRealmClientRegistrationPolicyConfigOrder suppresses spurious diffs on
+// multi-value config fields whose comma-separated old and new values contain the same
+// elements in a different order. Keycloak stores those fields as arrays and does not
+// preserve element order across writes, so without this the provider would plan an update on
+// every run even when nothing meaningfully changed.
 //
-// k is the flattened map element key, e.g. "config.trusted-hosts"; the synthetic
-// "config.%" element-count key and any non-multi-value field are never suppressed.
-func suppressMultiValueClientRegistrationConfigOrder(k, old, new string, _ *schema.ResourceData) bool {
-	key := strings.TrimPrefix(k, "config.")
-	if !keycloak.MultiValueClientRegistrationConfigKeys[key] {
-		return false
+// Which keys are multi-valued is determined at runtime from the provider's server-info
+// metadata (scoped to this resource's provider_id), so built-in and custom SPI policies are
+// handled the same way. A genuine add/remove/duplicate still diffs because the element counts
+// differ.
+func customizeDiffRealmClientRegistrationPolicyConfigOrder(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	providerId := diff.Get("provider_id").(string)
+	if providerId == "" {
+		return nil
 	}
 
-	return equalCommaSeparatedSet(old, new)
+	multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, providerId)
+	if err != nil || len(multiValuedKeys) == 0 {
+		// Best effort: if the multi-valued keys can't be determined, fall back to the normal
+		// diff rather than failing the plan.
+		return nil
+	}
+
+	oldRaw, newRaw := diff.GetChange("config")
+	oldConfig, _ := oldRaw.(map[string]interface{})
+	newConfig, _ := newRaw.(map[string]interface{})
+	if len(newConfig) == 0 {
+		return nil
+	}
+
+	suppressed := map[string]interface{}{}
+	for k, v := range newConfig {
+		suppressed[k] = v
+	}
+
+	changed := false
+	for key := range multiValuedKeys {
+		oldVal, oldOk := oldConfig[key].(string)
+		newVal, newOk := newConfig[key].(string)
+		if oldOk && newOk && oldVal != newVal && equalCommaSeparatedSet(oldVal, newVal) {
+			// Keep the prior value so Terraform sees no change for this key.
+			suppressed[key] = oldVal
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	return diff.SetNew("config", suppressed)
 }
 
 // equalCommaSeparatedSet reports whether two comma-separated strings contain the same

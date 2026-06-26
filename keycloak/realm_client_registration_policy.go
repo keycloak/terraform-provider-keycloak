@@ -8,25 +8,6 @@ import (
 
 const realmClientRegistrationPolicyProviderType = "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy"
 
-// MultiValueClientRegistrationConfigKeys are config fields that Keycloak stores as
-// an array of individual values (map[string][]string). In Terraform they are
-// expressed as a single comma-separated string, split into the array on write and
-// re-joined on read. Keeping the whole comma string as one element would make
-// Keycloak treat e.g. "roles,organization" as a single scope name and reject every
-// dynamic client registration.
-//
-// These keys can be discovered from a running Keycloak via
-// GET /admin/realms/{realm}/client-registration-policy/providers: every provider
-// lists its properties; the multi-valued ones have a "type" of "MultivaluedString"
-// or "MultivaluedList". On a stock Keycloak that yields exactly the three keys below.
-// Custom client registration policy SPIs with multi-valued config are not detected
-// automatically and would need to be added here.
-var MultiValueClientRegistrationConfigKeys = map[string]bool{
-	"trusted-hosts":                 true, // provider: trusted-hosts
-	"allowed-client-scopes":         true, // provider: allowed-client-templates
-	"allowed-protocol-mapper-types": true, // provider: allowed-protocol-mappers
-}
-
 type RealmClientRegistrationPolicy struct {
 	Id         string
 	Name       string
@@ -36,10 +17,27 @@ type RealmClientRegistrationPolicy struct {
 	Config     map[string]string
 }
 
-func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegistrationPolicy) *component {
+// MultiValuedClientRegistrationConfigKeys returns the config keys that Keycloak models as
+// multi-valued for the given client registration policy provider. Keycloak stores these as
+// an array of individual values (map[string][]string), while Terraform expresses them as a
+// single comma-separated string that is split into the array on write and re-joined on read.
+//
+// The set is derived at runtime from the server info component-type metadata (properties with
+// a "type" of "MultivaluedString" or "MultivaluedList"), so built-in and custom SPI policies
+// are handled the same way without a hardcoded list.
+func (keycloakClient *KeycloakClient) MultiValuedClientRegistrationConfigKeys(ctx context.Context, providerId string) (map[string]bool, error) {
+	serverInfo, err := keycloakClient.GetServerInfoCached(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return serverInfo.MultiValuedConfigKeys(realmClientRegistrationPolicyProviderType, providerId), nil
+}
+
+func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegistrationPolicy, multiValuedKeys map[string]bool) *component {
 	config := map[string][]string{}
 	for k, v := range policy.Config {
-		if MultiValueClientRegistrationConfigKeys[k] && strings.Contains(v, ",") {
+		if multiValuedKeys[k] && strings.Contains(v, ",") {
 			parts := strings.Split(v, ",")
 			for i := range parts {
 				parts[i] = strings.TrimSpace(parts[i])
@@ -61,14 +59,14 @@ func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegi
 	}
 }
 
-func convertFromComponentToRealmClientRegistrationPolicy(c *component, realmId string) *RealmClientRegistrationPolicy {
+func convertFromComponentToRealmClientRegistrationPolicy(c *component, realmId string, multiValuedKeys map[string]bool) *RealmClientRegistrationPolicy {
 	config := map[string]string{}
 	for k, vals := range c.Config {
 		if len(vals) == 0 {
 			continue
 		}
 
-		if MultiValueClientRegistrationConfigKeys[k] && len(vals) > 1 {
+		if multiValuedKeys[k] && len(vals) > 1 {
 			config[k] = strings.Join(vals, ",")
 		} else {
 			config[k] = vals[0]
@@ -86,7 +84,12 @@ func convertFromComponentToRealmClientRegistrationPolicy(c *component, realmId s
 }
 
 func (keycloakClient *KeycloakClient) NewRealmClientRegistrationPolicy(ctx context.Context, policy *RealmClientRegistrationPolicy) error {
-	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/components", policy.RealmId), convertFromRealmClientRegistrationPolicyToComponent(policy))
+	multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, policy.ProviderId)
+	if err != nil {
+		return err
+	}
+
+	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/components", policy.RealmId), convertFromRealmClientRegistrationPolicyToComponent(policy, multiValuedKeys))
 	if err != nil {
 		return err
 	}
@@ -104,7 +107,12 @@ func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicy(ctx conte
 		return nil, err
 	}
 
-	return convertFromComponentToRealmClientRegistrationPolicy(component, realmId), nil
+	multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, component.ProviderId)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertFromComponentToRealmClientRegistrationPolicy(component, realmId, multiValuedKeys), nil
 }
 
 func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicies(ctx context.Context, realmId string) ([]*RealmClientRegistrationPolicy, error) {
@@ -117,14 +125,24 @@ func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicies(ctx con
 
 	policies := make([]*RealmClientRegistrationPolicy, 0, len(components))
 	for _, c := range components {
-		policies = append(policies, convertFromComponentToRealmClientRegistrationPolicy(c, realmId))
+		multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, c.ProviderId)
+		if err != nil {
+			return nil, err
+		}
+
+		policies = append(policies, convertFromComponentToRealmClientRegistrationPolicy(c, realmId, multiValuedKeys))
 	}
 
 	return policies, nil
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealmClientRegistrationPolicy(ctx context.Context, policy *RealmClientRegistrationPolicy) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", policy.RealmId, policy.Id), convertFromRealmClientRegistrationPolicyToComponent(policy))
+	multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, policy.ProviderId)
+	if err != nil {
+		return err
+	}
+
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", policy.RealmId, policy.Id), convertFromRealmClientRegistrationPolicyToComponent(policy, multiValuedKeys))
 }
 
 func (keycloakClient *KeycloakClient) DeleteRealmClientRegistrationPolicy(ctx context.Context, realmId, id string) error {
