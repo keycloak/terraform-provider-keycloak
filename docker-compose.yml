@@ -46,4 +46,7 @@ services:
     volumes:
 # Make the custom-user-federation-example extension available to Keycloak. The :z option is required and tells Docker that the volume content will be shared between containers.
     - ./custom-user-federation-example/build/libs/custom-user-federation-example-all.jar:/opt/keycloak/providers/custom-user-federation-example-all.jar:z
+# Make the deployed JavaScript authorization policy available to Keycloak (used by the
+# keycloak_generic_client_authorization_policy acceptance test). Build it with `make authz-policy-example`.
+    - ./custom-authz-policy-example/build/keycloak-authz-policy-example.jar:/opt/keycloak/providers/keycloak-authz-policy-example.jar:z
     - ./provider/testdata:/opt/keycloak/testdata:z

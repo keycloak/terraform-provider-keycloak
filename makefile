@@ -35,13 +35,13 @@ run-debug:
 	echo "Starting delve debugger listening on port 127.0.0.1:58772"
 	dlv exec --listen=:58772 --accept-multiclient --headless "./terraform-provider-keycloak_$(VERSION)" -- -debug
 
-local: deps user-federation-example
+local: deps user-federation-example authz-policy-example
 	echo "Starting local Keycloak environment"
 	docker compose up --build -d
 	./scripts/wait-for-local-keycloak.sh
 	./scripts/create-terraform-client.sh
 
-local-mtls: deps user-federation-example
+local-mtls: deps user-federation-example authz-policy-example
 	echo "Starting local Keycloak environment with mtls"
 	docker compose --file docker-compose.yml --file docker-compose-mtls.yml up --build -d
 	./scripts/wait-for-local-keycloak.sh
@@ -83,6 +83,14 @@ access-token:
 
 user-federation-example:
 	cd custom-user-federation-example && ./gradlew shadowJar
+
+# Build a Keycloak provider JAR that deploys a JavaScript authorization policy. A scripts
+# provider is just a JAR (a ZIP) containing META-INF/keycloak-scripts.json and the scripts.
+# Used by the keycloak_generic_client_authorization_policy acceptance test.
+authz-policy-example:
+	rm -rf custom-authz-policy-example/build
+	mkdir -p custom-authz-policy-example/build
+	cd custom-authz-policy-example && zip -r -X build/keycloak-authz-policy-example.jar META-INF always-granting-policy.js
 
 mtls-certs:
 	./mtls-certs.sh create "$(CERTS_TLS_DIR)"
