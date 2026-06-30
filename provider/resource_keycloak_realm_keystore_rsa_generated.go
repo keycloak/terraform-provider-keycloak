@@ -109,6 +109,12 @@ func resourceKeycloakRealmKeystoreRsaGeneratedCreate(ctx context.Context, data *
 		return diag.FromErr(err)
 	}
 
+	realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	realmKey.ParentId = realm.Id
+
 	err = keycloakClient.NewRealmKeystoreRsaGenerated(ctx, realmKey)
 	if err != nil {
 		return diag.FromErr(err)
@@ -148,6 +154,12 @@ func resourceKeycloakRealmKeystoreRsaGeneratedUpdate(ctx context.Context, data *
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	realmKey.ParentId = realm.Id
 
 	err = keycloakClient.UpdateRealmKeystoreRsaGenerated(ctx, realmKey)
 	if err != nil {
