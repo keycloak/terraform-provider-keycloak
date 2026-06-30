@@ -120,7 +120,7 @@ func (keycloakClient *KeycloakClient) ValidateOpenIdAudienceProtocolMapper(ctx c
 		return fmt.Errorf("validation error: IncludedClientAudience and IncludedCustomAudience cannot both be set")
 	}
 
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
 	if err != nil {
 		return err
 	}

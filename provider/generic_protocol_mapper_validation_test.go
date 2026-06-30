@@ -400,7 +400,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClientOrClientScop
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserAttributeProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -416,7 +416,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClientOrClientScope
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserPropertyProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})

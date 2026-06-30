@@ -78,6 +78,15 @@ resource "keycloak_openid_user_property_protocol_mapper" "user_property_mapper" 
 - `add_to_id_token` - (Optional) Indicates if the property should be added as a claim to the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the property should be added as a claim to the access token. Defaults to `true`.
 - `add_to_userinfo` - (Optional) Indicates if the property should be added as a claim to the UserInfo response body. Defaults to `true`.
+- `import` - (Optional) When `true`, the provider looks up an existing mapper by `name` under the specified realm and client or client scope and updates it with the new configuration, overwriting any existing values. After the first apply, the resource behaves identically to one that was created normally, including deletion on `terraform destroy`.
+
+## Import Mode Behavior
+
+When `import = true`, this resource uses adopt-and-update behavior during creation:
+
+- The provider looks up an existing protocol mapper by `name` under the given `realm_id` and `client_id` or `client_scope_id`.
+- If a mapper is found, it will be imported and updated with the specified configuration. Schema defaults will overwrite existing configuration.
+- After the first apply, `import` has no further effect. The resource is fully managed by Terraform, including deletion on `terraform destroy`.
 
 ## Import
 

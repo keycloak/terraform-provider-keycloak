@@ -20,7 +20,7 @@ func resourceKeycloakOpenIdUserPropertyProtocolMapper() *schema.Resource {
 			// {{realmId}}/client/{{clientId}}/{{protocolMapperId}}
 			// or a client scope:
 			// {{realmId}}/client-scope/{{clientScopeId}}/{{protocolMapperId}}
-			StateContext: genericProtocolMapperImport,
+			StateContext: genericProtocolMapperImportWithImportFlag,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -35,18 +35,18 @@ func resourceKeycloakOpenIdUserPropertyProtocolMapper() *schema.Resource {
 				Description: "The realm id where the associated client or client scope exists.",
 			},
 			"client_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
-				ConflictsWith: []string{"client_scope_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"client_scope_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client scope. Cannot be used at the same time as client_id.",
-				ConflictsWith: []string{"client_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client scope. Cannot be used at the same time as client_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"add_to_id_token": {
 				Type:        schema.TypeBool,
@@ -80,6 +80,13 @@ func resourceKeycloakOpenIdUserPropertyProtocolMapper() *schema.Resource {
 				Description:  "Claim type used when serializing tokens.",
 				Default:      "String",
 				ValidateFunc: validation.StringInSlice([]string{"JSON", "String", "long", "int", "boolean"}, true),
+			},
+			"import": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				ForceNew:    false,
+				Description: "When true, the provider looks up an existing protocol mapper by name and updates it with the new configuration, overwriting any existing values. After the first apply, the resource behaves identically to one that was created normally, including deletion on terraform destroy.",
 			},
 		},
 	}
@@ -123,17 +130,39 @@ func mapFromOpenIdUserPropertyMapperToData(mapper *keycloak.OpenIdUserPropertyPr
 
 func resourceKeycloakOpenIdUserPropertyProtocolMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	importMode := data.Get("import").(bool)
 
 	openIdUserPropertyMapper := mapFromDataToOpenIdUserPropertyProtocolMapper(data)
 
-	err := openIdUserPropertyMapper.Validate(ctx, keycloakClient)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	if importMode {
+		existingMapper, err := keycloakClient.GetOpenIdUserPropertyProtocolMapperByName(ctx, openIdUserPropertyMapper.RealmId, openIdUserPropertyMapper.ClientId, openIdUserPropertyMapper.ClientScopeId, openIdUserPropertyMapper.Name)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
-	err = keycloakClient.NewOpenIdUserPropertyProtocolMapper(ctx, openIdUserPropertyMapper)
-	if err != nil {
-		return diag.FromErr(err)
+		if existingMapper == nil {
+			return diag.Errorf("protocol mapper with name %q not found for import", openIdUserPropertyMapper.Name)
+		}
+
+		// We only preserve the ID of the existing mapper to ensure we update the correct resource.
+		openIdUserPropertyMapper.Id = existingMapper.Id
+
+		err = keycloakClient.UpdateOpenIdUserPropertyProtocolMapper(ctx, openIdUserPropertyMapper)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		// Validation checks for existing protocol mappers with the same name, which is only
+		// relevant when creating a new protocol mapper, not when importing an existing one
+		err := openIdUserPropertyMapper.Validate(ctx, keycloakClient)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		err = keycloakClient.NewOpenIdUserPropertyProtocolMapper(ctx, openIdUserPropertyMapper)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	mapFromOpenIdUserPropertyMapperToData(openIdUserPropertyMapper, data)

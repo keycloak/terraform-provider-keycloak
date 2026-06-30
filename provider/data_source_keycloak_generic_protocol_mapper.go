@@ -66,18 +66,9 @@ func dataSourceKeycloakGenericProtocolMapperRead(ctx context.Context, data *sche
 		return diag.Errorf("one of client_id or client_scope_id must be set")
 	}
 
-	// List all protocol mappers and find the one with the matching name
-	mappers, err := keycloakClient.ListGenericProtocolMappers(ctx, realmId, clientId, clientScopeId)
+	foundMapper, err := keycloakClient.GetGenericProtocolMapperByName(ctx, realmId, clientId, clientScopeId, name)
 	if err != nil {
 		return diag.FromErr(err)
-	}
-
-	var foundMapper *keycloak.GenericProtocolMapper
-	for _, mapper := range mappers {
-		if mapper.Name == name {
-			foundMapper = mapper
-			break
-		}
 	}
 
 	if foundMapper == nil {
