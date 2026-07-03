@@ -4,6 +4,10 @@ FEATURES:
 
 * feat: support import for `keycloak_realm_default_client_scopes` and `keycloak_realm_optional_client_scopes` using the realm id
 
+BUG FIXES:
+
+* fix(custom_user_federation): keep all values of a multivalued `##` config setting instead of only the first ([#1398](https://github.com/keycloak/terraform-provider-keycloak/issues/1398))
+
 ## 5.8.0 (June 05, 2026)
 
 BREAKING CHANGES:
