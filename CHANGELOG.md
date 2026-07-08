@@ -3,6 +3,7 @@
 FEATURES:
 
 * feat: support import for `keycloak_realm_default_client_scopes` and `keycloak_realm_optional_client_scopes` using the realm id
+* feat: adds name-based import support for protocol mappers
 
 ## 5.8.0 (June 05, 2026)
 

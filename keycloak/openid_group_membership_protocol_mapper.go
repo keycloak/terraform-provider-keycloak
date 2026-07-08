@@ -116,11 +116,7 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdGroupMembershipProtocolMapper(
 }
 
 func (keycloakClient *KeycloakClient) ValidateOpenIdGroupMembershipProtocolMapper(ctx context.Context, mapper *OpenIdGroupMembershipProtocolMapper) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
 	if err != nil {
 		return err
 	}
