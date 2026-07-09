@@ -340,7 +340,7 @@ func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
 				ForceNew:    true,
 				Description: "When true, the provider will delete the default mappers which are normally created by Keycloak when creating an LDAP user federation provider.",
 			},
-		},
+		}
 	}
 
 func validateSyncPeriod(i interface{}, k string) (s []string, errs []error) {
