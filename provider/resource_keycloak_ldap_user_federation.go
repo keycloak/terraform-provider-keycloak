@@ -132,9 +132,9 @@ func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
 			Description: "DN of LDAP admin, which will be used by Keycloak to access LDAP server.",
 		},
 		"bind_credential": {
-			Type:     schema.TypeString,
-			Optional: true,
-			Sensitive: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
 			ConflictsWith: []string{"bind_credential_wo", "bind_credential_wo_version"},
 			DiffSuppressFunc: func(_, remoteBindCredential, _ string, _ *schema.ResourceData) bool {
 				return remoteBindCredential == "**********"
