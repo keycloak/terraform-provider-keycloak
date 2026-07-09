@@ -559,45 +559,59 @@ func TestAccKeycloakLdapUserFederation_bindCredential(t *testing.T) {
 func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnly(t *testing.T) {
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
+	updatedLdapName := ldapName + "-updated"
 	firstBindCredentialWO := acctest.RandomWithPrefix("tf-acc")
 	secondBindCredentialWO := acctest.RandomWithPrefix("tf-acc")
-	bindCredentialWOVersion := 1
+	bindCredentialWOVersion := "version1"
+	bindCredentialWOVersionUpdated := "version2"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldapName, firstBindCredentialWO, bindCredentialWOVersion),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential"),
-					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", strconv.Itoa(bindCredentialWOVersion)),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", bindCredentialWOVersion),
 				),
 			},
 			{
-				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldapName, secondBindCredentialWO, bindCredentialWOVersion),
+				// test UPDATE of unrelated fields when the write-only version is NOT MODIFIED
+				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(updatedLdapName, firstBindCredentialWO, bindCredentialWOVersion),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "name", updatedLdapName),
+					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential"),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", bindCredentialWOVersion),
+				),
+			},
+			{
+				// test NO UPDATE of write-only credential when the version is NOT MODIFIED
+				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(updatedLdapName, secondBindCredentialWO, bindCredentialWOVersion),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential"),
-					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", strconv.Itoa(bindCredentialWOVersion)),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", bindCredentialWOVersion),
 				),
 			},
 			{
-				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldapName, secondBindCredentialWO, bindCredentialWOVersion+1),
+				// test UPDATE of write-only credential when the version is MODIFIED
+				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(updatedLdapName, secondBindCredentialWO, bindCredentialWOVersionUpdated),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential"),
-					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", strconv.Itoa(bindCredentialWOVersion+1)),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", bindCredentialWOVersionUpdated),
 				),
 			},
 			{
-				Config: testKeycloakLdapUserFederation_bindCredential(ldapName, secondBindCredentialWO),
+				Config: testKeycloakLdapUserFederation_bindCredential(updatedLdapName, secondBindCredentialWO),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential", secondBindCredentialWO),
-					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", strconv.Itoa(0)),
+					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version"),
 				),
 			},
 		},
@@ -609,9 +623,9 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnlyValidation(t *test
 	ldapName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapUserFederationDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialWriteOnlyWithoutVersion(ldapName),
@@ -989,7 +1003,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	`, testAccRealmUserFederation.Realm, ldap, bindCredential)
 }
 
-func testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldap, bindCredentialWriteOnly string, bindCredentialWriteOnlyVersion int) string {
+func testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldap, bindCredentialWriteOnly, bindCredentialWriteOnlyVersion string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1012,7 +1026,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	users_dn                   = "dc=example,dc=org"
 	bind_dn                    = "cn=admin,dc=example,dc=org"
 	bind_credential_wo         = "%s"
-	bind_credential_wo_version = %d
+	bind_credential_wo_version = "%s"
 }
 	`, testAccRealmUserFederation.Realm, ldap, bindCredentialWriteOnly, bindCredentialWriteOnlyVersion)
 }
@@ -1066,7 +1080,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	connection_url             = "ldap://openldap"
 	users_dn                   = "dc=example,dc=org"
 	bind_dn                    = "cn=admin,dc=example,dc=org"
-	bind_credential_wo_version = 1
+	bind_credential_wo_version = "version1"
 }
 	`, testAccRealmUserFederation.Realm, ldap)
 }
@@ -1095,7 +1109,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	bind_dn                    = "cn=admin,dc=example,dc=org"
 	bind_credential            = "admin"
 	bind_credential_wo         = "admin"
-	bind_credential_wo_version = 1
+	bind_credential_wo_version = "version1"
 }
 	`, testAccRealmUserFederation.Realm, ldap)
 }

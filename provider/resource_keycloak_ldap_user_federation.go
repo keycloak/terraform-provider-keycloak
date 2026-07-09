@@ -146,7 +146,7 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 				Description:   "Password of LDAP admin as a write-only argument.",
 			},
 			"bind_credential_wo_version": {
-				Type:          schema.TypeInt,
+				Type:          schema.TypeString,
 				Optional:      true,
 				ConflictsWith: []string{"bind_credential"},
 				RequiredWith:  []string{"bind_credential_wo"},
@@ -352,7 +352,7 @@ func validateSyncPeriod(i interface{}, k string) (s []string, errs []error) {
 	return
 }
 
-func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId string) (*keycloak.LdapUserFederation, error) {
+func getLdapUserFederationFromData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmInternalId string) (*keycloak.LdapUserFederation, error) {
 	var userObjectClasses []string
 
 	for _, userObjectClass := range data.Get("user_object_classes").([]interface{}) {
@@ -430,13 +430,22 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		ldapUserFederation.AllowKerberosAuthentication = false
 	}
 
-	if data.Get("bind_credential_wo_version").(int) != 0 && data.HasChange("bind_credential_wo_version") {
-		bindCredentialWriteOnly, bindCredentialWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("bind_credential_wo"))
-		if bindCredentialWriteOnlyDiags.HasError() {
-			return nil, errors.New("error reading 'bind_credential_wo' argument")
-		}
+	if bindCredentialWOVersion := data.Get("bind_credential_wo_version").(string); bindCredentialWOVersion != "" {
+		if data.Id() == "" || data.HasChange("bind_credential_wo_version") {
+			bindCredentialWriteOnly, bindCredentialWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("bind_credential_wo"))
+			if bindCredentialWriteOnlyDiags.HasError() {
+				return nil, errors.New("error reading 'bind_credential_wo' argument")
+			}
 
-		ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
+			ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
+		} else {
+			currentLdapUserFederation, err := keycloakClient.GetLdapUserFederation(ctx, realmInternalId, data.Id())
+			if err != nil {
+				return nil, err
+			}
+
+			ldapUserFederation.BindCredential = currentLdapUserFederation.BindCredential
+		}
 	}
 
 	return ldapUserFederation, nil
@@ -465,7 +474,7 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("relative_create_dn", ldap.RelativeCreateDn)
 	data.Set("bind_dn", ldap.BindDn)
 	if v, ok := data.GetOk("bind_credential_wo_version"); ok && v != nil {
-		data.Set("bind_credential_wo_version", v.(int))
+		data.Set("bind_credential_wo_version", v.(string))
 	} else {
 		data.Set("bind_credential", ldap.BindCredential)
 	}
@@ -534,7 +543,7 @@ func resourceKeycloakLdapUserFederationCreate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap, err := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(ctx, keycloakClient, data, realm.Id)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -594,7 +603,7 @@ func resourceKeycloakLdapUserFederationUpdate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap, err := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(ctx, keycloakClient, data, realm.Id)
 	if err != nil {
 		return diag.FromErr(err)
 	}
