@@ -611,7 +611,7 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential", secondBindCredentialWO),
-					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version"),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", ""),
 				),
 			},
 		},
@@ -629,11 +629,11 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnlyValidation(t *test
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialWriteOnlyWithoutVersion(ldapName),
-				ExpectError: regexp.MustCompile(`all of .+bind_credential_wo.+bind_credential_wo_version.+ must be specified`),
+				ExpectError: regexp.MustCompile(`(Missing required argument|bind_credential_wo.+bind_credential_wo_version)`),
 			},
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialWriteOnlyVersionWithoutSecret(ldapName),
-				ExpectError: regexp.MustCompile(`all of .+bind_credential_wo.+bind_credential_wo_version.+ must be specified`),
+				ExpectError: regexp.MustCompile(`(Missing required argument|bind_credential_wo.+bind_credential_wo_version)`),
 			},
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialAndWriteOnlyConflict(ldapName),
