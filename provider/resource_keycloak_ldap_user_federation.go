@@ -342,7 +342,6 @@ func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
 			},
 		},
 	}
-}
 
 func validateSyncPeriod(i interface{}, k string) (s []string, errs []error) {
 	num, ok := i.(int)
