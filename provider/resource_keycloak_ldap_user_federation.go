@@ -34,7 +34,12 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakLdapUserFederationImport,
 		},
-		Schema: map[string]*schema.Schema{
+		Schema: resourceKeycloakLdapUserFederationSchema(),
+	}
+}
+
+func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -439,7 +444,7 @@ func getLdapUserFederationFromData(ctx context.Context, keycloakClient *keycloak
 
 			ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
 		} else {
-			currentLdapUserFederation, err := keycloakClient.GetLdapUserFederation(ctx, realmInternalId, data.Id())
+			currentLdapUserFederation, err := keycloakClient.GetLdapUserFederation(ctx, data.Get("realm_id").(string), data.Id())
 			if err != nil {
 				return nil, err
 			}
