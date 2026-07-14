@@ -36,6 +36,47 @@ func TestAccKeycloakOrganizationMemberships_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOrganizationMemberships_adoptPreExistingMembers(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	preExistingUser := acctest.RandomWithPrefix("tf-acc")
+	managedUser := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Step 1: Pre-populate the organization with a member out of band
+			{
+				Config: testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser),
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+						if err != nil {
+							return err
+						}
+						user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, preExistingUser)
+						if err != nil {
+							return err
+						}
+						return keycloakClient.AddUserToOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id)
+					},
+				),
+			},
+			// Step 2: Declare memberships with `managedUser` only. This should adopt the organization,
+			// adding `managedUser` and removing the pre-existing `preExistingUser`.
+			{
+				Config: testKeycloakOrganizationMemberships_basic(organizationName, managedUser),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserBelongsToOrganization("keycloak_organization_memberships.org_members", managedUser),
+					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{preExistingUser}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOrganizationMemberships_updateInPlace(t *testing.T) {
 	t.Parallel()
 
@@ -412,4 +453,31 @@ resource "keycloak_organization_memberships" "org_members" {
 	]
 }
 	`, testAccRealm.Realm, organizationName, username)
+}
+
+func testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "example.com"
+	}
+}
+
+resource "keycloak_user" "pre_existing_user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+	`, testAccRealm.Realm, organizationName, preExistingUser, managedUser)
 }

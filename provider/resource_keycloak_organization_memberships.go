@@ -43,6 +43,59 @@ func organizationMembershipsId(realmId, organizationId string) string {
 	return fmt.Sprintf("%s/organization-memberships/%s", realmId, organizationId)
 }
 
+func reconcileOrganizationMemberships(ctx context.Context, realmId, organizationId string, targetMembers []interface{}, keycloakClient *keycloak.KeycloakClient) error {
+	// 1. Resolve all desired usernames to user IDs and check existence
+	desiredUsersMap := make(map[string]string) // userId -> username
+	desiredUserIdsSet := make(map[string]bool) // userId -> true
+	for _, rawUsername := range targetMembers {
+		username := rawUsername.(string)
+		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username)
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			return fmt.Errorf("user with username %s does not exist", username)
+		}
+		desiredUsersMap[user.Id] = username
+		desiredUserIdsSet[user.Id] = true
+	}
+
+	// 2. Fetch current members from Keycloak
+	currentMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
+	if err != nil {
+		return err
+	}
+
+	currentUsersMap := make(map[string]string) // userId -> username
+	currentUserIdsSet := make(map[string]bool) // userId -> true
+	for _, member := range currentMembers {
+		currentUsersMap[member.Id] = member.Username
+		currentUserIdsSet[member.Id] = true
+	}
+
+	// 3. Remove users that are currently members but not desired
+	for currentUserId, currentUsername := range currentUsersMap {
+		if !desiredUserIdsSet[currentUserId] {
+			err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, currentUserId)
+			if err != nil {
+				return fmt.Errorf("error removing user %s from organization: %w", currentUsername, err)
+			}
+		}
+	}
+
+	// 4. Add users that are desired but not currently members
+	for desiredUserId, desiredUsername := range desiredUsersMap {
+		if !currentUserIdsSet[desiredUserId] {
+			err = keycloakClient.AddUserToOrganization(ctx, realmId, organizationId, desiredUserId)
+			if err != nil {
+				return fmt.Errorf("error adding user %s to organization: %w", desiredUsername, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func resourceKeycloakOrganizationMembershipsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
@@ -50,18 +103,8 @@ func resourceKeycloakOrganizationMembershipsCreate(ctx context.Context, data *sc
 	organizationId := data.Get("organization_id").(string)
 	members := data.Get("members").(*schema.Set).List()
 
-	for _, username := range members {
-		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if user == nil {
-			return diag.FromErr(fmt.Errorf("user with username %s does not exist", username.(string)))
-		}
-
-		if err = keycloakClient.AddUserToOrganization(ctx, realmId, organizationId, user.Id); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := reconcileOrganizationMemberships(ctx, realmId, organizationId, members, keycloakClient); err != nil {
+		return diag.FromErr(err)
 	}
 
 	data.SetId(organizationMembershipsId(realmId, organizationId))
@@ -96,39 +139,10 @@ func resourceKeycloakOrganizationMembershipsUpdate(ctx context.Context, data *sc
 
 	realmId := data.Get("realm_id").(string)
 	organizationId := data.Get("organization_id").(string)
-	tfMembers := data.Get("members").(*schema.Set)
+	members := data.Get("members").(*schema.Set).List()
 
-	keycloakMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
-	if err != nil {
+	if err := reconcileOrganizationMemberships(ctx, realmId, organizationId, members, keycloakClient); err != nil {
 		return diag.FromErr(err)
-	}
-
-	for _, keycloakMember := range keycloakMembers {
-		if tfMembers.Contains(keycloakMember.Username) {
-			// user exists in both Keycloak and Terraform state – nothing to do,
-			// remove from set so we can identify users that need to be added later
-			tfMembers.Remove(keycloakMember.Username)
-		} else {
-			// user exists in Keycloak but not in Terraform state – remove from org
-			if err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, keycloakMember.Id); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
-	// tfMembers now contains only usernames that need to be added
-	for _, username := range tfMembers.List() {
-		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if user == nil {
-			return diag.FromErr(fmt.Errorf("user with username %s does not exist", username.(string)))
-		}
-
-		if err = keycloakClient.AddUserToOrganization(ctx, realmId, organizationId, user.Id); err != nil {
-			return diag.FromErr(err)
-		}
 	}
 
 	data.SetId(organizationMembershipsId(realmId, organizationId))
