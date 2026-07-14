@@ -90,6 +90,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_openid_client_default_scopes":                      resourceKeycloakOpenidClientDefaultScopes(),
 			"keycloak_openid_client_optional_scopes":                     resourceKeycloakOpenidClientOptionalScopes(),
 			"keycloak_organization":                                      resourceKeycloakOrganization(),
+			"keycloak_organization_memberships":                          resourceKeycloakOrganizationMemberships(),
+
 			"keycloak_saml_client":                                       resourceKeycloakSamlClient(),
 			"keycloak_saml_client_scope":                                 resourceKeycloakSamlClientScope(),
 			"keycloak_saml_client_default_scopes":                        resourceKeycloakSamlClientDefaultScopes(),
