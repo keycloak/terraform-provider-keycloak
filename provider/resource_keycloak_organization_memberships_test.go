@@ -77,6 +77,22 @@ func TestAccKeycloakOrganizationMemberships_adoptPreExistingMembers(t *testing.T
 	})
 }
 
+func TestAccKeycloakOrganizationMemberships_moreThan50members(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganizationMemberships_moreThan50members(organizationName),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOrganizationMemberships_updateInPlace(t *testing.T) {
 	t.Parallel()
 
@@ -480,4 +496,38 @@ resource "keycloak_user" "user" {
 	username = "%s"
 }
 	`, testAccRealm.Realm, organizationName, preExistingUser, managedUser)
+}
+
+func testKeycloakOrganizationMemberships_moreThan50members(organizationName string) string {
+	username := acctest.RandomWithPrefix("tf-acc")
+	count := 60
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "example.com"
+	}
+}
+
+resource "keycloak_user" "users" {
+	count = %d
+
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s-${count.index}"
+}
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = keycloak_user.users.*.username
+}
+	`, testAccRealm.Realm, organizationName, count, username)
 }
