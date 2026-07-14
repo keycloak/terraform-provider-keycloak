@@ -80,7 +80,7 @@ func reconcileOrganizationMemberships(ctx context.Context, realmId, organization
 				return fmt.Errorf("cannot remove managed member %s from organization %s: Keycloak deletes the underlying user account for managed memberships. Please remove the membership through the Identity Provider federation or Keycloak admin console instead", member.Username, organizationId)
 			}
 			err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, currentUserId)
-			if err != nil {
+			if err != nil && !keycloak.ErrorIs404(err) {
 				return fmt.Errorf("error removing user %s from organization: %w", member.Username, err)
 			}
 		}
