@@ -78,26 +78,31 @@ func (keycloakClient *KeycloakClient) DeleteOrganization(ctx context.Context, re
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/organizations/%s", realmId, id), nil)
 }
 
-func (keycloakClient *KeycloakClient) GetOrganizationMembers(ctx context.Context, realm, orgId string) ([]*User, error) {
-	var users []*User
-	var first, pagination = 0, 50
-	var iterationUsers []*User
+type OrganizationMember struct {
+	Id             string `json:"id"`
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	FirstName      string `json:"firstName"`
+	LastName       string `json:"lastName"`
+	MembershipType string `json:"membershipType"`
+}
 
-	for ok := true; ok; ok = len(iterationUsers) > 0 {
-		iterationUsers = nil
-		err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/organizations/%s/members?max=%d&first=%d", realm, orgId, pagination, first), &iterationUsers, nil)
+func (keycloakClient *KeycloakClient) GetOrganizationMembers(ctx context.Context, realm, orgId string) ([]*OrganizationMember, error) {
+	var members []*OrganizationMember
+	var first, pagination = 0, 50
+	var iterationMembers []*OrganizationMember
+
+	for ok := true; ok; ok = len(iterationMembers) > 0 {
+		iterationMembers = nil
+		err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/organizations/%s/members?max=%d&first=%d", realm, orgId, pagination, first), &iterationMembers, nil)
 		if err != nil {
 			return nil, err
 		}
-		users = append(users, iterationUsers...)
+		members = append(members, iterationMembers...)
 		first += pagination
 	}
 
-	for _, user := range users {
-		user.RealmId = realm
-	}
-
-	return users, nil
+	return members, nil
 }
 
 func (keycloakClient *KeycloakClient) AddUserToOrganization(ctx context.Context, realm, orgId, userId string) error {

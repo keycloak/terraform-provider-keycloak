@@ -246,7 +246,7 @@ func TestAccKeycloakOrganizationMemberships_authoritativeRemove(t *testing.T) {
 
 // --- State helpers ---
 
-func testAccGetUsersInOrganizationFromState(resourceName string, s *terraform.State) ([]*keycloak.User, error) {
+func testAccGetUsersInOrganizationFromState(resourceName string, s *terraform.State) ([]*keycloak.OrganizationMember, error) {
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, fmt.Errorf("resource not found: %s", resourceName)

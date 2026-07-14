@@ -66,19 +66,22 @@ func reconcileOrganizationMemberships(ctx context.Context, realmId, organization
 		return err
 	}
 
-	currentUsersMap := make(map[string]string) // userId -> username
-	currentUserIdsSet := make(map[string]bool) // userId -> true
+	currentUsersMap := make(map[string]*keycloak.OrganizationMember) // userId -> Member
+	currentUserIdsSet := make(map[string]bool)                       // userId -> true
 	for _, member := range currentMembers {
-		currentUsersMap[member.Id] = member.Username
+		currentUsersMap[member.Id] = member
 		currentUserIdsSet[member.Id] = true
 	}
 
 	// 3. Remove users that are currently members but not desired
-	for currentUserId, currentUsername := range currentUsersMap {
+	for currentUserId, member := range currentUsersMap {
 		if !desiredUserIdsSet[currentUserId] {
+			if member.MembershipType == "MANAGED" {
+				return fmt.Errorf("cannot remove managed member %s from organization %s: Keycloak deletes the underlying user account for managed memberships. Please remove the membership through the Identity Provider federation or Keycloak admin console instead", member.Username, organizationId)
+			}
 			err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, currentUserId)
 			if err != nil {
-				return fmt.Errorf("error removing user %s from organization: %w", currentUsername, err)
+				return fmt.Errorf("error removing user %s from organization: %w", member.Username, err)
 			}
 		}
 	}
@@ -124,8 +127,11 @@ func resourceKeycloakOrganizationMembershipsRead(ctx context.Context, data *sche
 	}
 
 	var members []string
+	tfMembers := data.Get("members").(*schema.Set)
 	for _, member := range keycloakMembers {
-		members = append(members, member.Username)
+		if member.MembershipType == "UNMANAGED" || tfMembers.Contains(member.Username) {
+			members = append(members, member.Username)
+		}
 	}
 
 	data.Set("members", members)
@@ -165,6 +171,22 @@ func resourceKeycloakOrganizationMembershipsDelete(ctx context.Context, data *sc
 		if user == nil {
 			// user no longer exists; skip
 			continue
+		}
+
+		// To prevent deleting the Keycloak user account, verify if they are a MANAGED member.
+		currentMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
+		if err == nil {
+			isManaged := false
+			for _, m := range currentMembers {
+				if m.Id == user.Id && m.MembershipType == "MANAGED" {
+					isManaged = true
+					break
+				}
+			}
+			if isManaged {
+				// Skip removing managed member during destroy to protect their account.
+				continue
+			}
 		}
 
 		if err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, user.Id); err != nil {
