@@ -362,7 +362,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -379,7 +379,7 @@ resource "keycloak_organization_memberships" "org_members" {
 		keycloak_user.user.username
 	]
 }
-	`, testAccRealm.Realm, organizationName, username)
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
 }
 
 func testKeycloakOrganizationMemberships_noMembers(organizationName, username string) string {
@@ -393,7 +393,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -401,7 +401,7 @@ resource "keycloak_user" "user" {
 	realm_id = data.keycloak_realm.realm.id
 	username = "%s"
 }
-	`, testAccRealm.Realm, organizationName, username)
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
 }
 
 func testKeycloakOrganizationMemberships_multipleUsers(organizationName string, definedUsers, usersInOrg []string) string {
@@ -430,7 +430,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -442,7 +442,7 @@ resource "keycloak_organization_memberships" "org_members" {
 
 	members = %s
 }
-	`, testAccRealm.Realm, organizationName, userResources.String(), arrayOfStringsForTerraformResource(usersInOrgInterpolated))
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), userResources.String(), arrayOfStringsForTerraformResource(usersInOrgInterpolated))
 }
 
 func testKeycloakOrganizationMemberships_userDoesNotExist(organizationName, username string) string {
@@ -456,7 +456,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -468,7 +468,7 @@ resource "keycloak_organization_memberships" "org_members" {
 		"%s"
 	]
 }
-	`, testAccRealm.Realm, organizationName, username)
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
 }
 
 func testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser string) string {
@@ -482,7 +482,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -495,7 +495,7 @@ resource "keycloak_user" "user" {
 	realm_id = data.keycloak_realm.realm.id
 	username = "%s"
 }
-	`, testAccRealm.Realm, organizationName, preExistingUser, managedUser)
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), preExistingUser, managedUser)
 }
 
 func testKeycloakOrganizationMemberships_moreThan50members(organizationName string) string {
@@ -512,7 +512,7 @@ resource "keycloak_organization" "organization" {
 	realm = data.keycloak_realm.realm.id
 
 	domain {
-		name = "example.com"
+		name = "%s"
 	}
 }
 
@@ -529,5 +529,5 @@ resource "keycloak_organization_memberships" "org_members" {
 
 	members = keycloak_user.users.*.username
 }
-	`, testAccRealm.Realm, organizationName, count, username)
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), count, username)
 }
