@@ -163,6 +163,18 @@ func resourceKeycloakOrganizationMembershipsDelete(ctx context.Context, data *sc
 	organizationId := data.Get("organization_id").(string)
 	members := data.Get("members").(*schema.Set).List()
 
+	// Fetch current members once to check their membership type
+	currentMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
+	if err != nil {
+		return handleNotFoundError(ctx, err, data)
+	}
+
+	// Create a map of userId -> MembershipType
+	memberTypes := make(map[string]string)
+	for _, m := range currentMembers {
+		memberTypes[m.Id] = m.MembershipType
+	}
+
 	for _, username := range members {
 		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string))
 		if err != nil {
@@ -174,19 +186,9 @@ func resourceKeycloakOrganizationMembershipsDelete(ctx context.Context, data *sc
 		}
 
 		// To prevent deleting the Keycloak user account, verify if they are a MANAGED member.
-		currentMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
-		if err == nil {
-			isManaged := false
-			for _, m := range currentMembers {
-				if m.Id == user.Id && m.MembershipType == "MANAGED" {
-					isManaged = true
-					break
-				}
-			}
-			if isManaged {
-				// Skip removing managed member during destroy to protect their account.
-				continue
-			}
+		if memberTypes[user.Id] == "MANAGED" {
+			// Skip removing managed member during destroy to protect their account.
+			continue
 		}
 
 		if err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, user.Id); err != nil {
