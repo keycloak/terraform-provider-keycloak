@@ -132,7 +132,8 @@ type Realm struct {
 	WebAuthnPolicyAuthenticatorAttachment         string   `json:"webAuthnPolicyAuthenticatorAttachment"`
 	WebAuthnPolicyAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyCreateTimeout                   int      `json:"webAuthnPolicyCreateTimeout"`
-	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"`
+	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"` // Deprecated: use WebAuthnPolicyDiscoverableCredential instead
+	WebAuthnPolicyDiscoverableCredential          string   `json:"webAuthnPolicyResidentKey,omitempty"`
 	WebAuthnPolicyRpEntityName                    string   `json:"webAuthnPolicyRpEntityName"`
 	WebAuthnPolicyRpId                            string   `json:"webAuthnPolicyRpId"`
 	WebAuthnPolicySignatureAlgorithms             []string `json:"webAuthnPolicySignatureAlgorithms"`
@@ -145,7 +146,8 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessAuthenticatorAttachment         string   `json:"webAuthnPolicyPasswordlessAuthenticatorAttachment"`
 	WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyPasswordlessCreateTimeout                   int      `json:"webAuthnPolicyPasswordlessCreateTimeout"`
-	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
+	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"` // Deprecated: use WebAuthnPolicyPasswordlessDiscoverableCredential instead
+	WebAuthnPolicyPasswordlessDiscoverableCredential          string   `json:"webAuthnPolicyPasswordlessResidentKey,omitempty"`
 	WebAuthnPolicyPasswordlessRpEntityName                    string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
 	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
 	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
