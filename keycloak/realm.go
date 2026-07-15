@@ -132,7 +132,8 @@ type Realm struct {
 	WebAuthnPolicyAuthenticatorAttachment         string   `json:"webAuthnPolicyAuthenticatorAttachment"`
 	WebAuthnPolicyAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyCreateTimeout                   int      `json:"webAuthnPolicyCreateTimeout"`
-	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"` // Deprecated: use WebAuthnPolicyDiscoverableCredential instead
+	// Deprecated: use WebAuthnPolicyDiscoverableCredential instead.
+	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"`
 	WebAuthnPolicyDiscoverableCredential          string   `json:"webAuthnPolicyResidentKey,omitempty"`
 	WebAuthnPolicyRpEntityName                    string   `json:"webAuthnPolicyRpEntityName"`
 	WebAuthnPolicyRpId                            string   `json:"webAuthnPolicyRpId"`
@@ -146,7 +147,8 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessAuthenticatorAttachment         string   `json:"webAuthnPolicyPasswordlessAuthenticatorAttachment"`
 	WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyPasswordlessCreateTimeout                   int      `json:"webAuthnPolicyPasswordlessCreateTimeout"`
-	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"` // Deprecated: use WebAuthnPolicyPasswordlessDiscoverableCredential instead
+	// Deprecated: use WebAuthnPolicyPasswordlessDiscoverableCredential instead.
+	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
 	WebAuthnPolicyPasswordlessDiscoverableCredential          string   `json:"webAuthnPolicyPasswordlessResidentKey,omitempty"`
 	WebAuthnPolicyPasswordlessRpEntityName                    string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
 	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`

@@ -1125,8 +1125,8 @@ func TestAccKeycloakRealm_webauthn_discoverableCredential(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
-	discoverableCredential := randomStringInSlice([]string{"required", "preferred", "discouraged"})
-	updatedDiscoverableCredential := randomStringInSlice([]string{"required", "preferred", "discouraged"})
+	discoverableCredential := "required"
+	updatedDiscoverableCredential := "discouraged"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
