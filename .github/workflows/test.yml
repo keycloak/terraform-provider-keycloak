@@ -52,9 +52,12 @@ jobs:
     strategy:
       matrix:
         include:
-          # Newest version: run once with v2 (the default) and once with v1 explicitly enabled
-          - keycloak-version: '26.6.3'
-          - keycloak-version: '26.6.3'
+          # Newer versions: run once with v2 (the default) and once with v1 explicitly enabled
+          - keycloak-version: '26.7.0'
+          - keycloak-version: '26.7.0'
+            fgap-version: 'v1'
+          - keycloak-version: '26.6.4'
+          - keycloak-version: '26.6.4'
             fgap-version: 'v1'
           # Older versions that do not have v2 as the default: enable v1 explicitly
           - keycloak-version: '26.5.7'
