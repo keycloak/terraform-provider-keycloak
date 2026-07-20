@@ -49,6 +49,7 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `post_broker_login_flow_alias` - (Optional) Alias of authentication flow, which is triggered after each login with this identity provider. Useful if you want additional verification of each user authenticated with this identity provider (for example OTP). Leave this empty if you don't want any additional authenticators to be triggered after login with this identity provider. Also note, that authenticator implementations must assume that user is already set in ClientSession as identity provider already set it. Defaults to empty.
 - `authenticate_by_default` - (Optional) Authenticate users by default. Defaults to `false`.
 - `entity_id` - (Required) The Entity ID that will be used to uniquely identify this SAML Service Provider.
+- `idp_entity_id` - (Optional) The Entity ID as reported by the identity provider.
 - `single_sign_on_service_url` - (Required) The Url that must be used to send authentication requests (SAML AuthnRequest).
 - `single_logout_service_url` - (Optional) The Url that must be used to send logout requests.
 - `backchannel_supported` - (Optional) Does the external IDP support backchannel logout?. Defaults to `false`.

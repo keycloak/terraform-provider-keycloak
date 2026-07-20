@@ -20,6 +20,7 @@ type IdentityProviderConfig struct {
 	UserInfoUrl                     string                    `json:"userInfoUrl,omitempty"`
 	NameIDPolicyFormat              string                    `json:"nameIDPolicyFormat,omitempty"`
 	EntityId                        string                    `json:"entityId,omitempty"`
+	IdpEntityId                     string                    `json:"idpEntityId,omitempty"`
 	SingleLogoutServiceUrl          string                    `json:"singleLogoutServiceUrl,omitempty"`
 	SingleSignOnServiceUrl          string                    `json:"singleSignOnServiceUrl,omitempty"`
 	SigningCertificate              string                    `json:"signingCertificate,omitempty"`
