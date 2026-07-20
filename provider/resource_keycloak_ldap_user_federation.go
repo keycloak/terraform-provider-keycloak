@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -33,290 +34,308 @@ func resourceKeycloakLdapUserFederation() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakLdapUserFederationImport,
 		},
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Display name of the provider when displayed in the console.",
-			},
-			"realm_id": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The realm this provider will provide user federation for.",
-			},
-			"enabled": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-				Description: "When false, this provider will not be used when performing queries for users.",
-			},
-			"priority": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     0,
-				Description: "Priority of this provider when looking up users. Lower values are first.",
-			},
-			"import_enabled": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-				Description: "When true, LDAP users will be imported into the Keycloak database.",
-			},
-			"edit_mode": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "READ_ONLY",
-				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationEditModes, false),
-				Description:  "READ_ONLY and WRITABLE are self-explanatory. UNSYNCED allows user data to be imported but not synced back to LDAP.",
-			},
-			"sync_registrations": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "When true, newly created users will be synced back to LDAP.",
-			},
-			"vendor": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "OTHER",
-				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationVendors, false),
-				Description:  "LDAP vendor. I am almost certain this field does nothing, but the UI indicates that it is required.",
-			},
-			"username_ldap_attribute": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the LDAP attribute to use as the Keycloak username.",
-			},
-			"rdn_ldap_attribute": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the LDAP attribute to use as the relative distinguished name.",
-			},
-			"uuid_ldap_attribute": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the LDAP attribute to use as a unique object identifier for objects in LDAP.",
-			},
-			"user_object_classes": {
-				Type:        schema.TypeList,
-				Required:    true,
-				MinItems:    1,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "All values of LDAP objectClass attribute for users in LDAP.",
-			},
-			"connection_url": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Connection URL to the LDAP server.",
-			},
-			"users_dn": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Full DN of LDAP tree where your users are.",
-			},
-			"relative_create_dn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Relative DN of LDAP tree where new users will be created. Keycloak will use the Users DN as the base for the new user's DN.",
-			},
-			"bind_dn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "DN of LDAP admin, which will be used by Keycloak to access LDAP server.",
-			},
-			"bind_credential": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
-				DiffSuppressFunc: func(_, remoteBindCredential, _ string, _ *schema.ResourceData) bool {
-					return remoteBindCredential == "**********"
-				},
-				Description: "Password of LDAP admin.",
-			},
-			"custom_user_search_filter": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Additional LDAP filter for filtering searched users. Must begin with '(' and end with ')'.",
-			},
-			"krb_principal_attribute": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
-				Description: "Name of the LDAP attribute, which refers to Kerberos principal. This is used to lookup appropriate LDAP user after successful Kerberos/SPNEGO authentication in Keycloak. When this is empty, the LDAP user will be looked based on LDAP username corresponding to the first part of his Kerberos principal. For instance, for principal 'john@KEYCLOAK.ORG', it will assume that LDAP username is 'john'.",
-			},
-			"debug": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "false",
-				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationDebug, false),
-				Description:  "true: enables debug logging for Krb5LoginModule. false: disables debug logging for Krb5LoginModule",
-			},
-			"search_scope": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "ONE_LEVEL",
-				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationSearchScopes, false),
-				Description:  "ONE_LEVEL: only search for users in the DN specified by user_dn. SUBTREE: search entire LDAP subtree.",
-			},
+		Schema: resourceKeycloakLdapUserFederationSchema(),
+	}
+}
 
-			"start_tls": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "When true, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.",
+func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Display name of the provider when displayed in the console.",
+		},
+		"realm_id": {
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    true,
+			Description: "The realm this provider will provide user federation for.",
+		},
+		"enabled": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "When false, this provider will not be used when performing queries for users.",
+		},
+		"priority": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "Priority of this provider when looking up users. Lower values are first.",
+		},
+		"import_enabled": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "When true, LDAP users will be imported into the Keycloak database.",
+		},
+		"edit_mode": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "READ_ONLY",
+			ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationEditModes, false),
+			Description:  "READ_ONLY and WRITABLE are self-explanatory. UNSYNCED allows user data to be imported but not synced back to LDAP.",
+		},
+		"sync_registrations": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When true, newly created users will be synced back to LDAP.",
+		},
+		"vendor": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "OTHER",
+			ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationVendors, false),
+			Description:  "LDAP vendor. I am almost certain this field does nothing, but the UI indicates that it is required.",
+		},
+		"username_ldap_attribute": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Name of the LDAP attribute to use as the Keycloak username.",
+		},
+		"rdn_ldap_attribute": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Name of the LDAP attribute to use as the relative distinguished name.",
+		},
+		"uuid_ldap_attribute": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Name of the LDAP attribute to use as a unique object identifier for objects in LDAP.",
+		},
+		"user_object_classes": {
+			Type:        schema.TypeList,
+			Required:    true,
+			MinItems:    1,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "All values of LDAP objectClass attribute for users in LDAP.",
+		},
+		"connection_url": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Connection URL to the LDAP server.",
+		},
+		"users_dn": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Full DN of LDAP tree where your users are.",
+		},
+		"relative_create_dn": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Relative DN of LDAP tree where new users will be created. Keycloak will use the Users DN as the base for the new user's DN.",
+		},
+		"bind_dn": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "DN of LDAP admin, which will be used by Keycloak to access LDAP server.",
+		},
+		"bind_credential": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{"bind_credential_wo", "bind_credential_wo_version"},
+			DiffSuppressFunc: func(_, remoteBindCredential, _ string, _ *schema.ResourceData) bool {
+				return remoteBindCredential == "**********"
 			},
-			"connection_pooling": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "When true, Keycloak will use connection pooling when connecting to LDAP.",
-			},
-			"use_password_modify_extended_op": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "When `true`, use the LDAPv3 Password Modify Extended Operation (RFC-3062).",
-			},
-			"validate_password_policy": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "When true, Keycloak will validate passwords using the realm policy before updating it.",
-			},
-			"trust_email": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If enabled, email provided by this provider is not verified even if verification is enabled for the realm.",
-			},
-			"use_truststore_spi": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "ONLY_FOR_LDAPS",
-				ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationTruststoreSpiSettings, false),
-			},
-			"connection_timeout": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				Description:      "LDAP connection timeout (duration string)",
-				DiffSuppressFunc: suppressDurationStringDiff,
-			},
-			"read_timeout": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				Description:      "LDAP read timeout (duration string)",
-				DiffSuppressFunc: suppressDurationStringDiff,
-			},
-			"pagination": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-				Description: "When true, Keycloak assumes the LDAP server supports pagination.",
-			},
-
-			"batch_size_for_sync": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     1000,
-				Description: "The number of users to sync within a single transaction.",
-			},
-			"full_sync_period": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      -1,
-				ValidateFunc: validateSyncPeriod,
-				Description:  "How frequently Keycloak should sync all LDAP users, in seconds. Omit this property to disable periodic full sync.",
-			},
-			"changed_sync_period": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      -1,
-				ValidateFunc: validateSyncPeriod,
-				Description:  "How frequently Keycloak should sync changed LDAP users, in seconds. Omit this property to disable periodic changed users sync.",
-			},
-
-			"kerberos": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				MaxItems:    1,
-				Description: "Settings regarding kerberos authentication for this realm.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"kerberos_realm": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The name of the kerberos realm, e.g. FOO.LOCAL",
-						},
-						"server_principal": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The kerberos server principal, e.g. 'HTTP/host.foo.com@FOO.LOCAL'.",
-						},
-						"key_tab": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Path to the kerberos keytab file on the server with credentials of the service principal.",
-						},
-						"use_kerberos_for_password_authentication": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     false,
-							Description: "Use kerberos login module instead of ldap service api. Defaults to `false`.",
-						},
+			Description: "Password of LDAP admin.",
+		},
+		"bind_credential_wo": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{"bind_credential"},
+			RequiredWith:  []string{"bind_credential_wo_version"},
+			Description:   "Password of LDAP admin as a write-only argument.",
+		},
+		"bind_credential_wo_version": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			ConflictsWith: []string{"bind_credential"},
+			RequiredWith:  []string{"bind_credential_wo"},
+			Description:   "Version of the bind credential write-only argument.",
+		},
+		"custom_user_search_filter": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Additional LDAP filter for filtering searched users. Must begin with '(' and end with ')'.",
+		},
+		"krb_principal_attribute": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Name of the LDAP attribute, which refers to Kerberos principal. This is used to lookup appropriate LDAP user after successful Kerberos/SPNEGO authentication in Keycloak. When this is empty, the LDAP user will be looked based on LDAP username corresponding to the first part of his Kerberos principal. For instance, for principal 'john@KEYCLOAK.ORG', it will assume that LDAP username is 'john'.",
+		},
+		"debug": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "false",
+			ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationDebug, false),
+			Description:  "true: enables debug logging for Krb5LoginModule. false: disables debug logging for Krb5LoginModule",
+		},
+		"search_scope": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "ONE_LEVEL",
+			ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationSearchScopes, false),
+			Description:  "ONE_LEVEL: only search for users in the DN specified by user_dn. SUBTREE: search entire LDAP subtree.",
+		},
+		"start_tls": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When true, Keycloak will encrypt the connection to LDAP using STARTTLS, which will disable connection pooling.",
+		},
+		"connection_pooling": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When true, Keycloak will use connection pooling when connecting to LDAP.",
+		},
+		"use_password_modify_extended_op": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When `true`, use the LDAPv3 Password Modify Extended Operation (RFC-3062).",
+		},
+		"validate_password_policy": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When true, Keycloak will validate passwords using the realm policy before updating it.",
+		},
+		"trust_email": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "If enabled, email provided by this provider is not verified even if verification is enabled for the realm.",
+		},
+		"use_truststore_spi": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "ONLY_FOR_LDAPS",
+			ValidateFunc: validation.StringInSlice(keycloakLdapUserFederationTruststoreSpiSettings, false),
+		},
+		"connection_timeout": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			Description:      "LDAP connection timeout (duration string)",
+			DiffSuppressFunc: suppressDurationStringDiff,
+		},
+		"read_timeout": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			Description:      "LDAP read timeout (duration string)",
+			DiffSuppressFunc: suppressDurationStringDiff,
+		},
+		"pagination": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "When true, Keycloak assumes the LDAP server supports pagination.",
+		},
+		"batch_size_for_sync": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     1000,
+			Description: "The number of users to sync within a single transaction.",
+		},
+		"full_sync_period": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Default:      -1,
+			ValidateFunc: validateSyncPeriod,
+			Description:  "How frequently Keycloak should sync all LDAP users, in seconds. Omit this property to disable periodic full sync.",
+		},
+		"changed_sync_period": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Default:      -1,
+			ValidateFunc: validateSyncPeriod,
+			Description:  "How frequently Keycloak should sync changed LDAP users, in seconds. Omit this property to disable periodic changed users sync.",
+		},
+		"kerberos": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Settings regarding kerberos authentication for this realm.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"kerberos_realm": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "The name of the kerberos realm, e.g. FOO.LOCAL",
+					},
+					"server_principal": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "The kerberos server principal, e.g. 'HTTP/host.foo.com@FOO.LOCAL'.",
+					},
+					"key_tab": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Path to the kerberos keytab file on the server with credentials of the service principal.",
+					},
+					"use_kerberos_for_password_authentication": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Use kerberos login module instead of ldap service api. Defaults to `false`.",
 					},
 				},
 			},
-			"cache": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Description: "Settings regarding cache policy for this realm.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"policy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "DEFAULT",
-							ValidateFunc: validation.StringInSlice(keycloakUserFederationCachePolicies, false),
-						},
-						"max_lifespan": {
-							Type:             schema.TypeString,
-							Optional:         true,
-							DiffSuppressFunc: suppressDurationStringDiff,
-							Description:      "Max lifespan of cache entry (duration string).",
-						},
-						"eviction_day": {
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      "-1",
-							ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(6)),
-							Description:  "Day of the week the entry will become invalid on.",
-						},
-						"eviction_hour": {
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      "-1",
-							ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(23)),
-							Description:  "Hour of day the entry will become invalid on.",
-						},
-						"eviction_minute": {
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      "-1",
-							ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(59)),
-							Description:  "Minute of day the entry will become invalid on.",
-						},
+		},
+		"cache": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Settings regarding cache policy for this realm.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"policy": {
+						Type:         schema.TypeString,
+						Optional:     true,
+						Default:      "DEFAULT",
+						ValidateFunc: validation.StringInSlice(keycloakUserFederationCachePolicies, false),
+					},
+					"max_lifespan": {
+						Type:             schema.TypeString,
+						Optional:         true,
+						DiffSuppressFunc: suppressDurationStringDiff,
+						Description:      "Max lifespan of cache entry (duration string).",
+					},
+					"eviction_day": {
+						Type:         schema.TypeInt,
+						Optional:     true,
+						Default:      "-1",
+						ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(6)),
+						Description:  "Day of the week the entry will become invalid on.",
+					},
+					"eviction_hour": {
+						Type:         schema.TypeInt,
+						Optional:     true,
+						Default:      "-1",
+						ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(23)),
+						Description:  "Hour of day the entry will become invalid on.",
+					},
+					"eviction_minute": {
+						Type:         schema.TypeInt,
+						Optional:     true,
+						Default:      "-1",
+						ValidateFunc: validation.All(validation.IntAtLeast(0), validation.IntAtMost(59)),
+						Description:  "Minute of day the entry will become invalid on.",
 					},
 				},
 			},
-			"delete_default_mappers": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				ForceNew:    true,
-				Description: "When true, the provider will delete the default mappers which are normally created by Keycloak when creating an LDAP user federation provider.",
-			},
+		},
+		"delete_default_mappers": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			ForceNew:    true,
+			Description: "When true, the provider will delete the default mappers which are normally created by Keycloak when creating an LDAP user federation provider.",
 		},
 	}
 }
@@ -334,7 +353,7 @@ func validateSyncPeriod(i interface{}, k string) (s []string, errs []error) {
 	return
 }
 
-func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId string) *keycloak.LdapUserFederation {
+func getLdapUserFederationFromData(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmInternalId string) (*keycloak.LdapUserFederation, error) {
 	var userObjectClasses []string
 
 	for _, userObjectClass := range data.Get("user_object_classes").([]interface{}) {
@@ -412,7 +431,25 @@ func getLdapUserFederationFromData(data *schema.ResourceData, realmInternalId st
 		ldapUserFederation.AllowKerberosAuthentication = false
 	}
 
-	return ldapUserFederation
+	if bindCredentialWOVersion := data.Get("bind_credential_wo_version").(string); bindCredentialWOVersion != "" {
+		if data.Id() == "" || data.HasChange("bind_credential_wo_version") {
+			bindCredentialWriteOnly, bindCredentialWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("bind_credential_wo"))
+			if bindCredentialWriteOnlyDiags.HasError() {
+				return nil, errors.New("error reading 'bind_credential_wo' argument")
+			}
+
+			ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
+		} else {
+			currentLdapUserFederation, err := keycloakClient.GetLdapUserFederation(ctx, data.Get("realm_id").(string), data.Id())
+			if err != nil {
+				return nil, err
+			}
+
+			ldapUserFederation.BindCredential = currentLdapUserFederation.BindCredential
+		}
+	}
+
+	return ldapUserFederation, nil
 }
 
 func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUserFederation, realmId string) {
@@ -437,7 +474,11 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("users_dn", ldap.UsersDn)
 	data.Set("relative_create_dn", ldap.RelativeCreateDn)
 	data.Set("bind_dn", ldap.BindDn)
-	data.Set("bind_credential", ldap.BindCredential)
+	if v, ok := data.GetOk("bind_credential_wo_version"); ok && v != nil {
+		data.Set("bind_credential_wo_version", v.(string))
+	} else {
+		data.Set("bind_credential", ldap.BindCredential)
+	}
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)
 	data.Set("krb_principal_attribute", ldap.KrbPrincipalAttribute)
 	data.Set("debug", ldap.Debug)
@@ -503,7 +544,10 @@ func resourceKeycloakLdapUserFederationCreate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(ctx, keycloakClient, data, realm.Id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
 		ldap.RelativeCreateDn = ""
@@ -542,7 +586,9 @@ func resourceKeycloakLdapUserFederationRead(ctx context.Context, data *schema.Re
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	ldap.BindCredential = data.Get("bind_credential").(string) // we can't trust the API to set this field correctly since it just responds with "**********"
+	if _, ok := data.GetOk("bind_credential_wo_version"); !ok {
+		ldap.BindCredential = data.Get("bind_credential").(string) // we can't trust the API to set this field correctly since it just responds with "**********"
+	}
 	setLdapUserFederationData(data, ldap, realmId)
 
 	return nil
@@ -558,7 +604,10 @@ func resourceKeycloakLdapUserFederationUpdate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	ldap := getLdapUserFederationFromData(data, realm.Id)
+	ldap, err := getLdapUserFederationFromData(ctx, keycloakClient, data, realm.Id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if ok, _ := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_2); ok {
 		ldap.RelativeCreateDn = ""
