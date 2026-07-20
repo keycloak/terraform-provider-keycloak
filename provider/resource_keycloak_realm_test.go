@@ -1117,6 +1117,67 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealm_webauthn_discoverableCredential(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, minKeycloakDiscoverableCredentialVersion); !ok {
+		t.Skip()
+	}
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+	discoverableCredential := "required"
+	updatedDiscoverableCredential := "discouraged"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_webauthn_discoverable_credential(realmName, realmDisplayName, realmDisplayNameHtml, discoverableCredential),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_policy.0.discoverable_credential", discoverableCredential),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_passwordless_policy.0.discoverable_credential", discoverableCredential),
+					testAccCheckKeycloakRealmDiscoverableCredential("keycloak_realm.realm", discoverableCredential),
+				),
+			},
+			{
+				Config: testKeycloakRealm_webauthn_discoverable_credential(realmName, realmDisplayName, realmDisplayNameHtml, updatedDiscoverableCredential),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_policy.0.discoverable_credential", updatedDiscoverableCredential),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "web_authn_passwordless_policy.0.discoverable_credential", updatedDiscoverableCredential),
+					testAccCheckKeycloakRealmDiscoverableCredential("keycloak_realm.realm", updatedDiscoverableCredential),
+				),
+			},
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakRealmDiscoverableCredential(resourceName, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.WebAuthnPolicyDiscoverableCredential != expected {
+			return fmt.Errorf("expected realm %s to have webAuthnPolicyResidentKey set to %s, but was %s", realm.Realm, expected, realm.WebAuthnPolicyDiscoverableCredential)
+		}
+
+		if realm.WebAuthnPolicyPasswordlessDiscoverableCredential != expected {
+			return fmt.Errorf("expected realm %s to have webAuthnPolicyPasswordlessResidentKey set to %s, but was %s", realm.Realm, expected, realm.WebAuthnPolicyPasswordlessDiscoverableCredential)
+		}
+
+		return nil
+	}
+}
+
 func testKeycloakRealmLoginInfo(resourceName string, realm *keycloak.Realm) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realmFromState, err := getRealmFromState(s, resourceName)
@@ -1930,6 +1991,25 @@ resource "keycloak_realm" "realm" {
 	}
 }
 	`, realm, realmDisplayName, realmDisplayNameHtml, rpName, rpId, arrayOfStringsForTerraformResource(signatureAlgorithms), attestationConveyancePreference, authenticatorAttachment, avoidSameAuthenticatorRegister, requireResidentKey, userVerificationRequirement, passwordlessPasskeysEnabled)
+}
+
+func testKeycloakRealm_webauthn_discoverable_credential(realm, realmDisplayName, realmDisplayNameHtml, discoverableCredential string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm        		= "%s"
+	enabled     	 	= true
+	display_name 		= "%s"
+	display_name_html 	= "%s"
+
+	web_authn_policy {
+		discoverable_credential = "%s"
+	}
+
+	web_authn_passwordless_policy {
+		discoverable_credential = "%s"
+	}
+}
+	`, realm, realmDisplayName, realmDisplayNameHtml, discoverableCredential, discoverableCredential)
 }
 
 func testKeycloakRealm_basicInternalId(realm, internalId string) string {
