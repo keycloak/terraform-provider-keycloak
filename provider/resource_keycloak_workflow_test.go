@@ -346,7 +346,7 @@ resource "keycloak_workflow" "workflow" {
 	}
 
 	step {
-		uses  = "disable-user"
+		uses = "disable-user"
 		after = "86400000"
 	}
 }

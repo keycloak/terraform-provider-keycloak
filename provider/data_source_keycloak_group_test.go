@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccKeycloakDataSourceGroup_basic(t *testing.T) {
@@ -158,10 +157,9 @@ func testAccCheckDataKeycloakGroup(resourceName string) resource.TestCheckFunc {
 
 		id := rs.Primary.ID
 		realmId := rs.Primary.Attributes["realm_id"]
-		organizationId := rs.Primary.Attributes["organization_id"]
 		name := rs.Primary.Attributes["name"]
 
-		group, err := keycloakClient.GetOrganizationGroup(testCtx, realmId, organizationId, id)
+		group, err := keycloakClient.GetGroup(testCtx, realmId, id)
 		if err != nil {
 			return err
 		}
