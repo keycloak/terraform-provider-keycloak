@@ -32,6 +32,11 @@ func TestAccKeycloakOpenidClientOptionalScopes_basic(t *testing.T) {
 				Config: testKeycloakOpenidClientOptionalScopes_basic(client, clientScope),
 				Check:  testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", clientScopes),
 			},
+			{
+				ResourceName:      "keycloak_openid_client_optional_scopes.optional_scopes",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// we need a separate test step for destroy instead of using CheckDestroy because this resource is implicitly
 			// destroyed at the end of each test via destroying clients
 			{

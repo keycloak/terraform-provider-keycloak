@@ -21,6 +21,11 @@ func TestAccKeycloakRealmEvents_basic(t *testing.T) {
 				Config: testKeycloakRealmEvents_basic(realmName),
 				Check:  testAccCheckKeycloakRealmEventsExists("keycloak_realm_events.realm_events"),
 			},
+			{
+				ResourceName:      "keycloak_realm_events.realm_events",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
