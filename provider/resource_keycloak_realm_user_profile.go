@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -372,13 +373,16 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 
 			validator["name"] = name
 
-			c := make(map[string]interface{})
+			c := make(map[string]string)
 			for k, v := range config {
-				if _, ok := v.([]interface{}); ok {
-					t, _ := json.Marshal(v)
+				switch tv := v.(type) {
+				case string:
+					c[k] = tv
+				case []interface{}:
+					t, _ := json.Marshal(tv)
 					c[k] = string(t)
-				} else {
-					c[k] = v
+				case float64:
+					c[k] = strconv.FormatFloat(tv, 'f', -1, 64)
 				}
 			}
 
