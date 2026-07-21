@@ -778,6 +778,21 @@ func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	return "", false
 }
 
+func getRealmSMTPClientSecretFromData(data *schema.ResourceData) (string, bool) {
+	if v, ok := data.GetOk("smtp_server"); ok {
+		smtpSettings := v.([]interface{})[0].(map[string]interface{})
+		tokenConfig := smtpSettings["token_auth"].([]interface{})
+
+		if len(tokenConfig) == 1 {
+			return tokenConfig[0].(map[string]interface{})["client_secret"].(string), true
+		}
+
+		return "", false
+	}
+
+	return "", false
+}
+
 func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
 	if flow, ok := data.GetOk("browser_flow"); ok {
 		realm.BrowserFlow = stringPointer(flow.(string))
@@ -1603,9 +1618,13 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not be detected
+	// we can't trust the API to set these fields correctly since it just responds with "**********" this implies a 'password/client secret only' change will not be detected
 	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok {
 		realm.SmtpServer.Password = smtpPassword
+	}
+
+	if smtpClientSecret, ok := getRealmSMTPClientSecretFromData(data); ok {
+		realm.SmtpServer.AuthTokenClientSecret = smtpClientSecret
 	}
 
 	if _, ok := data.GetOk("terraform_deletion_protection"); !ok {
