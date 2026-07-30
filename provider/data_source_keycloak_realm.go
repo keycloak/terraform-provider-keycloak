@@ -78,6 +78,12 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Type:        schema.TypeString,
 			Description: "Either Yes or No",
 			Computed:    true,
+			Deprecated:  "Deprecated by Keycloak in favor of discoverable_credential. This attribute is only used when discoverable_credential is left as \"not specified\" and is planned to be removed in a future Keycloak version.",
+		},
+		"discoverable_credential": {
+			Type:        schema.TypeString,
+			Description: "Either required, preferred or discouraged. Replaces and takes precedence over the deprecated require_resident_key attribute. Requires Keycloak 26.7 or higher.",
+			Computed:    true,
 		},
 		"relying_party_entity_name": {
 			Type:     schema.TypeString,

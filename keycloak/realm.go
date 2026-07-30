@@ -132,11 +132,13 @@ type Realm struct {
 	WebAuthnPolicyAuthenticatorAttachment         string   `json:"webAuthnPolicyAuthenticatorAttachment"`
 	WebAuthnPolicyAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyCreateTimeout                   int      `json:"webAuthnPolicyCreateTimeout"`
-	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"`
-	WebAuthnPolicyRpEntityName                    string   `json:"webAuthnPolicyRpEntityName"`
-	WebAuthnPolicyRpId                            string   `json:"webAuthnPolicyRpId"`
-	WebAuthnPolicySignatureAlgorithms             []string `json:"webAuthnPolicySignatureAlgorithms"`
-	WebAuthnPolicyUserVerificationRequirement     string   `json:"webAuthnPolicyUserVerificationRequirement"`
+	// Deprecated: use WebAuthnPolicyDiscoverableCredential instead.
+	WebAuthnPolicyRequireResidentKey          string   `json:"webAuthnPolicyRequireResidentKey"`
+	WebAuthnPolicyDiscoverableCredential      string   `json:"webAuthnPolicyResidentKey,omitempty"`
+	WebAuthnPolicyRpEntityName                string   `json:"webAuthnPolicyRpEntityName"`
+	WebAuthnPolicyRpId                        string   `json:"webAuthnPolicyRpId"`
+	WebAuthnPolicySignatureAlgorithms         []string `json:"webAuthnPolicySignatureAlgorithms"`
+	WebAuthnPolicyUserVerificationRequirement string   `json:"webAuthnPolicyUserVerificationRequirement"`
 
 	// WebAuthn Passwordless
 	WebAuthnPolicyPasswordlessAcceptableAaguids               []string `json:"webAuthnPolicyPasswordlessAcceptableAaguids"`
@@ -145,12 +147,14 @@ type Realm struct {
 	WebAuthnPolicyPasswordlessAuthenticatorAttachment         string   `json:"webAuthnPolicyPasswordlessAuthenticatorAttachment"`
 	WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyPasswordlessCreateTimeout                   int      `json:"webAuthnPolicyPasswordlessCreateTimeout"`
-	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
-	WebAuthnPolicyPasswordlessRpEntityName                    string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
-	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
-	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
-	WebAuthnPolicyPasswordlessUserVerificationRequirement     string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
-	WebAuthnPolicyPasswordlessPasskeysEnabled                 *bool    `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
+	// Deprecated: use WebAuthnPolicyPasswordlessDiscoverableCredential instead.
+	WebAuthnPolicyPasswordlessRequireResidentKey          string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
+	WebAuthnPolicyPasswordlessDiscoverableCredential      string   `json:"webAuthnPolicyPasswordlessResidentKey,omitempty"`
+	WebAuthnPolicyPasswordlessRpEntityName                string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
+	WebAuthnPolicyPasswordlessRpId                        string   `json:"webAuthnPolicyPasswordlessRpId"`
+	WebAuthnPolicyPasswordlessSignatureAlgorithms         []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
+	WebAuthnPolicyPasswordlessUserVerificationRequirement string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
+	WebAuthnPolicyPasswordlessPasskeysEnabled             *bool    `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`
