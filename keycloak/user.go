@@ -247,3 +247,35 @@ func (keycloakClient *KeycloakClient) RemoveUserFromGroups(ctx context.Context, 
 	}
 	return nil
 }
+
+type UserCredential struct {
+	Id          string `json:"id,omitempty"`
+	Type        string `json:"type,omitempty"`
+	CreatedDate int64  `json:"createdDate,omitempty"`
+	Temporary   *bool  `json:"temporary,omitempty"`
+	// additional fields omitted
+}
+
+// GetUserPasswordCredential fetches the list of credentials for a user and
+// returns the one with type "password", or nil if no password credential exists.
+func (keycloakClient *KeycloakClient) GetUserPasswordCredential(ctx context.Context, realmId, userId string) (*UserCredential, error) {
+	var credentials []*UserCredential
+
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/users/%s/credentials", realmId, userId), &credentials, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cred := range credentials {
+		if cred.Type == "password" {
+			return cred, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// DeleteUserCredential removes a specific credential from a user.
+func (keycloakClient *KeycloakClient) DeleteUserCredential(ctx context.Context, realmId, userId, credentialId string) error {
+	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/users/%s/credentials/%s", realmId, userId, credentialId), nil)
+}
