@@ -19,6 +19,7 @@ var (
 )
 
 const minKeycloakPasskeysVersion = "26.3.5"
+const minKeycloakDiscoverableCredentialVersion = "26.7.0"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -131,6 +132,14 @@ func resourceKeycloakRealm() *schema.Resource {
 			Optional:     true,
 			Default:      "not specified",
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "Yes", "No"}, false),
+			Deprecated:   "Deprecated by Keycloak in favor of discoverable_credential. This attribute is only used when discoverable_credential is left as \"not specified\" and is planned to be removed in a future Keycloak version.",
+		},
+		"discoverable_credential": {
+			Type:         schema.TypeString,
+			Description:  "Either required, preferred or discouraged. Replaces and takes precedence over the deprecated require_resident_key attribute. Requires Keycloak 26.7 or higher.",
+			Optional:     true,
+			Default:      "not specified",
+			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 		"relying_party_entity_name": {
 			Type:     schema.TypeString,
@@ -1226,6 +1235,15 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyRequireResidentKey = webAuthnPolicyRequireResidentKey.(string)
 		}
 
+		if webAuthnPolicyDiscoverableCredential, ok := webAuthnPolicy["discoverable_credential"]; ok {
+			discoverableCredential := webAuthnPolicyDiscoverableCredential.(string)
+			if supportsDiscoverableCredential(keycloakVersion) {
+				realm.WebAuthnPolicyDiscoverableCredential = discoverableCredential
+			} else if discoverableCredential != "" && discoverableCredential != "not specified" {
+				return nil, fmt.Errorf("discoverable_credential in web_authn_policy for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realm.Id, minKeycloakDiscoverableCredentialVersion)
+			}
+		}
+
 		if webAuthnPolicyRpEntityName, ok := webAuthnPolicy["relying_party_entity_name"]; ok {
 			realm.WebAuthnPolicyRpEntityName = webAuthnPolicyRpEntityName.(string)
 		}
@@ -1287,6 +1305,15 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessRequireResidentKey = webAuthnPolicyPasswordlessRequireResidentKey.(string)
 		}
 
+		if webAuthnPolicyPasswordlessDiscoverableCredential, ok := webAuthnPasswordlessPolicy["discoverable_credential"]; ok {
+			discoverableCredential := webAuthnPolicyPasswordlessDiscoverableCredential.(string)
+			if supportsDiscoverableCredential(keycloakVersion) {
+				realm.WebAuthnPolicyPasswordlessDiscoverableCredential = discoverableCredential
+			} else if discoverableCredential != "" && discoverableCredential != "not specified" {
+				return nil, fmt.Errorf("discoverable_credential in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realm.Id, minKeycloakDiscoverableCredentialVersion)
+			}
+		}
+
 		if webAuthnPolicyPasswordlessRpEntityName, ok := webAuthnPasswordlessPolicy["relying_party_entity_name"]; ok {
 			realm.WebAuthnPolicyPasswordlessRpEntityName = webAuthnPolicyPasswordlessRpEntityName.(string)
 		}
@@ -1303,6 +1330,19 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 
 	return realm, nil
+}
+
+func supportsDiscoverableCredential(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakDiscoverableCredentialVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+func flattenDiscoverableCredential(residentKey string, keycloakVersion *version.Version) string {
+	if !supportsDiscoverableCredential(keycloakVersion) || residentKey == "" {
+		return "not specified"
+	}
+
+	return residentKey
 }
 
 func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
@@ -1475,6 +1515,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyAvoidSameAuthenticatorRegister
 	webAuthnPolicy["create_timeout"] = realm.WebAuthnPolicyCreateTimeout
 	webAuthnPolicy["require_resident_key"] = realm.WebAuthnPolicyRequireResidentKey
+	webAuthnPolicy["discoverable_credential"] = flattenDiscoverableCredential(realm.WebAuthnPolicyDiscoverableCredential, keycloakVersion)
 	webAuthnPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyRpEntityName
 	webAuthnPolicy["relying_party_id"] = realm.WebAuthnPolicyRpId
 	webAuthnPolicy["signature_algorithms"] = realm.WebAuthnPolicySignatureAlgorithms
@@ -1501,6 +1542,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister
 	webAuthnPasswordlessPolicy["create_timeout"] = realm.WebAuthnPolicyPasswordlessCreateTimeout
 	webAuthnPasswordlessPolicy["require_resident_key"] = realm.WebAuthnPolicyPasswordlessRequireResidentKey
+	webAuthnPasswordlessPolicy["discoverable_credential"] = flattenDiscoverableCredential(realm.WebAuthnPolicyPasswordlessDiscoverableCredential, keycloakVersion)
 	webAuthnPasswordlessPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyPasswordlessRpEntityName
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
