@@ -157,6 +157,9 @@ jobs:
           $MOUNT_AUTHZ_POLICY_EXAMPLE_VOLUME \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev
 
+      - name: Copy keystore file to data folder
+        run: docker exec keycloak cp -a /opt/keycloak/testdata/tf-acc-keystore /opt/keycloak/data/
+
       - name: Initialize Keycloak
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh
 

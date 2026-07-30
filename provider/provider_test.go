@@ -22,7 +22,7 @@ var keycloakClient *keycloak.KeycloakClient
 var testAccRealm *keycloak.Realm
 var testAccRealmTwo *keycloak.Realm
 var testAccRealmUserFederation *keycloak.Realm
-var testAccRealmOrganization *keycloak.Realm
+var testAccRealmKeystore *keycloak.Realm
 var testAccRealmFGAPv2 *keycloak.Realm
 var testCtx context.Context
 
@@ -59,6 +59,7 @@ func TestMain(m *testing.M) {
 	testAccRealmTwo = createTestRealm(testCtx)
 	testAccRealmUserFederation = createTestRealm(testCtx)
 	testAccRealmFGAPv2 = createFGAPv2TestRealm(testCtx)
+	testAccRealmKeystore = createRealm(testCtx, "tf-acc-keystore")
 
 	code := m.Run()
 
@@ -83,11 +84,19 @@ func TestMain(m *testing.M) {
 		log.Printf("Unable to delete realm %s: %s", testAccRealmFGAPv2.Realm, err)
 	}
 
+	err = keycloakClient.DeleteRealm(testCtx, testAccRealmKeystore.Realm)
+	if err != nil {
+		log.Printf("Unable to delete realm %s: %s", testAccRealmKeystore.Realm, err)
+	}
+
 	os.Exit(code)
 }
 
 func createTestRealm(testCtx context.Context) *keycloak.Realm {
-	name := acctest.RandomWithPrefix("tf-acc")
+	return createRealm(testCtx, acctest.RandomWithPrefix("tf-acc"))
+}
+
+func createRealm(testCtx context.Context, name string) *keycloak.Realm {
 	r := &keycloak.Realm{
 		Id:      name,
 		Realm:   name,
@@ -98,7 +107,7 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 
 	r.OrganizationsEnabled = true
 
-	for i := 0; i < 3; i++ { // on CI this sometimes fails and keycloak can't be reached
+	for range 3 { // on CI this sometimes fails and keycloak can't be reached
 		err = keycloakClient.NewRealm(testCtx, r)
 		if err != nil {
 			log.Printf("Unable to create new realm: %s - retrying in 5s", err)
