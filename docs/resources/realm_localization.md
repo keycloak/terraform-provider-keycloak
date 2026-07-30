@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_realm_localization" "german_texts" {
-  realm_id = keycloak_realm.my_realm.id
+  realm_id = keycloak_realm.realm.id
   locale = "de"
   texts = {
     "Hello" : "Hallo"
@@ -28,7 +28,7 @@ resource "keycloak_realm_localization" "german_texts" {
 
 ## Argument Reference
 
-- `realm_id` - (Required) The ID of the realm the user profile applies to.
+- `realm_id` - (Required) The ID of the realm the localization texts apply to.
 - `locale` - (Required) The locale (language code) the texts apply to.
 - `texts` - (Optional) A map of translation keys to values.
 
