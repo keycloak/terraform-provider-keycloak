@@ -97,7 +97,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 
 	groupKeystoreOne := &keycloak.RealmKeystoreJavaKeystore{
 		Name:     acctest.RandString(10),
-		RealmId:  testAccRealmUserFederation.Realm,
+		RealmId:  testAccRealmKeystore.Realm,
 		Enabled:  enabled,
 		Active:   active,
 		Priority: acctest.RandIntRange(0, 100),
@@ -105,7 +105,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 
 	groupKeystoreTwo := &keycloak.RealmKeystoreJavaKeystore{
 		Name:      acctest.RandString(10),
-		RealmId:   testAccRealmUserFederation.Realm,
+		RealmId:   testAccRealmKeystore.Realm,
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
@@ -114,7 +114,7 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 
 	groupKeystoreThree := &keycloak.RealmKeystoreJavaKeystore{
 		Name:      acctest.RandString(10),
-		RealmId:   testAccRealmUserFederation.Realm,
+		RealmId:   testAccRealmKeystore.Realm,
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
@@ -217,7 +217,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "sig-rs256"
     key_password = "12345678"
@@ -225,7 +225,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
     priority  = 100
     algorithm = "RS256"
 }
-	`, testAccRealmUserFederation.Realm, javaKeystoreName)
+	`, testAccRealmKeystore.Realm, javaKeystoreName)
 }
 
 func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, keyAlias string, attr, val string) string {
@@ -238,14 +238,14 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "%s"
     key_password = "12345678"
 
 	%s        = "%s"
 }
-	`, testAccRealmUserFederation.Realm, javaKeystoreName, keyAlias, attr, val)
+	`, testAccRealmKeystore.Realm, javaKeystoreName, keyAlias, attr, val)
 }
 
 func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore, keyAlias string) string {
@@ -268,7 +268,7 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
     key_alias    = "%s"
     key_password = "12345678"
@@ -277,5 +277,5 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	%s
     %s
 }
-	`, testAccRealmUserFederation.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), algorithmAttr, keyUseAttr)
+	`, testAccRealmKeystore.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), algorithmAttr, keyUseAttr)
 }

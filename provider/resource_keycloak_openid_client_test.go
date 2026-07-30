@@ -201,7 +201,7 @@ func TestAccKeycloakOpenidClient_updateInPlace(t *testing.T) {
 		ServiceAccountsEnabled:    serviceAccountsEnabled,
 		ValidRedirectUris:         []string{acctest.RandString(10), acctest.RandString(10), acctest.RandString(10), acctest.RandString(10)},
 		WebOrigins:                []string{acctest.RandString(10), acctest.RandString(10), acctest.RandString(10)},
-		AdminUrl:                  acctest.RandString(20),
+		AdminUrl:                  "http://localhost:2222/" + acctest.RandString(20),
 		BaseUrl:                   "http://localhost:2222/" + acctest.RandString(20),
 		RootUrl:                   &rootUrlBefore,
 		Attributes: keycloak.OpenidClientAttributes{
@@ -227,7 +227,7 @@ func TestAccKeycloakOpenidClient_updateInPlace(t *testing.T) {
 		ServiceAccountsEnabled:    !serviceAccountsEnabled,
 		ValidRedirectUris:         []string{acctest.RandString(10), acctest.RandString(10)},
 		WebOrigins:                []string{acctest.RandString(10), acctest.RandString(10), acctest.RandString(10), acctest.RandString(10), acctest.RandString(10)},
-		AdminUrl:                  acctest.RandString(20),
+		AdminUrl:                  "http://localhost:2222/" + acctest.RandString(20),
 		BaseUrl:                   "http://localhost:2222/" + acctest.RandString(20),
 		RootUrl:                   &rootUrlAfter,
 		Attributes: keycloak.OpenidClientAttributes{
