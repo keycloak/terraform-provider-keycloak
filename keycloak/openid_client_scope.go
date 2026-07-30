@@ -18,11 +18,12 @@ type OpenidClientScope struct {
 }
 
 type OpenidClientScopeAttributes struct {
-	DisplayOnConsentScreen types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
-	ConsentScreenText      string                   `json:"consent.screen.text"`
-	GuiOrder               string                   `json:"gui.order"`
-	IncludeInTokenScope    types.KeycloakBoolQuoted `json:"include.in.token.scope"` // boolean in string form
-	ExtraConfig            map[string]interface{}   `json:"-"`
+	DisplayOnConsentScreen          types.KeycloakBoolQuoted `json:"display.on.consent.screen"` // boolean in string form
+	ConsentScreenText               string                   `json:"consent.screen.text"`
+	GuiOrder                        string                   `json:"gui.order"`
+	IncludeInTokenScope             types.KeycloakBoolQuoted `json:"include.in.token.scope"`              // boolean in string form
+	IncludeInOpenidProviderMetadata types.KeycloakBoolQuoted `json:"include.in.openid.provider.metadata"` // boolean in string form
+	ExtraConfig                     map[string]interface{}   `json:"-"`
 }
 
 type OpenidClientScopeFilterFunc func(*OpenidClientScope) bool

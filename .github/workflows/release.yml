@@ -28,10 +28,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -58,7 +58,7 @@ jobs:
           echo "name=NOTES::${tmp}/release-notes.md" >> $GITHUB_OUTPUT
 
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # version v7.0.0
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # version v7.2.3
         with:
           args: release --clean --release-notes=${{ steps.build-release-notes.outputs.NOTES }}
         env:

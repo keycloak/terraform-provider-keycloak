@@ -47,6 +47,11 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"include_in_openid_provider_metadata": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
 			"gui_order": {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -83,6 +88,8 @@ func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidCli
 
 	clientScope.Attributes.IncludeInTokenScope = types.KeycloakBoolQuoted(data.Get("include_in_token_scope").(bool))
 
+	clientScope.Attributes.IncludeInOpenidProviderMetadata = types.KeycloakBoolQuoted(data.Get("include_in_openid_provider_metadata").(bool))
+
 	// Treat 0 as an empty string for the purpose of omitting the attribute to reset the order
 	if guiOrder := data.Get("gui_order").(int); guiOrder != 0 {
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
@@ -105,6 +112,7 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	}
 
 	data.Set("include_in_token_scope", clientScope.Attributes.IncludeInTokenScope)
+	data.Set("include_in_openid_provider_metadata", clientScope.Attributes.IncludeInOpenidProviderMetadata)
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}

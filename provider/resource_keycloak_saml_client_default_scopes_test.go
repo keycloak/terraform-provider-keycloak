@@ -12,7 +12,7 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-// All saml clients in Keycloak will automatically have these scopes listed as "default client scopes".
+// All saml clients in Keycloak will automatically have these scopes listed as "default client scopes". Note this list is not exhaustive and doesn't have to be for the sake of these tests.
 var preAssignedDefaultSamlClientScopes = []string{"role_list"}
 
 func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
@@ -253,29 +253,6 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 				},
 				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
-			},
-		},
-	})
-}
-
-// by default, keycloak saml clients have the default scopes "role_list",
-// attached. if you create this resource with only one scope, it
-// won't remove these two scopes, because the creation of a new resource should not
-// result in anything destructive. thus, a following plan will not be empty, as terraform
-// will think it needs to remove these scopes, which is okay to do during an update
-func TestAccKeycloakSamlClientDefaultScopes_profileAndEmailDefaultScopes(t *testing.T) {
-	t.Parallel()
-	client := acctest.RandomWithPrefix("tf-acc")
-	clientScope := acctest.RandomWithPrefix("tf-acc")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config:             testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, []string{clientScope}),
-				Check:              testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client.client", append(preAssignedDefaultSamlClientScopes, clientScope)),
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})

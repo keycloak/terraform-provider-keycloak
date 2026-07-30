@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
   display_name      = "my realm"
   display_name_html = "<b>my realm</b>"
 
-  login_theme = "base"
+  login_theme = "keycloak"
 
   access_code_lifespan = "1h"
 
@@ -159,6 +159,7 @@ This block supports the following arguments:
 - `envelope_from` - (Optional) The email address uses for bounces.
 - `starttls` - (Optional) When `true`, enables StartTLS. Defaults to `false`.
 - `ssl` - (Optional) When `true`, enables SSL. Defaults to `false`.
+- `allow_utf8` - (Optional) When `true`, allows UTF-8 in the local part of the email address. Defaults to `false`.
 - `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `password` - (Required) The SMTP server password.
@@ -236,6 +237,7 @@ The `otp_policy` block with following arguments can be found in the "OTP Policy"
 - `initial_counter` - (Optional) What should the initial counter value be. Defaults to `2`.
 - `look_ahead_window` - (Optional) How far ahead should the server look just in case the token generator and server are out of time sync or counter sync. Defaults to `1`.
 - `period` - (Optional) How many seconds should an OTP token be valid. Defaults to `30`.
+- `code_reusable` - (Optional) Possibility to use the same OTP code again after successful authentication. Defaults to `false`.
 
 ### WebAuthn
 
@@ -252,12 +254,14 @@ Each of these attributes are blocks with the following attributes:
 - `signature_algorithms` - (Optional) A set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
 - `attestation_conveyance_preference` - (Optional) The preference of how to generate a WebAuthn attestation statement. Valid options are `not specified`, `none`, `indirect`, `direct`, or `enterprise`. Defaults to `not specified`.
 - `authenticator_attachment` - (Optional) The acceptable attachment pattern for the WebAuthn authenticator. Valid options are `not specified`, `platform`, or `cross-platform`. Defaults to `not specified`.
-- `require_resident_key` - (Optional) Specifies whether a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`.
+- `require_resident_key` - (Optional) **Deprecated** Specifies whether a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`. Deprecated by Keycloak in favor of `discoverable_credential` — this attribute is only used when `discoverable_credential` is left as `not specified`.
+- `discoverable_credential` - (Optional) The extent to which the authenticator should create a client-side discoverable credential (resident key). Valid options are `not specified`, `required`, `preferred`, or `discouraged`. Defaults to `not specified`. Replaces and takes precedence over the deprecated `require_resident_key` attribute. Requires Keycloak 26.7 or higher.
 - `user_verification_requirement` - (Optional) Specifies the policy for verifying a user logging in via WebAuthn. Valid options are `not specified`, `required`, `preferred`, or `discouraged`. Defaults to `not specified`.
 - `create_timeout` - (Optional) The timeout value for creating a user's public key credential in seconds. When set to `0`, this timeout option is not adapted. Defaults to `0`.
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
 - `extra_origins` - (Optional) A set of extra origins for non-web applications.
+- `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. This attribute is only valid inside a `web_authn_passwordless_policy` block and requires a Keycloak version that supports passwordless passkeys. Defaults to `false`.
 
 ## Default Client Scopes
 

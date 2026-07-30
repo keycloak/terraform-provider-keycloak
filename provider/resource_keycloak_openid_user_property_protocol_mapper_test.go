@@ -63,7 +63,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_import(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
-		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -83,6 +83,18 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: getGenericProtocolMapperIdForClientScope(clientScopeResourceName),
+			},
+			{
+				ResourceName:      clientResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClient(clientResourceName),
+			},
+			{
+				ResourceName:      clientScopeResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClientScope(clientScopeResourceName),
 			},
 		},
 	})

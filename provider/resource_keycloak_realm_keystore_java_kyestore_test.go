@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -69,7 +70,7 @@ func TestAccKeycloakRealmKeystoreJava_createAfterManualDestroy(t *testing.T) {
 func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 	t.Parallel()
 
-	algorithm := randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm)
+	keystoreName := acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -77,12 +78,11 @@ func TestAccKeycloakRealmKeystoreJava_algorithmValidation(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(algorithm, "algorithm",
-					acctest.RandString(10)),
+				Config:      testKeycloakRealmKeystoreJava_basicWithAttrValidation(keystoreName, "sig-es256", "algorithm", acctest.RandString(10)),
 				ExpectError: regexp.MustCompile("expected algorithm to be one of .+ got .+"),
 			},
 			{
-				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(algorithm, "algorithm", algorithm),
+				Config: testKeycloakRealmKeystoreJava_basicWithAttrValidation(keystoreName, "sig-es256", "algorithm", "ES256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 		},
@@ -96,21 +96,30 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	active := randomBool()
 
 	groupKeystoreOne := &keycloak.RealmKeystoreJavaKeystore{
-		Name:      acctest.RandString(10),
-		RealmId:   testAccRealmUserFederation.Realm,
-		Enabled:   enabled,
-		Active:    active,
-		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm),
+		Name:     acctest.RandString(10),
+		RealmId:  testAccRealmKeystore.Realm,
+		Enabled:  enabled,
+		Active:   active,
+		Priority: acctest.RandIntRange(0, 100),
 	}
 
 	groupKeystoreTwo := &keycloak.RealmKeystoreJavaKeystore{
 		Name:      acctest.RandString(10),
-		RealmId:   testAccRealmUserFederation.Realm,
+		RealmId:   testAccRealmKeystore.Realm,
 		Enabled:   enabled,
 		Active:    active,
 		Priority:  acctest.RandIntRange(0, 100),
-		Algorithm: randomStringInSlice(keycloakRealmKeystoreJavaKeystoreAlgorithm),
+		Algorithm: "ES256",
+	}
+
+	groupKeystoreThree := &keycloak.RealmKeystoreJavaKeystore{
+		Name:      acctest.RandString(10),
+		RealmId:   testAccRealmKeystore.Realm,
+		Enabled:   enabled,
+		Active:    active,
+		Priority:  acctest.RandIntRange(0, 100),
+		Algorithm: "AES",
+		KeyUse:    "enc",
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -119,11 +128,15 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreOne),
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreOne, "sig-rs256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 			{
-				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreTwo),
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreTwo, "sig-es256"),
+				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreJava_basicFromInterface(groupKeystoreThree, "enc-aes256"),
 				Check:  testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
 			},
 		},
@@ -204,18 +217,18 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "sig-rs256"
     key_password = "12345678"
 
     priority  = 100
     algorithm = "RS256"
 }
-	`, testAccRealmUserFederation.Realm, javaKeystoreName)
+	`, testAccRealmKeystore.Realm, javaKeystoreName)
 }
 
-func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, attr, val string) string {
+func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, keyAlias string, attr, val string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -225,17 +238,27 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "%s"
     key_password = "12345678"
 
 	%s        = "%s"
 }
-	`, testAccRealmUserFederation.Realm, javaKeystoreName, attr, val)
+	`, testAccRealmKeystore.Realm, javaKeystoreName, keyAlias, attr, val)
 }
 
-func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore) string {
+func testKeycloakRealmKeystoreJava_basicFromInterface(keystore *keycloak.RealmKeystoreJavaKeystore, keyAlias string) string {
+	algorithmAttr := ""
+	if keystore.Algorithm != "" {
+		algorithmAttr = fmt.Sprintf(`algorithm = "%s"`, keystore.Algorithm)
+	}
+
+	keyUseAttr := ""
+	if keystore.KeyUse != "" {
+		keyUseAttr = fmt.Sprintf(`key_use = "%s"`, keystore.KeyUse)
+	}
+
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -245,13 +268,14 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
 	name      = "%s"
 	realm_id  = data.keycloak_realm.realm.id
 
-    keystore          = "/opt/keycloak/testdata/keystore.jks"
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
     keystore_password = "12345678"
-    key_alias    = "test"
+    key_alias    = "%s"
     key_password = "12345678"
 
     priority  = %s
-    algorithm = "%s"
+	%s
+    %s
 }
-	`, testAccRealmUserFederation.Realm, keystore.Name, strconv.Itoa(keystore.Priority), keystore.Algorithm)
+	`, testAccRealmKeystore.Realm, keystore.Name, keyAlias, strconv.Itoa(keystore.Priority), algorithmAttr, keyUseAttr)
 }

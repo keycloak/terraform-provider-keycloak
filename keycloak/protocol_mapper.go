@@ -57,7 +57,7 @@ func individualProtocolMapperPath(realmId, clientId, clientScopeId, mapperId str
 	return fmt.Sprintf("%s/%s", protocolMapperPath(realmId, clientId, clientScopeId), mapperId)
 }
 
-func (keycloakClient *KeycloakClient) listGenericProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*protocolMapper, error) {
+func (keycloakClient *KeycloakClient) listProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*protocolMapper, error) {
 	var protocolMappers []*protocolMapper
 
 	err := keycloakClient.get(ctx, protocolMapperPath(realmId, clientId, clientScopeId), &protocolMappers, nil)
@@ -66,4 +66,26 @@ func (keycloakClient *KeycloakClient) listGenericProtocolMappers(ctx context.Con
 	}
 
 	return protocolMappers, nil
+}
+
+func (keycloakClient *KeycloakClient) getProtocolMapperByName(ctx context.Context, realmId, clientId, clientScopeId, name string) (*protocolMapper, error) {
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, realmId, clientId, clientScopeId)
+	if err != nil {
+		return nil, err
+	}
+
+	var foundMapper *protocolMapper
+	for _, mapper := range protocolMappers {
+		if mapper.Name != name {
+			continue
+		}
+
+		if foundMapper != nil {
+			return nil, fmt.Errorf("more than one protocol mapper found with name %q", name)
+		}
+
+		foundMapper = mapper
+	}
+
+	return foundMapper, nil
 }

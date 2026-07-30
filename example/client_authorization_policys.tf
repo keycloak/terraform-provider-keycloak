@@ -2,7 +2,7 @@ resource keycloak_realm test_authorization {
   realm                = "test_authorization"
   enabled              = true
   display_name         = "foo"
-  account_theme        = "base"
+  account_theme        = "keycloak.v3"
   access_code_lifespan = "30m"
 }
 
@@ -196,3 +196,14 @@ resource "keycloak_openid_client_permissions" "my_permission" {
     keycloak_users_permissions.my_permission
   ]
 }
+
+resource "keycloak_openid_client_regex_policy" "test" {
+    resource_server_id = keycloak_openid_client.test.resource_server_id
+    realm_id           = keycloak_realm.test_authorization.id
+    name               = "client_regex_policy_test"
+    target_claim       = "sample-claim"
+    pattern            = "^sample.+$"
+    target_context_attributes = true
+    logic              = "POSITIVE"
+    decision_strategy  = "UNANIMOUS"
+  }

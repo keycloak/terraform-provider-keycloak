@@ -71,6 +71,7 @@ resource "keycloak_openid_audience_protocol_mapper" "audience_mapper" {
 - `included_custom_audience` - (Optional) A custom audience to include within the token's `aud` claim. Conflicts with `included_client_audience`. One of `included_client_audience` or `included_custom_audience` must be specified.
 - `add_to_id_token` - (Optional) Indicates if the audience should be included in the `aud` claim for the id token. Defaults to `true`.
 - `add_to_access_token` - (Optional) Indicates if the audience should be included in the `aud` claim for the id token. Defaults to `true`.
+- `add_to_token_introspection` - (Optional) Indicates if the attribute should be added as a claim on the token introspection response. Defaults to `true`.
 
 ## Import
 
@@ -78,9 +79,21 @@ Protocol mappers can be imported using one of the following formats:
 - Client: `{{realm_id}}/client/{{client_keycloak_id}}/{{protocol_mapper_id}}`
 - Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/{{protocol_mapper_id}}`
 
+As an alternative to importing by Keycloak protocol mapper ID, you can import by protocol mapper name.
+
+When using name-based import:
+- Use the literal `name` segment in the import path.
+- URL-encode the mapper name using path encoding (for example, `my protocol mapper` becomes `my%20protocol%20mapper`).
+
+Supported name-based formats:
+- Client: `{{realm_id}}/client/{{client_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+- Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+
 Example:
 
 ```bash
 $ terraform import keycloak_openid_audience_protocol_mapper.audience_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/71602afa-f7d1-4788-8c49-ef8fd00af0f4
 $ terraform import keycloak_openid_audience_protocol_mapper.audience_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/71602afa-f7d1-4788-8c49-ef8fd00af0f4
+$ terraform import keycloak_openid_audience_protocol_mapper.audience_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/name/my%20protocol%20mapper
+$ terraform import keycloak_openid_audience_protocol_mapper.audience_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/name/my%20protocol%20mapper
 ```

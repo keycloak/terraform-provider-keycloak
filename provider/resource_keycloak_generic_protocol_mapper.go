@@ -16,10 +16,13 @@ func resourceKeycloakGenericProtocolMapper() *schema.Resource {
 		ReadContext:   resourceKeycloakGenericProtocolMapperRead,
 		DeleteContext: resourceKeycloakGenericProtocolMapperDelete,
 		UpdateContext: resourceKeycloakGenericProtocolMapperUpdate,
-		//  import a mapper tied to a client:
-		// {{realmId}}/client/{{clientId}}/{{protocolMapperId}}
+		// import a mapper tied to a client:
+		// by id: {{realmId}}/client/{{clientId}}/{{protocolMapperId}}
+		// by name: {{realmId}}/client/{{clientId}}/name/{{protocolMapperName}}
 		// or a client scope:
-		// {{realmId}}/client-scope/{{clientScopeId}}/{{protocolMapperId}}
+		// by id: {{realmId}}/client-scope/{{clientScopeId}}/{{protocolMapperId}}
+		// by name: {{realmId}}/client-scope/{{clientScopeId}}/name/{{protocolMapperName}}
+		// note: the name must be url-encoded for the import to work
 		Importer: &schema.ResourceImporter{
 			StateContext: genericProtocolMapperImport,
 		},
@@ -37,18 +40,18 @@ func resourceKeycloakGenericProtocolMapper() *schema.Resource {
 				Description: "The realm id where the associated client or client scope exists.",
 			},
 			"client_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
-				ConflictsWith: []string{"client_scope_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"client_scope_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client scope. Cannot be used at the same time as client_id.",
-				ConflictsWith: []string{"client_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client scope. Cannot be used at the same time as client_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"protocol": {
 				Type:         schema.TypeString,

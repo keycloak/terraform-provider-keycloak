@@ -1,0 +1,9 @@
+{
+  "policies": [
+    {
+      "name": "Always Granting Policy",
+      "fileName": "always-granting-policy.js",
+      "description": "A deployed JavaScript authorization policy used by the terraform-provider-keycloak acceptance tests"
+    }
+  ]
+}

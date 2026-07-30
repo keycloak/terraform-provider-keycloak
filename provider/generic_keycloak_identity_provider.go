@@ -310,6 +310,14 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 			return diag.FromErr(err)
 		}
 
+		// Keycloak clears clientSecret when it is absent from the PUT body.
+		// Preserve the existing value (returned by Keycloak as "**********") so
+		// updates that don't rotate the write-only secret don't accidentally wipe it.
+		if identityProvider.Config != nil && currentIdentityProvider.Config != nil &&
+			identityProvider.Config.ClientSecret == "" && currentIdentityProvider.Config.ClientSecret != "" {
+			identityProvider.Config.ClientSecret = currentIdentityProvider.Config.ClientSecret
+		}
+
 		err = keycloakClient.UpdateIdentityProvider(ctx, identityProvider)
 		if err != nil {
 			return diag.FromErr(err)

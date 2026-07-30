@@ -77,8 +77,10 @@ resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_
 - `claim_value_type` - (Optional) The claim type used when serializing JSON tokens. Can be one of `String`, `JSON`, `long`, `int`, or `boolean`. Defaults to `String`.
 - `session_note` - (Optional) String value being the name of stored user session note within the `UserSessionModel.note` map.
 - `session_note_label` - (Optional) **Deprecated** Use `session_note` instead.
-- `add_to_id_token` - (Optional) Indicates if the property should be added as a claim to the id token. Defaults to `true`.
-- `add_to_access_token` - (Optional) Indicates if the property should be added as a claim to the access token. Defaults to `true`.
+- `add_to_id_token` - (Optional) Indicates if the session note should be added as a claim to the id token. Defaults to `true`.
+- `add_to_access_token` - (Optional) Indicates if the session note should be added as a claim to the access token. Defaults to `true`.
+- `add_to_userinfo` - (Optional) Indicates if the session note should be added as a claim to the UserInfo response body. Defaults to `true`.
+- `add_to_token_introspection` - (Optional) Indicates if the session note should be added as a claim to the token introspection response. Defaults to `true`.
 
 ## Import
 
@@ -86,9 +88,21 @@ Protocol mappers can be imported using one of the following formats:
 - Client: `{{realm_id}}/client/{{client_keycloak_id}}/{{protocol_mapper_id}}`
 - Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/{{protocol_mapper_id}}`
 
+As an alternative to importing by Keycloak protocol mapper ID, you can import by protocol mapper name.
+
+When using name-based import:
+- Use the literal `name` segment in the import path.
+- URL-encode the mapper name using path encoding (for example, `my protocol mapper` becomes `my%20protocol%20mapper`).
+
+Supported name-based formats:
+- Client: `{{realm_id}}/client/{{client_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+- Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+
 Example:
 
 ```bash
 $ terraform import keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/71602afa-f7d1-4788-8c49-ef8fd00af0f4
 $ terraform import keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/71602afa-f7d1-4788-8c49-ef8fd00af0f4
+$ terraform import keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/name/my%20protocol%20mapper
+$ terraform import keycloak_openid_user_session_note_protocol_mapper.user_session_note_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/name/my%20protocol%20mapper
 ```

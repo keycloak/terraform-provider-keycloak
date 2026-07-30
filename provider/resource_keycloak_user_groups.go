@@ -127,7 +127,12 @@ func resourceKeycloakUserGroupsDelete(ctx context.Context, data *schema.Resource
 	userId := data.Get("user_id").(string)
 	groupIds := interfaceSliceToStringSlice(data.Get("group_ids").(*schema.Set).List())
 
-	return diag.FromErr(keycloakClient.RemoveUserFromGroups(ctx, groupIds, userId, realmId))
+	err := keycloakClient.RemoveUserFromGroups(ctx, groupIds, userId, realmId)
+	if err != nil {
+		return handleNotFoundError(ctx, err, data)
+	}
+
+	return nil
 }
 
 func resourceKeycloakUserGroupsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {

@@ -88,11 +88,7 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdSubProtocolMapper(ctx context.
 }
 
 func (keycloakClient *KeycloakClient) ValidateOpenIdSubProtocolMapper(ctx context.Context, mapper *OpenIdSubProtocolMapper) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
 	if err != nil {
 		return err
 	}

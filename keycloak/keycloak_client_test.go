@@ -2,11 +2,13 @@ package keycloak
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/keycloak/terraform-provider-keycloak/helper"
 )
 
@@ -24,7 +26,7 @@ func TestAccKeycloakClientConnect(t *testing.T) {
 
 	keycloakClient, err := NewKeycloakClient(ctx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{
 		"foo": "bar",
-	})
+	}, "")
 
 	keycloakClientChecks(t, err, keycloakClient, ctx)
 }
@@ -43,7 +45,7 @@ func TestAccKeycloakClientConnectAccessTokenAuth(t *testing.T) {
 
 	keycloakClient, err := NewKeycloakClient(ctx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{
 		"foo": "bar",
-	})
+	}, "")
 	keycloakClientChecks(t, err, keycloakClient, ctx)
 }
 
@@ -66,7 +68,7 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth(t *testing.T) {
 			t.Fatalf("KEYCLOAK_URL_HTTP must also be set to https when using https")
 		}
 	}
-	keycloakClient, err := NewKeycloakClient(ctx, keycloakHttpUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, "", true, "", "", "", false, map[string]string{})
+	keycloakClient, err := NewKeycloakClient(ctx, keycloakHttpUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, "", true, "", "", "", false, map[string]string{}, "")
 
 	_, err = keycloakClient.Version(ctx)
 	if err != nil {
@@ -80,8 +82,259 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth(t *testing.T) {
 	}
 
 	// then try again to connect with Keycloak but this time via https with mtls client auth
-	mtlsKeycloakClient, err := NewKeycloakClient(ctx, keycloakUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{})
+	mtlsKeycloakClient, err := NewKeycloakClient(ctx, keycloakUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{}, "")
 	keycloakClientChecks(t, err, mtlsKeycloakClient, ctx)
+}
+
+func TestNewKeycloakClient_clientIdValidation(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name          string
+		clientId      string
+		clientSecret  string
+		username      string
+		password      string
+		accessToken   string
+		jwtSigningKey string
+		jwtToken      string
+		jwtTokenFile  string
+		initialLogin  bool
+		expectError   string
+	}{
+		{
+			name:        "password grant without client_id",
+			username:    "admin",
+			password:    "password",
+			expectError: "client_id is required for password grant",
+		},
+		{
+			name:         "client secret without client_id",
+			clientSecret: "secret",
+			expectError:  "client_id is required for client secret authentication",
+		},
+		{
+			name:          "jwt_signing_key without client_id",
+			jwtSigningKey: "some-key",
+			expectError:   "client_id is required when using jwt_signing_key because it is used for the JWT iss/sub claims",
+		},
+		{
+			name:         "no credentials with initial_login",
+			initialLogin: true,
+			expectError:  "must specify client id",
+		},
+		{
+			name:     "jwt_token without client_id succeeds",
+			jwtToken: "some-jwt-token",
+		},
+		{
+			name:         "jwt_token_file without client_id succeeds",
+			jwtTokenFile: "/tmp/nonexistent",
+		},
+		{
+			name:        "access_token without client_id succeeds",
+			accessToken: "some-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := NewKeycloakClient(
+				ctx,
+				"http://localhost:8080", // url
+				"",                      // basePath
+				"",                      // adminUrl
+				tt.clientId,
+				tt.clientSecret,
+				"master",    // realm
+				tt.username, // username
+				tt.password, // password
+				tt.accessToken,
+				"RS256", // jwtSigningAlg
+				tt.jwtSigningKey,
+				tt.jwtToken,
+				tt.jwtTokenFile,
+				tt.initialLogin,
+				5,     // clientTimeout
+				"",    // caCert
+				true,  // tlsInsecureSkipVerify
+				"",    // tlsClientCert
+				"",    // tlsClientPrivateKey
+				"",    // userAgent
+				false, // redHatSSO
+				map[string]string{},
+				"", // keycloakVersion
+			)
+
+			if tt.expectError != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q but got nil", tt.expectError)
+				}
+				if !strings.Contains(err.Error(), tt.expectError) {
+					t.Errorf("expected error containing %q, got: %v", tt.expectError, err)
+				}
+			} else {
+				// For success cases, we expect either no error or a connection error
+				// (since there's no real Keycloak). The point is that validation passed.
+				if err != nil && strings.Contains(err.Error(), "client_id is required") {
+					t.Errorf("unexpected client_id validation error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// TestResolveServerVersion covers the version-resolution logic, including the
+// Keycloak 26.4+ case where /admin/serverinfo returns an empty version because
+// the service account lacks the view-system (or manage-realms) role.
+// See https://github.com/keycloak/terraform-provider-keycloak/issues/1342.
+func TestResolveServerVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name                string
+		reportedVersion     string
+		configuredVersion   string
+		expectVersion       string
+		expectError         bool
+		expectErrorContains string
+	}{
+		{
+			name:            "reported version is used as-is",
+			reportedVersion: "26.3.5",
+			expectVersion:   "26.3.5",
+		},
+		{
+			name:            "GA suffix is stripped",
+			reportedVersion: "18.0.0.GA",
+			expectVersion:   "18.0.0",
+		},
+		{
+			name:            "Red Hat build suffix is stripped",
+			reportedVersion: "18.0.0.redhat-00001",
+			expectVersion:   "18.0.0",
+		},
+		{
+			name:              "empty reported version falls back to the configured keycloak_version",
+			reportedVersion:   "",
+			configuredVersion: "26.4.7",
+			expectVersion:     "26.4.7",
+		},
+		{
+			name:            "empty reported version with no configuration falls back to the latest tested version",
+			reportedVersion: "",
+			expectVersion:   string(Version_Latest),
+		},
+		{
+			name:              "configured version is ignored when the server reports a version",
+			reportedVersion:   "26.2.5",
+			configuredVersion: "26.4.7",
+			expectVersion:     "26.2.5",
+		},
+		{
+			name:                "invalid configured version returns an error that names keycloak_version",
+			reportedVersion:     "",
+			configuredVersion:   "not-a-version",
+			expectError:         true,
+			expectErrorContains: "keycloak_version",
+		},
+		{
+			name:                "invalid reported version returns an error that names the server version",
+			reportedVersion:     "not-a-version",
+			expectError:         true,
+			expectErrorContains: "server version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			v, err := resolveServerVersion(ctx, tt.reportedVersion, tt.configuredVersion)
+
+			if tt.expectError {
+				if err == nil {
+					t.Fatalf("expected an error but got version %v", v)
+				}
+				if tt.expectErrorContains != "" && !strings.Contains(err.Error(), tt.expectErrorContains) {
+					t.Errorf("expected error to contain %q, got: %v", tt.expectErrorContains, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			expected, err := version.NewVersion(tt.expectVersion)
+			if err != nil {
+				t.Fatalf("invalid expected version %q: %v", tt.expectVersion, err)
+			}
+
+			if !v.Equal(expected) {
+				t.Errorf("expected version %s, got %s", expected, v)
+			}
+		})
+	}
+}
+
+func TestApplyAdditionalHeaders_HostHeader(t *testing.T) {
+	keycloakClient := &KeycloakClient{
+		additionalHeaders: map[string]string{
+			"Host":         "custom.host.example.com",
+			"X-Custom-Key": "custom-value",
+		},
+	}
+
+	request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %s", err)
+	}
+
+	keycloakClient.applyAdditionalHeaders(request)
+
+	if request.Host != "custom.host.example.com" {
+		t.Fatalf("expected request.Host to be 'custom.host.example.com', got '%s'", request.Host)
+	}
+
+	if request.Header.Get("Host") != "" {
+		t.Fatal("expected Host to not be set in request.Header (Go uses request.Host instead)")
+	}
+
+	if request.Header.Get("X-Custom-Key") != "custom-value" {
+		t.Fatalf("expected X-Custom-Key header to be 'custom-value', got '%s'", request.Header.Get("X-Custom-Key"))
+	}
+}
+
+func TestApplyAdditionalHeaders_HostHeaderCaseInsensitive(t *testing.T) {
+	variants := []string{"host", "HOST", "Host", "hOsT"}
+
+	for _, hostKey := range variants {
+		t.Run(hostKey, func(t *testing.T) {
+			keycloakClient := &KeycloakClient{
+				additionalHeaders: map[string]string{
+					hostKey: "custom.host.example.com",
+				},
+			}
+
+			request, err := http.NewRequest(http.MethodGet, "http://localhost/test", nil)
+			if err != nil {
+				t.Fatalf("unexpected error creating request: %s", err)
+			}
+
+			keycloakClient.applyAdditionalHeaders(request)
+
+			if request.Host != "custom.host.example.com" {
+				t.Fatalf("expected request.Host to be 'custom.host.example.com' for key '%s', got '%s'", hostKey, request.Host)
+			}
+		})
+	}
 }
 
 func checkClientTimeout(t *testing.T) int {

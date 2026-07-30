@@ -43,5 +43,13 @@ resource "keycloak_realm_default_client_scopes" "default_scopes" {
 
 ## Import
 
-This resource does not support import. Instead of importing, feel free to create this resource
-as if it did not already exist on the server.
+This resource can be imported using the realm id, which adopts the realm's current
+default client scopes into state. This is useful for reviewing the exact delta between
+a realm's existing (e.g. Keycloak factory) default scopes and your declared set in the
+plan, rather than starting from an opaque create.
+
+Example:
+
+```bash
+terraform import keycloak_realm_default_client_scopes.default_scopes my-realm
+```

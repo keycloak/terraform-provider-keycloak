@@ -68,7 +68,7 @@ resource "keycloak_openid_client" "openid_client" {
 	enabled = true
 
 	client_secret_wo         = ephemeral.random_password.openid_client_secret.result
-	client_secret_wo_version = 1
+	client_secret_wo_version = "version1"
 
 	access_type           = "CONFIDENTIAL"
 	standard_flow_enabled = true

@@ -7,22 +7,48 @@ import (
 )
 
 type WorkflowStep struct {
-	Id     string            `json:"id,omitempty"`
-	Uses   string            `json:"uses"`
-	After  string            `json:"after,omitempty"`
-	Config map[string]string `json:"with,omitempty"`
+	Id    string `json:"id,omitempty"`
+	Uses  string `json:"uses"`
+	After string `json:"after,omitempty"`
+	// Priority controls the execution order of steps that would otherwise run at the same time.
+	Priority string            `json:"priority,omitempty"`
+	Config   map[string]string `json:"with,omitempty"`
+	// ScheduledAt and Status are runtime values populated by Keycloak; they are read-only.
+	ScheduledAt int64  `json:"scheduledAt,omitempty"`
+	Status      string `json:"status,omitempty"`
+}
+
+// WorkflowConcurrency holds the concurrency settings of a workflow. Keycloak expects these
+// to be nested inside a "concurrency" object with kebab-case keys, not as flat fields on the
+// workflow itself.
+type WorkflowConcurrency struct {
+	CancelInProgress  string `json:"cancel-in-progress,omitempty"`
+	RestartInProgress string `json:"restart-in-progress,omitempty"`
+}
+
+// WorkflowSchedule holds the scheduling settings of a workflow, nested under a "schedule" object.
+type WorkflowSchedule struct {
+	After     string `json:"after,omitempty"`
+	BatchSize int    `json:"batch-size,omitempty"`
+}
+
+// WorkflowState is the runtime state of a workflow as reported by Keycloak. It is read-only.
+type WorkflowState struct {
+	Errors []string `json:"errors,omitempty"`
 }
 
 type Workflow struct {
-	Id                string         `json:"id,omitempty"`
-	Realm             string         `json:"-"`
-	Name              string         `json:"name"`
-	On                string         `json:"on"`
-	Enabled           bool           `json:"enabled"`
-	Conditions        string         `json:"if,omitempty"`
-	Steps             []WorkflowStep `json:"steps"`
-	CancelInProgress  string         `json:"cancelInProgress,omitempty"`
-	RestartInProgress string         `json:"restartInProgress,omitempty"`
+	Id          string               `json:"id,omitempty"`
+	Realm       string               `json:"-"`
+	Name        string               `json:"name"`
+	On          string               `json:"on"`
+	Enabled     bool                 `json:"enabled"`
+	Conditions  string               `json:"if,omitempty"`
+	Steps       []WorkflowStep       `json:"steps"`
+	Concurrency *WorkflowConcurrency `json:"concurrency,omitempty"`
+	Schedule    *WorkflowSchedule    `json:"schedule,omitempty"`
+	// State is runtime state populated by Keycloak; it is read-only and never sent on writes.
+	State *WorkflowState `json:"state,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) NewWorkflow(ctx context.Context, workflow *Workflow) error {
@@ -40,10 +66,10 @@ func (keycloakClient *KeycloakClient) GetWorkflow(ctx context.Context, realm, id
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/workflows/%s", realm, id), &workflow, nil)
 	if err != nil {
-		// The workflow API returns 400 "Not a valid resource workflow: <id>" when the
+		// The workflow API returns 400 "Not a valid (resource workflow|workflow resource): <id>" when the
 		// workflow does not exist, instead of a standard 404.
 		if apiErr, ok := err.(*ApiError); ok && apiErr.Code == 400 &&
-			strings.Contains(apiErr.Message, "Not a valid resource workflow:") {
+			strings.Contains(apiErr.Message, "Not a valid") {
 			return nil, &ApiError{Code: 404, Message: apiErr.Message}
 		}
 		return nil, err

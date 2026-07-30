@@ -12,6 +12,7 @@ import (
 )
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_basic(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	t.Parallel()
 
 	providerAlias := acctest.RandomWithPrefix("tf-acc")
@@ -32,6 +33,7 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_basic(t *testing.T) {
 }
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_createAfterManualDestroy(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	t.Parallel()
 
 	var idpPermissions = &keycloak.IdentityProviderPermissions{}
@@ -67,6 +69,7 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_createAfterManualDestroy(t *
 }
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_import(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	t.Parallel()
 
 	providerAlias := acctest.RandomWithPrefix("tf-acc")
@@ -93,6 +96,7 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_import(t *testing.T) {
 }
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_updatePolicyMultipleClients(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	t.Parallel()
 
 	providerAlias := acctest.RandomWithPrefix("tf-acc")
@@ -125,6 +129,7 @@ func TestAccKeycloakIdpTokenExchangeScopePermission_updatePolicyMultipleClients(
 }
 
 func TestAccKeycloakIdpTokenExchangeScopePermission_rolePolicy(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	t.Parallel()
 
 	providerAlias := acctest.RandomWithPrefix("tf-acc")

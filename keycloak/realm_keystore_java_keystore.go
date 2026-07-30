@@ -7,14 +7,16 @@ import (
 )
 
 type RealmKeystoreJavaKeystore struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
 	Priority  int
 	Algorithm string
+	KeyUse    string
 
 	Keystore         string
 	KeystorePassword string
@@ -48,12 +50,15 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 		"keyPassword": {
 			realmKey.KeyPassword,
 		},
+		"keyUse": {
+			realmKey.KeyUse,
+		},
 	}
 
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
+		ParentId:     realmKey.ParentId,
 		ProviderId:   "java-keystore",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -80,14 +85,16 @@ func convertFromComponentToRealmKeystoreJavaKeystore(component *component, realm
 	}
 
 	realmKey := &RealmKeystoreJavaKeystore{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:           active,
 		Enabled:          enabled,
 		Priority:         priority,
 		Algorithm:        component.getConfig("algorithm"),
+		KeyUse:           component.getConfig("keyUse"),
 		Keystore:         component.getConfig("keystore"),
 		KeystorePassword: component.getConfig("keystorePassword"),
 		KeyAlias:         component.getConfig("keyAlias"),
@@ -98,6 +105,15 @@ func convertFromComponentToRealmKeystoreJavaKeystore(component *component, realm
 }
 
 func (keycloakClient *KeycloakClient) NewRealmKeystoreJavaKeystore(ctx context.Context, realmKey *RealmKeystoreJavaKeystore) error {
+	if realmKey.ParentId == "" {
+		realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
+		if err != nil {
+			return err
+		}
+
+		realmKey.ParentId = realm.Id
+	}
+
 	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/components", realmKey.RealmId), convertFromRealmKeystoreJavaKeystoreToComponent(realmKey))
 	if err != nil {
 		return err

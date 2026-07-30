@@ -12,7 +12,7 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-// All openid clients in Keycloak will automatically have these scopes listed as "default client scopes".
+// All openid clients in Keycloak will automatically have these scopes listed as "default client scopes". Note this list is not exhaustive and doesn't have to be for the sake of these tests.
 var preAssignedDefaultClientScopes = []string{"profile", "email", "web-origins", "roles"}
 
 func TestAccKeycloakOpenidClientDefaultScopes_basic(t *testing.T) {
