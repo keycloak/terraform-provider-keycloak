@@ -52,9 +52,12 @@ jobs:
     strategy:
       matrix:
         include:
-          # Newest version: run once with v2 (the default) and once with v1 explicitly enabled
-          - keycloak-version: '26.6.3'
-          - keycloak-version: '26.6.3'
+          # Newer versions: run once with v2 (the default) and once with v1 explicitly enabled
+          - keycloak-version: '26.7.0'
+          - keycloak-version: '26.7.0'
+            fgap-version: 'v1'
+          - keycloak-version: '26.6.4'
+          - keycloak-version: '26.6.4'
             fgap-version: 'v1'
           # Older versions that do not have v2 as the default: enable v1 explicitly
           - keycloak-version: '26.5.7'
@@ -153,6 +156,9 @@ jobs:
           $MOUNT_FEDERATION_EXAMPLE_VOLUME \
           $MOUNT_AUTHZ_POLICY_EXAMPLE_VOLUME \
           quay.io/keycloak/keycloak:${{ matrix.keycloak-version }} --verbose start-dev
+
+      - name: Copy keystore file to data folder
+        run: docker exec keycloak cp -a /opt/keycloak/testdata/tf-acc-keystore /opt/keycloak/data/
 
       - name: Initialize Keycloak
         run: ./scripts/wait-for-local-keycloak.sh && ./scripts/create-terraform-client.sh

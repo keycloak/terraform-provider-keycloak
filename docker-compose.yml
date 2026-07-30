@@ -14,8 +14,10 @@ services:
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.3
+    image: quay.io/keycloak/keycloak:26.7.0
     command: --verbose start-dev
+    post_start:
+      - command: cp -a /opt/keycloak/testdata/tf-acc-keystore /opt/keycloak/data/tf-acc-keystore
     depends_on:
     - postgres
     - openldap

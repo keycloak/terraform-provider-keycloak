@@ -112,14 +112,19 @@ data "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
+data "keycloak_openid_client" "account" {
+  realm_id  = data.keycloak_realm.realm.id
+  client_id = "account"
+}
+
 data "keycloak_openid_client" "realm_management" {
   realm_id  = data.keycloak_realm.realm.id
   client_id = "realm-management"
 }
 
-resource "keycloak_openid_client_permissions" "realm-management_permission" {
+resource "keycloak_openid_client_permissions" "account_permission" {
 	realm_id   = data.keycloak_realm.realm.id
-	client_id  = data.keycloak_openid_client.realm_management.id
+	client_id  = data.keycloak_openid_client.account.id
 }
 
 resource "keycloak_group" "group" {
@@ -139,7 +144,7 @@ resource "keycloak_openid_client_group_policy" "test" {
 	logic             = "POSITIVE"
 	decision_strategy = "UNANIMOUS"
 	depends_on = [
-		keycloak_openid_client_permissions.realm-management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 
