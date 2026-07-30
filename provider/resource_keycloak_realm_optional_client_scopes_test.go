@@ -30,6 +30,18 @@ func TestAccKeycloakRealmOptionalClientScopes_basic(t *testing.T) {
 						[]string{"address", "phone", "offline_access", clientScope},
 					),
 				},
+				{
+					ResourceName:      "keycloak_realm_optional_client_scopes.optional_scopes",
+					ImportState:       true,
+					ImportStateVerify: true,
+					ImportStateIdFunc: func(s *terraform.State) (string, error) {
+						rs, ok := s.RootModule().Resources["keycloak_realm_optional_client_scopes.optional_scopes"]
+						if !ok {
+							return "", fmt.Errorf("resource not found: keycloak_realm_optional_client_scopes.optional_scopes")
+						}
+						return rs.Primary.Attributes["realm_id"], nil
+					},
+				},
 			},
 		},
 	)

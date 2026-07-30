@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,7 +16,10 @@ func resourceKeycloakRealmLocalization() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmLocalizationTextsRead,
 		DeleteContext: resourceKeycloakRealmLocalizationTextsDelete,
 		UpdateContext: resourceKeycloakRealmLocalizationTextsUpdate,
-		Description:   "Manage realm-level localization texts.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmLocalizationTextsImport,
+		},
+		Description: "Manage realm-level localization texts.",
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:        schema.TypeString,
@@ -83,6 +87,23 @@ func resourceKeycloakRealmLocalizationTextsDelete(ctx context.Context, d *schema
 
 	d.SetId("")
 	return nil
+}
+
+func resourceKeycloakRealmLocalizationTextsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.Split(d.Id(), "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}/{{locale}}")
+	}
+
+	d.Set("realm_id", parts[0])
+	d.Set("locale", parts[1])
+
+	diagnostics := resourceKeycloakRealmLocalizationTextsRead(ctx, d, meta)
+	if diagnostics.HasError() {
+		return nil, fmt.Errorf("%s", diagnostics[0].Summary)
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func convertTexts(texts map[string]interface{}) map[string]string {

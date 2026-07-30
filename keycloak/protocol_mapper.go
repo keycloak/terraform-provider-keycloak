@@ -57,7 +57,7 @@ func individualProtocolMapperPath(realmId, clientId, clientScopeId, mapperId str
 	return fmt.Sprintf("%s/%s", protocolMapperPath(realmId, clientId, clientScopeId), mapperId)
 }
 
-func (keycloakClient *KeycloakClient) listGenericProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*protocolMapper, error) {
+func (keycloakClient *KeycloakClient) listProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*protocolMapper, error) {
 	var protocolMappers []*protocolMapper
 
 	err := keycloakClient.get(ctx, protocolMapperPath(realmId, clientId, clientScopeId), &protocolMappers, nil)
@@ -68,27 +68,24 @@ func (keycloakClient *KeycloakClient) listGenericProtocolMappers(ctx context.Con
 	return protocolMappers, nil
 }
 
-// ListGenericProtocolMappers returns all protocol mappers for a client or client scope.
-// Used by the data source to look up mappers by name.
-func (keycloakClient *KeycloakClient) ListGenericProtocolMappers(ctx context.Context, realmId, clientId, clientScopeId string) ([]*GenericProtocolMapper, error) {
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, realmId, clientId, clientScopeId)
+func (keycloakClient *KeycloakClient) getProtocolMapperByName(ctx context.Context, realmId, clientId, clientScopeId, name string) (*protocolMapper, error) {
+	protocolMappers, err := keycloakClient.listProtocolMappers(ctx, realmId, clientId, clientScopeId)
 	if err != nil {
 		return nil, err
 	}
 
-	genericProtocolMappers := make([]*GenericProtocolMapper, len(protocolMappers))
-	for i, mapper := range protocolMappers {
-		genericProtocolMappers[i] = &GenericProtocolMapper{
-			Id:             mapper.Id,
-			Name:           mapper.Name,
-			Protocol:       mapper.Protocol,
-			ProtocolMapper: mapper.ProtocolMapper,
-			Config:         mapper.Config,
-			RealmId:        realmId,
-			ClientId:       clientId,
-			ClientScopeId:  clientScopeId,
+	var foundMapper *protocolMapper
+	for _, mapper := range protocolMappers {
+		if mapper.Name != name {
+			continue
 		}
+
+		if foundMapper != nil {
+			return nil, fmt.Errorf("more than one protocol mapper found with name %q", name)
+		}
+
+		foundMapper = mapper
 	}
 
-	return genericProtocolMappers, nil
+	return foundMapper, nil
 }

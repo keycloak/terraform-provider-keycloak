@@ -87,6 +87,18 @@ func TestAccKeycloakOpenIdSubProtocolMapper_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: getGenericProtocolMapperIdForClientScope(clientScopeResourceName),
 			},
+			{
+				ResourceName:      clientResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClient(clientResourceName),
+			},
+			{
+				ResourceName:      clientScopeResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClientScope(clientScopeResourceName),
+			},
 		},
 	})
 }

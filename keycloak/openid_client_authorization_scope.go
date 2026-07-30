@@ -47,6 +47,23 @@ func (keycloakClient *KeycloakClient) UpdateOpenidClientAuthorizationScope(ctx c
 	return nil
 }
 
+func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationScopeByName(ctx context.Context, realm, resourceServerId, name string) (*OpenidClientAuthorizationScope, error) {
+	var scopes []OpenidClientAuthorizationScope
+	params := map[string]string{"name": name}
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/scope", realm, resourceServerId), &scopes, params)
+	if err != nil {
+		return nil, err
+	}
+	for _, scope := range scopes {
+		if scope.Name == name {
+			scope.RealmId = realm
+			scope.ResourceServerId = resourceServerId
+			return &scope, nil
+		}
+	}
+	return nil, fmt.Errorf("no authorization scope with name %s found", name)
+}
+
 func (keycloakClient *KeycloakClient) DeleteOpenidClientAuthorizationScope(ctx context.Context, realmId, resourceServerId, scopeId string) error {
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/scope/%s", realmId, resourceServerId, scopeId), nil)
 }

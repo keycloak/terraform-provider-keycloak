@@ -4,6 +4,10 @@ page_title: "keycloak_identity_provider_token_exchange_scope_permission Resource
 
 # keycloak\_identity\_provider\_token\_exchange\_scope\_permission Resource
 
+~> **This resource requires Fine-Grained Admin Permissions v1.** It is not compatible with Keycloak instances
+that have `ADMIN_FINE_GRAINED_AUTHZ_V2` enabled (Keycloak 26.2+, where v2 is the default).
+There is currently no v2 replacement for this resource: the Keycloak v2 permission model does not include a resource type for identity providers.
+
 Allows you to manage Identity Provider "Token exchange" Scope Based Permissions.
 
 This is part of a preview keycloak feature. You need to enable this feature to be able to use this resource.
@@ -19,6 +23,18 @@ The only thing that is missing is a policy set on the permission.
 As the policy lives within the context of the realm-management client, you cannot create a policy resource and link to from with your _.tf_ file. This would also cause an implicit cycle dependency.
 Thus, the only way to manage this in terraform is to create and manage the policy internally from within this terraform resource itself.
 At the moment only a client policy type is supported. The client policy will automatically be created for the `clients` parameter.
+
+## Migration to v2
+
+If you are upgrading your Keycloak instance to 26.2 or later (where Fine-Grained Admin Permissions v2 is enabled by default),
+this resource will return an error. There is currently no v2 replacement resource for identity provider token exchange
+permissions, as the Keycloak v2 permission model does not include a resource type for identity providers.
+
+To stop managing this permission with Terraform, remove it from state:
+
+```bash
+terraform state rm keycloak_identity_provider_token_exchange_scope_permission.<name>
+```
 
 ## Example Usage
 

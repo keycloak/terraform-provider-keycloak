@@ -368,7 +368,7 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_validateClientOrClientScopeSet(
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdFullNameProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -384,7 +384,7 @@ func TestAccKeycloakOpenIdGroupMembershipProtocolMapper_validateClientOrClientSc
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdGroupMembershipProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -400,7 +400,7 @@ func TestAccKeycloakOpenIdUserAttributeProtocolMapper_validateClientOrClientScop
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserAttributeProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -416,7 +416,7 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClientOrClientScope
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserPropertyProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -432,7 +432,7 @@ func TestAccKeycloakOpenIdHardcodedClaimProtocolMapper_validateClientOrClientSco
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdHardcodedClaimProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -448,7 +448,7 @@ func TestAccKeycloakOpenIdUserRealmRoleProtocolMapper_validateClientOrClientScop
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserRealmRoleProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -464,7 +464,7 @@ func TestAccKeycloakOpenIdUserClientRoleProtocolMapper_validateClientOrClientSco
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserClientRoleProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})
@@ -480,7 +480,7 @@ func TestAccKeycloakOpenIdUserSessionNoteProtocolMapper_validateClientOrClientSc
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserSessionNoteProtocolMapper_parentResourceValidation(mapperName),
-				ExpectError: regexp.MustCompile("validation error: one of ClientId or ClientScopeId must be set"),
+				ExpectError: regexp.MustCompile("one of `client_id,client_scope_id` must be specified"),
 			},
 		},
 	})

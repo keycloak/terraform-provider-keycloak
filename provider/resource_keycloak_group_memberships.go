@@ -129,7 +129,12 @@ func resourceKeycloakGroupMembershipsDelete(ctx context.Context, data *schema.Re
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
-	return diag.FromErr(keycloakClient.RemoveUsersFromGroup(ctx, realmId, groupId, data.Get("members").(*schema.Set).List()))
+	err := keycloakClient.RemoveUsersFromGroup(ctx, realmId, groupId, data.Get("members").(*schema.Set).List())
+	if err != nil {
+		return handleNotFoundError(ctx, err, data)
+	}
+
+	return nil
 }
 
 func groupMembershipsId(realmId, groupId string) string {

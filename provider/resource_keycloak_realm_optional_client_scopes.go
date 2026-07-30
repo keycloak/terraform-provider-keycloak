@@ -14,6 +14,10 @@ func resourceKeycloakRealmOptionalClientScopes() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmOptionalClientScopesRead,
 		DeleteContext: resourceKeycloakRealmOptionalClientScopesDelete,
 		UpdateContext: resourceKeycloakRealmOptionalClientScopesReconcile,
+		Importer: &schema.ResourceImporter{
+			// Import id is the realm id (the resource id is the realm id too).
+			StateContext: resourceKeycloakRealmOptionalClientScopesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -97,4 +101,14 @@ func resourceKeycloakRealmOptionalClientScopesDelete(ctx context.Context, data *
 	optionalClientScopes := data.Get("optional_scopes").(*schema.Set)
 
 	return diag.FromErr(keycloakClient.UnmarkClientScopesAsRealmOptional(ctx, realmId, interfaceSliceToStringSlice(optionalClientScopes.List())))
+}
+
+// resourceKeycloakRealmOptionalClientScopesImport adopts the realm-level optional
+// client scopes into state. The import id is the realm id; realm_id is required
+// by the Read, so it is populated from the id before Read runs (which then
+// resolves the current optional scopes and sets the resource id to the realm id).
+func resourceKeycloakRealmOptionalClientScopesImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	d.Set("realm_id", d.Id())
+
+	return []*schema.ResourceData{d}, nil
 }

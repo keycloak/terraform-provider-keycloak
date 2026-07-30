@@ -197,6 +197,9 @@ func resourceKeycloakGroupRolesDelete(ctx context.Context, data *schema.Resource
 	groupId := data.Get("group_id").(string)
 
 	group, err := keycloakClient.GetGroup(ctx, realmId, groupId)
+	if err != nil {
+		return handleNotFoundError(ctx, err, data)
+	}
 
 	roleIds := interfaceSliceToStringSlice(data.Get("role_ids").(*schema.Set).List())
 	rolesToRemove, err := getExtendedRoleMapping(ctx, keycloakClient, realmId, roleIds)
@@ -206,7 +209,7 @@ func resourceKeycloakGroupRolesDelete(ctx context.Context, data *schema.Resource
 
 	err = removeRolesFromGroup(ctx, keycloakClient, rolesToRemove.clientRoles, rolesToRemove.realmRoles, group)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleNotFoundError(ctx, err, data)
 	}
 
 	return nil

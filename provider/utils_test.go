@@ -107,6 +107,28 @@ func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keyc
 	}
 }
 
+func skipIfFGAPv2NotEnabled(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient) {
+	t.Helper()
+	ok, err := keycloakClient.FGAPv2IsEnabled(ctx)
+	if err != nil {
+		t.Errorf("error checking FGAP v2 feature flag: %v", err)
+	}
+	if !ok {
+		t.Skip("skipping: Fine-Grained Admin Permissions v2 (ADMIN_FINE_GRAINED_AUTHZ_V2) is not enabled on this Keycloak instance")
+	}
+}
+
+func skipIfFGAPv2Enabled(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient) {
+	t.Helper()
+	ok, err := keycloakClient.FGAPv2IsEnabled(ctx)
+	if err != nil {
+		t.Errorf("error checking FGAP v2 feature flag: %v", err)
+	}
+	if ok {
+		t.Skip("skipping: Fine-Grained Admin Permissions v2 (ADMIN_FINE_GRAINED_AUTHZ_V2) is enabled; this resource requires v1")
+	}
+}
+
 func CheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		err := resource.TestCheckResourceAttr(name, key, value)(s)

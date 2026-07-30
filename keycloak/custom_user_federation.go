@@ -33,7 +33,7 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 
 	if custom.Config != nil {
 		for k, j := range custom.Config {
-			componentConfig[k] = append(componentConfig[k], j[0])
+			componentConfig[k] = j
 		}
 	}
 	componentConfig["cachePolicy"] = append(componentConfig["cachePolicy"], custom.CachePolicy)
@@ -83,9 +83,9 @@ func convertFromComponentToCustomUserFederation(component *component, realmName 
 		"changedSyncPeriod": true,
 	}
 	config := make(map[string][]string)
-	for k := range component.Config {
+	for k, v := range component.Config {
 		if found := configsToIgnore[k]; !found {
-			config[k] = append(config[k], component.getConfig(k))
+			config[k] = v
 		}
 	}
 
