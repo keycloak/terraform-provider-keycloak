@@ -89,7 +89,7 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # version v4.0.1
         with:
           terraform_wrapper: false
-          terraform_version: 1.14.3
+          terraform_version: 1.15.8
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # version v6.2.0
