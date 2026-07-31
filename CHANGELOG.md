@@ -1,13 +1,56 @@
 ## What's Changed
 
+## 5.9.0 (July 31, 2026)
+
 FEATURES:
 
-* feat: support import for `keycloak_realm_default_client_scopes` and `keycloak_realm_optional_client_scopes` using the realm id
-* feat: adds name-based import support for protocol mappers
+* feat: tolerate empty server version on Keycloak 26.4+ (closes #1342) by @nlenepveu in https://github.com/keycloak/terraform-provider-keycloak/pull/1619
+* Resource for OIDC Microsoft identity provider by @Laureatgrepi in https://github.com/keycloak/terraform-provider-keycloak/pull/1526
+* feat: support import for realm default and optional client scopes by @nlenepveu in https://github.com/keycloak/terraform-provider-keycloak/pull/1618
+* feat: support import for realm localization by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1627
+* feat: align the workflow resource with WorkflowRepresentation by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1629
+* feat: support include_in_openid_provider_metadata for openid client scope by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1633
+* feat: add FGAPv2 admin permission resources and guard v1 resources by @sventorben in https://github.com/keycloak/terraform-provider-keycloak/pull/1606
+* feat: add keycloak_realm_client_registration_policy resource and data source by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1563
+* feat: add generic client authorization policy resource and restore keycloak_openid_client_js_policy by @pboehm in https://github.com/keycloak/terraform-provider-keycloak/pull/1639
+* feat: adds name-based import support for protocol mappers by @remcojansen in https://github.com/keycloak/terraform-provider-keycloak/pull/1647
+
+IMPROVEMENTS:
+
+* convert wo_version attributes to string by @dominiktopp in https://github.com/keycloak/terraform-provider-keycloak/pull/1559
+* Document removal of Keycloak < 26.x Support in Changelog by @RafaelWO in https://github.com/keycloak/terraform-provider-keycloak/pull/1631
+* Add `add_to_token_introspection` to keycloak_openid_group_membership_protocol_mapper and keycloak_openid_audience_protocol_mapper by @espenhaland in https://github.com/keycloak/terraform-provider-keycloak/pull/1630
+* fix: gracefully handle 404 on delete for groups and users  by @Filirom1 in https://github.com/keycloak/terraform-provider-keycloak/pull/1637
+* Add relative user creation DN by @antonarntz in https://github.com/keycloak/terraform-provider-keycloak/pull/1533
+* feat(data/keycloak_group): add group_path attribute for precise nested group lookup by @ckyvra in https://github.com/keycloak/terraform-provider-keycloak/pull/1530
+* docs(realm_localization): fix example and realm_id description by @Ripolin in https://github.com/keycloak/terraform-provider-keycloak/pull/1652
+* Update to KC26.6.4 and KC26.7.0 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1659
+* Deprecate require_resident_key config value in Realm WebAuthn settings (KC version 26.7.0) by @Laureatgrepi in https://github.com/keycloak/terraform-provider-keycloak/pull/1658
+* Updated go dependencies and terraform version to 1.15.8 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1667
 
 BUG FIXES:
 
-* fix(custom_user_federation): keep all values of a multivalued `##` config setting instead of only the first ([#1398](https://github.com/keycloak/terraform-provider-keycloak/issues/1398))
+* fix(custom_user_federation): keep all values of a multivalued config by @emmanuel in https://github.com/keycloak/terraform-provider-keycloak/pull/1649
+* oidc idp: prevent client_secret from being cleared on update when using client_secret_wo by @plafue in https://github.com/keycloak/terraform-provider-keycloak/pull/1616
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [nlenepveu](https://github.com/nlenepveu)
+- [Laureatgrepi](https://github.com/Laureatgrepi)
+- [thomasdarimont](https://github.com/thomasdarimont)
+- [sventorben](https://github.com/sventorben)
+- [QuellcodeWanderer](https://github.com/QuellcodeWanderer)
+- [pboehm](https://github.com/pboehm)
+- [remcojansen](https://github.com/remcojansen)
+- [dominiktopp](https://github.com/dominiktopp)
+- [RafaelWO](https://github.com/RafaelWO)
+- [espenhaland](https://github.com/espenhaland)
+- [Filirom1](https://github.com/Filirom1)
+- [antonarntz](https://github.com/antonarntz)
+- [ckyvra](https://github.com/ckyvra)
+- [Ripolin](https://github.com/Ripolin)
+- [emmanuel](https://github.com/emmanuel)
+- [plafue](https://github.com/plafue)
 
 ## 5.8.0 (June 05, 2026)
 
