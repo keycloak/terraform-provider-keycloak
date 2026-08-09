@@ -84,9 +84,16 @@ func TestAccKeycloakRealm_import(t *testing.T) {
 				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
 			},
 			{
-				ResourceName:      "keycloak_realm.realm",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "keycloak_realm.realm",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"security_defenses"},
+			},
+			// verify no drift after import
+			{
+				Config:             testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -671,6 +678,135 @@ func TestAccKeycloakRealm_securityDefenses(t *testing.T) {
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", false),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 30),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_securityDefenses_removal(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_securityDefenses(realmName, realmDisplayName, "DENY", 37),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
+				),
+			},
+			// remove security_defenses from config
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", false),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_securityDefensesHeaders_import(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			// create with headers
+			{
+				Config: testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "DENY"),
+				Check:  testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
+			},
+			// import and verify state matches
+			{
+				ResourceName:            "keycloak_realm.realm",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"security_defenses_configured"},
+			},
+			// verify no drift after import
+			{
+				Config:             testKeycloakRealm_securityDefensesHeaders(realmName, realmDisplayName, "DENY"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_securityDefensesBruteForceDetection_import(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			// create with brute force detection
+			{
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
+				),
+			},
+			// import and verify state matches (headers populated by import even though not in config)
+			{
+				ResourceName:            "keycloak_realm.realm",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"security_defenses_configured", "security_defenses.0.headers"},
+			},
+			// verify no drift after import
+			{
+				Config:             testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_securityDefenses_import(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			// create with both headers and brute force
+			{
+				Config: testKeycloakRealm_securityDefenses(realmName, realmDisplayName, "DENY", 37),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 37),
+				),
+			},
+			// import and verify state matches
+			{
+				ResourceName:            "keycloak_realm.realm",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"security_defenses_configured"},
+			},
+			// verify no drift after import
+			{
+				Config:             testKeycloakRealm_securityDefenses(realmName, realmDisplayName, "DENY", 37),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -2057,6 +2193,59 @@ func TestAccKeycloakRealm_displayNameCanBeCleared(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "display_name", ""),
 					resource.TestCheckResourceAttr(resourceName, "display_name_html", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealm_importThenUnrelatedUpdate_preservesSecurityDefenses(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	displayName1 := acctest.RandomWithPrefix("tf-acc")
+	displayName2 := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					realm := &keycloak.Realm{
+						Realm:       realmName,
+						Enabled:     true,
+						DisplayName: displayName1,
+					}
+					err := keycloakClient.NewRealm(testCtx, realm)
+					if err != nil {
+						t.Fatalf("failed to create realm via API: %s", err)
+					}
+					realm, err = keycloakClient.GetRealm(testCtx, realmName)
+					if err != nil {
+						t.Fatalf("failed to get realm: %s", err)
+					}
+					realm.BrowserSecurityHeaders.XFrameOptions = "DENY"
+					realm.BruteForceProtected = true
+					realm.FailureFactor = 33
+					err = keycloakClient.UpdateRealm(testCtx, realm)
+					if err != nil {
+						t.Fatalf("failed to update realm via API: %s", err)
+					}
+				},
+				Config:             testKeycloakRealm_basic(realmName, displayName1, displayName1),
+				ResourceName:       "keycloak_realm.realm",
+				ImportState:        true,
+				ImportStatePersist: true,
+				ImportStateId:      realmName,
+				ImportStateVerify:  false,
+			},
+			{
+				Config: testKeycloakRealm_basic(realmName, displayName2, displayName2),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmDisplayName("keycloak_realm.realm", displayName2),
+					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "DENY"),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
 				),
 			},
 		},
