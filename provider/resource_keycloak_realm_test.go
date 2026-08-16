@@ -1614,7 +1614,7 @@ resource "keycloak_realm" "realm" {
 		allow_utf8 = true
 		envelope_from = "nottom@%[3]s"
 		auth {
-			username = "%s"
+			username = "%[5]s"
 			password = "tom"
 		}
 	}
