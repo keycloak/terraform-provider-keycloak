@@ -1608,11 +1608,11 @@ resource "keycloak_realm" "realm" {
 		from_display_name = "Tom"
 		from = "%s"
 		reply_to_display_name = "Tom"
-		reply_to = "tom@myhost.com"
+		reply_to = "tom@%[3]s"
 		ssl = true
 		starttls = true
 		allow_utf8 = true
-		envelope_from = "nottom@myhost.com"
+		envelope_from = "nottom@%[3]s"
 		auth {
 			username = "%s"
 			password = "tom"
