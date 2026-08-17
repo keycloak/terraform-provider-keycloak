@@ -155,6 +155,7 @@ func resourceKeycloakLdapUserFederationSchema() map[string]*schema.Schema {
 			Optional:      true,
 			ConflictsWith: []string{"bind_credential"},
 			RequiredWith:  []string{"bind_credential_wo"},
+			ValidateFunc:  validation.StringIsNotEmpty,
 			Description:   "Version of the bind credential write-only argument.",
 		},
 		"custom_user_search_filter": {
@@ -437,6 +438,9 @@ func getLdapUserFederationFromData(ctx context.Context, keycloakClient *keycloak
 			if bindCredentialWriteOnlyDiags.HasError() {
 				return nil, errors.New("error reading 'bind_credential_wo' argument")
 			}
+			if !bindCredentialWriteOnly.IsKnown() || bindCredentialWriteOnly.IsNull() || !bindCredentialWriteOnly.Type().Equals(cty.String) {
+				return nil, errors.New("'bind_credential_wo' must be a known, non-null string")
+			}
 
 			ldapUserFederation.BindCredential = bindCredentialWriteOnly.AsString()
 		} else {
@@ -475,8 +479,10 @@ func setLdapUserFederationData(data *schema.ResourceData, ldap *keycloak.LdapUse
 	data.Set("relative_create_dn", ldap.RelativeCreateDn)
 	data.Set("bind_dn", ldap.BindDn)
 	if v, ok := data.GetOk("bind_credential_wo_version"); ok && v != nil {
+		data.Set("bind_credential", nil)
 		data.Set("bind_credential_wo_version", v.(string))
 	} else {
+		data.Set("bind_credential_wo_version", nil)
 		data.Set("bind_credential", ldap.BindCredential)
 	}
 	data.Set("custom_user_search_filter", ldap.CustomUserSearchFilter)

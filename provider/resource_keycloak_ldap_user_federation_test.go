@@ -564,6 +564,7 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnly(t *testing.T) {
 	secondBindCredentialWO := acctest.RandomWithPrefix("tf-acc")
 	bindCredentialWOVersion := "version1"
 	bindCredentialWOVersionUpdated := "version2"
+	bindCredentialWOVersionFinal := "version3"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -611,7 +612,15 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
 					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential", secondBindCredentialWO),
-					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", ""),
+					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version"),
+				),
+			},
+			{
+				Config: testKeycloakLdapUserFederation_bindCredentialWriteOnly(updatedLdapName, firstBindCredentialWO, bindCredentialWOVersionFinal),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
+					resource.TestCheckNoResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential"),
+					resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "bind_credential_wo_version", bindCredentialWOVersionFinal),
 				),
 			},
 		},
@@ -634,6 +643,10 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnlyValidation(t *test
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialWriteOnlyVersionWithoutSecret(ldapName),
 				ExpectError: regexp.MustCompile(`(Missing required argument|bind_credential_wo.+bind_credential_wo_version)`),
+			},
+			{
+				Config:      testKeycloakLdapUserFederation_bindCredentialWriteOnly(ldapName, "admin", ""),
+				ExpectError: regexp.MustCompile(`not be an empty string`),
 			},
 			{
 				Config:      testKeycloakLdapUserFederation_bindCredentialAndWriteOnlyConflict(ldapName),
