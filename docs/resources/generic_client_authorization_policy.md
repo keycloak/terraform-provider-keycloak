@@ -102,7 +102,8 @@ The following arguments are supported:
 - `config` - (Optional) A map of provider-specific settings, passed through as-is to the policy's
   `config` object. This is how a custom Java SPI provider that reads its own settings (connection
   details, thresholds, anything the provider defines) receives them; Keycloak's generic
-  `PolicyRepresentation` carries these as a flat string-to-string map.
+  `PolicyRepresentation` carries these as a flat string-to-string map, so values must be strings
+  and nested structures are not supported.
 
 ## Attributes Reference
 
