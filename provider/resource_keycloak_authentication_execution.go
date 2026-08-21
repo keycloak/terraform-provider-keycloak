@@ -34,18 +34,23 @@ func resourceKeycloakAuthenticationExecution() *schema.Resource {
 			},
 			"authenticator": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"requirement": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"REQUIRED", "ALTERNATIVE", "OPTIONAL", "CONDITIONAL", "DISABLED"}, false), //OPTIONAL is removed from 8.0.0 onwards
+				ValidateFunc: validation.StringInSlice([]string{"REQUIRED", "ALTERNATIVE", "OPTIONAL", "CONDITIONAL", "DISABLED"}, false), // OPTIONAL is removed from 8.0.0 onwards
 				Default:      "DISABLED",
 			},
 			"priority": {
 				Type:     schema.TypeInt,
 				Optional: true,
+			},
+			"flow_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
 			},
 		},
 	}
@@ -59,6 +64,7 @@ func mapFromDataToAuthenticationExecution(data *schema.ResourceData) *keycloak.A
 		Authenticator:   data.Get("authenticator").(string),
 		Requirement:     data.Get("requirement").(string),
 		Priority:        data.Get("priority").(int),
+		FlowId:          data.Get("flow_id").(string),
 	}
 
 	return authenticationExecution
@@ -73,6 +79,7 @@ func mapFromAuthenticationExecutionToData(ctx context.Context, keycloakClient *k
 	data.Set("authenticator", authenticationExecution.Authenticator)
 	data.Set("requirement", authenticationExecution.Requirement)
 	data.Set("priority", authenticationExecution.Priority)
+	data.Set("flow_id", authenticationExecution.FlowId)
 
 	return nil
 }
