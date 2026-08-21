@@ -219,6 +219,7 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			EntityId:                        "https://example.com/entity_id/1",
+			IdpEntityId:                     "https://example.com/idp/entity_id/1",
 			SingleSignOnServiceUrl:          "https://example.com/signon/1",
 			BackchannelSupported:            types.KeycloakBoolQuoted(firstBackchannel),
 			ValidateSignature:               types.KeycloakBoolQuoted(firstValidateSignature),
@@ -249,6 +250,7 @@ func TestAccKeycloakSamlIdentityProvider_basicUpdateAll(t *testing.T) {
 		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			EntityId:                        "https://example.com/entity_id/2",
+			IdpEntityId:                     "https://example.com/idp/entity_id/2",
 			SingleSignOnServiceUrl:          "https://example.com/signon/2",
 			BackchannelSupported:            types.KeycloakBoolQuoted(!firstBackchannel),
 			ValidateSignature:               types.KeycloakBoolQuoted(!firstValidateSignature),
