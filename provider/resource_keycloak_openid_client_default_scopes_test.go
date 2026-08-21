@@ -276,12 +276,15 @@ func TestAccKeycloakOpenidClientDefaultScopes_noImportNeeded(t *testing.T) {
 }
 
 // Keycloak throws a 500 if you attempt to attach an optional scope that is already attached as an optional scope
+// but the provider will remove the existing scope and re-attach as a default scope
 func TestAccKeycloakOpenidClientDefaultScopes_validateDuplicateScopeAssignment(t *testing.T) {
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
 	optionalClientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
+
+	expectedDefaultClientScopes := append(preAssignedDefaultClientScopes, clientScope)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -292,10 +295,10 @@ func TestAccKeycloakOpenidClientDefaultScopes_validateDuplicateScopeAssignment(t
 				Config: testKeycloakOpenidClientOptionalScopes_basic(client, clientScope),
 				Check:  testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", optionalClientScopes),
 			},
-			// attach default scopes with the custom scope, expect an error since it is already in use
+			// attach default scopes with the custom scope, expect pass since we remove and re-add
 			{
-				Config:      testKeycloakOpenidClientDefaultScopes_duplicateScopeAssignment(client, clientScope),
-				ExpectError: regexp.MustCompile("validation error: scope .+ is already attached to client as an optional scope"),
+				Config: testKeycloakOpenidClientDefaultScopes_duplicateScopeAssignment(client, clientScope),
+				Check:  testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", expectedDefaultClientScopes),
 			},
 		},
 	})
