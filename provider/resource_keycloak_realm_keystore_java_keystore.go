@@ -146,6 +146,12 @@ func resourceKeycloakRealmKeystoreJavaKeystoreCreate(ctx context.Context, data *
 		return diag.FromErr(err)
 	}
 
+	realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	realmKey.ParentId = realm.Id
+
 	err = keycloakClient.NewRealmKeystoreJavaKeystore(ctx, realmKey)
 	if err != nil {
 		return diag.FromErr(err)
@@ -185,6 +191,12 @@ func resourceKeycloakRealmKeystoreJavaKeystoreUpdate(ctx context.Context, data *
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	realmKey.ParentId = realm.Id
 
 	err = keycloakClient.UpdateRealmKeystoreJavaKeystore(ctx, realmKey)
 	if err != nil {
