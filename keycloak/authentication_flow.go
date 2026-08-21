@@ -56,47 +56,30 @@ func (keycloakClient *KeycloakClient) GetAuthenticationFlow(ctx context.Context,
 }
 
 func (keycloakClient *KeycloakClient) GetAuthenticationFlowFromAlias(ctx context.Context, realmId, alias string) (*AuthenticationFlow, error) {
-	var authenticationFlows []*AuthenticationFlow
-	var authenticationFlow *AuthenticationFlow = nil
+	// A flow created moments ago (e.g. earlier in the same apply) can take a few milliseconds
+	// to appear in the list, and the list is never empty in practice because realms ship with
+	// built-in flows. Retry while the requested alias is absent before giving up.
+	for attempt := 0; ; attempt++ {
+		var authenticationFlows []*AuthenticationFlow
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/flows", realmId), &authenticationFlows, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Retry 3 more times if not found, sometimes it took split milliseconds the Authentication to populate
-	if len(authenticationFlows) == 0 {
-		for i := 0; i < 3; i++ {
-			err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/flows", realmId), &authenticationFlows, nil)
-
-			if len(authenticationFlows) > 0 {
-				break
-			}
-
-			if err != nil {
-				return nil, err
-			}
-
-			time.Sleep(time.Millisecond * 50)
+		err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/flows", realmId), &authenticationFlows, nil)
+		if err != nil {
+			return nil, err
 		}
 
-		if len(authenticationFlows) == 0 {
+		for _, authFlow := range authenticationFlows {
+			if authFlow.Alias == alias {
+				authFlow.RealmId = realmId
+				return authFlow, nil
+			}
+		}
+
+		if attempt >= 3 {
 			return nil, fmt.Errorf("no authentication flow found for alias %s", alias)
 		}
-	}
 
-	for _, authFlow := range authenticationFlows {
-		if authFlow.Alias == alias {
-			authenticationFlow = authFlow
-		}
+		time.Sleep(time.Millisecond * 50)
 	}
-
-	if authenticationFlow == nil {
-		return nil, fmt.Errorf("no authentication flow found for alias %s", alias)
-	}
-	authenticationFlow.RealmId = realmId
-
-	return authenticationFlow, nil
 }
 
 func (keycloakClient *KeycloakClient) UpdateAuthenticationFlow(ctx context.Context, authenticationFlow *AuthenticationFlow) error {
