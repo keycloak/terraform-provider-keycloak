@@ -7,14 +7,15 @@ import (
 )
 
 type GenericClientAuthorizationPolicy struct {
-	Id               string `json:"id,omitempty"`
-	RealmId          string `json:"-"`
-	ResourceServerId string `json:"-"`
-	Name             string `json:"name"`
-	DecisionStrategy string `json:"decisionStrategy"`
-	Logic            string `json:"logic"`
-	Type             string `json:"type"`
-	Description      string `json:"description"`
+	Id               string            `json:"id,omitempty"`
+	RealmId          string            `json:"-"`
+	ResourceServerId string            `json:"-"`
+	Name             string            `json:"name"`
+	DecisionStrategy string            `json:"decisionStrategy"`
+	Logic            string            `json:"logic"`
+	Type             string            `json:"type"`
+	Description      string            `json:"description"`
+	Config           map[string]string `json:"config"`
 }
 
 func (keycloakClient *KeycloakClient) NewGenericClientAuthorizationPolicy(ctx context.Context, policy *GenericClientAuthorizationPolicy) error {
