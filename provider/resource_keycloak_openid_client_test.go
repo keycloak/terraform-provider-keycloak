@@ -884,6 +884,10 @@ func TestAccKeycloakOpenidClient_authenticationFlowBindingOverridesConflict(t *t
 				Config:      testKeycloakOpenidClient_authenticationFlowBindingOverridesConflict(clientId, flowAlias),
 				ExpectError: regexp.MustCompile("browser_id and browser_alias are mutually exclusive"),
 			},
+			{
+				Config:      testKeycloakOpenidClient_authenticationFlowBindingOverridesDirectGrantConflict(clientId, flowAlias),
+				ExpectError: regexp.MustCompile("direct_grant_id and direct_grant_alias are mutually exclusive"),
+			},
 		},
 	})
 }
@@ -2391,6 +2395,30 @@ resource "keycloak_openid_client" "client" {
 		browser_id         = keycloak_authentication_flow.another_flow.id
 		browser_alias      = keycloak_authentication_flow.another_flow.alias
 		direct_grant_id    = keycloak_authentication_flow.another_flow.id
+	}
+}
+	`, testAccRealm.Realm, flowAlias, clientId)
+}
+
+func testKeycloakOpenidClient_authenticationFlowBindingOverridesDirectGrantConflict(clientId, flowAlias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "another_flow" {
+  alias    = "%s"
+  realm_id = data.keycloak_realm.realm.id
+  description = "this is another flow"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "PUBLIC"
+	authentication_flow_binding_overrides {
+		direct_grant_id    = keycloak_authentication_flow.another_flow.id
+		direct_grant_alias = keycloak_authentication_flow.another_flow.alias
 	}
 }
 	`, testAccRealm.Realm, flowAlias, clientId)
