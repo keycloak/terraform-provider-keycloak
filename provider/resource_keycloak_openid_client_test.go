@@ -1270,14 +1270,15 @@ func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiff(t *testing.T) {
 				Config: config,
 			},
 			{
-				Config:   config,
-				PlanOnly: true,
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
 }
 
-func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiffAfterUpgradeFrom550(t *testing.T) {
+func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiffAfterUpgradeFrom570(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
@@ -1291,8 +1292,12 @@ func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiffAfterUpgradeFrom550
 				Config: config,
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"keycloak": {
-						Source:            "registry.terraform.io/keycloak/keycloak",
-						VersionConstraint: "=5.5.0",
+						Source: "registry.terraform.io/keycloak/keycloak",
+						// 5.7.0 is the oldest release that does not panic on
+						// Keycloak 26.5+ when creating a client with an
+						// authorization block; it still defaults
+						// allow_remote_resource_management to false
+						VersionConstraint: "=5.7.0",
 					},
 				},
 			},
@@ -1301,9 +1306,10 @@ func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiffAfterUpgradeFrom550
 				ProviderFactories: testAccProviderFactories,
 			},
 			{
-				Config:            config,
-				ProviderFactories: testAccProviderFactories,
-				PlanOnly:          true,
+				Config:             config,
+				ProviderFactories:  testAccProviderFactories,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -1380,7 +1386,9 @@ func TestAccKeycloakOpenidClient_authorizationRemoveExplicitFieldNoPerpetualDiff
 				Config: testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId),
 			},
 			{
-				Config: testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId),
+				Config:             testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})

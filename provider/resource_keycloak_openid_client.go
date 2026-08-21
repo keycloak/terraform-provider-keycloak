@@ -688,6 +688,15 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
+		// the generic client update endpoint ignores authorizationSettings,
+		// so they must be persisted separately when adopting an existing client
+		if client.AuthorizationSettings != nil {
+			err = keycloakClient.UpdateOpenidClientAuthorizationSettings(ctx, client)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	} else {
 		err = keycloakClient.NewOpenidClient(ctx, client)
 		if err != nil {
