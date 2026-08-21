@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +17,9 @@ func resourceKeycloakOpenidClientDefaultScopes() *schema.Resource {
 		ReadContext:   resourceKeycloakOpenidClientDefaultScopesRead,
 		DeleteContext: resourceKeycloakOpenidClientDefaultScopesDelete,
 		UpdateContext: resourceKeycloakOpenidClientDefaultScopesReconcile,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakOpenidClientDefaultScopesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -114,4 +119,44 @@ func resourceKeycloakOpenidClientDefaultScopesDelete(ctx context.Context, data *
 	defaultScopes := data.Get("default_scopes").(*schema.Set)
 
 	return diag.FromErr(keycloakClient.DetachOpenidClientDefaultScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(defaultScopes.List())))
+}
+
+func resourceKeycloakOpenidClientDefaultScopesImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.Split(data.Id(), "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{openidClientId}}")
+	}
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	realmId := parts[0]
+	clientId := parts[1]
+
+	keycloakOpenidClientDefaultScopes, err := keycloakClient.GetOpenidClientDefaultScopes(ctx, realmId, clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = data.Set("realm_id", realmId)
+	if err != nil {
+		return nil, err
+	}
+	err = data.Set("client_id", clientId)
+	if err != nil {
+		return nil, err
+	}
+	var defaultScopes []string
+	for _, clientScope := range keycloakOpenidClientDefaultScopes {
+		defaultScopes = append(defaultScopes, clientScope.Name)
+	}
+	err = data.Set("default_scopes", defaultScopes)
+	if err != nil {
+		return nil, err
+	}
+
+	diagnostics := resourceKeycloakOpenidClientDefaultScopesRead(ctx, data, meta)
+	if diagnostics.HasError() {
+		return nil, errors.New(diagnostics[0].Summary)
+	}
+
+	return []*schema.ResourceData{data}, nil
 }
