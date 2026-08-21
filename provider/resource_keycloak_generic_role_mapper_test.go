@@ -376,3 +376,99 @@ resource "keycloak_generic_role_mapper" "client-with-some-other-role" {
 }
 	`, testAccRealm.Realm, clientName, someRoleName, someOtherRoleName)
 }
+
+func TestAccKeycloakGenericClientRoleMapper_deleteRoleScopeMappingRealmRole(t *testing.T) {
+	t.Parallel()
+
+	var role = &keycloak.Role{}
+	var childClient = &keycloak.GenericClient{}
+
+	roleName := acctest.RandomWithPrefix("tf-acc")
+	childClientName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGenericClientRoleMapper_realmRole(roleName, childClientName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGenericClientRoleMapperExists("keycloak_generic_client_role_mapper.child-client-with-realm-role"),
+					testAccCheckKeycloakRoleFetch("keycloak_role.realm-role", role),
+					testAccCheckKeycloakGenericClientFetch("keycloak_openid_client.child-client", childClient),
+				),
+			},
+			{
+				PreConfig: func() {
+					err := keycloakClient.DeleteRoleScopeMapping(testCtx, childClient.RealmId, childClient.Id, "", role)
+					if err != nil {
+						t.Fatalf("Error deleting realm role mapping: %s", err)
+					}
+				},
+				Config: testKeycloakGenericClientRoleMapper_realmRole(roleName, childClientName),
+				Check:  testAccCheckKeycloakGenericClientRoleMapperExists("keycloak_generic_client_role_mapper.child-client-with-realm-role"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakGenericClientRoleMapper_deleteRoleScopeMappingClientRole(t *testing.T) {
+	t.Parallel()
+
+	var role = &keycloak.Role{}
+	var childClient = &keycloak.GenericClient{}
+
+	parentClientName := acctest.RandomWithPrefix("tf-acc")
+	parentRoleName := acctest.RandomWithPrefix("tf-acc")
+	childClientName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGenericClientRoleMapper_basic(parentClientName, parentRoleName, childClientName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakGenericClientRoleMapperExists("keycloak_generic_client_role_mapper.child-client-with-parent-client-role"),
+					testAccCheckKeycloakRoleFetch("keycloak_role.parent-role", role),
+					testAccCheckKeycloakGenericClientFetch("keycloak_openid_client.child-client", childClient),
+				),
+			},
+			{
+				PreConfig: func() {
+					err := keycloakClient.DeleteRoleScopeMapping(testCtx, childClient.RealmId, childClient.Id, "", role)
+					if err != nil {
+						t.Fatalf("Error deleting client role mapping: %s", err)
+					}
+				},
+				Config: testKeycloakGenericClientRoleMapper_basic(parentClientName, parentRoleName, childClientName),
+				Check:  testAccCheckKeycloakGenericClientRoleMapperExists("keycloak_generic_client_role_mapper.child-client-with-parent-client-role"),
+			},
+		},
+	})
+}
+
+func testKeycloakGenericClientRoleMapper_realmRole(roleName, childClientName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_role" "realm-role" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = "%s"
+}
+
+resource "keycloak_openid_client" "child-client" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+	access_type = "PUBLIC"
+}
+
+resource "keycloak_generic_client_role_mapper" "child-client-with-realm-role" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = keycloak_openid_client.child-client.id
+	role_id   = keycloak_role.realm-role.id
+}
+	`, testAccRealm.Realm, roleName, childClientName)
+}
