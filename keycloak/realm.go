@@ -91,10 +91,10 @@ type Realm struct {
 
 	BruteForceProtected          bool   `json:"bruteForceProtected"`
 	PermanentLockout             bool   `json:"permanentLockout"`
-	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`   // Strategy to increase wait time
-	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"` //Max Temporary Lockouts
-	FailureFactor                int    `json:"failureFactor"`                  //Max Login Failures
-	MaxSecondaryAuthFailures     int    `json:"maxSecondaryAuthFailures"`       //Max Secondary Auth Failures
+	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`       // Strategy to increase wait time
+	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"`     //Max Temporary Lockouts
+	FailureFactor                int    `json:"failureFactor"`                      //Max Login Failures
+	MaxSecondaryAuthFailures     *int   `json:"maxSecondaryAuthFailures,omitempty"` //Max Secondary Auth Failures (requires Keycloak >= 26.6.0)
 	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
 	QuickLoginCheckMilliSeconds  int    `json:"quickLoginCheckMilliSeconds"`
 	MinimumQuickLoginWaitSeconds int    `json:"minimumQuickLoginWaitSeconds"`

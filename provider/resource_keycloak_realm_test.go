@@ -585,25 +585,22 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", false),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 30),
-					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 0),
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR", 5),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR", 0),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy("keycloak_realm.realm", "LINEAR"),
-					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 5),
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "MULTIPLE", 5),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "MULTIPLE", 0),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy("keycloak_realm.realm", "MULTIPLE"),
-					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 5),
 				),
 			},
 			{
@@ -611,6 +608,44 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", false),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 30),
+				),
+			},
+		},
+	})
+}
+
+// maxSecondaryAuthFailures was added to Keycloak in 26.6.0 (see minKeycloakMaxSecondaryAuthFailuresVersion), so this
+// is a dedicated test (rather than folded into TestAccKeycloakRealm_securityDefensesBruteForceDetection) to allow
+// skipping it on the older Keycloak versions this provider still supports.
+func TestAccKeycloakRealm_securityDefensesBruteForceDetectionMaxSecondaryAuthFailures(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, minKeycloakMaxSecondaryAuthFailuresVersion); !ok {
+		t.Skip()
+	}
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 0),
+				),
+			},
+			{
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 30, "MULTIPLE", 5),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 5),
+				),
+			},
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 0),
 				),
 			},
@@ -1470,8 +1505,13 @@ func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAut
 			return err
 		}
 
-		if realm.MaxSecondaryAuthFailures != maxSecondaryAuthFailures {
-			return fmt.Errorf("expected realm %s to have MaxSecondaryAuthFailures set to %d, but was %d", realm.Realm, maxSecondaryAuthFailures, realm.MaxSecondaryAuthFailures)
+		actualMaxSecondaryAuthFailures := 0
+		if realm.MaxSecondaryAuthFailures != nil {
+			actualMaxSecondaryAuthFailures = *realm.MaxSecondaryAuthFailures
+		}
+
+		if actualMaxSecondaryAuthFailures != maxSecondaryAuthFailures {
+			return fmt.Errorf("expected realm %s to have MaxSecondaryAuthFailures set to %d, but was %d", realm.Realm, maxSecondaryAuthFailures, actualMaxSecondaryAuthFailures)
 		}
 
 		return nil

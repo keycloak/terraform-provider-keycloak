@@ -199,7 +199,7 @@ The `brute_force_detection` block supports the following arguments:
 - `permanent_lockout` - (Optional) When `true`, this will lock the user permanently when the user exceeds the maximum login failures.
 - `max_temporary_lockouts` - (Optional) How many temporary lockouts are permitted before a user is permanently locked out. `permanent_lockout` needs to be `true`. Defaults to `0`
 - `max_login_failures` - (Optional) How many failures before wait is triggered.
-- `max_secondary_auth_failures` - (Optional) How many failures of the secondary authentication factor (e.g. OTP) are permitted before the wait is triggered. Defaults to `0`.
+- `max_secondary_auth_failures` - (Optional) How many failures of the secondary authentication factor (e.g. OTP) are permitted before the wait is triggered. Defaults to `0`. Requires Keycloak 26.6 or higher.
 - `wait_increment_seconds` - (Optional) This represents the amount of time a user should be locked out when the login failure threshold has been met.
 - `quick_login_check_milli_seconds` - (Optional) Configures the amount of time, in milliseconds, for consecutive failures to lock a user out.
 - `minimum_quick_login_wait_seconds` - (Optional) How long to wait after a quick login failure.
