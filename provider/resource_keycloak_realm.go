@@ -626,6 +626,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  30,
 									},
+									"max_secondary_auth_failures": { //Max Secondary Auth Failures
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
 									"wait_increment_seconds": { //Wait Increment
 										Type:     schema.TypeInt,
 										Optional: true,
@@ -1129,6 +1134,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
+			realm.MaxSecondaryAuthFailures = bruteForceDetectionSettings["max_secondary_auth_failures"].(int)
 			realm.WaitIncrementSeconds = bruteForceDetectionSettings["wait_increment_seconds"].(int)
 			realm.QuickLoginCheckMilliSeconds = bruteForceDetectionSettings["quick_login_check_milli_seconds"].(int)
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
@@ -1363,6 +1369,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.PermanentLockout = false
 	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
+	realm.MaxSecondaryAuthFailures = 0
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60
@@ -1579,6 +1586,7 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *vers
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
 	bruteForceDetectionSettings["brute_force_strategy"] = realm.BruteForceStrategy
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
+	bruteForceDetectionSettings["max_secondary_auth_failures"] = realm.MaxSecondaryAuthFailures
 	bruteForceDetectionSettings["wait_increment_seconds"] = realm.WaitIncrementSeconds
 	bruteForceDetectionSettings["quick_login_check_milli_seconds"] = realm.QuickLoginCheckMilliSeconds
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
