@@ -1135,12 +1135,11 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
-			maxSecondaryAuthFailures := bruteForceDetectionSettings["max_secondary_auth_failures"].(int)
-			if supportsMaxSecondaryAuthFailures(keycloakVersion) {
-				realm.MaxSecondaryAuthFailures = &maxSecondaryAuthFailures
-			} else if maxSecondaryAuthFailures != 0 {
-				return nil, fmt.Errorf("max_secondary_auth_failures in brute_force_detection for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realm.Id, minKeycloakMaxSecondaryAuthFailuresVersion)
+			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Id, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
+			if err != nil {
+				return nil, err
 			}
+			realm.MaxSecondaryAuthFailures = maxSecondaryAuthFailures
 			realm.WaitIncrementSeconds = bruteForceDetectionSettings["wait_increment_seconds"].(int)
 			realm.QuickLoginCheckMilliSeconds = bruteForceDetectionSettings["quick_login_check_milli_seconds"].(int)
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
@@ -1354,6 +1353,21 @@ func supportsMaxSecondaryAuthFailures(keycloakVersion *version.Version) bool {
 	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
 }
 
+// resolveMaxSecondaryAuthFailures decides what to do with a configured max_secondary_auth_failures
+// value given the target Keycloak version: on supported versions it's always returned (even when 0,
+// so resetting the field back to its default reaches Keycloak instead of being silently omitted); on
+// unsupported versions it's omitted (nil) unless the user configured a non-default value, in which case
+// this returns an explicit error rather than letting Keycloak reject the request with a raw 400.
+func resolveMaxSecondaryAuthFailures(realmId string, maxSecondaryAuthFailures int, keycloakVersion *version.Version) (*int, error) {
+	if supportsMaxSecondaryAuthFailures(keycloakVersion) {
+		return &maxSecondaryAuthFailures, nil
+	}
+	if maxSecondaryAuthFailures != 0 {
+		return nil, fmt.Errorf("max_secondary_auth_failures in brute_force_detection for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realmId, minKeycloakMaxSecondaryAuthFailuresVersion)
+	}
+	return nil, nil
+}
+
 func flattenDiscoverableCredential(residentKey string, keycloakVersion *version.Version) string {
 	if !supportsDiscoverableCredential(keycloakVersion) || residentKey == "" {
 		return "not specified"
@@ -1380,10 +1394,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.PermanentLockout = false
 	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
-	if supportsMaxSecondaryAuthFailures(keycloakVersion) {
-		defaultMaxSecondaryAuthFailures := 0
-		realm.MaxSecondaryAuthFailures = &defaultMaxSecondaryAuthFailures
-	}
+	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Id, 0, keycloakVersion)
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60

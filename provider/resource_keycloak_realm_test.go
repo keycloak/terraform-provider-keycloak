@@ -3,8 +3,10 @@ package provider
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -650,6 +652,60 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetectionMaxSecondaryAuthFai
 				),
 			},
 		},
+	})
+}
+
+// Deterministic (no TF_ACC, no live Keycloak) coverage for resolveMaxSecondaryAuthFailures, since
+// TestAccKeycloakRealm_securityDefensesBruteForceDetectionMaxSecondaryAuthFailures skips entirely on
+// Keycloak < 26.6.0 and so never exercises the unsupported-version branch on any real server.
+func TestResolveMaxSecondaryAuthFailures(t *testing.T) {
+	oldVersion, err := version.NewVersion("26.5.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newVersion, err := version.NewVersion("26.6.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("old version, default 0, returns nil with no error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 0, oldVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+	})
+
+	t.Run("old version, non-zero value, returns an explicit error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 5, oldVersion)
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+		if err == nil || !strings.Contains(err.Error(), "not supported by your Keycloak version") {
+			t.Fatalf("expected an unsupported-version error, got %v", err)
+		}
+	})
+
+	t.Run("new version, non-zero value, returns the value with no error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 5, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || *got != 5 {
+			t.Fatalf("expected 5, got %v", got)
+		}
+	})
+
+	t.Run("new version, default 0, returns a pointer to 0 (not nil) so resets reach Keycloak", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 0, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || *got != 0 {
+			t.Fatalf("expected a pointer to 0, got %v", got)
+		}
 	})
 }
 
