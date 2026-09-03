@@ -32,10 +32,11 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 				Required: true,
 			},
 			"provider_id": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Computed:     true,
-				ValidateFunc: validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ValidateFunc:  validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
+				ConflictsWith: []string{"copy_from"},
 			},
 			"description": {
 				Type:             schema.TypeString,
@@ -43,10 +44,11 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"copy_from": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "The alias of an existing authentication flow (built-in or custom) to copy. All executions and subflows of the source flow are duplicated into this flow, which - unlike a built-in flow - can then be freely modified.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"provider_id"},
+				Description:   "The alias of an existing authentication flow (built-in or custom) to copy. All executions and subflows of the source flow are duplicated into this flow, which - unlike a built-in flow - can then be freely modified.",
 			},
 		},
 	}
@@ -92,7 +94,14 @@ func resourceKeycloakAuthenticationFlowCreate(ctx context.Context, data *schema.
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		authenticationFlow.Id = id
+
+		// The copy endpoint only accepts a new alias, inheriting everything else (description,
+		// provider_id, ...) from the source flow, so re-fetch the created flow instead of relying
+		// on the partially-populated struct built from config.
+		authenticationFlow, err = keycloakClient.GetAuthenticationFlow(ctx, authenticationFlow.RealmId, id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	} else {
 		if _, ok := data.GetOkExists("provider_id"); !ok {
 			authenticationFlow.ProviderId = "basic-flow"

@@ -124,6 +124,32 @@ func TestAccKeycloakAuthenticationFlow_copyFrom(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakAuthenticationFlow_copyFromClientFlow(t *testing.T) {
+	t.Parallel()
+	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationFlowDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// "clients" is a built-in flow whose provider_id is "client-flow", not the
+				// "basic-flow" default - this exercises provider_id correctly inheriting the
+				// copied flow's actual type instead of being forced/defaulted.
+				Config: testKeycloakAuthenticationFlow_copyFromClientFlow(authFlowAlias),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationFlowExists("keycloak_authentication_flow.flow"),
+					resource.TestCheckResourceAttr("keycloak_authentication_flow.flow", "alias", authFlowAlias),
+					resource.TestCheckResourceAttr("keycloak_authentication_flow.flow", "provider_id", "client-flow"),
+					testAccCheckKeycloakAuthenticationFlowIsNotBuiltIn("keycloak_authentication_flow.flow"),
+					testAccCheckKeycloakAuthenticationFlowHasExecution("keycloak_authentication_flow.flow", "client-secret"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakAuthenticationFlowIsNotBuiltIn(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		authenticationFlow, err := getAuthenticationFlowFromState(s, resourceName)
@@ -289,6 +315,20 @@ resource "keycloak_authentication_flow" "flow" {
 	realm_id  = data.keycloak_realm.realm.id
 	alias     = "%s"
 	copy_from = "browser"
+}
+	`, testAccRealm.Realm, alias)
+}
+
+func testKeycloakAuthenticationFlow_copyFromClientFlow(alias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id  = data.keycloak_realm.realm.id
+	alias     = "%s"
+	copy_from = "clients"
 }
 	`, testAccRealm.Realm, alias)
 }
