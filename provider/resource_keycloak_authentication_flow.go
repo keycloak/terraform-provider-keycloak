@@ -33,14 +33,20 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 			},
 			"provider_id": {
 				Type:         schema.TypeString,
-				Default:      "basic-flow",
-				ValidateFunc: validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
 				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
 			},
 			"description": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+			},
+			"copy_from": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The alias of an existing authentication flow (built-in or custom) to copy. All executions and subflows of the source flow are duplicated into this flow, which - unlike a built-in flow - can then be freely modified.",
 			},
 		},
 	}
@@ -81,9 +87,21 @@ func resourceKeycloakAuthenticationFlowCreate(ctx context.Context, data *schema.
 
 	authenticationFlow := mapFromDataToAuthenticationFlow(data)
 
-	err := keycloakClient.NewAuthenticationFlow(ctx, authenticationFlow)
-	if err != nil {
-		return diag.FromErr(err)
+	if copyFrom, ok := data.GetOk("copy_from"); ok {
+		id, err := keycloakClient.CopyAuthenticationFlow(ctx, authenticationFlow.RealmId, copyFrom.(string), authenticationFlow.Alias)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		authenticationFlow.Id = id
+	} else {
+		if _, ok := data.GetOkExists("provider_id"); !ok {
+			authenticationFlow.ProviderId = "basic-flow"
+		}
+
+		err := keycloakClient.NewAuthenticationFlow(ctx, authenticationFlow)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	mapFromAuthenticationFlowToData(data, authenticationFlow)

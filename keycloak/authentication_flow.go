@@ -44,6 +44,22 @@ func (keycloakClient *KeycloakClient) NewAuthenticationFlow(ctx context.Context,
 	return nil
 }
 
+type authenticationFlowCopyRequest struct {
+	NewName string `json:"newName"`
+}
+
+// CopyAuthenticationFlow duplicates an existing flow (including all of its executions and
+// subflows) under a new alias. Unlike a built-in flow, the resulting copy is not builtIn and
+// can be freely modified.
+func (keycloakClient *KeycloakClient) CopyAuthenticationFlow(ctx context.Context, realmId, flowAlias, newName string) (string, error) {
+	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s/copy", realmId, flowAlias), &authenticationFlowCopyRequest{NewName: newName})
+	if err != nil {
+		return "", err
+	}
+
+	return getIdFromLocationHeader(location), nil
+}
+
 func (keycloakClient *KeycloakClient) GetAuthenticationFlow(ctx context.Context, realmId, id string) (*AuthenticationFlow, error) {
 	var authenticationFlow AuthenticationFlow
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s", realmId, id), &authenticationFlow, nil)

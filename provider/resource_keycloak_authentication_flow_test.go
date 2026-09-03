@@ -94,6 +94,73 @@ func TestAccKeycloakAuthenticationFlow_updateAuthenticationFlow(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakAuthenticationFlow_copyFrom(t *testing.T) {
+	t.Parallel()
+	authFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationFlowDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakAuthenticationFlow_copyFrom(authFlowAlias),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationFlowExists("keycloak_authentication_flow.flow"),
+					resource.TestCheckResourceAttr("keycloak_authentication_flow.flow", "alias", authFlowAlias),
+					resource.TestCheckResourceAttr("keycloak_authentication_flow.flow", "provider_id", "basic-flow"),
+					testAccCheckKeycloakAuthenticationFlowIsNotBuiltIn("keycloak_authentication_flow.flow"),
+					testAccCheckKeycloakAuthenticationFlowHasExecution("keycloak_authentication_flow.flow", "auth-cookie"),
+				),
+			},
+			{
+				ResourceName:            "keycloak_authentication_flow.flow",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateIdPrefix:     testAccRealm.Realm + "/",
+				ImportStateVerifyIgnore: []string{"copy_from"},
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakAuthenticationFlowIsNotBuiltIn(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		authenticationFlow, err := getAuthenticationFlowFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if authenticationFlow.BuiltIn {
+			return fmt.Errorf("expected authentication flow with id %s to not be built-in", authenticationFlow.Id)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakAuthenticationFlowHasExecution(resourceName, providerId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		authenticationFlow, err := getAuthenticationFlowFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		executions, err := keycloakClient.ListAuthenticationExecutions(testCtx, authenticationFlow.RealmId, authenticationFlow.Alias)
+		if err != nil {
+			return fmt.Errorf("error listing executions for authentication flow with id %s: %s", authenticationFlow.Id, err)
+		}
+
+		for _, execution := range executions {
+			if execution.ProviderId == providerId {
+				return nil
+			}
+		}
+
+		return fmt.Errorf("expected authentication flow with id %s to have an execution with provider id %s", authenticationFlow.Id, providerId)
+	}
+}
+
 func TestAccKeycloakAuthenticationFlow_updateRealm(t *testing.T) {
 	t.Parallel()
 
@@ -208,6 +275,20 @@ data "keycloak_realm" "realm" {
 resource "keycloak_authentication_flow" "flow" {
 	realm_id = data.keycloak_realm.realm.id
 	alias    = "%s"
+}
+	`, testAccRealm.Realm, alias)
+}
+
+func testKeycloakAuthenticationFlow_copyFrom(alias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id  = data.keycloak_realm.realm.id
+	alias     = "%s"
+	copy_from = "browser"
 }
 	`, testAccRealm.Realm, alias)
 }
