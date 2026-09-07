@@ -54,6 +54,8 @@ func resourceKeycloakRole() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Computed: true,
+				// ignore ordering of multi-valued attributes
+				DiffSuppressFunc: suppressDiffForMultivalueAttributeOrder(),
 			},
 			"import": {
 				Type:     schema.TypeBool,
