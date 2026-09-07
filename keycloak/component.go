@@ -12,7 +12,7 @@ type component struct {
 	Name         string              `json:"name"`
 	ProviderId   string              `json:"providerId"`
 	ProviderType string              `json:"providerType"`
-	ParentId     string              `json:"parentId"`
+	ParentId     string              `json:"parentId,omitempty"`
 	SubType      string              `json:"subType,omitempty"`
 	Config       map[string][]string `json:"config"`
 }
