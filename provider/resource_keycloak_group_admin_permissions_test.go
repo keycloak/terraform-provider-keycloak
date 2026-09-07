@@ -27,10 +27,34 @@ func TestAccKeycloakGroupAdminPermissions_basic(t *testing.T) {
 				Check:  testAccCheckKeycloakGroupAdminPermissionsExists("keycloak_group_admin_permissions.test"),
 			},
 			{
+				Config: testKeycloakGroupAdminPermissions_basic("manage-membership"),
+				Check:  testAccCheckKeycloakGroupAdminPermissionsExists("keycloak_group_admin_permissions.test"),
+			},
+			{
+				Config: testKeycloakGroupAdminPermissions_basic("impersonate-members"),
+				Check:  testAccCheckKeycloakGroupAdminPermissionsExists("keycloak_group_admin_permissions.test"),
+			},
+			{
 				ResourceName:            "keycloak_group_admin_permissions.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"group_ids"},
+			},
+		},
+	})
+}
+
+func TestAccKeycloakGroupAdminPermissions_manageMembershipOfMembers(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroupAdminPermissions_basic("manage-membership-of-members"),
+				Check:  testAccCheckKeycloakGroupAdminPermissionsExists("keycloak_group_admin_permissions.test"),
 			},
 		},
 	})
