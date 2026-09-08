@@ -90,15 +90,15 @@ func resourceKeycloakAuthenticationFlowCreate(ctx context.Context, data *schema.
 	authenticationFlow := mapFromDataToAuthenticationFlow(data)
 
 	if copyFrom, ok := data.GetOk("copy_from"); ok {
-		id, err := keycloakClient.CopyAuthenticationFlow(ctx, authenticationFlow.RealmId, copyFrom.(string), authenticationFlow.Alias)
+		err := keycloakClient.CopyAuthenticationFlow(ctx, authenticationFlow.RealmId, copyFrom.(string), authenticationFlow.Alias)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
 		// The copy endpoint only accepts a new alias, inheriting everything else (description,
-		// provider_id, ...) from the source flow, so re-fetch the created flow instead of relying
-		// on the partially-populated struct built from config.
-		authenticationFlow, err = keycloakClient.GetAuthenticationFlow(ctx, authenticationFlow.RealmId, id)
+		// provider_id, ...) from the source flow, and does not reliably return a Location header
+		// across Keycloak versions, so re-fetch the created flow by its new alias instead.
+		authenticationFlow, err = keycloakClient.GetAuthenticationFlowFromAlias(ctx, authenticationFlow.RealmId, authenticationFlow.Alias)
 		if err != nil {
 			return diag.FromErr(err)
 		}
