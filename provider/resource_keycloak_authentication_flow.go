@@ -32,15 +32,23 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 				Required: true,
 			},
 			"provider_id": {
-				Type:         schema.TypeString,
-				Default:      "basic-flow",
-				ValidateFunc: validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
-				Optional:     true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ValidateFunc:  validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
+				ConflictsWith: []string{"copy_from"},
 			},
 			"description": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+			},
+			"copy_from": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"provider_id"},
+				Description:   "The alias of an existing authentication flow (built-in or custom) to copy. All executions and subflows of the source flow are duplicated into this flow, which - unlike a built-in flow - can then be freely modified.",
 			},
 		},
 	}
@@ -81,9 +89,28 @@ func resourceKeycloakAuthenticationFlowCreate(ctx context.Context, data *schema.
 
 	authenticationFlow := mapFromDataToAuthenticationFlow(data)
 
-	err := keycloakClient.NewAuthenticationFlow(ctx, authenticationFlow)
-	if err != nil {
-		return diag.FromErr(err)
+	if copyFrom, ok := data.GetOk("copy_from"); ok {
+		err := keycloakClient.CopyAuthenticationFlow(ctx, authenticationFlow.RealmId, copyFrom.(string), authenticationFlow.Alias)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// The copy endpoint only accepts a new alias, inheriting everything else (description,
+		// provider_id, ...) from the source flow, and does not reliably return a Location header
+		// across Keycloak versions, so re-fetch the created flow by its new alias instead.
+		authenticationFlow, err = keycloakClient.GetAuthenticationFlowFromAlias(ctx, authenticationFlow.RealmId, authenticationFlow.Alias)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		if _, ok := data.GetOkExists("provider_id"); !ok {
+			authenticationFlow.ProviderId = "basic-flow"
+		}
+
+		err := keycloakClient.NewAuthenticationFlow(ctx, authenticationFlow)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	mapFromAuthenticationFlowToData(data, authenticationFlow)
