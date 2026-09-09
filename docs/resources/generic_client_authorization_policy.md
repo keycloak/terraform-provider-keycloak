@@ -69,6 +69,20 @@ resource "keycloak_generic_client_authorization_policy" "deployed_js" {
   logic              = "POSITIVE"
   description        = "Authorization policy backed by a deployed JavaScript script"
 }
+
+# A custom Java SPI policy provider that reads its own settings from config.
+resource "keycloak_generic_client_authorization_policy" "custom_with_config" {
+  resource_server_id = keycloak_openid_client.test.resource_server_id
+  realm_id           = keycloak_realm.realm.id
+  name               = "my-configurable-policy"
+  type               = "my-custom-policy-provider"
+  decision_strategy  = "UNANIMOUS"
+  logic              = "POSITIVE"
+
+  config = {
+    some_setting = "some_value"
+  }
+}
 ```
 
 ## Argument Reference
@@ -85,6 +99,11 @@ The following arguments are supported:
 - `decision_strategy` - (Required) The decision strategy, can be one of `UNANIMOUS`, `AFFIRMATIVE`, or `CONSENSUS`.
 - `logic` - (Optional) The logic, can be one of `POSITIVE` or `NEGATIVE`. Defaults to `POSITIVE`.
 - `description` - (Optional) A description for the authorization policy.
+- `config` - (Optional) A map of provider-specific settings, passed through as-is to the policy's
+  `config` object. This is how a custom Java SPI provider that reads its own settings (connection
+  details, thresholds, anything the provider defines) receives them; Keycloak's generic
+  `PolicyRepresentation` carries these as a flat string-to-string map, so values must be strings
+  and nested structures are not supported.
 
 ## Attributes Reference
 
