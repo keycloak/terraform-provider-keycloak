@@ -155,8 +155,10 @@ is set to `true`.
 - `display_on_consent_screen` - (Optional) When `true`, the consent screen will display information about the client itself. Defaults to `false`. This is applicable only when `consent_required` is `true`.
 - `consent_screen_text` - (Optional) The text to display on the consent screen about permissions specific to this client. This is applicable only when `display_on_consent_screen` is `true`.
 - `authentication_flow_binding_overrides` - (Optional) Override realm authentication flow bindings
-  - `browser_id` - (Optional) Browser flow id, (flow needs to exist)
-  - `direct_grant_id` - (Optional) Direct grant flow id (flow needs to exist)
+  - `browser_id` - (Optional) Browser flow ID to use for this client. The flow must exist. Conflicts with `browser_alias`.
+  - `browser_alias` - (Optional) Browser flow alias to use for this client. The provider will look up the flow ID automatically. Conflicts with `browser_id`.
+  - `direct_grant_id` - (Optional) Direct grant flow ID to use for this client. The flow must exist. Conflicts with `direct_grant_alias`.
+  - `direct_grant_alias` - (Optional) Direct grant flow alias to use for this client. The provider will look up the flow ID automatically. Conflicts with `direct_grant_id`.
 - `login_theme` - (Optional) The client login theme. This will override the default theme for the realm.
 - `exclude_session_state_from_auth_response` - (Optional) When `true`, the parameter `session_state` will not be included in OpenID Connect Authentication Response.
 - `exclude_issuer_from_auth_response` - (Optional) When `true`, the parameter `iss` will not be included in OpenID Connect Authentication Response.
