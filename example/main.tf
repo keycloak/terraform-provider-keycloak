@@ -77,11 +77,6 @@ resource "keycloak_realm" "test" {
   ssl_required    = "external"
   password_policy = "upperCase(1) and length(8) and forceExpiredPasswordChange(365) and notUsername"
 
-  attributes = {
-    mycustomAttribute  = "myCustomValue"
-    userProfileEnabled = true
-  }
-
   web_authn_policy {
     relying_party_entity_name = "Example"
     relying_party_id          = "keycloak.example.com"
@@ -100,6 +95,15 @@ resource "keycloak_realm" "test" {
     ]
   }
 }
+
+resource "keycloak_realm_attributes" "test_attributes" {
+  realm_id = keycloak_realm.test.id
+
+  attributes = {
+    mycustomAttribute  = "myCustomValue"
+    userProfileEnabled = true
+  }
+} 
 
 resource "keycloak_realm_localization" "test_translation" {
   realm_id = keycloak_realm.test.id
