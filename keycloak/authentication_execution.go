@@ -10,7 +10,9 @@ import (
 // other fields can be provided to the API, but they are ignored
 // POST /realms/${realmId}/authentication/flows/${flowAlias}/executions/execution
 type authenticationExecutionCreate struct {
-	Provider string `json:"provider"` //authenticator of the execution
+	Provider string `json:"provider"` // authenticator of the execution
+	Priority int    `json:"priority,omitempty"`
+	FlowId   string `json:"flowId,omitempty"`
 }
 
 type authenticationExecutionRequirementUpdate struct {
@@ -26,12 +28,12 @@ type AuthenticationExecution struct {
 	Id                   string `json:"id"`
 	RealmId              string `json:"-"`
 	ParentFlowAlias      string `json:"-"`
-	Authenticator        string `json:"authenticator"` //can be any authenticator from GET realms/{realm}/authentication/authenticator-providers OR GET realms/{realm}/authentication/client-authenticator-providers OR GET realms/{realm}/authentication/form-action-providers
+	Authenticator        string `json:"authenticator"` // can be any authenticator from GET realms/{realm}/authentication/authenticator-providers OR GET realms/{realm}/authentication/client-authenticator-providers OR GET realms/{realm}/authentication/form-action-providers
 	AuthenticationConfig string `json:"authenticationConfig"`
 	AuthenticationFlow   bool   `json:"authenticationFlow"`
 	FlowId               string `json:"flowId"`
 	ParentFlowId         string `json:"parentFlow"`
-	Priority             int    `json:"priority"`
+	Priority             int    `json:"priority,omitempty"`
 	Requirement          string `json:"requirement"`
 }
 
@@ -48,8 +50,8 @@ type AuthenticationExecutionInfo struct {
 	Index                int    `json:"index"`
 	Level                int    `json:"level"`
 	ProviderId           string `json:"providerId"`
+	Priority             int    `json:"priority,omitempty"`
 	Requirement          string `json:"requirement"`
-	Priority             int    `json:"priority"`
 }
 
 type AuthenticationExecutionList []*AuthenticationExecutionInfo
@@ -121,7 +123,15 @@ func (keycloakClient *KeycloakClient) GetAuthenticationExecutionInfoFromProvider
 }
 
 func (keycloakClient *KeycloakClient) NewAuthenticationExecution(ctx context.Context, execution *AuthenticationExecution) error {
-	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s/executions/execution", execution.RealmId, execution.ParentFlowAlias), &authenticationExecutionCreate{Provider: execution.Authenticator})
+	executionCreate := &authenticationExecutionCreate{
+		Provider: execution.Authenticator,
+		FlowId:   execution.FlowId,
+	}
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, Version_25); prioritySupported {
+		executionCreate.Priority = execution.Priority
+	}
+
+	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s/executions/execution", execution.RealmId, execution.ParentFlowAlias), executionCreate)
 	if err != nil {
 		return err
 	}
@@ -158,6 +168,9 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationExecution(ctx context.
 		Requirement:     execution.Requirement,
 		Priority:        execution.Priority,
 	}
+	if prioritySupported, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, Version_25); prioritySupported {
+		authenticationExecutionUpdateRequirement.Priority = execution.Priority
+	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 }
 
@@ -177,16 +190,10 @@ func (keycloakClient *KeycloakClient) DeleteAuthenticationExecution(ctx context.
 
 func (keycloakClient *KeycloakClient) RaiseAuthenticationExecutionPriority(ctx context.Context, realmId, id string) error {
 	_, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s/raise-priority", realmId, id), nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (keycloakClient *KeycloakClient) LowerAuthenticationExecutionPriority(ctx context.Context, realmId, id string) error {
 	_, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s/lower-priority", realmId, id), nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
