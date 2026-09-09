@@ -28,6 +28,9 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmUserProfileRead,
 		DeleteContext: resourceKeycloakRealmUserProfileDelete,
 		UpdateContext: resourceKeycloakRealmUserProfileUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmUserProfileImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -540,4 +543,22 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 	}
 
 	return nil
+}
+
+func resourceKeycloakRealmUserProfileImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	realmUserProfile, err := keycloakClient.GetRealmUserProfile(ctx, data.Id())
+	if err != nil {
+		return nil, err
+	}
+
+	err = data.Set("realm_id", data.Id())
+	if err != nil {
+		return nil, err
+	}
+
+	setRealmUserProfileData(ctx, keycloakClient, data, realmUserProfile)
+
+	return []*schema.ResourceData{data}, nil
 }
