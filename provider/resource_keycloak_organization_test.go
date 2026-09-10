@@ -156,6 +156,64 @@ func TestAccKeycloakOrganization_basicWithAttributes(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOrganization_multiValuedAttributeNoDrift(t *testing.T) {
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
+
+	orderedValues := []string{"role-1", "role-2", "role-3", "role-4", "role-5"}
+	attributeValue := strings.Join(orderedValues, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+
+	resourceName := "keycloak_organization.organization"
+
+	var organization *keycloak.Organization
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganization_attributes(organizationName, attributeName, attributeValue),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOrganizationExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "attributes."+attributeName, attributeValue),
+					func(s *terraform.State) error {
+						var err error
+						organization, err = getOrganizationFromState(s, resourceName)
+						return err
+					},
+				),
+			},
+			{
+				PreConfig: func() {
+					// Keycloak won't persist a different order for a collection that already
+					// holds the same items, so the values have to be replaced with a dummy
+					// before they can be written back in a different order
+					fetchedOrganization, err := keycloakClient.GetOrganization(testCtx, organization.Realm, organization.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					fetchedOrganization.Attributes = map[string][]string{
+						attributeName: {"dummy"},
+					}
+					if err = keycloakClient.UpdateOrganization(testCtx, fetchedOrganization); err != nil {
+						t.Fatal(err)
+					}
+					fetchedOrganization.Attributes = map[string][]string{
+						attributeName: {"role-3", "role-5", "role-1", "role-4", "role-2"},
+					}
+					if err = keycloakClient.UpdateOrganization(testCtx, fetchedOrganization); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakOrganization_attributes(organizationName, attributeName, attributeValue),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakOrganizationExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getOrganizationFromState(s, resourceName)

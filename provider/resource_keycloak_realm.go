@@ -20,6 +20,7 @@ var (
 
 const minKeycloakPasskeysVersion = "26.3.5"
 const minKeycloakDiscoverableCredentialVersion = "26.7.0"
+const minKeycloakMaxSecondaryAuthFailuresVersion = "26.6.0"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -626,6 +627,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  30,
 									},
+									"max_secondary_auth_failures": { //Max Secondary Auth Failures
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
 									"wait_increment_seconds": { //Wait Increment
 										Type:     schema.TypeInt,
 										Optional: true,
@@ -775,7 +781,10 @@ func resourceKeycloakRealm() *schema.Resource {
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
-		authConfig := smtpSettings["auth"].([]interface{})
+		authConfig, ok := smtpSettings["auth"].([]interface{})
+		if !ok {
+			return "", false
+		}
 
 		if len(authConfig) == 1 {
 			return authConfig[0].(map[string]interface{})["password"].(string), true
@@ -1129,6 +1138,11 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
+			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Id, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
+			if err != nil {
+				return nil, err
+			}
+			realm.MaxSecondaryAuthFailures = maxSecondaryAuthFailures
 			realm.WaitIncrementSeconds = bruteForceDetectionSettings["wait_increment_seconds"].(int)
 			realm.QuickLoginCheckMilliSeconds = bruteForceDetectionSettings["quick_login_check_milli_seconds"].(int)
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
@@ -1337,6 +1351,26 @@ func supportsDiscoverableCredential(keycloakVersion *version.Version) bool {
 	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
 }
 
+func supportsMaxSecondaryAuthFailures(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakMaxSecondaryAuthFailuresVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+// resolveMaxSecondaryAuthFailures decides what to do with a configured max_secondary_auth_failures
+// value given the target Keycloak version: on supported versions it's always returned (even when 0,
+// so resetting the field back to its default reaches Keycloak instead of being silently omitted); on
+// unsupported versions it's omitted (nil) unless the user configured a non-default value, in which case
+// this returns an explicit error rather than letting Keycloak reject the request with a raw 400.
+func resolveMaxSecondaryAuthFailures(realmId string, maxSecondaryAuthFailures int, keycloakVersion *version.Version) (*int, error) {
+	if supportsMaxSecondaryAuthFailures(keycloakVersion) {
+		return &maxSecondaryAuthFailures, nil
+	}
+	if maxSecondaryAuthFailures != 0 {
+		return nil, fmt.Errorf("max_secondary_auth_failures in brute_force_detection for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realmId, minKeycloakMaxSecondaryAuthFailuresVersion)
+	}
+	return nil, nil
+}
+
 func flattenDiscoverableCredential(residentKey string, keycloakVersion *version.Version) string {
 	if !supportsDiscoverableCredential(keycloakVersion) || residentKey == "" {
 		return "not specified"
@@ -1363,6 +1397,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.PermanentLockout = false
 	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
+	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Id, 0, keycloakVersion)
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60
@@ -1401,7 +1436,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	} else {
 		smtpSettings := make(map[string]interface{})
 
-		smtpSettings["starttls"] = realm.SmtpServer.StartTls
+		smtpSettings["starttls"] = bool(realm.SmtpServer.StartTls)
 		smtpSettings["port"] = realm.SmtpServer.Port
 		smtpSettings["host"] = realm.SmtpServer.Host
 		smtpSettings["reply_to"] = realm.SmtpServer.ReplyTo
@@ -1409,8 +1444,8 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 		smtpSettings["from"] = realm.SmtpServer.From
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
-		smtpSettings["ssl"] = realm.SmtpServer.Ssl
-		smtpSettings["allow_utf8"] = realm.SmtpServer.AllowUtf8
+		smtpSettings["ssl"] = bool(realm.SmtpServer.Ssl)
+		smtpSettings["allow_utf8"] = bool(realm.SmtpServer.AllowUtf8)
 
 		if realm.SmtpServer.Auth {
 			if realm.SmtpServer.AuthType == "token" {
@@ -1579,6 +1614,11 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *vers
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
 	bruteForceDetectionSettings["brute_force_strategy"] = realm.BruteForceStrategy
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
+	if realm.MaxSecondaryAuthFailures != nil {
+		bruteForceDetectionSettings["max_secondary_auth_failures"] = *realm.MaxSecondaryAuthFailures
+	} else {
+		bruteForceDetectionSettings["max_secondary_auth_failures"] = 0
+	}
 	bruteForceDetectionSettings["wait_increment_seconds"] = realm.WaitIncrementSeconds
 	bruteForceDetectionSettings["quick_login_check_milli_seconds"] = realm.QuickLoginCheckMilliSeconds
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds

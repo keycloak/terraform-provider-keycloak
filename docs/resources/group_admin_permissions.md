@@ -19,6 +19,8 @@ Available scopes:
 - `view-members` — view user details of the group's members
 - `manage-members` — manage the users that belong to this group
 - `manage-membership` — add or remove members from this group
+- `manage-membership-of-members` — change the group memberships of this group's members (requires Keycloak 26.6 or later)
+- `impersonate-members` — impersonate the users that belong to this group
 
 ## Example Usage
 
@@ -86,7 +88,7 @@ resource "keycloak_group_admin_permissions" "admins_view_all_groups" {
 - `description` - (Optional) Description of the permission.
 - `decision_strategy` - (Optional) Decision strategy. One of `UNANIMOUS`, `AFFIRMATIVE`, or `CONSENSUS`. Defaults to `UNANIMOUS`.
 - `group_ids` - (Optional) Set of group UUIDs (`keycloak_group.xxx.id`) this permission applies to. When omitted or empty, the permission applies to **all groups** in the realm.
-- `scopes` - (Required) Set of scopes this permission grants. Valid values: `view`, `manage`, `view-members`, `manage-members`, `manage-membership`.
+- `scopes` - (Required) Set of scopes this permission grants. Valid values: `view`, `manage`, `view-members`, `manage-members`, `manage-membership`, `manage-membership-of-members`, `impersonate-members`.
 - `policies` - (Optional) Set of policy IDs to attach to the permission.
 
 ## Attributes Reference
