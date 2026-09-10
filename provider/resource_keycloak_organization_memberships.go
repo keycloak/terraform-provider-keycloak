@@ -73,20 +73,26 @@ func reconcileOrganizationMemberships(ctx context.Context, realmId, organization
 		currentUserIdsSet[member.Id] = true
 	}
 
-	// 3. Remove users that are currently members but not desired
+	// 3. Preflight check: verify no undesired members are MANAGED before issuing any delete requests
+	var usersToRemove []*keycloak.OrganizationMember
 	for currentUserId, member := range currentUsersMap {
 		if !desiredUserIdsSet[currentUserId] {
 			if member.MembershipType == "MANAGED" {
 				return fmt.Errorf("cannot remove managed member %s from organization %s: Keycloak deletes the underlying user account for managed memberships. Please remove the membership through the Identity Provider federation or Keycloak admin console instead", member.Username, organizationId)
 			}
-			err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, currentUserId)
-			if err != nil && !keycloak.ErrorIs404(err) {
-				return fmt.Errorf("error removing user %s from organization: %w", member.Username, err)
-			}
+			usersToRemove = append(usersToRemove, member)
 		}
 	}
 
-	// 4. Add users that are desired but not currently members
+	// 4. Remove users that are currently members but not desired
+	for _, member := range usersToRemove {
+		err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, member.Id)
+		if err != nil && !keycloak.ErrorIs404(err) {
+			return fmt.Errorf("error removing user %s from organization: %w", member.Username, err)
+		}
+	}
+
+	// 5. Add users that are desired but not currently members
 	for desiredUserId, desiredUsername := range desiredUsersMap {
 		if !currentUserIdsSet[desiredUserId] {
 			err = keycloakClient.AddUserToOrganization(ctx, realmId, organizationId, desiredUserId)
@@ -161,37 +167,25 @@ func resourceKeycloakOrganizationMembershipsDelete(ctx context.Context, data *sc
 
 	realmId := data.Get("realm_id").(string)
 	organizationId := data.Get("organization_id").(string)
-	members := data.Get("members").(*schema.Set).List()
+	tfMembers := data.Get("members").(*schema.Set)
 
-	// Fetch current members once to check their membership type
+	// Fetch current members to retain their membership representations (including membershipType)
 	currentMembers, err := keycloakClient.GetOrganizationMembers(ctx, realmId, organizationId)
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	// Create a map of userId -> MembershipType
-	memberTypes := make(map[string]string)
-	for _, m := range currentMembers {
-		memberTypes[m.Id] = m.MembershipType
-	}
-
-	for _, username := range members {
-		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string))
-		if err != nil {
-			return handleNotFoundError(ctx, err, data)
-		}
-		if user == nil {
-			// user no longer exists; skip
+	for _, member := range currentMembers {
+		if !tfMembers.Contains(member.Username) {
 			continue
 		}
 
-		// To prevent deleting the Keycloak user account, verify if they are a MANAGED member.
-		if memberTypes[user.Id] == "MANAGED" {
-			// Skip removing managed member during destroy to protect their account.
+		// To prevent deleting the Keycloak user account, do not issue remove requests for MANAGED members.
+		if member.MembershipType == "MANAGED" {
 			continue
 		}
 
-		if err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, user.Id); err != nil {
+		if err = keycloakClient.RemoveUserFromOrganization(ctx, realmId, organizationId, member.Id); err != nil && !keycloak.ErrorIs404(err) {
 			return handleNotFoundError(ctx, err, data)
 		}
 	}
