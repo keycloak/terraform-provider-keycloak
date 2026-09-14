@@ -29,6 +29,11 @@ func TestAccKeycloakRealmUserProfile_enabledByDefault(t *testing.T) {
 				Config: testKeycloakRealmUserProfile_userProfileEnabledNotSet(realmName),
 				Check:  testAccCheckKeycloakRealmUserProfileExists("keycloak_realm_user_profile.realm_user_profile"),
 			},
+			{
+				ResourceName:      "keycloak_realm_user_profile.realm_user_profile",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
