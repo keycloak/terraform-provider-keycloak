@@ -90,6 +90,11 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "The Entity ID that will be used to uniquely identify this SAML Service Provider.",
 		},
+		"idp_entity_id": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The Entity ID provided by the identity provider.",
+		},
 		"single_sign_on_service_url": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -214,6 +219,7 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion 
 		BackchannelSupported:            types.KeycloakBoolQuoted(data.Get("backchannel_supported").(bool)),
 		NameIDPolicyFormat:              nameIdPolicyFormats[data.Get("name_id_policy_format").(string)],
 		EntityId:                        data.Get("entity_id").(string),
+		IdpEntityId:                     data.Get("idp_entity_id").(string),
 		SingleLogoutServiceUrl:          data.Get("single_logout_service_url").(string),
 		SingleSignOnServiceUrl:          data.Get("single_sign_on_service_url").(string),
 		SigningCertificate:              data.Get("signing_certificate").(string),
@@ -270,6 +276,7 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("validate_signature", identityProvider.Config.ValidateSignature)
 	data.Set("name_id_policy_format", nameIDPolicyFormat)
 	data.Set("entity_id", identityProvider.Config.EntityId)
+	data.Set("idp_entity_id", identityProvider.Config.IdpEntityId)
 	data.Set("single_logout_service_url", identityProvider.Config.SingleLogoutServiceUrl)
 	data.Set("single_sign_on_service_url", identityProvider.Config.SingleSignOnServiceUrl)
 	data.Set("signing_certificate", identityProvider.Config.SigningCertificate)
