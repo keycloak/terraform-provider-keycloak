@@ -70,8 +70,10 @@ resource "keycloak_saml_client" "saml_client" {
 - `logout_service_redirect_binding_url` - (Optional) SAML Redirect Binding URL for the client's single logout service.
 - `full_scope_allowed` - (Optional) - Allow to include all roles mappings in the access token
 - `authentication_flow_binding_overrides` - (Optional) Override realm authentication flow bindings
-    - `browser_id` - (Optional) Browser flow id, (flow needs to exist)
-    - `direct_grant_id` - (Optional) Direct grant flow id (flow needs to exist)
+    - `browser_id` - (Optional) Browser flow ID to use for this client. The flow must exist. Conflicts with `browser_alias`.
+    - `browser_alias` - (Optional) Browser flow alias to use for this client. The provider will look up the flow ID automatically. Conflicts with `browser_id`.
+    - `direct_grant_id` - (Optional) Direct grant flow ID to use for this client. The flow must exist. Conflicts with `direct_grant_alias`.
+    - `direct_grant_alias` - (Optional) Direct grant flow alias to use for this client. The provider will look up the flow ID automatically. Conflicts with `direct_grant_id`.
 - `always_display_in_console` - (Optional) Always list this client in the Account UI, even if the user does not have an active session.
 - `consent_required` - (Optional) When `true`, users have to consent to client access. Defaults to `false`.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration attributes to this client. This can be used for custom attributes, or to add configuration attributes that is not yet supported by this Terraform provider. Use this attribute at your own risk, as s may conflict with top-level configuration attributes in future provider updates.
