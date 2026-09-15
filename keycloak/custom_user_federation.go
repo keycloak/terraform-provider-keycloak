@@ -41,16 +41,15 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 	componentConfig["priority"] = append(componentConfig["priority"], strconv.Itoa(custom.Priority))
 	componentConfig["fullSyncPeriod"] = append(componentConfig["fullSyncPeriod"], strconv.Itoa(custom.FullSyncPeriod))
 	componentConfig["changedSyncPeriod"] = append(componentConfig["changedSyncPeriod"], strconv.Itoa(custom.ChangedSyncPeriod))
-	parentId := custom.RealmId
-	if custom.ParentId != "" {
-		parentId = custom.ParentId
-	}
+
+	// ParentId is only sent when explicitly set (deprecated parent_id attribute), otherwise Keycloak
+	// defaults to the realm's internal id
 	return &component{
 		Id:           custom.Id,
 		Name:         custom.Name,
 		ProviderId:   custom.ProviderId,
 		ProviderType: userStorageProviderType,
-		ParentId:     parentId,
+		ParentId:     custom.ParentId,
 		Config:       componentConfig,
 	}
 }
@@ -146,12 +145,12 @@ func (keycloakClient *KeycloakClient) GetCustomUserFederation(ctx context.Contex
 	return convertFromComponentToCustomUserFederation(component, realmName)
 }
 
-func (keycloakClient *KeycloakClient) GetCustomUserFederations(ctx context.Context, realmName, realmId string) (*[]CustomUserFederation, error) {
+func (keycloakClient *KeycloakClient) GetCustomUserFederations(ctx context.Context, realmName string) (*[]CustomUserFederation, error) {
 	var components []*component
 	var customUserFederations []CustomUserFederation
 	var customUserFederation *CustomUserFederation
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?parent=%s&type=%s", realmName, realmId, userStorageProviderType), &components, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?type=%s", realmName, userStorageProviderType), &components, nil)
 	if err != nil {
 		return nil, err
 	}
