@@ -145,12 +145,12 @@ func (keycloakClient *KeycloakClient) GetCustomUserFederation(ctx context.Contex
 	return convertFromComponentToCustomUserFederation(component, realmName)
 }
 
-func (keycloakClient *KeycloakClient) GetCustomUserFederations(ctx context.Context, realmName string) (*[]CustomUserFederation, error) {
+func (keycloakClient *KeycloakClient) GetCustomUserFederations(ctx context.Context, realmName, realmId string) (*[]CustomUserFederation, error) {
 	var components []*component
 	var customUserFederations []CustomUserFederation
 	var customUserFederation *CustomUserFederation
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?type=%s", realmName, userStorageProviderType), &components, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?parent=%s&type=%s", realmName, realmId, userStorageProviderType), &components, nil)
 	if err != nil {
 		return nil, err
 	}
