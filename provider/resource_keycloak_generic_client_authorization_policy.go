@@ -51,11 +51,20 @@ func resourceKeycloakGenericClientAuthorizationPolicy() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"config": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
 		},
 	}
 }
 
 func getGenericClientAuthorizationPolicyFromData(data *schema.ResourceData) *keycloak.GenericClientAuthorizationPolicy {
+	config := make(map[string]string)
+	for k, v := range data.Get("config").(map[string]interface{}) {
+		config[k] = v.(string)
+	}
+
 	return &keycloak.GenericClientAuthorizationPolicy{
 		Id:               data.Id(),
 		ResourceServerId: data.Get("resource_server_id").(string),
@@ -65,6 +74,7 @@ func getGenericClientAuthorizationPolicyFromData(data *schema.ResourceData) *key
 		Name:             data.Get("name").(string),
 		Type:             data.Get("type").(string),
 		Description:      data.Get("description").(string),
+		Config:           config,
 	}
 }
 
@@ -78,6 +88,7 @@ func setGenericClientAuthorizationPolicyData(data *schema.ResourceData, policy *
 	data.Set("decision_strategy", policy.DecisionStrategy)
 	data.Set("logic", policy.Logic)
 	data.Set("description", policy.Description)
+	data.Set("config", policy.Config)
 }
 
 func resourceKeycloakGenericClientAuthorizationPolicyCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
