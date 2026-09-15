@@ -130,6 +130,53 @@ func TestAccKeycloakRealmKeystoreAesGenerated_updateRealmKeystoreAesGenerated(t 
 	})
 }
 
+func TestAccKeycloakRealmKeystoreAesGenerated_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	aesName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreAesGeneratedDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakRealmKeystoreAesGenerated_parentId(realmName, aesName, "100"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreAesGeneratedExists("keycloak_realm_keystore_aes_generated.realm_aes"),
+					testAccCheckRealmKeystoreAesGeneratedParentId("keycloak_realm_keystore_aes_generated.realm_aes", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakRealmKeystoreAesGenerated_parentId(realmName, aesName, "200"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreAesGeneratedExists("keycloak_realm_keystore_aes_generated.realm_aes"),
+					testAccCheckRealmKeystoreAesGeneratedParentId("keycloak_realm_keystore_aes_generated.realm_aes", internalId),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckRealmKeystoreAesGeneratedExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreAesGeneratedFromState(s, resourceName)
@@ -150,6 +197,21 @@ func testAccCheckRealmKeystoreAesGeneratedFetch(resourceName string, keystore *k
 
 		keystore.Id = fetchedKeystore.Id
 		keystore.RealmId = fetchedKeystore.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckRealmKeystoreAesGeneratedParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		keystore, err := getKeycloakRealmKeystoreAesGeneratedFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if keystore.ParentId != expectedParentId {
+			return fmt.Errorf("expected aes keystore %s to have parent id %s, but got %s", keystore.Id, expectedParentId, keystore.ParentId)
+		}
 
 		return nil
 	}
@@ -207,6 +269,17 @@ resource "keycloak_realm_keystore_aes_generated" "realm_aes" {
     priority           = 100
 }
 	`, testAccRealmUserFederation.Realm, aesName)
+}
+
+func testKeycloakRealmKeystoreAesGenerated_parentId(realmName, aesName, priority string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_keystore_aes_generated" "realm_aes" {
+	name      = "%s"
+	realm_id  = "%s"
+
+    priority  = %s
+}
+	`, aesName, realmName, priority)
 }
 
 func testKeycloakRealmKeystoreAesGenerated_basicWithAttrValidation(aesName, attr, val string) string {
