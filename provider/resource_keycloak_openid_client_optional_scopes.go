@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +17,9 @@ func resourceKeycloakOpenidClientOptionalScopes() *schema.Resource {
 		ReadContext:   resourceKeycloakOpenidClientOptionalScopesRead,
 		DeleteContext: resourceKeycloakOpenidClientOptionalScopesDelete,
 		UpdateContext: resourceKeycloakOpenidClientOptionalScopesReconcile,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakOpenidClientOptionalScopesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -114,4 +119,44 @@ func resourceKeycloakOpenidClientOptionalScopesDelete(ctx context.Context, data 
 	optionalScopes := data.Get("optional_scopes").(*schema.Set)
 
 	return diag.FromErr(keycloakClient.DetachOpenidClientOptionalScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(optionalScopes.List())))
+}
+
+func resourceKeycloakOpenidClientOptionalScopesImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.Split(data.Id(), "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid import. Supported import formats: {{realmId}}/{{openidClientId}}")
+	}
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	realmId := parts[0]
+	clientId := parts[1]
+
+	keycloakOpenidClientOptionalScopes, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = data.Set("realm_id", realmId)
+	if err != nil {
+		return nil, err
+	}
+	err = data.Set("client_id", clientId)
+	if err != nil {
+		return nil, err
+	}
+	var optionalScopes []string
+	for _, clientScope := range keycloakOpenidClientOptionalScopes {
+		optionalScopes = append(optionalScopes, clientScope.Name)
+	}
+	err = data.Set("optional_scopes", optionalScopes)
+	if err != nil {
+		return nil, err
+	}
+
+	diagnostics := resourceKeycloakOpenidClientOptionalScopesRead(ctx, data, meta)
+	if diagnostics.HasError() {
+		return nil, errors.New(diagnostics[0].Summary)
+	}
+
+	return []*schema.ResourceData{data}, nil
 }
