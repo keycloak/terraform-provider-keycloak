@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreRsa struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
@@ -51,10 +52,15 @@ func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *compone
 		}
 	}
 
+	parentId := realmKey.RealmId
+	if realmKey.ParentId != "" {
+		parentId = realmKey.ParentId
+	}
+
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
+		ParentId:     parentId,
 		ProviderId:   realmKey.ProviderId,
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -81,9 +87,10 @@ func convertFromComponentToRealmKeystoreRsa(component *component, realmId string
 	}
 
 	realmKey := &RealmKeystoreRsa{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:      active,
 		Enabled:     enabled,

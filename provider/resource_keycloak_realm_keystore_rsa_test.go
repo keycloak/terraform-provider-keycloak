@@ -136,6 +136,50 @@ func TestAccKeycloakRealmKeystoreRsa_extraConfigKid(t *testing.T) {
 	})
 }
 
+// TestAccKeycloakRealmKeystoreRsa_importedRealm exercises the regression from #1368:
+// when a realm's internal UUID differs from its display name (i.e. the realm was created
+// outside Terraform and then imported), keystore create and update must both succeed.
+// Before the fix, Update would re-submit the realm name as parentId; Keycloak would then
+// orphan or re-associate the component, causing the key to vanish from the admin console.
+func TestAccKeycloakRealmKeystoreRsa_importedRealm(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc") // deliberately different from realmName
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+	rsaNameUpdated := acctest.RandomWithPrefix("tf-acc")
+	privateKey, certificate := generateKeyAndCert(2048)
+
+	realm := &keycloak.Realm{
+		Realm: realmName,
+		Id:    internalId,
+	}
+
+	t.Cleanup(func() {
+		_ = keycloakClient.DeleteRealm(testCtx, realmName)
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, realm)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaName, privateKey, certificate),
+				Check:  testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaNameUpdated, privateKey, certificate),
+				Check:  testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+			},
+		},
+	})
+}
+
 func testAccCheckRealmKeystoreRsaExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
@@ -273,6 +317,24 @@ func parsePemRealmKeystoreRsa(input string) string {
 	output = strings.ReplaceAll(output, "\n", "")
 
 	return output
+}
+
+func testKeycloakRealmKeystoreRsa_withExternalRealm(realmName, rsaName, privateKey, certificate string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_realm_keystore_rsa" "realm_rsa" {
+	name      = "%s"
+	realm_id  = data.keycloak_realm.realm.id
+
+	priority    = 100
+	algorithm   = "RS384"
+	private_key = "%s"
+	certificate = "%s"
+}
+	`, realmName, rsaName, privateKey, certificate)
 }
 
 func testKeycloakRealmKeystoreRsa_basic(rsaName, privateKey, certificate string) string {
