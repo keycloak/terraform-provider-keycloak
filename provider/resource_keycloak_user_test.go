@@ -173,6 +173,14 @@ func TestAccKeycloakUser_initialPasswordWriteOnlyValidation(t *testing.T) {
 				ExpectError: regexp.MustCompile(`(Missing required argument|value_wo.+value_wo_version)`),
 			},
 			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, fmt.Sprintf("value_wo = \"%s\"\n\t\tvalue_wo_version = \"\"", password)),
+				ExpectError: regexp.MustCompile(`value_wo_version.+ to not be an empty string`),
+			},
+			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, "value_wo = \"\"\n\t\tvalue_wo_version = \"1\""),
+				ExpectError: regexp.MustCompile(`value_wo.+ to not be an empty string`),
+			},
+			{
 				Config:      testKeycloakUser_initialPasswordBlock(username, fmt.Sprintf("value = \"%s\"\n\t\tvalue_wo = \"%s\"\n\t\tvalue_wo_version = \"1\"", password, password)),
 				ExpectError: regexp.MustCompile(`(Conflicting configuration arguments|Invalid combination of arguments)`),
 			},

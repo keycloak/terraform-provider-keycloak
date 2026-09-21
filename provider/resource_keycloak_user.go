@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -115,6 +116,7 @@ func resourceKeycloakUser() *schema.Resource {
 							ConflictsWith: []string{"initial_password.0.value"},
 							RequiredWith:  []string{"initial_password.0.value_wo_version"},
 							ExactlyOneOf:  []string{"initial_password.0.value", "initial_password.0.value_wo"},
+							ValidateFunc:  validation.StringIsNotEmpty,
 							Description:   "The initial password as write-only argument",
 						},
 						"value_wo_version": {
@@ -122,6 +124,7 @@ func resourceKeycloakUser() *schema.Resource {
 							Optional:      true,
 							ConflictsWith: []string{"initial_password.0.value"},
 							RequiredWith:  []string{"initial_password.0.value_wo"},
+							ValidateFunc:  validation.StringIsNotEmpty,
 							Description:   "Version of the initial password write-only argument",
 						},
 						"temporary": {
@@ -196,6 +199,8 @@ func getInitialPasswordFromData(data *schema.ResourceData) (*userInitialPassword
 		temporary: passwordBlock["temporary"].(bool),
 	}
 
+	// an empty version means the legacy `value` argument is in use, since the schema rejects an
+	// explicitly empty `value_wo_version`
 	if passwordBlock["value_wo_version"].(string) == "" {
 		return initialPassword, nil
 	}

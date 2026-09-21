@@ -91,8 +91,8 @@ resource "keycloak_user" "user_with_initial_password" {
 - `username` - (Required) The unique username of this user.
 - `initial_password` - (Optional) When given, the user's initial password will be set. Exactly one of `value` and `value_wo` must be given.
   - `value` - (Optional) The initial password. This argument is only respected during initial user creation; later changes to it are ignored. Conflicts with `value_wo` and `value_wo_version`.
-  - `value_wo` - (Optional, Write-Only) The initial password. This is a write-only argument and Terraform does not store it in state or plan files. Conflicts with `value`. Required when using `value_wo_version`.
-  - `value_wo_version` - (Optional) Functions as a flag and/or trigger to indicate Terraform when to use the input value in `value_wo` to execute a Create or Update operation. The value of this argument is stored in the state and plan files. Changing it resets the password of an existing user. Conflicts with `value`. Required when using `value_wo`.
+  - `value_wo` - (Optional, Write-Only) The initial password. This is a write-only argument and Terraform does not store it in state or plan files. Conflicts with `value`. Required when using `value_wo_version`. Must not be an empty string.
+  - `value_wo_version` - (Optional) Functions as a flag and/or trigger to indicate Terraform when to use the input value in `value_wo` to execute a Create or Update operation. The value of this argument is stored in the state and plan files. Changing it resets the password of an existing user. Conflicts with `value`. Required when using `value_wo`. Must not be an empty string.
   - `temporary` - (Optional) If set to `true`, the initial password is set up for renewal on first use. Default to `false`.
 - `enabled` - (Optional) When false, this user cannot log in. Defaults to `true`.
 - `email` - (Optional) The user's email.
