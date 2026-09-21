@@ -10,6 +10,16 @@ This resource was created primarily to enable the acceptance tests for the `keyc
 Keycloak is not recommended. Instead, users should be federated from external sources by configuring user federation providers
 or identity providers.
 
+> **NOTICE:** This resource now supports [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)
+> for the initial password via the new arguments `initial_password.value_wo` and `initial_password.value_wo_version`. Using
+> write-only arguments prevents sensitive values from being stored in plan and state files. You cannot use
+> `initial_password.value_wo` and `initial_password.value_wo_version` alongside `initial_password.value` as this will result
+> in a validation error due to conflicts.
+>
+> For backward compatibility, the behavior of the original `initial_password.value` argument remains unchanged: it is only
+> respected during user creation. Unlike `initial_password.value`, bumping `initial_password.value_wo_version` resets the
+> password of an existing user.
+
 ## Example Usage
 
 ```hcl
@@ -49,12 +59,40 @@ resource "keycloak_user" "user_with_initial_password" {
 }
 ```
 
+## Example Usage with `initial_password.value_wo`
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
+ephemeral "random_password" "user_password" {
+  length           = 16
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "keycloak_user" "user_with_initial_password" {
+  realm_id = keycloak_realm.realm.id
+  username = "alice"
+  enabled  = true
+
+  initial_password {
+    value_wo         = ephemeral.random_password.user_password.result
+    value_wo_version = "version1"
+    temporary        = true
+  }
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this user belongs to.
 - `username` - (Required) The unique username of this user.
-- `initial_password` - (Optional) When given, the user's initial password will be set. This attribute is only respected during initial user creation.
-  - `value` - (Required) The initial password.
+- `initial_password` - (Optional) When given, the user's initial password will be set. Exactly one of `value` and `value_wo` must be given.
+  - `value` - (Optional) The initial password. This argument is only respected during initial user creation; later changes to it are ignored. Conflicts with `value_wo` and `value_wo_version`.
+  - `value_wo` - (Optional, Write-Only) The initial password. This is a write-only argument and Terraform does not store it in state or plan files. Conflicts with `value`. Required when using `value_wo_version`.
+  - `value_wo_version` - (Optional) Functions as a flag and/or trigger to indicate Terraform when to use the input value in `value_wo` to execute a Create or Update operation. The value of this argument is stored in the state and plan files. Changing it resets the password of an existing user. Conflicts with `value`. Required when using `value_wo`.
   - `temporary` - (Optional) If set to `true`, the initial password is set up for renewal on first use. Default to `false`.
 - `enabled` - (Optional) When false, this user cannot log in. Defaults to `true`.
 - `email` - (Optional) The user's email.

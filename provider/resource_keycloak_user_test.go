@@ -89,6 +89,101 @@ func TestAccKeycloakUser_withInitialPassword(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakUser_withInitialPasswordWriteOnly(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	passwordWO := acctest.RandomWithPrefix("tf-acc")
+	passwordWOUpdated := acctest.RandomWithPrefix("tf-acc")
+	passwordExplicit := acctest.RandomWithPrefix("tf-acc")
+	passwordWOVersion := "someString"
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_user.user"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// test CREATION of the initial password via write-only attribute
+				Config: testKeycloakUser_initialPasswordWriteOnly(username, passwordWO, passwordWOVersion, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					// assert the user against Keycloak's API (the write-only password SHOULD work)
+					testAccCheckKeycloakUserExists(resourceName),
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordWO, clientId),
+
+					// assert the user against the Terraform state (the password value SHOULD NOT be stored in state)
+					resource.TestCheckNoResourceAttr(resourceName, "initial_password.0.value_wo"),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value", ""),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value_wo_version", passwordWOVersion),
+				),
+			},
+			{
+				// test NO RESET of the password when value_wo_version is NOT MODIFIED
+				Config: testKeycloakUser_initialPasswordWriteOnly(username, passwordWOUpdated, passwordWOVersion, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordWO, clientId),
+					resource.TestCheckNoResourceAttr(resourceName, "initial_password.0.value_wo"),
+				),
+			},
+			{
+				// test RESET of the password when value_wo_version is MODIFIED
+				Config: testKeycloakUser_initialPasswordWriteOnly(username, passwordWOUpdated, passwordWOVersion+"Updated", clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordWOUpdated, clientId),
+					resource.TestCheckNoResourceAttr(resourceName, "initial_password.0.value_wo"),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value_wo_version", passwordWOVersion+"Updated"),
+				),
+			},
+			{
+				// test that re-applying the same config results in an empty plan
+				Config:             testKeycloakUser_initialPasswordWriteOnly(username, passwordWOUpdated, passwordWOVersion+"Updated", clientId),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				// test that switching back to the explicit value keeps the existing password,
+				// as `value` is still only respected during user creation
+				Config: testKeycloakUser_initialPassword(username, passwordExplicit, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordWOUpdated, clientId),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value", passwordExplicit),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value_wo_version", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakUser_initialPasswordWriteOnlyValidation(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	password := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, fmt.Sprintf(`value_wo = "%s"`, password)),
+				ExpectError: regexp.MustCompile(`(Missing required argument|value_wo.+value_wo_version)`),
+			},
+			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, `value_wo_version = "1"`),
+				ExpectError: regexp.MustCompile(`(Missing required argument|value_wo.+value_wo_version)`),
+			},
+			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, fmt.Sprintf("value = \"%s\"\n\t\tvalue_wo = \"%s\"\n\t\tvalue_wo_version = \"1\"", password, password)),
+				ExpectError: regexp.MustCompile(`(Conflicting configuration arguments|Invalid combination of arguments)`),
+			},
+			{
+				Config:      testKeycloakUser_initialPasswordBlock(username, `temporary = true`),
+				ExpectError: regexp.MustCompile(`(Invalid combination of arguments|one of .+value.+value_wo.+ must be specified)`),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakUser_createAfterManualDestroy(t *testing.T) {
 	var user = &keycloak.User{}
 
@@ -633,6 +728,60 @@ resource "keycloak_user" "user" {
 	%s
 }
 	`, testAccRealm.Realm, userProfile, clientId, username, password, dependsOn)
+}
+
+func testKeycloakUser_initialPasswordWriteOnly(username, passwordWriteOnly, passwordWriteOnlyVersion, clientId string) string {
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+
+%s
+
+resource "keycloak_openid_client" "client" {
+	realm_id                     = data.keycloak_realm.realm.id
+	client_id                    = "%s"
+
+	name                         = "test client"
+	enabled                      = true
+
+	access_type                  = "PUBLIC"
+	direct_access_grants_enabled = true
+}
+
+resource "keycloak_user" "user" {
+	realm_id         = data.keycloak_realm.realm.id
+	username         = "%s"
+	initial_password {
+		value_wo         = "%s"
+		value_wo_version = "%s"
+		temporary        = false
+	}
+	%s
+}
+	`, testAccRealm.Realm, userProfile, clientId, username, passwordWriteOnly, passwordWriteOnlyVersion, dependsOn)
+}
+
+func testKeycloakUser_initialPasswordBlock(username, initialPasswordArguments string) string {
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+%s
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+	initial_password {
+		%s
+	}
+	%s
+}
+	`, testAccRealm.Realm, userProfile, username, initialPasswordArguments, dependsOn)
 }
 
 func testKeycloakUser_fromInterface(user *keycloak.User) string {
