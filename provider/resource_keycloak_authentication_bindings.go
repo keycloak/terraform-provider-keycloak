@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,6 +17,9 @@ func resourceKeycloakAuthenticationBindings() *schema.Resource {
 		ReadContext:   resourceKeycloakAuthenticationBindingsRead,
 		DeleteContext: resourceKeycloakAuthenticationBindingsDelete,
 		UpdateContext: resourceKeycloakAuthenticationBindingsUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakAuthenticationBindingsImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -188,4 +193,22 @@ func resourceKeycloakAuthenticationBindingsUpdate(ctx context.Context, data *sch
 	setAuthenticationBindingsData(data, realm, keycloakVersion)
 
 	return resourceKeycloakAuthenticationBindingsRead(ctx, data, meta)
+}
+
+func resourceKeycloakAuthenticationBindingsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	realmId := d.Id()
+	if realmId == "" || strings.Contains(realmId, "/") {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}.")
+	}
+
+	if _, err := keycloakClient.GetRealm(ctx, realmId); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.SetId(realmId)
+
+	return []*schema.ResourceData{d}, nil
 }

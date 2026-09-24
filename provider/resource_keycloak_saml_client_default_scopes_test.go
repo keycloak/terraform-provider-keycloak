@@ -30,6 +30,11 @@ func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
 				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
+			{
+				ResourceName:      "keycloak_saml_client_default_scopes.default_scopes",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// we need a separate test step for destroy instead of using CheckDestroy because this resource is implicitly
 			// destroyed at the end of each test via destroying clients
 			{
