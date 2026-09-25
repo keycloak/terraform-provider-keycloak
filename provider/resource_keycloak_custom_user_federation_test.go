@@ -120,16 +120,13 @@ func TestAccKeycloakCustomUserFederation_validation(t *testing.T) {
 	})
 }
 
-func TestAccKeycloakCustomUserFederation_ParentIdDifferentFromRealmName(t *testing.T) {
+func TestAccKeycloakCustomUserFederation_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	internalId := acctest.RandomWithPrefix("tf-acc")
 	name := acctest.RandomWithPrefix("tf-acc")
 	providerId := "custom"
-
-	realm := &keycloak.Realm{
-		Realm: realmName,
-		Id:    internalId,
-	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -137,17 +134,77 @@ func TestAccKeycloakCustomUserFederation_ParentIdDifferentFromRealmName(t *testi
 		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
 		Steps: []resource.TestStep{
 			{
-				ResourceName:  "keycloak_realm.realm",
-				ImportStateId: realmName,
-				ImportState:   true,
 				PreConfig: func() {
-					err := keycloakClient.NewRealm(testCtx, realm)
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
 					if err != nil {
 						t.Fatal(err)
 					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
 				},
-				Config: testKeycloakCustomUserFederation_parentId(realmName, name, providerId, internalId),
-				Check:  testAccCheckKeycloakCustomUserFederationExists("keycloak_custom_user_federation.custom"),
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakCustomUserFederation_parentId(realmName, name, providerId, "0"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakCustomUserFederationExists("keycloak_custom_user_federation.custom"),
+					testAccCheckKeycloakCustomUserFederationParentId("keycloak_custom_user_federation.custom", internalId),
+					resource.TestCheckResourceAttr("keycloak_custom_user_federation.custom", "parent_id", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakCustomUserFederation_parentId(realmName, name, providerId, "10"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakCustomUserFederationExists("keycloak_custom_user_federation.custom"),
+					testAccCheckKeycloakCustomUserFederationParentId("keycloak_custom_user_federation.custom", internalId),
+					resource.TestCheckResourceAttr("keycloak_custom_user_federation.custom", "parent_id", internalId),
+				),
+			},
+		},
+	})
+}
+
+// the deprecated parent_id attribute must keep working for existing configurations that set it explicitly
+func TestAccKeycloakCustomUserFederation_explicitParentId(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	name := acctest.RandomWithPrefix("tf-acc")
+	providerId := "custom"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakCustomUserFederationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				Config: testKeycloakCustomUserFederation_explicitParentId(realmName, name, providerId, internalId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakCustomUserFederationExists("keycloak_custom_user_federation.custom"),
+					testAccCheckKeycloakCustomUserFederationParentId("keycloak_custom_user_federation.custom", internalId),
+				),
 			},
 		},
 	})
@@ -188,6 +245,21 @@ func testAccCheckKeycloakCustomUserFederationFetch(resourceName string, federati
 
 		federation.Id = fetchedFederation.Id
 		federation.RealmId = fetchedFederation.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakCustomUserFederationParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		custom, err := getCustomUserFederationFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if custom.ParentId != expectedParentId {
+			return fmt.Errorf("expected custom user federation %s to have parent id %s, but got %s", custom.Id, expectedParentId, custom.ParentId)
+		}
 
 		return nil
 	}
@@ -276,22 +348,34 @@ resource "keycloak_custom_user_federation" "custom" {
 	`, testAccRealm.Realm, name, providerId, customConfigValue)
 }
 
-func testKeycloakCustomUserFederation_parentId(realm, name, providerId, parentId string) string {
+func testKeycloakCustomUserFederation_parentId(realmName, name, providerId, priority string) string {
 	return fmt.Sprintf(`
-resource "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
 resource "keycloak_custom_user_federation" "custom" {
 	name        = "%s"
-	realm_id    = keycloak_realm.realm.id
+	realm_id    = "%s"
 	provider_id = "%s"
-    parent_id   = "%s"
+	priority    = %s
 
 	full_sync_period    = 30
 	changed_sync_period = 60
 
 	enabled     = true
 }
-	`, realm, name, providerId, parentId)
+	`, name, realmName, providerId, priority)
+}
+
+func testKeycloakCustomUserFederation_explicitParentId(realmName, name, providerId, parentId string) string {
+	return fmt.Sprintf(`
+resource "keycloak_custom_user_federation" "custom" {
+	name        = "%s"
+	realm_id    = "%s"
+	provider_id = "%s"
+	parent_id   = "%s"
+
+	full_sync_period    = 30
+	changed_sync_period = 60
+
+	enabled     = true
+}
+	`, name, realmName, providerId, parentId)
 }

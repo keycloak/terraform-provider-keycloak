@@ -657,6 +657,53 @@ func TestAccKeycloakLdapUserFederation_bindCredentialWriteOnlyValidation(t *test
 	})
 }
 
+func TestAccKeycloakLdapUserFederation_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	ldapName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakLdapUserFederation_parentId(realmName, ldapName, "0"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
+					testAccCheckKeycloakLdapUserFederationParentId("keycloak_ldap_user_federation.openldap", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakLdapUserFederation_parentId(realmName, ldapName, "10"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakLdapUserFederationExists("keycloak_ldap_user_federation.openldap"),
+					testAccCheckKeycloakLdapUserFederationParentId("keycloak_ldap_user_federation.openldap", internalId),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKeycloakLdapUserFederationExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getLdapUserFederationFromState(s, resourceName)
@@ -697,6 +744,21 @@ func testAccCheckKeycloakLdapUserFederationFetch(resourceName string, ldap *keyc
 
 		ldap.Id = fetchedLdap.Id
 		ldap.RealmId = fetchedLdap.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakLdapUserFederationParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ldap, err := getLdapUserFederationFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if ldap.ParentId != expectedParentId {
+			return fmt.Errorf("expected ldap user federation %s to have parent id %s, but got %s", ldap.Id, expectedParentId, ldap.ParentId)
+		}
 
 		return nil
 	}
@@ -784,6 +846,30 @@ resource "keycloak_ldap_user_federation" "openldap" {
 	bind_credential         = "admin"
 }
 	`, testAccRealmUserFederation.Realm, ldap, relativeCreateDn)
+}
+
+func testKeycloakLdapUserFederation_parentId(realmName, ldap, priority string) string {
+	return fmt.Sprintf(`
+resource "keycloak_ldap_user_federation" "openldap" {
+	name                    = "%s"
+	realm_id                = "%s"
+
+	enabled                 = true
+	priority                = %s
+
+	username_ldap_attribute = "cn"
+	rdn_ldap_attribute      = "cn"
+	uuid_ldap_attribute     = "entryDN"
+	user_object_classes     = [
+		"simpleSecurityObject",
+		"organizationalRole"
+	]
+	connection_url          = "ldap://openldap"
+	users_dn                = "dc=example,dc=org"
+	bind_dn                 = "cn=admin,dc=example,dc=org"
+	bind_credential         = "admin"
+}
+	`, ldap, realmName, priority)
 }
 
 func testKeycloakLdapUserFederation_basicFromInterface(ldap *keycloak.LdapUserFederation) string {
