@@ -485,9 +485,11 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 
 	keycloakClient.addRequestHeaders(request)
 
-	response, err := keycloakClient.httpClient.Do(request)
+	httpClient := keycloakClient.httpClientFor(ctx)
+
+	response, err := httpClient.Do(request)
 	if err != nil {
-		return nil, "", fmt.Errorf("error sending request: %v", err)
+		return nil, "", fmt.Errorf("error sending request: %w", err)
 	}
 	defer response.Body.Close()
 
@@ -508,9 +510,9 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 		if body != nil {
 			request.Body = io.NopCloser(bytes.NewReader(body))
 		}
-		response, err = keycloakClient.httpClient.Do(request)
+		response, err = httpClient.Do(request)
 		if err != nil {
-			return nil, "", fmt.Errorf("error sending request after refresh: %v", err)
+			return nil, "", fmt.Errorf("error sending request after refresh: %w", err)
 		}
 		defer response.Body.Close()
 	}
@@ -544,6 +546,27 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	}
 
 	return responseBody, response.Header.Get("Location"), nil
+}
+
+type requestTimeoutContextKey struct{}
+
+// WithRequestTimeout overrides the client timeout for all requests sent with the returned context.
+// This is useful for long-running requests, e.g. triggering a user federation sync.
+func WithRequestTimeout(ctx context.Context, timeout time.Duration) context.Context {
+	return context.WithValue(ctx, requestTimeoutContextKey{}, timeout)
+}
+
+func (keycloakClient *KeycloakClient) httpClientFor(ctx context.Context) *http.Client {
+	timeout, ok := ctx.Value(requestTimeoutContextKey{}).(time.Duration)
+	if !ok {
+		return keycloakClient.httpClient
+	}
+
+	// shallow copy, which shares the transport and cookie jar with the original client
+	httpClient := *keycloakClient.httpClient
+	httpClient.Timeout = timeout
+
+	return &httpClient
 }
 
 func (keycloakClient *KeycloakClient) get(ctx context.Context, path string, resource interface{}, params map[string]string) error {

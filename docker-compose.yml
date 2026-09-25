@@ -10,7 +10,10 @@ services:
     volumes:
     - postgres:/var/lib/postgresql
   openldap:
-    image: bitnamilegacy/openldap:2.6
+    # pinned by the digest of the multi-platform image index, keep in sync with .github/workflows/test.yml
+    # Do not add "ports" to this service: the LDAP server only contains test data with well-known credentials
+    # and must only be reachable by Keycloak via the compose network.
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4@sha256:966fd39ed25813890e9bd57dac56def163bbcfe64967e0bae59ab018d505bd93
     environment:
       LDAP_PORT_NUMBER: 389
   keycloak:
