@@ -41,16 +41,15 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 	componentConfig["priority"] = append(componentConfig["priority"], strconv.Itoa(custom.Priority))
 	componentConfig["fullSyncPeriod"] = append(componentConfig["fullSyncPeriod"], strconv.Itoa(custom.FullSyncPeriod))
 	componentConfig["changedSyncPeriod"] = append(componentConfig["changedSyncPeriod"], strconv.Itoa(custom.ChangedSyncPeriod))
-	parentId := custom.RealmId
-	if custom.ParentId != "" {
-		parentId = custom.ParentId
-	}
+
+	// ParentId is only sent when explicitly set (deprecated parent_id attribute), otherwise Keycloak
+	// defaults to the realm's internal id
 	return &component{
 		Id:           custom.Id,
 		Name:         custom.Name,
 		ProviderId:   custom.ProviderId,
 		ProviderType: userStorageProviderType,
-		ParentId:     parentId,
+		ParentId:     custom.ParentId,
 		Config:       componentConfig,
 	}
 }

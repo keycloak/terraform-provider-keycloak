@@ -222,6 +222,7 @@ jobs:
       - name: Print container logs
         if: always()
         run: docker logs keycloak
+
       - name: Clean up
         if: always()
         run: |

@@ -130,6 +130,53 @@ func TestAccKeycloakRealmKeystoreEcdsaGenerated_updateRealmKeystoreEcdsaGenerate
 	})
 }
 
+func TestAccKeycloakRealmKeystoreEcdsaGenerated_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	ecdsaName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreEcdsaGeneratedDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakRealmKeystoreEcdsaGenerated_parentId(realmName, ecdsaName, "100"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreEcdsaGeneratedExists("keycloak_realm_keystore_ecdsa_generated.realm_ecdsa"),
+					testAccCheckRealmKeystoreEcdsaGeneratedParentId("keycloak_realm_keystore_ecdsa_generated.realm_ecdsa", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakRealmKeystoreEcdsaGenerated_parentId(realmName, ecdsaName, "200"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreEcdsaGeneratedExists("keycloak_realm_keystore_ecdsa_generated.realm_ecdsa"),
+					testAccCheckRealmKeystoreEcdsaGeneratedParentId("keycloak_realm_keystore_ecdsa_generated.realm_ecdsa", internalId),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckRealmKeystoreEcdsaGeneratedExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreEcdsaGeneratedFromState(s, resourceName)
@@ -150,6 +197,21 @@ func testAccCheckRealmKeystoreEcdsaGeneratedFetch(resourceName string, keystore 
 
 		keystore.Id = fetchedKeystore.Id
 		keystore.RealmId = fetchedKeystore.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckRealmKeystoreEcdsaGeneratedParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		keystore, err := getKeycloakRealmKeystoreEcdsaGeneratedFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if keystore.ParentId != expectedParentId {
+			return fmt.Errorf("expected ecdsa keystore %s to have parent id %s, but got %s", keystore.Id, expectedParentId, keystore.ParentId)
+		}
 
 		return nil
 	}
@@ -208,6 +270,18 @@ resource "keycloak_realm_keystore_ecdsa_generated" "realm_ecdsa" {
     elliptic_curve_key = "P-384"
 }
 	`, testAccRealmUserFederation.Realm, ecdsaName)
+}
+
+func testKeycloakRealmKeystoreEcdsaGenerated_parentId(realmName, ecdsaName, priority string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_keystore_ecdsa_generated" "realm_ecdsa" {
+	name      = "%s"
+	realm_id  = "%s"
+
+    priority           = %s
+    elliptic_curve_key = "P-384"
+}
+	`, ecdsaName, realmName, priority)
 }
 
 func testKeycloakRealmKeystoreEcdsaGenerated_basicWithAttrValidation(ecdsaName, attr, val string) string {
