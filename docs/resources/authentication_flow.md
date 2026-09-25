@@ -31,12 +31,46 @@ resource "keycloak_authentication_execution" "execution" {
 }
 ```
 
+### Copying a built-in flow, then restructuring it
+
+Built-in flows (such as `browser`, `direct grant`, `registration`, `first broker login`, `clients`, and `docker auth`) can have
+the `requirement` of their *existing* executions configured freely (that part already works against the built-in flow itself),
+but Keycloak rejects any attempt to restructure them - adding a new execution, removing one, or adding a subflow all fail with
+errors like `It is illegal to add execution to a built in flow`. Copying the flow with `copy_from` removes that restriction:
+the copy includes all of the source flow's executions and subflows, and - unlike the original - is not built-in, so executions
+and subflows can be added to or removed from it. The new flow can then be bound in place of the original via
+`keycloak_authentication_bindings`.
+
+```hcl
+resource "keycloak_authentication_flow" "custom_browser" {
+  realm_id  = keycloak_realm.realm.id
+  alias     = "my-custom-browser"
+  copy_from = "browser"
+}
+
+resource "keycloak_authentication_bindings" "bindings" {
+  realm_id     = keycloak_realm.realm.id
+  browser_flow = keycloak_authentication_flow.custom_browser.alias
+}
+
+# Adding a brand new top-level execution like this - e.g. offering WebAuthn/passkey login as
+# an alternative to username+password - fails with "It is illegal to add execution to a built
+# in flow" against "browser" itself, but succeeds on the copy.
+resource "keycloak_authentication_execution" "webauthn_passwordless" {
+  realm_id          = keycloak_realm.realm.id
+  parent_flow_alias = keycloak_authentication_flow.custom_browser.alias
+  authenticator     = "webauthn-authenticator-passwordless"
+  requirement       = "ALTERNATIVE"
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm that the authentication flow exists in.
 - `alias` - (Required) The alias for this authentication flow.
 - `description` - (Optional) A description for the authentication flow.
-- `provider_id` - (Optional) The type of authentication flow to create. Valid choices include `basic-flow` and `client-flow`. Defaults to `basic-flow`.
+- `provider_id` - (Optional) The type of authentication flow to create. Valid choices include `basic-flow` and `client-flow`. Defaults to `basic-flow`. Ignored when `copy_from` is set, since the copy inherits its type from the source flow.
+- `copy_from` - (Optional) The alias of an existing authentication flow (built-in or custom) to copy. All executions and subflows of the source flow are duplicated into this flow. Changing this attribute will force creation of a new resource.
 
 ## Import
 

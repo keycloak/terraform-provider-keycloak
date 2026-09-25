@@ -3,8 +3,10 @@ package provider
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -123,12 +125,12 @@ func TestAccKeycloakRealm_SmtpServer(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user", "password"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "password"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "", "", "", ""),
 			},
 		},
 	})
@@ -143,16 +145,42 @@ func TestAccKeycloakRealm_SmtpServerUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost.com", "admin@myhost.com", "user", "password"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "password"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
+				Config: testKeycloakRealm_WithSmtpServer(realm, "myhost2.com", "admin@myhost2.com", "user2", "password2"),
+				Check:  testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2", "password2"),
 			},
 		},
 	})
 }
+func TestAccKeycloakRealm_SmtpServerAllowUtf8(t *testing.T) {
+	realm := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost.com", "tom@myhost.com", "user", "password"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost.com", "tom@myhost.com", "user", "password"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.allow_utf8", "true"),
+				),
+			},
+			{
+				Config: testKeycloakRealm_WithSmtpServerAllowUtf8(realm, "myhost2.com", "tom@myhost2.com", "user2", "password"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSmtpPassword("keycloak_realm.realm", "myhost2.com", "tom@myhost2.com", "user2", "password"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.allow_utf8", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 	realm := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
@@ -163,12 +191,12 @@ func TestAccKeycloakRealm_SmtpServerOauth(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
 			},
 			{
 				Config: testKeycloakRealm_basic(realm, realm, realmDisplayNameHtml),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "", "", ""),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "", "", "", "", "", "", ""),
 			},
 		},
 	})
@@ -183,12 +211,12 @@ func TestAccKeycloakRealm_SmtpServerOauthUpdate(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble", "wiggle"),
 			},
 			{
-				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost2.com", "admin@myhost2.com", "user2"),
-				Check:  testAccCheckKeycloakRealmSmtp("keycloak_realm.realm", "myhost2.com", "admin@myhost2.com", "user2"),
+				Config: testKeycloakRealm_WithSmtpServerWithOauth(realm, "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble2", "wiggle"),
+				Check:  testAccCheckKeycloakRealmSmtpOauth("keycloak_realm.realm", "myhost.com", "admin@myhost.com", "user", "wibble.com", "wibble", "wobble2", "wiggle"),
 			},
 		},
 	})
@@ -588,7 +616,7 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR"),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "LINEAR", 0),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
@@ -596,7 +624,7 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "MULTIPLE"),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 33, "MULTIPLE", 0),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor("keycloak_realm.realm", 33),
@@ -611,6 +639,99 @@ func TestAccKeycloakRealm_securityDefensesBruteForceDetection(t *testing.T) {
 				),
 			},
 		},
+	})
+}
+
+// maxSecondaryAuthFailures was added to Keycloak in 26.6.0 (see minKeycloakMaxSecondaryAuthFailuresVersion), so this
+// is a dedicated test (rather than folded into TestAccKeycloakRealm_securityDefensesBruteForceDetection) to allow
+// skipping it on the older Keycloak versions this provider still supports.
+func TestAccKeycloakRealm_securityDefensesBruteForceDetectionMaxSecondaryAuthFailures(t *testing.T) {
+	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, minKeycloakMaxSecondaryAuthFailuresVersion); !ok {
+		t.Skip()
+	}
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
+	realmDisplayNameHtml := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 0),
+				),
+			},
+			{
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 30, "MULTIPLE", 5),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 5),
+				),
+			},
+			{
+				Config: testKeycloakRealm_basic(realmName, realmDisplayName, realmDisplayNameHtml),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures("keycloak_realm.realm", 0),
+				),
+			},
+		},
+	})
+}
+
+// Deterministic (no TF_ACC, no live Keycloak) coverage for resolveMaxSecondaryAuthFailures, since
+// TestAccKeycloakRealm_securityDefensesBruteForceDetectionMaxSecondaryAuthFailures skips entirely on
+// Keycloak < 26.6.0 and so never exercises the unsupported-version branch on any real server.
+func TestResolveMaxSecondaryAuthFailures(t *testing.T) {
+	oldVersion, err := version.NewVersion("26.5.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newVersion, err := version.NewVersion("26.6.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("old version, default 0, returns nil with no error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 0, oldVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+	})
+
+	t.Run("old version, non-zero value, returns an explicit error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 5, oldVersion)
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+		if err == nil || !strings.Contains(err.Error(), "not supported by your Keycloak version") {
+			t.Fatalf("expected an unsupported-version error, got %v", err)
+		}
+	})
+
+	t.Run("new version, non-zero value, returns the value with no error", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 5, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || *got != 5 {
+			t.Fatalf("expected 5, got %v", got)
+		}
+	})
+
+	t.Run("new version, default 0, returns a pointer to 0 (not nil) so resets reach Keycloak", func(t *testing.T) {
+		got, err := resolveMaxSecondaryAuthFailures("test-realm", 0, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || *got != 0 {
+			t.Fatalf("expected a pointer to 0, got %v", got)
+		}
 	})
 }
 
@@ -649,7 +770,7 @@ func TestAccKeycloakRealm_securityDefenses(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 31, "MULTIPLE"),
+				Config: testKeycloakRealm_securityDefensesBruteForceDetection(realmName, realmDisplayName, 31, "MULTIPLE", 0),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmSecurityDefensesHeaders("keycloak_realm.realm", "SAMEORIGIN"),
 					testAccCheckKeycloakRealmSecurityDefensesBruteForceDetection("keycloak_realm.realm", true),
@@ -1285,7 +1406,7 @@ func testAccCheckKeycloakRealmDisplayNameHtml(resourceName string, displayNameHt
 	}
 }
 
-func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resource.TestCheckFunc {
+func testAccCheckKeycloakRealmSmtpPassword(resourceName, host, from, user, password string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
 		if err != nil {
@@ -1302,6 +1423,61 @@ func testAccCheckKeycloakRealmSmtp(resourceName, host, from, user string) resour
 
 		if realm.SmtpServer.User != user {
 			return fmt.Errorf("expected realm %s to have smtp user set to %s, but was %s", realm.Realm, user, realm.SmtpServer.User)
+		}
+
+		if password == "" {
+			if err := resource.TestCheckNoResourceAttr(resourceName, "smtp_server.0.auth.0.password")(s); err != nil {
+				return fmt.Errorf("expected realm %s to have smtp password cleared in state: %w", realm.Realm, err)
+			}
+		} else {
+			if err := resource.TestCheckResourceAttr(resourceName, "smtp_server.0.auth.0.password", password)(s); err != nil {
+				return fmt.Errorf("expected realm %s to have smtp password set to %s in state: %w", realm.Realm, password, err)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakRealmSmtpOauth(resourceName, host, from, user, url, client_id, client_secret, scope string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.SmtpServer.Host != host {
+			return fmt.Errorf("expected realm %s to have smtp host set to %s, but was %s", realm.Realm, host, realm.SmtpServer.Host)
+		}
+
+		if realm.SmtpServer.From != from {
+			return fmt.Errorf("expected realm %s to have smtp from set to %s, but was %s", realm.Realm, from, realm.SmtpServer.From)
+		}
+
+		if realm.SmtpServer.User != user {
+			return fmt.Errorf("expected realm %s to have smtp user set to %s, but was %s", realm.Realm, user, realm.SmtpServer.User)
+		}
+
+		if realm.SmtpServer.AuthTokenUrl != url {
+			return fmt.Errorf("expected realm %s to have smtp url set to %s, but was %s", realm.Realm, url, realm.SmtpServer.AuthTokenUrl)
+		}
+
+		if realm.SmtpServer.AuthTokenClientId != client_id {
+			return fmt.Errorf("expected realm %s to have smtp client id set to %s, but was %s", realm.Realm, client_id, realm.SmtpServer.AuthTokenClientId)
+		}
+
+		if client_secret == "" {
+			if err := resource.TestCheckNoResourceAttr(resourceName, "smtp_server.0.token_auth.0.client_secret")(s); err != nil {
+				return fmt.Errorf("expected realm %s to have smtp client secret cleared in state: %w", realm.Realm, err)
+			}
+		} else {
+			if err := resource.TestCheckResourceAttr(resourceName, "smtp_server.0.token_auth.0.client_secret", client_secret)(s); err != nil {
+				return fmt.Errorf("expected realm %s to have smtp client secret set to %s in state: %w", realm.Realm, client_secret, err)
+			}
+		}
+
+		if realm.SmtpServer.AuthTokenScope != scope {
+			return fmt.Errorf("expected realm %s to have smtp scope set to %s, but was %s", realm.Realm, scope, realm.SmtpServer.AuthTokenScope)
 		}
 
 		return nil
@@ -1459,6 +1635,26 @@ func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionFailureFactor(r
 	}
 }
 
+func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionMaxSecondaryAuthFailures(resourceName string, maxSecondaryAuthFailures int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		actualMaxSecondaryAuthFailures := 0
+		if realm.MaxSecondaryAuthFailures != nil {
+			actualMaxSecondaryAuthFailures = *realm.MaxSecondaryAuthFailures
+		}
+
+		if actualMaxSecondaryAuthFailures != maxSecondaryAuthFailures {
+			return fmt.Errorf("expected realm %s to have MaxSecondaryAuthFailures set to %d, but was %d", realm.Realm, maxSecondaryAuthFailures, actualMaxSecondaryAuthFailures)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakRealmSecurityDefensesBruteForceDetectionStrategy(resourceName, strategy string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
@@ -1545,7 +1741,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realmDisplayName, realmDisplayNameHtml)
 }
 
-func testKeycloakRealm_WithSmtpServer(realm, host, from, user string) string {
+func testKeycloakRealm_WithSmtpServer(realm, host, from, user, password string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1563,14 +1759,40 @@ resource "keycloak_realm" "realm" {
 		envelope_from = "nottom@myhost.com"
 		auth {
 			username = "%s"
-			password = "tom"
+			password = "%s"
 		}
 	}
 }
-	`, realm, realm, host, from, user)
+	`, realm, realm, host, from, user, password)
 }
 
-func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user string) string {
+func testKeycloakRealm_WithSmtpServerAllowUtf8(realm, host, from, user, password string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+	enabled = true
+	display_name = "%s"
+	smtp_server {
+		host = "%s"
+		port = 25
+		from_display_name = "Tom"
+		from = "%s"
+		reply_to_display_name = "Tom"
+		reply_to = "tom@%[3]s"
+		ssl = true
+		starttls = true
+		allow_utf8 = true
+		envelope_from = "nottom@%[3]s"
+		auth {
+			username = "%[5]s"
+			password = "%[6]s"
+		}
+	}
+}
+	`, realm, realm, host, from, user, password)
+}
+
+func testKeycloakRealm_WithSmtpServerWithOauth(realm, host, from, user, url, client_id, client_secret, scope string) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm = "%s"
@@ -1588,14 +1810,14 @@ resource "keycloak_realm" "realm" {
 		envelope_from = "nottom@myhost.com"
 		token_auth {
 			username      = "%s"
-			url           = "wibble.com"
-			client_id     = "wibble"
-			client_secret = "wobble"
-			scope         = "wiggle"
+			url           = "%s"
+			client_id     = "%s"
+			client_secret = "%s"
+			scope         = "%s"
 		}
 	}
 }
-	`, realm, realm, host, from, user)
+	`, realm, realm, host, from, user, url, client_id, client_secret, scope)
 }
 
 func testKeycloakRealm_WithOTP(realm, otpType, algorithm string, period int, codeReusable bool) string {
@@ -1859,7 +2081,7 @@ resource "keycloak_realm" "realm" {
 	`, realm, realmDisplayName, xFrameOptions)
 }
 
-func testKeycloakRealm_securityDefensesBruteForceDetection(realm, realmDisplayName string, maxLoginFailures int, bruteForceStrategy string) string {
+func testKeycloakRealm_securityDefensesBruteForceDetection(realm, realmDisplayName string, maxLoginFailures int, bruteForceStrategy string, maxSecondaryAuthFailures int) string {
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm        = "%s"
@@ -1870,6 +2092,7 @@ resource "keycloak_realm" "realm" {
             permanent_lockout                 = false
 			brute_force_strategy              = "%s"
       		max_login_failures                = %d
+      		max_secondary_auth_failures        = %d
       		wait_increment_seconds            = 60
       		quick_login_check_milli_seconds   = 1000
       		minimum_quick_login_wait_seconds  = 60
@@ -1878,7 +2101,7 @@ resource "keycloak_realm" "realm" {
         }
 	}
 }
-	`, realm, realmDisplayName, bruteForceStrategy, maxLoginFailures)
+	`, realm, realmDisplayName, bruteForceStrategy, maxLoginFailures, maxSecondaryAuthFailures)
 }
 
 func testKeycloakRealm_securityDefenses(realm, realmDisplayName, xFrameOptions string, maxLoginFailures int) string {

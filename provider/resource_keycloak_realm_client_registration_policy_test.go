@@ -207,6 +207,53 @@ func TestAccKeycloakRealmClientRegistrationPolicy_importByAttributes(t *testing.
 	})
 }
 
+func TestAccKeycloakRealmClientRegistrationPolicy_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	policyName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmClientRegistrationPolicyDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakRealmClientRegistrationPolicy_parentId(realmName, policyName, "50"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmClientRegistrationPolicyExists("keycloak_realm_client_registration_policy.policy"),
+					testAccCheckRealmClientRegistrationPolicyParentId("keycloak_realm_client_registration_policy.policy", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakRealmClientRegistrationPolicy_parentId(realmName, policyName, "100"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmClientRegistrationPolicyExists("keycloak_realm_client_registration_policy.policy"),
+					testAccCheckRealmClientRegistrationPolicyParentId("keycloak_realm_client_registration_policy.policy", internalId),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmClientRegistrationPolicy_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -253,6 +300,21 @@ func testAccCheckRealmClientRegistrationPolicyFetch(resourceName string, policy 
 
 		policy.Id = fetched.Id
 		policy.RealmId = fetched.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckRealmClientRegistrationPolicyParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		policy, err := getRealmClientRegistrationPolicyFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if policy.ParentId != expectedParentId {
+			return fmt.Errorf("expected client registration policy %s to have parent id %s, but got %s", policy.Id, expectedParentId, policy.ParentId)
+		}
 
 		return nil
 	}
@@ -406,6 +468,20 @@ resource "keycloak_realm_client_registration_policy" "policy" {
 	}
 }
 `, testAccRealm.Realm, name, allowedProtocolMapperTypes)
+}
+
+func testKeycloakRealmClientRegistrationPolicy_parentId(realmName, name, maxClients string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_client_registration_policy" "policy" {
+	realm_id    = "%s"
+	name        = "%s"
+	provider_id = "max-clients"
+	sub_type    = "anonymous"
+	config = {
+		"max-clients" = "%s"
+	}
+}
+`, realmName, name, maxClients)
 }
 
 func testKeycloakRealmClientRegistrationPolicy_basic(name, subType, maxClients string) string {

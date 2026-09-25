@@ -305,6 +305,61 @@ func TestAccKeycloakRole_basicWithAttributes(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRole_multiValuedAttributeNoDrift(t *testing.T) {
+	t.Parallel()
+	roleName := acctest.RandomWithPrefix("tf-acc")
+	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
+
+	orderedValues := []string{"role-1", "role-2", "role-3", "role-4", "role-5"}
+	attributeValue := strings.Join(orderedValues, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+
+	resourceName := "keycloak_role.role"
+
+	var role keycloak.Role
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRoleDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRole_basicWithAttributes(roleName, attributeName, attributeValue),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRoleExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "attributes."+attributeName, attributeValue),
+					testAccCheckKeycloakRoleFetch(resourceName, &role),
+				),
+			},
+			{
+				PreConfig: func() {
+					// Keycloak won't persist a different order for a collection that already
+					// holds the same items, so the values have to be replaced with a dummy
+					// before they can be written back in a different order
+					fetchedRole, err := keycloakClient.GetRole(testCtx, role.RealmId, role.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					fetchedRole.Attributes = map[string][]string{
+						attributeName: {"dummy"},
+					}
+					if err = keycloakClient.UpdateRole(testCtx, fetchedRole); err != nil {
+						t.Fatal(err)
+					}
+					fetchedRole.Attributes = map[string][]string{
+						attributeName: {"role-3", "role-5", "role-1", "role-4", "role-2"},
+					}
+					if err = keycloakClient.UpdateRole(testCtx, fetchedRole); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakRole_basicWithAttributes(roleName, attributeName, attributeValue),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRole_importWithAttributes(t *testing.T) {
 	t.Parallel()
 	roleName := acctest.RandomWithPrefix("tf-acc")

@@ -40,7 +40,7 @@ resource "keycloak_custom_user_federation" "custom_user_federation" {
 - `enabled` - (Optional) When `false`, this provider will not be used when performing queries for users. Defaults to `true`.
 - `priority` - (Optional) Priority of this provider when looking up users. Lower values are first. Defaults to `0`.
 - `cache_policy` - (Optional) Can be one of `DEFAULT`, `EVICT_DAILY`, `EVICT_WEEKLY`, `MAX_LIFESPAN`, or `NO_CACHE`. Defaults to `DEFAULT`.
-- `parent_id` - (Optional) Must be set to the realms' `internal_id`  when it differs from the realm. This can happen when existing resources are imported into the state.
+- `parent_id` - (Optional) **Deprecated** The internal id of the realm this component is attached to. This is now resolved automatically, so it no longer needs to be set, even when the realm's `internal_id` differs from its name. This attribute will be removed in a future release.
 - `full_sync_period` - (Optional) How frequently Keycloak should sync all users, in seconds. Omit this property to disable periodic full sync.
 - `changed_sync_period` - (Optional) How frequently Keycloak should sync changed users, in seconds. Omit this property to disable periodic changed users sync.
 - `config` - (Optional) The provider configuration handed over to your custom user federation provider. To give a setting more than one value, join the values with `##`; each value is stored separately in Keycloak.

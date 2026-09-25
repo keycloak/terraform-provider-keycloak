@@ -16,6 +16,8 @@ var groupAdminPermissionScopes = []string{
 	"view-members",
 	"manage-members",
 	"manage-membership",
+	"manage-membership-of-members",
+	"impersonate-members",
 }
 
 func resourceKeycloakGroupAdminPermissions() *schema.Resource {

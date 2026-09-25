@@ -53,8 +53,8 @@ jobs:
       matrix:
         include:
           # Newer versions: run once with v2 (the default) and once with v1 explicitly enabled
-          - keycloak-version: '26.7.0'
-          - keycloak-version: '26.7.0'
+          - keycloak-version: '26.7.3'
+          - keycloak-version: '26.7.3'
             fgap-version: 'v1'
           - keycloak-version: '26.6.4'
           - keycloak-version: '26.6.4'

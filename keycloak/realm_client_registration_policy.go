@@ -12,6 +12,7 @@ type RealmClientRegistrationPolicy struct {
 	Id         string
 	Name       string
 	RealmId    string
+	ParentId   string
 	ProviderId string
 	SubType    string
 	Config     map[string]string
@@ -48,12 +49,12 @@ func convertFromRealmClientRegistrationPolicyToComponent(policy *RealmClientRegi
 		}
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           policy.Id,
 		Name:         policy.Name,
 		ProviderId:   policy.ProviderId,
 		ProviderType: realmClientRegistrationPolicyProviderType,
-		ParentId:     policy.RealmId,
 		SubType:      policy.SubType,
 		Config:       config,
 	}
@@ -77,6 +78,7 @@ func convertFromComponentToRealmClientRegistrationPolicy(c *component, realmId s
 		Id:         c.Id,
 		Name:       c.Name,
 		RealmId:    realmId,
+		ParentId:   c.ParentId,
 		ProviderId: c.ProviderId,
 		SubType:    c.SubType,
 		Config:     config,
@@ -118,7 +120,7 @@ func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicy(ctx conte
 func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicies(ctx context.Context, realmId string) ([]*RealmClientRegistrationPolicy, error) {
 	var components []*component
 
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?parent=%s&type=%s", realmId, realmId, realmClientRegistrationPolicyProviderType), &components, nil)
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/components?type=%s", realmId, realmClientRegistrationPolicyProviderType), &components, nil)
 	if err != nil {
 		return nil, err
 	}
