@@ -184,6 +184,217 @@ func TestAccKeycloakRealmKeystoreRsa_parentIdDifferentFromRealmName(t *testing.T
 	})
 }
 
+func TestAccKeycloakRealmKeystoreRsa_writeOnly(t *testing.T) {
+	t.Parallel()
+
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+	privateKey, certificate := generateKeyAndCert(2048)
+	newPrivateKey, newCertificate := generateKeyAndCert(2048)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// CREATE using write-only attributes
+				Config: testKeycloakRealmKeystoreRsa_writeOnly(rsaName, 100, privateKey, "v1", certificate, "v1"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key_wo"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate_wo"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key_wo_version", "v1"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate_wo_version", "v1"),
+				),
+			},
+			{
+				// UPDATE of another attribute without changing the versions keeps the stored key
+				Config: testKeycloakRealmKeystoreRsa_writeOnly(rsaName, 200, privateKey, "v1", certificate, "v1"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "priority", "200"),
+					testAccCheckRealmKeystoreRsaCertificate("keycloak_realm_keystore_rsa.realm_rsa", certificate),
+				),
+			},
+			{
+				// ROTATE the key by changing the versions
+				Config: testKeycloakRealmKeystoreRsa_writeOnly(rsaName, 200, newPrivateKey, "v2", newCertificate, "v2"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key_wo_version", "v2"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate_wo_version", "v2"),
+					testAccCheckRealmKeystoreRsaCertificate("keycloak_realm_keystore_rsa.realm_rsa", newCertificate),
+				),
+			},
+		},
+	})
+}
+
+// TestAccKeycloakRealmKeystoreRsa_writeOnlyFromComputedValue covers the documented use case where
+// `private_key_wo` and `certificate_wo` come from an ephemeral or computed source, so their values
+// are unknown while the plan is created and only available during apply.
+func TestAccKeycloakRealmKeystoreRsa_writeOnlyFromComputedValue(t *testing.T) {
+	t.Parallel()
+
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	privateKey, certificate := generateKeyAndCert(2048)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// CREATE from values that are unknown during plan
+				Config: testKeycloakRealmKeystoreRsa_writeOnlyFromComputedValue(rsaName, clientId, privateKey, certificate),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaExists("keycloak_realm_keystore_rsa.realm_rsa"),
+					testAccCheckRealmKeystoreRsaCertificate("keycloak_realm_keystore_rsa.realm_rsa", certificate),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key_wo"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate"),
+					resource.TestCheckNoResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate_wo"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "private_key_wo_version", "v1"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_rsa.realm_rsa", "certificate_wo_version", "v1"),
+				),
+			},
+			{
+				// re-applying the same config results in an empty plan
+				Config:             testKeycloakRealmKeystoreRsa_writeOnlyFromComputedValue(rsaName, clientId, privateKey, certificate),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmKeystoreRsa_writeOnlyValidation(t *testing.T) {
+	t.Parallel()
+
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+	privateKey, certificate := generateKeyAndCert(2048)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// private_key and private_key_wo conflict
+				Config: testKeycloakRealmKeystoreRsa_writeOnlyAttrs(rsaName, fmt.Sprintf(`
+	private_key            = "%s"
+	private_key_wo         = "%s"
+	private_key_wo_version = "v1"
+	certificate            = "%s"`, privateKey, privateKey, certificate)),
+				ExpectError: regexp.MustCompile("conflicts with"),
+			},
+			{
+				// private_key_wo requires private_key_wo_version
+				Config: testKeycloakRealmKeystoreRsa_writeOnlyAttrs(rsaName, fmt.Sprintf(`
+	private_key_wo = "%s"
+	certificate    = "%s"`, privateKey, certificate)),
+				ExpectError: regexp.MustCompile("private_key_wo_version"),
+			},
+			{
+				// certificate or certificate_wo is required
+				Config: testKeycloakRealmKeystoreRsa_writeOnlyAttrs(rsaName, fmt.Sprintf(`
+	private_key = "%s"`, privateKey)),
+				ExpectError: regexp.MustCompile("certificate"),
+			},
+		},
+	})
+}
+
+func testAccCheckRealmKeystoreRsaCertificate(resourceName, expectedCertificate string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedKeystore, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if fetchedKeystore.Certificate != expectedCertificate {
+			return fmt.Errorf("expected certificate %s but got %s", expectedCertificate, fetchedKeystore.Certificate)
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakRealmKeystoreRsa_writeOnly(rsaName string, priority int, privateKey, privateKeyVersion, certificate, certificateVersion string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_realm_keystore_rsa" "realm_rsa" {
+	name      = "%s"
+	realm_id  = data.keycloak_realm.realm.id
+
+	priority  = %d
+	algorithm = "RS384"
+
+	private_key_wo         = "%s"
+	private_key_wo_version = "%s"
+	certificate_wo         = "%s"
+	certificate_wo_version = "%s"
+}
+	`, testAccRealmUserFederation.Realm, rsaName, priority, privateKey, privateKeyVersion, certificate, certificateVersion)
+}
+
+func testKeycloakRealmKeystoreRsa_writeOnlyFromComputedValue(rsaName, clientId, privateKey, certificate string) string {
+	// terraform_data.output is unknown during plan because its input depends on the id of a resource
+	// that does not exist yet, which is the same situation as a value coming from another module
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "source" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+	access_type = "CONFIDENTIAL"
+}
+
+resource "terraform_data" "private_key" {
+	input = keycloak_openid_client.source.id != "" ? "%s" : ""
+}
+
+resource "terraform_data" "certificate" {
+	input = keycloak_openid_client.source.id != "" ? "%s" : ""
+}
+
+resource "keycloak_realm_keystore_rsa" "realm_rsa" {
+	name      = "%s"
+	realm_id  = data.keycloak_realm.realm.id
+
+	priority  = 100
+	algorithm = "RS384"
+
+	private_key_wo         = terraform_data.private_key.output
+	private_key_wo_version = "v1"
+	certificate_wo         = terraform_data.certificate.output
+	certificate_wo_version = "v1"
+}
+	`, testAccRealmUserFederation.Realm, clientId, privateKey, certificate, rsaName)
+}
+
+func testKeycloakRealmKeystoreRsa_writeOnlyAttrs(rsaName, attrs string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_realm_keystore_rsa" "realm_rsa" {
+	name      = "%s"
+	realm_id  = data.keycloak_realm.realm.id
+	%s
+}
+	`, testAccRealmUserFederation.Realm, rsaName, attrs)
+}
+
 func testAccCheckRealmKeystoreRsaExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreRsaFromState(s, resourceName)
