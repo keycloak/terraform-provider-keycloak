@@ -231,6 +231,27 @@ func resourceKeycloakIdentityProviderCreate(getIdentityProviderFromData identity
 			return diag.FromErr(err)
 		}
 
+		if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26_8.AsVersion()) {
+			if err := keycloakClient.ValidateLegacyIdentityProviderOrganization(ctx, identityProvider); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := keycloakClient.NewIdentityProvider(ctx, identityProvider); err != nil {
+				return diag.FromErr(err)
+			}
+			// Record the IdP immediately so Terraform can recover or destroy it if
+			// one of the subsequent association/routing requests fails.
+			data.SetId(identityProvider.Alias)
+			// Persist provider-specific defaults (such as Facebook's alias) before
+			// Read or cleanup uses the resource attributes to address the IdP.
+			if err := setDataFromIdentityProvider(data, identityProvider, keycloakVersion); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := keycloakClient.ReconcileLegacyIdentityProviderOrganization(ctx, identityProvider, ""); err != nil {
+				return diag.FromErr(err)
+			}
+			return resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider)(ctx, data, meta)
+		}
+
 		organization_id := identityProvider.OrganizationId
 		identityProvider.OrganizationId = ""
 
@@ -270,7 +291,8 @@ func resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider identityPr
 		}
 		realm := data.Get("realm").(string)
 		alias := data.Get("alias").(string)
-		identityProvider, err := keycloakClient.GetIdentityProvider(ctx, realm, alias)
+		identityProvider, err := keycloakClient.GetIdentityProviderForOrganization(ctx, realm, alias,
+			data.Get("organization_id").(string), data.Get("org_domain").(string))
 		if err != nil {
 			return handleNotFoundError(ctx, err, data)
 		}
@@ -289,6 +311,31 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 		identityProvider, err := getIdentityProviderFromData(data, keycloakVersion)
 		if err != nil {
 			return diag.FromErr(err)
+		}
+
+		if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26_8.AsVersion()) {
+			oldOrganization, _ := data.GetChange("organization_id")
+			oldDomain, _ := data.GetChange("org_domain")
+			current, err := keycloakClient.GetIdentityProviderForOrganization(ctx, identityProvider.Realm, identityProvider.Alias,
+				oldOrganization.(string), oldDomain.(string))
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if err := keycloakClient.ValidateLegacyIdentityProviderOrganization(ctx, identityProvider); err != nil {
+				return diag.FromErr(err)
+			}
+			// Preserve the existing secret when a write-only secret is unchanged.
+			if identityProvider.Config != nil && current.Config != nil &&
+				identityProvider.Config.ClientSecret == "" && current.Config.ClientSecret != "" {
+				identityProvider.Config.ClientSecret = current.Config.ClientSecret
+			}
+			if err := keycloakClient.UpdateIdentityProvider(ctx, identityProvider); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := keycloakClient.ReconcileLegacyIdentityProviderOrganization(ctx, identityProvider, oldOrganization.(string)); err != nil {
+				return diag.FromErr(err)
+			}
+			return resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider)(ctx, data, meta)
 		}
 
 		currentIdentityProvider, err := keycloakClient.GetIdentityProvider(ctx, identityProvider.Realm, identityProvider.Alias)

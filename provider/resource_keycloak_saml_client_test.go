@@ -193,6 +193,28 @@ func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
+	isKeycloak26_8OrLater, err := keycloakClient.VersionIsGreaterThanOrEqualTo(
+		testCtx, keycloak.Version_26_8,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const resourceName = "keycloak_saml_client.saml_client"
+
+	checks := []resource.TestCheckFunc{
+		testAccCheckKeycloakSamlClientExistsWithCorrectProtocol(resourceName),
+		resource.TestCheckResourceAttrSet(resourceName, "signing_certificate"),
+		resource.TestCheckResourceAttrSet(resourceName, "signing_certificate_sha1"),
+	}
+
+	if !isKeycloak26_8OrLater {
+		checks = append(checks,
+			resource.TestCheckResourceAttrSet(resourceName, "signing_private_key"),
+			resource.TestCheckResourceAttrSet(resourceName, "signing_private_key_sha1"),
+		)
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -200,13 +222,7 @@ func TestAccKeycloakSamlClient_generatedCertificate(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakSamlClient_basic(clientId),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_certificate"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_private_key"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_certificate_sha1"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_private_key_sha1"),
-				),
+				Check:  resource.ComposeTestCheckFunc(checks...),
 			},
 		},
 	})
@@ -277,13 +293,17 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 	clientId := acctest.RandomWithPrefix("tf-acc")
 	enabled := randomBool()
 	frontChannelLogout := randomBool()
+	signingPrivateKey := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	if signingPrivateKey == "null" {
+		signingPrivateKey = `""`
+	}
 
 	encryptionCertificateBefore := acctest.RandomWithPrefix("tf-acc")
 	encryptionCertificateAfter := acctest.RandomWithPrefix("tf-acc")
 	signingCertificateBefore := acctest.RandomWithPrefix("tf-acc")
 	signingCertificateAfter := acctest.RandomWithPrefix("tf-acc")
-	signingPrivateKeyBefore := acctest.RandomWithPrefix("tf-acc")
-	signingPrivateKeyAfter := acctest.RandomWithPrefix("tf-acc")
+	signingPrivateKeyBefore := signingPrivateKey
+	signingPrivateKeyAfter := signingPrivateKey
 
 	samlClientBefore := &keycloak.SamlClient{
 		RealmId:  testAccRealm.Realm,
@@ -400,20 +420,39 @@ func TestAccKeycloakSamlClient_certificateAndKey(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
 
+	isKeycloak26_8OrLater, err := keycloakClient.VersionIsGreaterThanOrEqualTo(
+		testCtx, keycloak.Version_26_8,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const resourceName = "keycloak_saml_client.saml_client"
+	signingPrivateKeyExpr := `file("testdata/saml-key.pem")`
+
+	checks := []resource.TestCheckFunc{
+		testAccCheckKeycloakSamlClientExistsWithCorrectProtocol(resourceName),
+		testAccCheckKeycloakSamlClientHasSigningCertificate(resourceName),
+		resource.TestCheckResourceAttrSet(resourceName, "signing_certificate_sha1"),
+	}
+
+	if !isKeycloak26_8OrLater {
+		checks = append(checks,
+			testAccCheckKeycloakSamlClientHasPrivateKey(resourceName),
+			resource.TestCheckResourceAttrSet(resourceName, "signing_private_key_sha1"),
+		)
+	} else {
+		signingPrivateKeyExpr = "null"
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccCheckKeycloakSamlClientDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClient_signingCertificateAndKey(clientId),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckKeycloakSamlClientExistsWithCorrectProtocol("keycloak_saml_client.saml_client"),
-					testAccCheckKeycloakSamlClientHasSigningCertificate("keycloak_saml_client.saml_client"),
-					testAccCheckKeycloakSamlClientHasPrivateKey("keycloak_saml_client.saml_client"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_certificate_sha1"),
-					resource.TestCheckResourceAttrSet("keycloak_saml_client.saml_client", "signing_private_key_sha1"),
-				),
+				Config: testKeycloakSamlClient_signingCertificateAndKey(clientId, signingPrivateKeyExpr),
+				Check:  resource.ComposeTestCheckFunc(checks...),
 			},
 		},
 	})
@@ -743,23 +782,6 @@ resource "keycloak_saml_client" "saml_client" {
 	`, testAccRealm.Realm, clientId)
 }
 
-func testKeycloakSamlClient_generatedCertificate(clientId string) string {
-	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "saml_client" {
-	client_id = "%s"
-	realm_id  = data.keycloak_realm.realm.id
-
-	sign_documents          = false
-	sign_assertions         = true
-	include_authn_statement = true
-}
-	`, testAccRealm.Realm, clientId)
-}
-
 func testKeycloakSamlClient_updateRealmBefore(clientId string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm_1" {
@@ -828,7 +850,7 @@ resource "keycloak_saml_client" "saml_client" {
 
 	encryption_certificate     = "%s"
 	signing_certificate        = "%s"
-	signing_private_key        = "%s"
+	signing_private_key        = %s
 
 	idp_initiated_sso_url_name    = "%s"
 	idp_initiated_sso_relay_state = "%s"
@@ -870,7 +892,7 @@ resource "keycloak_saml_client" "saml_client" {
 	)
 }
 
-func testKeycloakSamlClient_signingCertificateAndKey(clientId string) string {
+func testKeycloakSamlClient_signingCertificateAndKey(clientId, signingPrivateKeyExpr string) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -887,30 +909,9 @@ resource "keycloak_saml_client" "saml_client" {
 	include_authn_statement = true
 
 	signing_certificate     = file("testdata/saml-cert.pem")
-	signing_private_key     = file("testdata/saml-key.pem")
+	signing_private_key     = %s
 }
-	`, testAccRealm.Realm, clientId)
-}
-
-func testKeycloakSamlClient_signingCertificateNoKey(clientId string) string {
-	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "saml_client" {
-	client_id               = "%s"
-	realm_id                = data.keycloak_realm.realm.id
-	name                    = "test-saml-client"
-
-	sign_documents          = false
-	sign_assertions         = true
-	encrypt_assertions      = false
-	include_authn_statement = true
-
-	signing_certificate     = file("testdata/saml-cert.pem")
-}
-	`, testAccRealm.Realm, clientId)
+	`, testAccRealm.Realm, clientId, signingPrivateKeyExpr)
 }
 
 func testKeycloakSamlClient_encryptionCertificate(clientId string) string {
@@ -928,23 +929,6 @@ resource "keycloak_saml_client" "saml_client" {
 	include_authn_statement = true
 
 	encryption_certificate     = file("testdata/saml-cert.pem")
-}
-	`, testAccRealm.Realm, clientId)
-}
-
-func testKeycloakSamlClient_NoEncryptionCertificate(clientId string) string {
-	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "saml_client" {
-	client_id               = "%s"
-	realm_id                = data.keycloak_realm.realm.id
-	name                    = "test-saml-client"
-
-	encrypt_assertions      = true
-	include_authn_statement = true
 }
 	`, testAccRealm.Realm, clientId)
 }

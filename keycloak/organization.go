@@ -71,6 +71,13 @@ func (keycloakClient *KeycloakClient) GetOrganizationByName(ctx context.Context,
 }
 
 func (keycloakClient *KeycloakClient) UpdateOrganization(ctx context.Context, organization *Organization) error {
+	modern, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, Version_26_8)
+	if err != nil {
+		return err
+	}
+	if modern {
+		return keycloakClient.updateOrganizationPreservingIdentityProviderRouting(ctx, organization)
+	}
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/organizations/%s", organization.Realm, organization.Id), organization)
 }
 

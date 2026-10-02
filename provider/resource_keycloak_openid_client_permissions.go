@@ -77,7 +77,7 @@ func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data 
 		return diag.FromErr(err)
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -151,7 +151,7 @@ func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *sche
 		return nil
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}

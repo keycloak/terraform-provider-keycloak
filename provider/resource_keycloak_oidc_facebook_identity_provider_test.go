@@ -138,7 +138,7 @@ func TestAccKeycloakOidcFacebookIdentityProvider_linkOrganization(t *testing.T) 
 				Config: testKeycloakOidcFacebookIdentityProvider_linkOrganization(organizationName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOidcFacebookIdentityProviderExists("keycloak_oidc_facebook_identity_provider.facebook"),
-					testAccCheckKeycloakOidcFacebookIdentityProviderLinkOrganization("keycloak_oidc_facebook_identity_provider.facebook"),
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_oidc_facebook_identity_provider.facebook"),
 				),
 			},
 		},
@@ -254,21 +254,6 @@ func testAccCheckKeycloakOidcFacebookIdentityProviderHasCustomConfigValue(resour
 
 		if fetchedOidc.Config.ExtraConfig["dummyConfig"].(string) != customConfigValue {
 			return fmt.Errorf("expected custom oidc provider to have config with a custom key 'dummyConfig' with a value %s, but value was %s", customConfigValue, fetchedOidc.Config.ExtraConfig["dummyConfig"].(string))
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKeycloakOidcFacebookIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if fetchedOidc.OrganizationId == "" {
-			return fmt.Errorf("expected custom oidc provider to be linked with an organization, but it was not")
 		}
 
 		return nil

@@ -79,7 +79,7 @@ func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.Re
 		return diag.FromErr(err)
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -128,7 +128,7 @@ func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.Reso
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
