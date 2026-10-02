@@ -155,6 +155,92 @@ func TestAccKeycloakUser_withInitialPasswordWriteOnly(t *testing.T) {
 	})
 }
 
+// TestAccKeycloakUser_withInitialPasswordWriteOnlyFromComputedValue covers the documented use case
+// where `value_wo` comes from an ephemeral or computed source, so its value is unknown while the
+// plan is created. This is the only case that exercises the nested `GetRawConfigAt` lookup with an
+// unknown value.
+func TestAccKeycloakUser_withInitialPasswordWriteOnlyFromComputedValue(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_user.user"
+	passwordSourceName := "keycloak_openid_client.password_source"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// test CREATION of the initial password from a value that is unknown during plan
+				Config: testKeycloakUser_initialPasswordWriteOnlyFromComputedValue(username, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					// assert the user against Keycloak's API (the computed write-only password SHOULD work)
+					testAccCheckKeycloakUserExists(resourceName),
+					testAccCheckKeycloakUserInitialPasswordLoginFromState(username, clientId, passwordSourceName, "client_secret"),
+
+					// assert the user against the Terraform state (the password value SHOULD NOT be stored in state)
+					resource.TestCheckNoResourceAttr(resourceName, "initial_password.0.value_wo"),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value", ""),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value_wo_version", "version1"),
+				),
+			},
+			{
+				// test that re-applying the same config results in an empty plan
+				Config:             testKeycloakUser_initialPasswordWriteOnlyFromComputedValue(username, clientId),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+// TestAccKeycloakUser_initialPasswordMigrationToWriteOnly covers the migration of an existing user
+// from `value` to `value_wo`, which is the case the configuration side of
+// `initialPasswordUsesWriteOnly` is needed for. Without it, the diff of the appearing
+// `value_wo_version` would be suppressed and the password would never be reset.
+func TestAccKeycloakUser_initialPasswordMigrationToWriteOnly(t *testing.T) {
+	username := acctest.RandomWithPrefix("tf-acc")
+	passwordExplicit := acctest.RandomWithPrefix("tf-acc")
+	passwordWO := acctest.RandomWithPrefix("tf-acc")
+	passwordWOVersion := "someString"
+	clientId := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_user.user"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakUserDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// test CREATION of the initial password via the legacy value
+				Config: testKeycloakUser_initialPassword(username, passwordExplicit, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists(resourceName),
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordExplicit, clientId),
+				),
+			},
+			{
+				// test RESET of the password when an existing user is migrated to the write-only argument
+				Config: testKeycloakUser_initialPasswordWriteOnly(username, passwordWO, passwordWOVersion, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserInitialPasswordLogin(username, passwordWO, clientId),
+					resource.TestCheckNoResourceAttr(resourceName, "initial_password.0.value_wo"),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value", ""),
+					resource.TestCheckResourceAttr(resourceName, "initial_password.0.value_wo_version", passwordWOVersion),
+				),
+			},
+			{
+				// test that re-applying the same config results in an empty plan
+				Config:             testKeycloakUser_initialPasswordWriteOnly(username, passwordWO, passwordWOVersion, clientId),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccKeycloakUser_initialPasswordWriteOnlyValidation(t *testing.T) {
 	username := acctest.RandomWithPrefix("tf-acc")
 	password := acctest.RandomWithPrefix("tf-acc")
@@ -597,6 +683,24 @@ func testAccCheckKeycloakUserInitialPasswordLogin(username, password, clientId s
 	}
 }
 
+// testAccCheckKeycloakUserInitialPasswordLoginFromState logs in with a password that is only known
+// after apply, as it is taken from the state of the resource that produced it
+func testAccCheckKeycloakUserInitialPasswordLoginFromState(username, clientId, resourceName, attribute string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		password := rs.Primary.Attributes[attribute]
+		if password == "" {
+			return fmt.Errorf("attribute %s of %s is empty", attribute, resourceName)
+		}
+
+		return testAccCheckKeycloakUserInitialPasswordLogin(username, password, clientId)(s)
+	}
+}
+
 func testAccCheckKeycloakUserDestroy() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {
@@ -770,6 +874,49 @@ resource "keycloak_user" "user" {
 	%s
 }
 	`, testAccRealm.Realm, userProfile, clientId, username, passwordWriteOnly, passwordWriteOnlyVersion, dependsOn)
+}
+
+func testKeycloakUser_initialPasswordWriteOnlyFromComputedValue(username, clientId string) string {
+	userProfile, dependsOn := userProfile("data.keycloak_realm.realm.id")
+	// 'value_wo_version' always ends up as "version1", but making it conditional keeps the value
+	// unknown during validation, which is the same situation as a value coming from another module
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+
+%s
+
+resource "keycloak_openid_client" "client" {
+	realm_id                     = data.keycloak_realm.realm.id
+	client_id                    = "%s"
+
+	name                         = "test client"
+	enabled                      = true
+
+	access_type                  = "PUBLIC"
+	direct_access_grants_enabled = true
+}
+
+resource "keycloak_openid_client" "password_source" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s-password-source"
+
+	access_type = "CONFIDENTIAL"
+}
+
+resource "keycloak_user" "user" {
+	realm_id         = data.keycloak_realm.realm.id
+	username         = "%s"
+	initial_password {
+		value_wo         = keycloak_openid_client.password_source.client_secret
+		value_wo_version = keycloak_openid_client.password_source.id != "" ? "version1" : "version0"
+		temporary        = false
+	}
+	%s
+}
+	`, testAccRealm.Realm, userProfile, clientId, clientId, username, dependsOn)
 }
 
 func testKeycloakUser_initialPasswordBlock(username, initialPasswordArguments string) string {
