@@ -49,7 +49,7 @@ func init() {
 func protoV5ProviderFactories(provider *schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		"keycloak": func() (tfprotov5.ProviderServer, error) {
-			return provider.GRPCProvider(), nil
+			return MuxProviderServer(context.Background(), provider)
 		},
 	}
 }
