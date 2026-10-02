@@ -160,7 +160,7 @@ func TestAccKeycloakSamlIdentityProvider_linkOrganization(t *testing.T) {
 				Config: testKeycloakSamlIdentityProvider_linkOrganization(samlName, organizationName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakSamlIdentityProviderExists("keycloak_saml_identity_provider.saml"),
-					testAccCheckKeycloakSamlIdentityProviderLinkOrganization("keycloak_saml_identity_provider.saml"),
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_saml_identity_provider.saml"),
 				),
 			},
 		},
@@ -354,21 +354,6 @@ func testAccCheckKeycloakSamlIdentityProviderHasNameIdPolicyFormatValue(resource
 
 		if fetchedSaml.Config.NameIDPolicyFormat != nameIdPolicyFormatValue {
 			return fmt.Errorf("expected saml provider to have config with nameIdPolicyFormat with a value %s, but value was %s", nameIdPolicyFormatValue, fetchedSaml.Config.NameIDPolicyFormat)
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKeycloakSamlIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		fetchedSaml, err := getKeycloakSamlIdentityProviderFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if fetchedSaml.OrganizationId == "" {
-			return fmt.Errorf("expected saml provider to be linked with an organization, but it was not")
 		}
 
 		return nil

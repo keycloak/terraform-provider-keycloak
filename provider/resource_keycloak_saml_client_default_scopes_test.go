@@ -22,12 +22,16 @@ func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
 
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_basic(),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 			{
@@ -38,7 +42,7 @@ func TestAccKeycloakSamlClientDefaultScopes_basic(t *testing.T) {
 			// we need a separate test step for destroy instead of using CheckDestroy because this resource is implicitly
 			// destroyed at the end of each test via destroying clients
 			{
-				Config: testKeycloakSamlClientDefaultScopes_noDefaultScopes(client, clientScope),
+				Config: baseConfig,
 				Check:  testAccCheckKeycloakSamlClientHasNoDefaultScopes("keycloak_saml_client.client"),
 			},
 		},
@@ -53,16 +57,22 @@ func TestAccKeycloakSamlClientDefaultScopes_updateClientForceNew(t *testing.T) {
 
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfigOne := testKeycloakSamlClientDefaultScopes_base(clientOne, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+	baseConfigTwo := testKeycloakSamlClientDefaultScopes_base(clientTwo, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClientDefaultScopes_basic(clientOne, clientScope),
+				Config: baseConfigOne + testKeycloakSamlClientDefaultScopes_basic(),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 			{
-				Config: testKeycloakSamlClientDefaultScopes_basic(clientTwo, clientScope),
+				Config: baseConfigTwo + testKeycloakSamlClientDefaultScopes_basic(),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 		},
@@ -84,23 +94,27 @@ func TestAccKeycloakSamlClientDefaultScopes_updateInPlace(t *testing.T) {
 		}
 	}
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			// init
 			{
-				Config: testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, allClientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_listOfScopes(allClientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", allClientScopes),
 			},
 			// remove
 			{
-				Config: testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, subsetOfClientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_listOfScopes(subsetOfClientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", subsetOfClientScopes),
 			},
 			// add
 			{
-				Config: testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope, allClientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_listOfScopes(allClientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", allClientScopes),
 			},
 		},
@@ -112,12 +126,15 @@ func TestAccKeycloakSamlClientDefaultScopes_validateClientDoesNotExist(t *testin
 	client := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
+	baseConfig := testKeycloakSamlClientDefaultScopes_realm() +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakSamlClientDefaultScopes_validationNoClient(client, clientScope),
+				Config:      baseConfig + testKeycloakSamlClientDefaultScopes_validationNoClient(client),
 				ExpectError: regexp.MustCompile("validation error: client with id .+ does not exist"),
 			},
 		},
@@ -134,12 +151,15 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeAdd(t *testing.T) {
 		"terraform-client-scope-"+acctest.RandString(10),
 	)
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, clientScopes, clientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_multipleClientScopes(clientScopes, clientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 			{
@@ -155,7 +175,7 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeAdd(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, clientScopes, clientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_multipleClientScopes(clientScopes, clientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 		},
@@ -182,12 +202,15 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 		}
 	}
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, allClientScopes, attachedClientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_multipleClientScopes(allClientScopes, attachedClientScopes),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", attachedClientScopes),
 			},
 			{
@@ -202,7 +225,7 @@ func TestAccKeycloakSamlClientDefaultScopes_authoritativeRemove(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakSamlClientDefaultScopes_multipleClientScopes(client, allClientScopes, attachedClientScopes),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_multipleClientScopes(allClientScopes, attachedClientScopes),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", attachedClientScopes),
 					testAccCheckKeycloakSamlClientDefaultScopeIsNotAttached("keycloak_saml_client_default_scopes.default_scopes", clientToManuallyAttach),
@@ -216,12 +239,16 @@ func TestAccKeycloakSamlClientDefaultScopes_validateScopeDoesNotExist(t *testing
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(acctest.RandomWithPrefix("tf-acc"))
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakSamlClientDefaultScopes_listOfScopes(client, acctest.RandomWithPrefix("tf-acc"), []string{"role_list", "non_existent_scope_that_should_fail"}),
+				Config:      baseConfig + testKeycloakSamlClientDefaultScopes_listOfScopes([]string{"role_list", "non_existent_scope_that_should_fail"}),
 				ExpectError: regexp.MustCompile("scope .+ does not exist"),
 			},
 		},
@@ -236,12 +263,16 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 
 	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
 
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakSamlClientDefaultScopes_noDefaultScopes(client, clientScope),
+				Config: baseConfig,
 				Check:  testAccCheckKeycloakSamlClientDefaultScopeIsNotAttached("keycloak_saml_client.client", clientScope),
 			},
 			{
@@ -256,7 +287,7 @@ func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakSamlClientDefaultScopes_basic(client, clientScope),
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_basic(),
 				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
 			},
 		},
@@ -343,12 +374,32 @@ func testAccCheckKeycloakSamlClientDefaultScopeIsNotAttached(resourceName, clien
 	}
 }
 
-func testKeycloakSamlClientDefaultScopes_basic(client, clientScope string) string {
+func testKeycloakSamlClientDefaultScopes_realm() string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
+	`, testAccRealm.Realm)
+}
+
+func testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t *testing.T) string {
+	t.Helper()
+
+	ok, err := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_8)
+	if err != nil {
+		t.Fatalf("failed to determine Keycloak version: %v", err)
+	}
+	if ok {
+		return "null"
+	}
+
+	return `file("testdata/saml-key.pem")`
+}
+
+// signingPrivateKeyExpr is a Terraform expression, such as file("testdata/saml-key.pem") or null.
+func testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr string) string {
+	return testKeycloakSamlClientDefaultScopes_realm() + fmt.Sprintf(`
 resource "keycloak_saml_client" "client" {
 	client_id   = "%s"
 	realm_id    = data.keycloak_realm.realm.id
@@ -358,9 +409,14 @@ resource "keycloak_saml_client" "client" {
 	include_authn_statement = true
 
 	signing_certificate     = file("testdata/saml-cert.pem")
-	signing_private_key     = file("testdata/saml-key.pem")
+	signing_private_key     = %s
 }
 
+	`, client, signingPrivateKeyExpr)
+}
+
+func testKeycloakSamlClientDefaultScopes_clientScope(clientScope string) string {
+	return fmt.Sprintf(`
 resource "keycloak_saml_client_scope" "client_scope" {
 	name        = "%s"
 	realm_id    = data.keycloak_realm.realm.id
@@ -368,6 +424,11 @@ resource "keycloak_saml_client_scope" "client_scope" {
 	description = "test description"
 }
 
+	`, clientScope)
+}
+
+func testKeycloakSamlClientDefaultScopes_basic() string {
+	return `
 resource "keycloak_saml_client_default_scopes" "default_scopes" {
 	realm_id       = data.keycloak_realm.realm.id
 	client_id      = keycloak_saml_client.client.id
@@ -376,61 +437,11 @@ resource "keycloak_saml_client_default_scopes" "default_scopes" {
 		keycloak_saml_client_scope.client_scope.name
 	]
 }
-	`, testAccRealm.Realm, client, clientScope)
+	`
 }
 
-func testKeycloakSamlClientDefaultScopes_noDefaultScopes(client, clientScope string) string {
+func testKeycloakSamlClientDefaultScopes_listOfScopes(listOfDefaultScopes []string) string {
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "client" {
-	client_id   = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	sign_documents          = false
-	sign_assertions         = true
-	include_authn_statement = true
-
-	signing_certificate     = file("testdata/saml-cert.pem")
-	signing_private_key     = file("testdata/saml-key.pem")
-}
-
-resource "keycloak_saml_client_scope" "client_scope" {
-	name        = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	description = "test description"
-}
-	`, testAccRealm.Realm, client, clientScope)
-}
-
-func testKeycloakSamlClientDefaultScopes_listOfScopes(client, clientScope string, listOfDefaultScopes []string) string {
-	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "client" {
-	client_id   = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	sign_documents          = false
-	sign_assertions         = true
-	include_authn_statement = true
-
-	signing_certificate     = file("testdata/saml-cert.pem")
-	signing_private_key     = file("testdata/saml-key.pem")
-}
-
-resource "keycloak_saml_client_scope" "client_scope" {
-	name        = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	description = "test description"
-}
-
 resource "keycloak_saml_client_default_scopes" "default_scopes" {
 	realm_id       = data.keycloak_realm.realm.id
 	client_id      = keycloak_saml_client.client.id
@@ -438,22 +449,11 @@ resource "keycloak_saml_client_default_scopes" "default_scopes" {
 
 	depends_on = ["keycloak_saml_client_scope.client_scope"]
 }
-	`, testAccRealm.Realm, client, clientScope, arrayOfStringsForTerraformResource(listOfDefaultScopes))
+	`, arrayOfStringsForTerraformResource(listOfDefaultScopes))
 }
 
-func testKeycloakSamlClientDefaultScopes_validationNoClient(client, clientScope string) string {
+func testKeycloakSamlClientDefaultScopes_validationNoClient(client string) string {
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client_scope" "client_scope" {
-	name        = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	description = "test description"
-}
-
 resource "keycloak_saml_client_default_scopes" "default_scopes" {
 	realm_id       = data.keycloak_realm.realm.id
 	client_id      = "%s"
@@ -462,10 +462,10 @@ resource "keycloak_saml_client_default_scopes" "default_scopes" {
 		keycloak_saml_client_scope.client_scope.name
 	]
 }
-	`, testAccRealm.Realm, clientScope, client)
+	`, client)
 }
 
-func testKeycloakSamlClientDefaultScopes_multipleClientScopes(client string, allClientScopes, attachedClientScopes []string) string {
+func testKeycloakSamlClientDefaultScopes_multipleClientScopes(allClientScopes, attachedClientScopes []string) string {
 	var clientScopeResources strings.Builder
 	for _, clientScope := range allClientScopes {
 		if strings.HasPrefix(clientScope, "terraform") {
@@ -488,22 +488,6 @@ resource "keycloak_saml_client_scope" "client_scope_%s" {
 	}
 
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
-	realm = "%s"
-}
-
-resource "keycloak_saml_client" "client" {
-	client_id   = "%s"
-	realm_id    = data.keycloak_realm.realm.id
-
-	sign_documents          = false
-	sign_assertions         = true
-	include_authn_statement = true
-
-	signing_certificate     = file("testdata/saml-cert.pem")
-	signing_private_key     = file("testdata/saml-key.pem")
-}
-
 %s
 
 resource "keycloak_saml_client_default_scopes" "default_scopes" {
@@ -511,5 +495,5 @@ resource "keycloak_saml_client_default_scopes" "default_scopes" {
 	client_id      = keycloak_saml_client.client.id
 	default_scopes = %s
 }
-	`, testAccRealm.Realm, client, clientScopeResources.String(), arrayOfStringsForTerraformResource(attachedClientScopesInterpolated))
+	`, clientScopeResources.String(), arrayOfStringsForTerraformResource(attachedClientScopesInterpolated))
 }

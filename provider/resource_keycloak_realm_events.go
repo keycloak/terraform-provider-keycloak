@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,6 +16,9 @@ func resourceKeycloakRealmEvents() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmEventsRead,
 		DeleteContext: resourceKeycloakRealmEventsDelete,
 		UpdateContext: resourceKeycloakRealmEventsUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmEventsImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -152,4 +157,22 @@ func resourceKeycloakRealmEventsUpdate(ctx context.Context, data *schema.Resourc
 	setRealmEventsConfigData(data, realmEventsConfig)
 
 	return nil
+}
+
+func resourceKeycloakRealmEventsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	realmId := d.Id()
+	if realmId == "" || strings.Contains(realmId, "/") {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}.")
+	}
+
+	if _, err := keycloakClient.GetRealmEventsConfig(ctx, realmId); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.SetId(realmId)
+
+	return []*schema.ResourceData{d}, nil
 }
