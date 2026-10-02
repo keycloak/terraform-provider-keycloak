@@ -121,7 +121,7 @@ resource "keycloak_group_roles" "group_role_association2" {
 
 ## Organization Group Example
 
-Organization groups require Keycloak 26.6 or newer. Set `organizations_enabled = true` on the
+Organization group role assignments require Keycloak 26.7 or newer. Set `organizations_enabled = true` on the
 `keycloak_realm.realm` resource before applying this example. This example uses the realm and realm role defined above.
 
 ```hcl
@@ -151,7 +151,7 @@ resource "keycloak_group_roles" "organization_group_roles" {
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this group exists in.
-- `organization_id` - (Optional) The ID of the organization this group belongs to. Omit for realm-level groups.
+- `organization_id` - (Optional) The ID of the organization this group belongs to. Requires Keycloak 26.7 or newer. Omit for realm-level groups.
 - `group_id` - (Required) The ID of the group this resource should manage roles for.
 - `role_ids` - (Required) A list of role IDs to map to the group.
 - `exhaustive` - (Optional) Indicates if the list of roles is exhaustive. In this case, roles that are manually added to the group will be removed. Defaults to `true`.

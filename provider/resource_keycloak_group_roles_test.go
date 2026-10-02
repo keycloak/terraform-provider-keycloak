@@ -750,7 +750,8 @@ resource "keycloak_group_roles" "group_roles" {
 }
 
 func TestAccKeycloakGroupRoles_organization(t *testing.T) {
-	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	// Organization groups exist in 26.6, but their role-mapping endpoints require 26.7.
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_7)
 	t.Parallel()
 
 	organizationName := acctest.RandomWithPrefix("tf-acc")
