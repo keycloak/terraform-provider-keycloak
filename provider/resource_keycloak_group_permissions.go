@@ -35,6 +35,12 @@ func resourceKeycloakGroupPermissions() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"organization_id": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validateGroupPermissionsOrganizationId,
+			},
 			"authorization_resource_server_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -53,11 +59,30 @@ func groupPermissionsId(realmId, groupId string) string {
 	return fmt.Sprintf("%s/%s", realmId, groupId)
 }
 
+// validateGroupPermissionsOrganizationId rejects a non-empty organization_id.
+// This is the Fine-Grained Admin Permissions v1 resource, whose REST endpoint is
+// realm-scoped and cannot manage organization groups. Point users to the v2
+// resource, which does support organization groups.
+func validateGroupPermissionsOrganizationId(i interface{}, k string) ([]string, []error) {
+	if i.(string) != "" {
+		return nil, []error{fmt.Errorf(
+			"%s is not supported by the %s resource (Fine-Grained Admin Permissions v1); organization group permissions require the %s resource (FGA v2)",
+			k, "keycloak_group_permissions", "keycloak_group_admin_permissions")}
+	}
+	return nil, nil
+}
+
 func resourceKeycloakGroupPermissionsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return resourceKeycloakGroupPermissionsUpdate(ctx, data, meta)
 }
 
 func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// An organization ID from a newly created resource can be unknown during
+	// schema validation. Reject the resolved value before making any API calls.
+	if _, errs := validateGroupPermissionsOrganizationId(data.Get("organization_id"), "organization_id"); len(errs) != 0 {
+		return diag.FromErr(errs[0])
+	}
+
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", "keycloak_group_admin_permissions"); err != nil {

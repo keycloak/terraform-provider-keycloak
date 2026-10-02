@@ -315,6 +315,7 @@ func testAccCheckKeycloakGroupHasRoles(resourceName string, exhaustive bool) res
 		}
 
 		realm := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
 		groupId := rs.Primary.Attributes["group_id"]
 
 		var roles []*keycloak.Role
@@ -331,12 +332,12 @@ func testAccCheckKeycloakGroupHasRoles(resourceName string, exhaustive bool) res
 			roles = append(roles, role)
 		}
 
-		group, err := keycloakClient.GetGroup(testCtx, realm, groupId)
+		group, err := keycloakClient.GetOrganizationGroup(testCtx, realm, organizationId, groupId)
 		if err != nil {
 			return err
 		}
 
-		groupRoleMappings, err := keycloakClient.GetGroupRoleMappings(testCtx, realm, groupId)
+		groupRoleMappings, err := keycloakClient.GetOrganizationGroupRoleMappings(testCtx, realm, organizationId, groupId)
 		if err != nil {
 			return err
 		}
@@ -390,9 +391,10 @@ func testAccCheckKeycloakGroupHasNoRoles(resourceName string) resource.TestCheck
 		}
 
 		realm := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
 		id := rs.Primary.ID
 
-		group, err := keycloakClient.GetGroup(testCtx, realm, id)
+		group, err := keycloakClient.GetOrganizationGroup(testCtx, realm, organizationId, id)
 		if err != nil {
 			return err
 		}
@@ -745,4 +747,107 @@ resource "keycloak_group_roles" "group_roles" {
 	]
 }
 `, testAccRealm.Realm, id, groupName)
+}
+
+func TestAccKeycloakGroupRoles_organization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	realmRoleName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_group_roles.group_roles"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroupRoles_organization(organizationName, realmRoleName, groupName, true),
+				Check:  testAccCheckKeycloakGroupHasRoles(resourceName, true),
+			},
+			{
+				// import using the three-part (organization-scoped) format
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: testAccGetGroupRolesOrganizationImportId(resourceName),
+			},
+			{
+				Config: testKeycloakGroupRoles_organization(organizationName, realmRoleName, groupName, false),
+				Check:  testAccCheckKeycloakGroupHasRoles(resourceName, true),
+			},
+			{
+				Config: testKeycloakGroupRoles_organization(organizationName, realmRoleName, groupName, true),
+				Check:  testAccCheckKeycloakGroupHasRoles(resourceName, true),
+			},
+		},
+	})
+}
+
+func testAccGetGroupRolesOrganizationImportId(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		realmId := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
+		groupId := rs.Primary.Attributes["group_id"]
+
+		return fmt.Sprintf("%s/%s/%s", realmId, organizationId, groupId), nil
+	}
+}
+
+func testKeycloakGroupRoles_organization(organization, realmRoleName, groupName string, assignRoles bool) string {
+	roleIds := "[]"
+	if assignRoles {
+		roleIds = "[keycloak_role.realm_role.id, keycloak_role.client_role.id]"
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s.example.com"
+	}
+}
+
+resource "keycloak_role" "realm_role" {
+	name     = "%s"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+resource "keycloak_openid_client" "client" {
+    realm_id = data.keycloak_realm.realm.id
+    client_id = "%s-client"
+    access_type = "BEARER-ONLY"
+}
+
+resource "keycloak_role" "client_role" {
+    realm_id = data.keycloak_realm.realm.id
+    client_id = keycloak_openid_client.client.id
+    name = "organization-client-role"
+}
+
+resource "keycloak_group" "group" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+}
+
+resource "keycloak_group_roles" "group_roles" {
+	realm_id          = data.keycloak_realm.realm.id
+	organization_id   = keycloak_organization.organization.id
+	group_id          = keycloak_group.group.id
+
+	role_ids = %s
+}
+	`, testAccRealm.Realm, organization, organization, realmRoleName, groupName, groupName, roleIds)
 }

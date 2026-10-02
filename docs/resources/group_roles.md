@@ -118,21 +118,57 @@ resource "keycloak_group_roles" "group_role_association2" {
 }
 
 ```
+
+## Organization Group Example
+
+Organization groups require Keycloak 26.6 or newer. Set `organizations_enabled = true` on the
+`keycloak_realm.realm` resource before applying this example. This example uses the realm and realm role defined above.
+
+```hcl
+resource "keycloak_organization" "organization" {
+  realm = keycloak_realm.realm.id
+  name  = "my-organization"
+
+  domain {
+    name = "organization.example.com"
+  }
+}
+
+resource "keycloak_group" "organization_group" {
+  realm_id        = keycloak_realm.realm.id
+  organization_id = keycloak_organization.organization.id
+  name            = "my-organization-group"
+}
+
+resource "keycloak_group_roles" "organization_group_roles" {
+  realm_id        = keycloak_realm.realm.id
+  organization_id = keycloak_organization.organization.id
+  group_id        = keycloak_group.organization_group.id
+  role_ids        = [keycloak_role.realm_role.id]
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this group exists in.
+- `organization_id` - (Optional) The ID of the organization this group belongs to. Omit for realm-level groups.
 - `group_id` - (Required) The ID of the group this resource should manage roles for.
 - `role_ids` - (Required) A list of role IDs to map to the group.
 - `exhaustive` - (Optional) Indicates if the list of roles is exhaustive. In this case, roles that are manually added to the group will be removed. Defaults to `true`.
 
 ## Import
 
-This resource can be imported using the format `{{realm_id}}/{{group_id}}`, where `group_id` is the unique ID that Keycloak
+This resource can be imported using the format `{{realm_id}}/{{group_id}}`, or, for a group that belongs to an
+organization, `{{realm_id}}/{{organization_id}}/{{group_id}}`. Here, `group_id` is the unique ID that Keycloak
 assigns to the group upon creation. This value can be found in the URI when editing this group in the GUI, and is typically
 a GUID.
 
-Example:
+Examples:
 
 ```bash
+# realm-level group
 $ terraform import keycloak_group_roles.group_roles my-realm/18cc6b87-2ce7-4e59-bdc8-b9d49ec98a94
+
+# organization-scoped group
+$ terraform import keycloak_group_roles.group_roles my-realm/b258402a-5e1b-4e53-b05a-6e5b9c4d1e77/18cc6b87-2ce7-4e59-bdc8-b9d49ec98a94
 ```
