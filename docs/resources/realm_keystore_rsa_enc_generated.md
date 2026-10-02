@@ -6,7 +6,7 @@ page_title: "keycloak_realm_keystore_rsa_enc_generated Resources"
 
 Allows for creating and managing `rsa-enc-generated` Realm keystores within Keycloak.
 
-A realm keystore manages generated key pairs that are used by Keycloak to perform cryptographic signatures and encryption.
+A realm keystore manages generated key pairs that are used by Keycloak to perform encryption.
 
 ## Example Usage
 
