@@ -64,26 +64,31 @@ type IdentityProviderConfig struct {
 }
 
 type IdentityProvider struct {
-	Realm                     string                  `json:"-"`
-	InternalId                string                  `json:"internalId,omitempty"`
-	Alias                     string                  `json:"alias"`
-	DisplayName               string                  `json:"displayName"`
-	ProviderId                string                  `json:"providerId"`
-	Enabled                   bool                    `json:"enabled"`
-	StoreToken                bool                    `json:"storeToken"`
-	AddReadTokenRoleOnCreate  bool                    `json:"addReadTokenRoleOnCreate"`
-	AuthenticateByDefault     bool                    `json:"authenticateByDefault"`
-	LinkOnly                  bool                    `json:"linkOnly"`
-	HideOnLogin               bool                    `json:"hideOnLogin,omitempty"` //since keycloak v26
-	TrustEmail                bool                    `json:"trustEmail"`
-	FirstBrokerLoginFlowAlias string                  `json:"firstBrokerLoginFlowAlias"`
-	PostBrokerLoginFlowAlias  string                  `json:"postBrokerLoginFlowAlias"`
-	OrganizationId            string                  `json:"organizationId,omitempty"`
-	Config                    *IdentityProviderConfig `json:"config"`
+	OrganizationLinks         []IdentityProviderOrganizationLink `json:"organizationLinks,omitempty"`
+	Realm                     string                             `json:"-"`
+	InternalId                string                             `json:"internalId,omitempty"`
+	Alias                     string                             `json:"alias"`
+	DisplayName               string                             `json:"displayName"`
+	ProviderId                string                             `json:"providerId"`
+	Enabled                   bool                               `json:"enabled"`
+	StoreToken                bool                               `json:"storeToken"`
+	AddReadTokenRoleOnCreate  bool                               `json:"addReadTokenRoleOnCreate"`
+	AuthenticateByDefault     bool                               `json:"authenticateByDefault"`
+	LinkOnly                  bool                               `json:"linkOnly"`
+	HideOnLogin               bool                               `json:"hideOnLogin,omitempty"` //since keycloak v26
+	TrustEmail                bool                               `json:"trustEmail"`
+	FirstBrokerLoginFlowAlias string                             `json:"firstBrokerLoginFlowAlias"`
+	PostBrokerLoginFlowAlias  string                             `json:"postBrokerLoginFlowAlias"`
+	OrganizationId            string                             `json:"organizationId,omitempty"`
+	Config                    *IdentityProviderConfig            `json:"config"`
 }
 
 func (keycloakClient *KeycloakClient) NewIdentityProvider(ctx context.Context, identityProvider *IdentityProvider) error {
-	_, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/identity-provider/instances", identityProvider.Realm), identityProvider)
+	request, err := keycloakClient.identityProviderRequest(ctx, identityProvider)
+	if err != nil {
+		return err
+	}
+	_, _, err = keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/identity-provider/instances", identityProvider.Realm), request)
 	if err != nil {
 		return err
 	}
@@ -92,6 +97,10 @@ func (keycloakClient *KeycloakClient) NewIdentityProvider(ctx context.Context, i
 }
 
 func (keycloakClient *KeycloakClient) GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProvider, error) {
+	return keycloakClient.GetIdentityProviderForOrganization(ctx, realm, alias, "", "")
+}
+
+func (keycloakClient *KeycloakClient) getIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProvider, error) {
 	var identityProvider IdentityProvider
 	identityProvider.Realm = realm
 
@@ -104,7 +113,11 @@ func (keycloakClient *KeycloakClient) GetIdentityProvider(ctx context.Context, r
 }
 
 func (keycloakClient *KeycloakClient) UpdateIdentityProvider(ctx context.Context, identityProvider *IdentityProvider) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/identity-provider/instances/%s", identityProvider.Realm, identityProvider.Alias), identityProvider)
+	request, err := keycloakClient.identityProviderRequest(ctx, identityProvider)
+	if err != nil {
+		return err
+	}
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/identity-provider/instances/%s", identityProvider.Realm, identityProvider.Alias), request)
 }
 
 func (keycloakClient *KeycloakClient) DeleteIdentityProvider(ctx context.Context, realm, alias string) error {

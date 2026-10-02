@@ -230,6 +230,8 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
+				Deprecated: "Keycloak starting 26.8 does not need the SAML client's private key. " +
+					"Remove signing_private_key from your configuration and configure only signing_certificate. ",
 				DiffSuppressFunc: func(_, old, new string, _ *schema.ResourceData) bool {
 					return old == formatSigningPrivateKey(new)
 				},
@@ -241,10 +243,11 @@ func resourceKeycloakSamlClient() *schema.Resource {
 			"signing_certificate_sha1": {
 				Type:     schema.TypeString,
 				Computed: true,
-			},
-			"signing_private_key_sha1": {
+			}, "signing_private_key_sha1": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Deprecated: "Deprecated together with signing_private_key since Keycloak 26.8. " +
+					"Remove references to this attribute and manage the private key outside of Keycloak ",
 			},
 			"idp_initiated_sso_url_name": {
 				Type:             schema.TypeString,

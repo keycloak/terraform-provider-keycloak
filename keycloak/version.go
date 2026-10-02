@@ -36,11 +36,12 @@ const (
 	Version_26_4 Version = "26.4.0"
 	Version_26_5 Version = "26.5.0"
 	Version_26_6 Version = "26.6.0"
-
+	Version_26_7 Version = "26.7.0"
+	Version_26_8 Version = "26.8.0"
 	// Version_Latest is the most recent Keycloak version this provider has been
 	// tested against. It is used as a fallback when the server does not report
 	// its version (see resolveServerVersion).
-	Version_Latest = Version_26_6
+	Version_Latest = Version_26_8
 )
 
 func (v Version) AsVersion() *version.Version {
