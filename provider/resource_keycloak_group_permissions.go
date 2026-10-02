@@ -38,7 +38,6 @@ func resourceKeycloakGroupPermissions() *schema.Resource {
 			"organization_id": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateGroupPermissionsOrganizationId,
 			},
 			"authorization_resource_server_id": {
