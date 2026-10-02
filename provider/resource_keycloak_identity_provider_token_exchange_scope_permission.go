@@ -83,7 +83,7 @@ func setIdentityProviderTokenExchangeScopePermissionClientPolicy(ctx context.Con
 		return err
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func unsetIdentityProviderTokenExchangeScopePermissionPolicy(ctx context.Context
 		return err
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx contex
 	data.Set("realm_id", identityProviderPermissions.RealmId)
 	data.Set("provider_alias", identityProviderPermissions.ProviderAlias)
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
