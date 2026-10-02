@@ -49,6 +49,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_realm_keystore_hmac_generated":                     resourceKeycloakRealmKeystoreHmacGenerated(),
 			"keycloak_realm_keystore_java_keystore":                      resourceKeycloakRealmKeystoreJavaKeystore(),
 			"keycloak_realm_keystore_rsa":                                resourceKeycloakRealmKeystoreRsa(),
+			"keycloak_realm_keystore_rsa_enc_generated":                  resourceKeycloakRealmKeystoreRsaEncGenerated(),
 			"keycloak_realm_keystore_rsa_generated":                      resourceKeycloakRealmKeystoreRsaGenerated(),
 			"keycloak_realm_user_profile":                                resourceKeycloakRealmUserProfile(),
 			"keycloak_realm_localization":                                resourceKeycloakRealmLocalization(),
