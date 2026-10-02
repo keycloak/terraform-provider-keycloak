@@ -295,7 +295,7 @@ func TestAccKeycloakSamlClient_updateInPlace(t *testing.T) {
 	frontChannelLogout := randomBool()
 	signingPrivateKey := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
 	if signingPrivateKey == "null" {
-		signingPrivateKey = ""
+		signingPrivateKey = `""`
 	}
 
 	encryptionCertificateBefore := acctest.RandomWithPrefix("tf-acc")
