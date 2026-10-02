@@ -243,7 +243,8 @@ func resourceKeycloakSamlClient() *schema.Resource {
 			"signing_certificate_sha1": {
 				Type:     schema.TypeString,
 				Computed: true,
-			}, "signing_private_key_sha1": {
+			},
+			"signing_private_key_sha1": {
 				Type:     schema.TypeString,
 				Computed: true,
 				Deprecated: "Deprecated together with signing_private_key since Keycloak 26.8. " +
