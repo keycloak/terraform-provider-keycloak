@@ -850,7 +850,7 @@ resource "keycloak_saml_client" "saml_client" {
 
 	encryption_certificate     = "%s"
 	signing_certificate        = "%s"
-	signing_private_key        = "%s"
+	signing_private_key        = %s
 
 	idp_initiated_sso_url_name    = "%s"
 	idp_initiated_sso_relay_state = "%s"
