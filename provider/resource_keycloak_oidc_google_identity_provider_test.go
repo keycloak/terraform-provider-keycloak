@@ -166,7 +166,7 @@ func TestAccKeycloakOidcGoogleIdentityProvider_linkOrganization(t *testing.T) {
 				Config: testKeycloakOidcGoogleIdentityProvider_linkOrganization(organizationName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
-					testAccCheckKeycloakOidcGoogleIdentityProviderLinkOrganization("keycloak_oidc_google_identity_provider.google"),
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_oidc_google_identity_provider.google"),
 				),
 			},
 		},
@@ -282,21 +282,6 @@ func testAccCheckKeycloakOidcGoogleIdentityProviderHasCustomConfigValue(resource
 
 		if fetchedOidc.Config.ExtraConfig["dummyConfig"].(string) != customConfigValue {
 			return fmt.Errorf("expected custom oidc provider to have config with a custom key 'dummyConfig' with a value %s, but value was %s", customConfigValue, fetchedOidc.Config.ExtraConfig["dummyConfig"].(string))
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKeycloakOidcGoogleIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if fetchedOidc.OrganizationId == "" {
-			return fmt.Errorf("expected custom oidc provider to be linked with an organization, but it was not")
 		}
 
 		return nil

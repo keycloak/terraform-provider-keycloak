@@ -97,7 +97,7 @@ func (keycloakClient *KeycloakClient) NewIdentityProvider(ctx context.Context, i
 }
 
 func (keycloakClient *KeycloakClient) GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProvider, error) {
-	return keycloakClient.GetIdentityProviderForOrganization(ctx, realm, alias, "", "")
+	return keycloakClient.getIdentityProvider(ctx, realm, alias)
 }
 
 func (keycloakClient *KeycloakClient) getIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProvider, error) {

@@ -145,7 +145,7 @@ func TestAccKeycloakOidcIdentityProvider_linkOrganization(t *testing.T) {
 				Config: testKeycloakOidcIdentityProvider_linkOrganization(oidcName, organizationName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakOidcIdentityProviderExists("keycloak_oidc_identity_provider.oidc"),
-					testAccCheckKeycloakOidcIdentityProviderLinkOrganization("keycloak_oidc_identity_provider.oidc"),
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_oidc_identity_provider.oidc"),
 				),
 			},
 		},
@@ -331,21 +331,6 @@ func testAccCheckKeycloakOidcIdentityProviderDefaultScopes(resourceName, value s
 
 		if fetchedOidc.Config.DefaultScope != value {
 			return fmt.Errorf("expected oidc provider to have value %s for key 'defaultScope', but value was %s", value, fetchedOidc.Config.DefaultScope)
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKeycloakOidcIdentityProviderLinkOrganization(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
-		if err != nil {
-			return err
-		}
-
-		if fetchedOidc.OrganizationId == "" {
-			return fmt.Errorf("expected oidc provider to be linked with an organization, but it was not")
 		}
 
 		return nil
@@ -660,4 +645,45 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	backchannel_supported = %t
 }
 	`, testAccRealm.Realm, oidc, clientSecretWriteOnly, clientSecretWriteOnlyVersion, backchannelSupported)
+}
+
+func testAccCheckKeycloakIdentityProviderLinkOrganization(
+	resourceName string,
+) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		expectedOrganization := rs.Primary.Attributes["organization_id"]
+		if expectedOrganization == "" {
+			return fmt.Errorf(
+				"resource %s has no organization_id in state",
+				resourceName,
+			)
+		}
+
+		idp, err := keycloakClient.GetIdentityProviderForOrganization(
+			testCtx,
+			rs.Primary.Attributes["realm"],
+			rs.Primary.Attributes["alias"],
+			expectedOrganization,
+			rs.Primary.Attributes["org_domain"],
+		)
+		if err != nil {
+			return err
+		}
+
+		if idp.OrganizationId != expectedOrganization {
+			return fmt.Errorf(
+				"expected identity provider %q to be linked to organization %q, got %q",
+				idp.Alias,
+				expectedOrganization,
+				idp.OrganizationId,
+			)
+		}
+
+		return nil
+	}
 }
