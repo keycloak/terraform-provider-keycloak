@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -21,20 +22,56 @@ func TestAccKeycloakGenericClientAuthorizationPolicy(t *testing.T) {
 	// the provider id returned by its PolicyProviderFactory.getId().
 	policyType := "script-always-granting-policy.js"
 
+	resourceName := "keycloak_generic_client_authorization_policy.test"
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testResourceKeycloakGenericClientAuthorizationPolicyDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceKeycloakGenericClientAuthorizationPolicy_basic(clientId, policyName, policyType),
-				Check:  testResourceKeycloakGenericClientAuthorizationPolicyExists("keycloak_generic_client_authorization_policy.test"),
+				// The deployed JS policy in this test ignores config; it's set here purely
+				// to verify the attribute round-trips through create/read/update/import.
+				Config: testResourceKeycloakGenericClientAuthorizationPolicy_config(clientId, policyName, policyType, `{
+					foo = "bar"
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceKeycloakGenericClientAuthorizationPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "config.foo", "bar"),
+					testResourceKeycloakGenericClientAuthorizationPolicyHasConfig(resourceName, map[string]string{"foo": "bar"}),
+				),
 			},
 			{
-				ResourceName:      "keycloak_generic_client_authorization_policy.test",
+				// Update: change a value and add a key. Proves Update sends the new config,
+				// not just Create.
+				Config: testResourceKeycloakGenericClientAuthorizationPolicy_config(clientId, policyName, policyType, `{
+					foo   = "baz"
+					other = "value"
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceKeycloakGenericClientAuthorizationPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "config.foo", "baz"),
+					resource.TestCheckResourceAttr(resourceName, "config.other", "value"),
+					testResourceKeycloakGenericClientAuthorizationPolicyHasConfig(resourceName, map[string]string{"foo": "baz", "other": "value"}),
+				),
+			},
+			{
+				// Clear config entirely. Regression check for a real bug caught in review:
+				// `omitempty` on the Go struct's Config field would drop the "config" key
+				// from the update payload for an empty map, leaving the previous values
+				// stuck on the server while Terraform reports a clean apply.
+				Config: testResourceKeycloakGenericClientAuthorizationPolicy_config(clientId, policyName, policyType, `{}`),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceKeycloakGenericClientAuthorizationPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "config.%", "0"),
+					testResourceKeycloakGenericClientAuthorizationPolicyHasConfig(resourceName, map[string]string{}),
+				),
+			},
+			{
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: getResourceKeycloakGenericClientAuthorizationPolicyImportId("keycloak_generic_client_authorization_policy.test"),
+				ImportStateIdFunc: getResourceKeycloakGenericClientAuthorizationPolicyImportId(resourceName),
 			},
 		},
 	})
@@ -102,7 +139,38 @@ func testResourceKeycloakGenericClientAuthorizationPolicyExists(resourceName str
 	}
 }
 
-func testResourceKeycloakGenericClientAuthorizationPolicy_basic(clientId, policyName, policyType string) string {
+// testResourceKeycloakGenericClientAuthorizationPolicyHasConfig fetches the policy directly
+// from the Keycloak Admin API (independent of Terraform's own Read path) and asserts its
+// config matches expected. ImportStateVerify alone compares two reads that both go through
+// the same Read function, so it can't catch a case where Terraform's in-memory state is
+// correct but the value never actually reached (or was cleared on) the server.
+func testResourceKeycloakGenericClientAuthorizationPolicyHasConfig(resourceName string, expected map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		policy, err := getResourceKeycloakGenericClientAuthorizationPolicyFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		// A nil map (no config key returned by the server) and an empty map both mean
+		// "no config", normalize before comparing so the empty-config case isn't a
+		// false failure.
+		actual := policy.Config
+		if len(actual) == 0 {
+			actual = map[string]string{}
+		}
+		if len(expected) == 0 {
+			expected = map[string]string{}
+		}
+
+		if !reflect.DeepEqual(actual, expected) {
+			return fmt.Errorf("expected policy config to be %v, got %v", expected, actual)
+		}
+
+		return nil
+	}
+}
+
+func testResourceKeycloakGenericClientAuthorizationPolicy_config(clientId, policyName, policyType, configHcl string) string {
 	return fmt.Sprintf(`
 	data "keycloak_realm" "realm" {
 		realm = "%s"
@@ -125,6 +193,7 @@ func testResourceKeycloakGenericClientAuthorizationPolicy_basic(clientId, policy
 		type               = "%s"
 		decision_strategy  = "UNANIMOUS"
 		logic              = "POSITIVE"
+		config             = %s
 	}
-	`, testAccRealm.Realm, clientId, policyName, policyType)
+	`, testAccRealm.Realm, clientId, policyName, policyType, configHcl)
 }

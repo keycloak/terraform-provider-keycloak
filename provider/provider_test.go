@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	testAccRealmTwo = createTestRealm(testCtx)
 	testAccRealmUserFederation = createTestRealm(testCtx)
 	testAccRealmFGAPv2 = createFGAPv2TestRealm(testCtx)
-	testAccRealmKeystore = createRealm(testCtx, "tf-acc-keystore")
+	testAccRealmKeystore = createRealmWithId(testCtx, "tf-acc-keystore", acctest.RandomWithPrefix("tf-acc-ks"))
 
 	code := m.Run()
 
@@ -97,8 +97,12 @@ func createTestRealm(testCtx context.Context) *keycloak.Realm {
 }
 
 func createRealm(testCtx context.Context, name string) *keycloak.Realm {
+	return createRealmWithId(testCtx, name, name)
+}
+
+func createRealmWithId(testCtx context.Context, name, id string) *keycloak.Realm {
 	r := &keycloak.Realm{
-		Id:      name,
+		Id:      id,
 		Realm:   name,
 		Enabled: true,
 	}

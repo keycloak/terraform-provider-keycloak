@@ -143,6 +143,45 @@ func TestAccKeycloakRealmKeystoreJava_updateRsaKeystoreGenerated(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmKeystoreJava_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	// the keystore file must live under /opt/keycloak/data/<realm name>, so a random realm can't be used here
+	realmName := testAccRealmKeystore.Realm
+	internalId := testAccRealmKeystore.Id
+	javaKeystoreName := acctest.RandomWithPrefix("tf-acc")
+
+	if realmName == internalId {
+		t.Fatalf("expected the shared keystore realm %s to have an internal id that differs from its name", realmName)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreJavaDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakRealmKeystoreJava_parentId(realmName, javaKeystoreName, "100"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
+					testAccCheckRealmKeystoreJavaParentId("keycloak_realm_keystore_java_keystore.realm_java_keystore", internalId),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_java_keystore.realm_java_keystore", "parent_id", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakRealmKeystoreJava_parentId(realmName, javaKeystoreName, "200"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreJavaExists("keycloak_realm_keystore_java_keystore.realm_java_keystore"),
+					testAccCheckRealmKeystoreJavaParentId("keycloak_realm_keystore_java_keystore.realm_java_keystore", internalId),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_java_keystore.realm_java_keystore", "parent_id", internalId),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckRealmKeystoreJavaExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, err := getKeycloakRealmKeystoreJavaFromState(s, resourceName)
@@ -163,6 +202,21 @@ func testAccCheckRealmKeystoreJavaFetch(resourceName string, keystore *keycloak.
 
 		keystore.Id = fetchedKeystore.Id
 		keystore.RealmId = fetchedKeystore.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckRealmKeystoreJavaParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		keystore, err := getKeycloakRealmKeystoreJavaFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if keystore.ParentId != expectedParentId {
+			return fmt.Errorf("expected java keystore %s to have parent id %s, but got %s", keystore.Id, expectedParentId, keystore.ParentId)
+		}
 
 		return nil
 	}
@@ -226,6 +280,23 @@ resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
     algorithm = "RS256"
 }
 	`, testAccRealmKeystore.Realm, javaKeystoreName)
+}
+
+func testKeycloakRealmKeystoreJava_parentId(realmName, javaKeystoreName, priority string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_keystore_java_keystore" "realm_java_keystore" {
+	name      = "%s"
+	realm_id  = "%s"
+
+    keystore          = "/opt/keycloak/data/tf-acc-keystore/keystore.jks"
+    keystore_password = "12345678"
+    key_alias    = "sig-rs256"
+    key_password = "12345678"
+
+    priority  = %s
+    algorithm = "RS256"
+}
+	`, javaKeystoreName, realmName, priority)
 }
 
 func testKeycloakRealmKeystoreJava_basicWithAttrValidation(javaKeystoreName, keyAlias string, attr, val string) string {

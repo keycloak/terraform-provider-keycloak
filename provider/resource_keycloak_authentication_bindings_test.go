@@ -22,6 +22,11 @@ func TestAccKeycloakAuthenticationBindings_browser(t *testing.T) {
 				Config: testKeycloakAuthenticationBindings(testAccRealm.Realm, flow, flowAlias),
 				Check:  testAccCheckKeycloakAuthenticationBindingBrowserSet(testAccRealm.Realm, "BrowserFlow", flowAlias),
 			},
+			{
+				ResourceName:      "keycloak_authentication_bindings.authentication_binding",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

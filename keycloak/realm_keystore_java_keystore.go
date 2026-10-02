@@ -55,10 +55,10 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.ParentId,
 		ProviderId:   "java-keystore",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -105,15 +105,6 @@ func convertFromComponentToRealmKeystoreJavaKeystore(component *component, realm
 }
 
 func (keycloakClient *KeycloakClient) NewRealmKeystoreJavaKeystore(ctx context.Context, realmKey *RealmKeystoreJavaKeystore) error {
-	if realmKey.ParentId == "" {
-		realm, err := keycloakClient.GetRealm(ctx, realmKey.RealmId)
-		if err != nil {
-			return err
-		}
-
-		realmKey.ParentId = realm.Id
-	}
-
 	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/components", realmKey.RealmId), convertFromRealmKeystoreJavaKeystoreToComponent(realmKey))
 	if err != nil {
 		return err

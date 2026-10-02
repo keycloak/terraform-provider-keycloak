@@ -67,3 +67,13 @@ resource "keycloak_authentication_bindings" "browser_authentication_binding" {
 - `client_authentication_flow` - (Optional) The alias of the flow to assign to the realm ClientAuthenticationFlow.
 - `docker_authentication_flow` - (Optional) The alias of the flow to assign to the realm DockerAuthenticationFlow.
 - `first_broker_login_flow` - (Optional) The alias of the flow to assign to the realm FirstBrokerLoginFlow (since Keycloak 24).
+
+## Import
+
+This resource can be imported using the realm ID.
+
+Example:
+
+```bash
+$ terraform import keycloak_authentication_bindings.example my-realm
+```

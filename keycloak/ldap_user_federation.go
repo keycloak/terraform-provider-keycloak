@@ -8,9 +8,10 @@ import (
 )
 
 type LdapUserFederation struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Enabled  bool
 	Priority int
@@ -232,17 +233,17 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		}
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           ldap.Id,
 		Name:         ldap.Name,
 		ProviderId:   "ldap",
 		ProviderType: userStorageProviderType,
-		ParentId:     ldap.RealmId,
 		Config:       componentConfig,
 	}, nil
 }
 
-func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFederation, error) {
+func convertFromComponentToLdapUserFederation(component *component, realmId string) (*LdapUserFederation, error) {
 	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
@@ -321,9 +322,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 	}
 
 	ldap := &LdapUserFederation{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: component.ParentId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Enabled:  enabled,
 		Priority: priority,
@@ -488,7 +490,7 @@ func (keycloakClient *KeycloakClient) GetLdapUserFederation(ctx context.Context,
 		return nil, err
 	}
 
-	return convertFromComponentToLdapUserFederation(component)
+	return convertFromComponentToLdapUserFederation(component, realmId)
 }
 
 func (keycloakClient *KeycloakClient) GetLdapUserFederationMappers(ctx context.Context, realmId, id string) (*[]interface{}, error) {
