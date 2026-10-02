@@ -47,4 +47,12 @@ resource "keycloak_realm_events" "realm_events" {
 
 ## Import
 
-This resource currently does not support importing.
+This resource can be imported using the realm ID.
+
+Example:
+
+```bash
+$ terraform import keycloak_realm_events.realm_events my-realm
+```
+
+Note: `enabled_event_types` is not populated on import (the provider only tracks it when set in configuration). If you manage the list, declare it explicitly; the first apply records it in state.

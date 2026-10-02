@@ -156,6 +156,13 @@ func TestAccKeycloakRealmEvents_unsetEnabledEventTypes(t *testing.T) {
 				Check:  testAccCheckKeycloakRealmEventsExists("keycloak_realm_events.realm_events"),
 			},
 			{
+				ResourceName:      "keycloak_realm_events.realm_events",
+				ImportState:       true,
+				ImportStateVerify: true,
+				// enabled_event_types is only stored in state when set in config, so it cannot round-trip an import
+				ImportStateVerifyIgnore: []string{"enabled_event_types"},
+			},
+			{
 				Config: testKeycloakRealmEvents_basicFromInterface(realmName, after),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmEventsExists("keycloak_realm_events.realm_events"),

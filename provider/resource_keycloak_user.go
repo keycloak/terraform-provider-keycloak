@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -100,9 +102,30 @@ func resourceKeycloakUser() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"value": {
-							Type:      schema.TypeString,
-							Required:  true,
-							Sensitive: true,
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							ConflictsWith: []string{"initial_password.0.value_wo", "initial_password.0.value_wo_version"},
+							ExactlyOneOf:  []string{"initial_password.0.value", "initial_password.0.value_wo"},
+						},
+						"value_wo": {
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							WriteOnly:     true,
+							ConflictsWith: []string{"initial_password.0.value"},
+							RequiredWith:  []string{"initial_password.0.value_wo_version"},
+							ExactlyOneOf:  []string{"initial_password.0.value", "initial_password.0.value_wo"},
+							ValidateFunc:  validation.StringIsNotEmpty,
+							Description:   "The initial password as write-only argument",
+						},
+						"value_wo_version": {
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"initial_password.0.value"},
+							RequiredWith:  []string{"initial_password.0.value_wo"},
+							ValidateFunc:  validation.StringIsNotEmpty,
+							Description:   "Version of the initial password write-only argument",
 						},
 						"temporary": {
 							Type:     schema.TypeBool,
@@ -127,8 +150,72 @@ func resourceKeycloakUser() *schema.Resource {
 	}
 }
 
+// onlyDiffOnCreate suppresses changes to the initial_password block once the user exists, since the
+// password is only applied during creation. This does not apply when the write-only argument
+// `value_wo` is used: there, `value_wo_version` acts as the trigger to reset the password of an
+// existing user, so its changes - and the changes of its sibling arguments - have to be visible.
 func onlyDiffOnCreate(_, _, _ string, d *schema.ResourceData) bool {
+	if initialPasswordUsesWriteOnly(d) {
+		return false
+	}
+
 	return d.Id() != ""
+}
+
+// initialPasswordUsesWriteOnly returns true when either the state or the configuration carries a
+// non-empty `initial_password.value_wo_version`, which is only valid together with
+// `initial_password.value_wo`. Looking at both sides keeps changes visible while a user is migrated
+// to or away from the write-only argument.
+func initialPasswordUsesWriteOnly(d *schema.ResourceData) bool {
+	stateVersion, configVersion := d.GetChange("initial_password.0.value_wo_version")
+
+	oldVersion, _ := stateVersion.(string)
+	newVersion, _ := configVersion.(string)
+
+	return oldVersion != "" || newVersion != ""
+}
+
+func initialPasswordPath(attribute string) cty.Path {
+	return cty.GetAttrPath("initial_password").IndexInt(0).GetAttr(attribute)
+}
+
+type userInitialPassword struct {
+	value     string
+	temporary bool
+}
+
+// getInitialPasswordFromData returns the initial password to send to Keycloak, or nil when the
+// configuration does not contain an initial_password block. The write-only argument `value_wo` is
+// never present in state, so it has to be read from the raw configuration.
+func getInitialPasswordFromData(data *schema.ResourceData) (*userInitialPassword, error) {
+	v, ok := data.GetOk("initial_password")
+	if !ok {
+		return nil, nil
+	}
+
+	passwordBlock := v.([]interface{})[0].(map[string]interface{})
+	initialPassword := &userInitialPassword{
+		value:     passwordBlock["value"].(string),
+		temporary: passwordBlock["temporary"].(bool),
+	}
+
+	// an empty version means the legacy `value` argument is in use, since the schema rejects an
+	// explicitly empty `value_wo_version`
+	if passwordBlock["value_wo_version"].(string) == "" {
+		return initialPassword, nil
+	}
+
+	valueWriteOnly, valueWriteOnlyDiags := data.GetRawConfigAt(initialPasswordPath("value_wo"))
+	if valueWriteOnlyDiags.HasError() {
+		return nil, errors.New("error reading 'initial_password.value_wo' argument")
+	}
+	if !valueWriteOnly.IsKnown() || valueWriteOnly.IsNull() || !valueWriteOnly.Type().Equals(cty.String) {
+		return nil, errors.New("'initial_password.value_wo' must be a known, non-null string")
+	}
+
+	initialPassword.value = valueWriteOnly.AsString()
+
+	return initialPassword, nil
 }
 
 func mapFromDataToUser(data *schema.ResourceData) *keycloak.User {
@@ -219,12 +306,12 @@ func resourceKeycloakUserCreate(ctx context.Context, data *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 
-		v, isInitialPasswordSet := data.GetOk("initial_password")
-		if isInitialPasswordSet {
-			passwordBlock := v.([]interface{})[0].(map[string]interface{})
-			passwordValue := passwordBlock["value"].(string)
-			isPasswordTemporary := passwordBlock["temporary"].(bool)
-			err := keycloakClient.ResetUserPassword(ctx, user.RealmId, user.Id, passwordValue, isPasswordTemporary)
+		initialPassword, err := getInitialPasswordFromData(data)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if initialPassword != nil {
+			err := keycloakClient.ResetUserPassword(ctx, user.RealmId, user.Id, initialPassword.value, initialPassword.temporary)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -281,6 +368,20 @@ func resourceKeycloakUserUpdate(ctx context.Context, data *schema.ResourceData, 
 	err := keycloakClient.UpdateUser(ctx, user)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// a change of the write-only version is the only way to reset the password of an existing user
+	if data.Get("initial_password.0.value_wo_version").(string) != "" && data.HasChange("initial_password.0.value_wo_version") {
+		initialPassword, err := getInitialPasswordFromData(data)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if initialPassword != nil {
+			err := keycloakClient.ResetUserPassword(ctx, user.RealmId, user.Id, initialPassword.value, initialPassword.temporary)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	mapFromUserToData(data, user)
