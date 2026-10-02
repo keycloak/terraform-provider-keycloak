@@ -133,6 +133,9 @@ func resourceKeycloakGroupRolesReconcile(ctx context.Context, data *schema.Resou
 
 	// get the list of currently assigned roles. Due to default realm and client roles
 	roleMappings, err := keycloakClient.GetOrganizationGroupRoleMappings(ctx, realmId, organizationId, groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// sort into roles we need to add and roles we need to remove
 	updates := calculateRoleMappingUpdates(tfRoles, intoRoleMapping(roleMappings))
