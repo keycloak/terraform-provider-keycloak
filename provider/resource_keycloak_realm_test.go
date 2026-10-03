@@ -2317,6 +2317,8 @@ func TestAccKeycloakRealm_SmtpServerPasswordWriteOnly(t *testing.T) {
 			{Config: config("second-secret", "v1", "updated"), Check: check},
 			{Config: config("second-secret", "v2", "updated"), Check: check},
 			{Config: config("second-secret", "v2", "updated"), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), PlanOnly: true, ExpectError: regexp.MustCompile("SMTP destination settings changed")},
+			{Config: strings.ReplaceAll(config("second-secret", "v3", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), Check: check},
 			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `password_wo_version = "v2"`, ""), ExpectError: regexp.MustCompile("Missing required argument")},
 		},
 	})

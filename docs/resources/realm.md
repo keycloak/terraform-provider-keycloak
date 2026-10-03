@@ -201,6 +201,8 @@ resource "keycloak_realm" "realm" {
 
 When migrating from `password`, remove it and configure both `password_wo` and `password_wo_version`. The password is applied and removed from the current state. Previous state snapshots can still contain the old password. After importing a realm, configure both write-only arguments to manage its SMTP password; the version cannot be recovered from Keycloak.
 
+When using `password_wo`, also change `password_wo_version` when changing the SMTP host, port, SSL, STARTTLS, sender (`from`), or username. Keycloak cannot preserve a masked password when these destination settings change, so the provider requires a new version to resend the real password. Other realm settings and SMTP display names can be updated without changing the password version.
+
 ### Internationalization
 
 Internationalization support can be configured by using the `internationalization` block, which supports the following arguments:

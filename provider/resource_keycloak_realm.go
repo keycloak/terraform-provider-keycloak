@@ -184,6 +184,7 @@ func resourceKeycloakRealm() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmRead,
 		DeleteContext: resourceKeycloakRealmDelete,
 		UpdateContext: resourceKeycloakRealmUpdate,
+		CustomizeDiff: validateRealmSMTPPasswordVersionDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -802,6 +803,42 @@ func resourceKeycloakRealm() *schema.Resource {
 			},
 		},
 	}
+}
+
+const realmSMTPPasswordVersionRequired = "SMTP destination settings changed; change smtp_server.auth.password_wo_version to send the real password and preserve SMTP authentication"
+
+func validateRealmSMTPPasswordVersionDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	const versionPath = "smtp_server.0.auth.0.password_wo_version"
+	if diff.Id() == "" || !diff.NewValueKnown(versionPath) || diff.Get(versionPath).(string) == "" || diff.HasChange(versionPath) {
+		return nil
+	}
+
+	for _, path := range []string{
+		"smtp_server.0.host", "smtp_server.0.port", "smtp_server.0.ssl",
+		"smtp_server.0.starttls", "smtp_server.0.from", "smtp_server.0.auth.0.username",
+	} {
+		if diff.NewValueKnown(path) && diff.HasChange(path) {
+			return fmt.Errorf("%s (%s)", realmSMTPPasswordVersionRequired, path)
+		}
+	}
+	return nil
+}
+
+// Match Keycloak's destination comparison before reusing a masked SMTP password.
+// Empty ports are omitted from the API payload and therefore default to 25.
+func realmSMTPDestinationUnchanged(current, next keycloak.SmtpServer) bool {
+	port := func(value string) string {
+		if value == "" {
+			return "25"
+		}
+		return value
+	}
+	return current.Host == next.Host && port(current.Port) == port(next.Port) &&
+		current.Ssl == next.Ssl && current.StartTls == next.StartTls &&
+		current.From == next.From && current.User == next.User &&
+		current.AuthTokenUrl == next.AuthTokenUrl &&
+		current.AuthTokenClientId == next.AuthTokenClientId &&
+		current.AuthTokenScope == next.AuthTokenScope
 }
 
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
@@ -1778,11 +1815,14 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 	}
 
 	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
-		// The SMTP settings are replaced as a whole. Echo the server's masked password
-		// to preserve it when updating other realm settings without rotating the secret.
+		// Keycloak only preserves a masked password while the SMTP destination is
+		// unchanged. Check the server too, in case it drifted after planning.
 		currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if !realmSMTPDestinationUnchanged(currentRealm.SmtpServer, realm.SmtpServer) {
+			return diag.Errorf("%s", realmSMTPPasswordVersionRequired)
 		}
 		realm.SmtpServer.Password = currentRealm.SmtpServer.Password
 	}

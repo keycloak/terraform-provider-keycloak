@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"strings"
 	"sync"
 	"testing"
 
@@ -23,12 +25,13 @@ import (
 func TestKeycloakRealmSMTPPasswordWriteOnly(t *testing.T) {
 	var mu sync.Mutex
 	var current keycloak.Realm
+	var writes int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Path == "/admin/serverinfo" {
-			fmt.Fprint(w, `{"systemInfo":{"version":"26.0.0"}}`)
+			fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
 			return
 		}
 		switch r.Method {
@@ -40,9 +43,23 @@ func TestKeycloakRealmSMTPPasswordWriteOnly(t *testing.T) {
 				return
 			}
 			if next.SmtpServer.Password == "**********" {
-				next.SmtpServer.Password = current.SmtpServer.Password
+				// Keycloak 26.8 removes masked credentials when the destination changes.
+				old, new := current.SmtpServer, next.SmtpServer
+				if old.Port == "" {
+					old.Port = "25"
+				}
+				if new.Port == "" {
+					new.Port = "25"
+				}
+				next.SmtpServer.Password = ""
+				if old.Host == new.Host && old.Port == new.Port && old.Ssl == new.Ssl &&
+					old.StartTls == new.StartTls && old.From == new.From && old.User == new.User &&
+					old.AuthTokenUrl == new.AuthTokenUrl && old.AuthTokenClientId == new.AuthTokenClientId && old.AuthTokenScope == new.AuthTokenScope {
+					next.SmtpServer.Password = current.SmtpServer.Password
+				}
 			}
 			current = next
+			writes++
 			w.WriteHeader(http.StatusNoContent)
 		case http.MethodGet:
 			response := current
@@ -95,28 +112,56 @@ func TestKeycloakRealmSMTPPasswordWriteOnly(t *testing.T) {
 		}
 	}
 
-	resource.UnitTest(t, resource.TestCase{
-		ProtoV5ProviderFactories: factories,
-		Steps: []resource.TestStep{
-			{
-				Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("first-secret", "v1", "first"),
-				Check:  check("first-secret", "v1"),
-			},
-			{
-				Config:             testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v1", "first"),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-			{
-				Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v1", "updated"),
-				Check:  check("first-secret", "v1"),
-			},
-			{
-				Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v2", "updated"),
-				Check:  check("second-secret", "v2"),
-			},
-			{
-				Config: `resource "keycloak_realm" "realm" {
+	steps := []resource.TestStep{
+		{
+			Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("first-secret", "v1", "first"),
+			Check:  check("first-secret", "v1"),
+		},
+		{
+			Config:             testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v1", "first"),
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		},
+		{
+			Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v1", "updated"),
+			Check:  check("first-secret", "v1"),
+		},
+		{
+			Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v2", "updated"),
+			Check:  check("second-secret", "v2"),
+		},
+		{
+			Config: strings.ReplaceAll(testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", "v2", "updated"), `from = "admin@example.com"`, "from = \"admin@example.com\"\nfrom_display_name = \"Updated sender\""),
+			Check:  check("second-secret", "v2"),
+		},
+	}
+	// Each destination change must fail without a version bump, then succeed
+	// with the real password when a new version is provided.
+	for i, change := range []struct{ old, new string }{
+		{`host = "smtp.example.com"`, `host = "other.example.com"`},
+		{`host = "smtp.example.com"`, "host = \"smtp.example.com\"\nport = \"587\""},
+		{`host = "smtp.example.com"`, "host = \"smtp.example.com\"\nssl = true"},
+		{`host = "smtp.example.com"`, "host = \"smtp.example.com\"\nstarttls = true"},
+		{`from = "admin@example.com"`, `from = "other@example.com"`},
+		{`username = "user"`, `username = "other-user"`},
+	} {
+		version := fmt.Sprintf("destination-%d", i)
+		previousVersion := "v2"
+		if i > 0 {
+			previousVersion = fmt.Sprintf("reset-%d", i-1)
+		}
+		changed := func(v string) string {
+			return strings.ReplaceAll(testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", v, "updated"), change.old, change.new)
+		}
+		steps = append(steps,
+			resource.TestStep{Config: changed(previousVersion), PlanOnly: true, ExpectError: regexp.MustCompile("SMTP destination settings changed")},
+			resource.TestStep{Config: changed(version), Check: check("second-secret", version)},
+			resource.TestStep{Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("second-secret", fmt.Sprintf("reset-%d", i), "updated"), Check: check("second-secret", fmt.Sprintf("reset-%d", i))},
+		)
+	}
+	steps = append(steps, []resource.TestStep{
+		{
+			Config: `resource "keycloak_realm" "realm" {
 					realm = "smtp-test"
 					smtp_server {
 						host = "smtp.example.com"
@@ -127,37 +172,98 @@ func TestKeycloakRealmSMTPPasswordWriteOnly(t *testing.T) {
 						}
 					}
 				}`,
-				Check: check("legacy-secret", ""),
+			Check: check("legacy-secret", ""),
+		},
+		{
+			Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("migrated-secret", "v1", "updated"),
+			Check:  check("migrated-secret", "v1"),
+		},
+		{
+			ResourceName:      "keycloak_realm.realm",
+			ImportState:       true,
+			ImportStateVerify: true,
+			ImportStateVerifyIgnore: []string{
+				"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo_version",
 			},
-			{
-				Config: testKeycloakRealmSMTPPasswordWriteOnlyConfig("migrated-secret", "v1", "updated"),
-				Check:  check("migrated-secret", "v1"),
-			},
-			{
-				ResourceName:      "keycloak_realm.realm",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo_version",
-				},
-			},
-			{
-				Config:             testKeycloakRealmSMTPPasswordWriteOnlyConfig("migrated-secret", "v1", "updated"),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-			{
-				Config: `resource "keycloak_realm" "realm" {
+		},
+		{
+			Config:             testKeycloakRealmSMTPPasswordWriteOnlyConfig("migrated-secret", "v1", "updated"),
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		},
+		{
+			Config: `resource "keycloak_realm" "realm" {
 					realm = "smtp-test"
 					smtp_server {
 						host = "smtp.example.com"
 						from = "admin@example.com"
 					}
 				}`,
-				Check: check("", ""),
-			},
+			Check: check("", ""),
 		},
+	}...)
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: factories,
+		Steps:                    steps,
 	})
+
+	// Verify that the emulator itself rejects a mask on a changed destination,
+	// rather than silently hiding this regression with unconditional preservation.
+	base := keycloak.Realm{Realm: "smtp-test", SmtpServer: keycloak.SmtpServer{
+		Host: "smtp.example.com", From: "admin@example.com", User: "user", Auth: true, AuthType: "basic", Password: "secret",
+	}}
+	if err := client.NewRealm(context.Background(), &base); err != nil {
+		t.Fatal(err)
+	}
+	masked := base
+	masked.SmtpServer.Password = "**********"
+	if err := client.UpdateRealm(context.Background(), &masked); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	if current.SmtpServer.Password != "secret" {
+		t.Error("emulator did not preserve password with unchanged destination")
+	}
+	mu.Unlock()
+	masked.SmtpServer.Host = "other.example.com"
+	if err := client.UpdateRealm(context.Background(), &masked); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	if current.SmtpServer.Password != "" {
+		t.Error("emulator preserved masked password with changed destination")
+	}
+	mu.Unlock()
+
+	// Bypass planning and simulate destination drift before Apply. The provider
+	// must refuse to write even when the Terraform diff only changes display_name.
+	if err := client.UpdateRealm(context.Background(), &base); err != nil {
+		t.Fatal(err)
+	}
+	data := schema.TestResourceDataRaw(t, resourceKeycloakRealm().Schema, map[string]interface{}{
+		"realm": "smtp-test", "display_name": "original",
+		"smtp_server": []interface{}{map[string]interface{}{
+			"host": "other.example.com", "from": "admin@example.com",
+			"auth": []interface{}{map[string]interface{}{"username": "user", "password_wo_version": "v1"}},
+		}},
+	})
+	data.SetId("smtp-test")
+	data = resourceKeycloakRealm().Data(data.State())
+	if err := data.Set("display_name", "updated"); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	before := writes
+	mu.Unlock()
+	diags := resourceKeycloakRealmUpdate(context.Background(), data, client)
+	if !diags.HasError() || !strings.Contains(diags[0].Summary, "SMTP destination settings changed") {
+		t.Fatalf("expected SMTP destination error, got %v", diags)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if writes != before || current.SmtpServer.Password != "secret" {
+		t.Error("unsafe apply modified SMTP settings or password")
+	}
 }
 
 func testKeycloakRealmSMTPPasswordWriteOnlyConfig(password, version, displayName string) string {
