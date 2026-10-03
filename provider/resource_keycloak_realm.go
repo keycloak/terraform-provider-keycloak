@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -336,12 +337,37 @@ func resourceKeycloakRealm() *schema.Resource {
 										Required: true,
 									},
 									"password": {
-										Type:      schema.TypeString,
-										Required:  true,
-										Sensitive: true,
-										DiffSuppressFunc: func(_, smtpServerPassword, _ string, _ *schema.ResourceData) bool {
+										Type:          schema.TypeString,
+										Optional:      true,
+										Sensitive:     true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password_wo", "smtp_server.0.auth.0.password_wo_version"},
+										ExactlyOneOf:  []string{"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo"},
+										DiffSuppressFunc: func(_, smtpServerPassword, _ string, data *schema.ResourceData) bool {
+											oldVersion, newVersion := data.GetChange("smtp_server.0.auth.0.password_wo_version")
+											if oldVersion != "" || newVersion != "" {
+												return false
+											}
 											return smtpServerPassword == "**********"
 										},
+									},
+									"password_wo": {
+										Type:          schema.TypeString,
+										Optional:      true,
+										Sensitive:     true,
+										WriteOnly:     true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password"},
+										ExactlyOneOf:  []string{"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo"},
+										RequiredWith:  []string{"smtp_server.0.auth.0.password_wo_version"},
+										ValidateFunc:  validation.StringIsNotEmpty,
+										Description:   "The SMTP server password as a write-only argument",
+									},
+									"password_wo_version": {
+										Type:          schema.TypeString,
+										Optional:      true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password"},
+										RequiredWith:  []string{"smtp_server.0.auth.0.password_wo"},
+										ValidateFunc:  validation.StringIsNotEmpty,
+										Description:   "Change this value to update the SMTP server write-only password",
 									},
 								},
 							},
@@ -779,6 +805,10 @@ func resourceKeycloakRealm() *schema.Resource {
 }
 
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
+	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok {
+		return "", false
+	}
+
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
 		authConfig, ok := smtpSettings["auth"].([]interface{})
@@ -939,6 +969,19 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			smtpServer.AuthType = "basic"
 			smtpServer.User = auth["username"].(string)
 			smtpServer.Password = auth["password"].(string)
+			if auth["password_wo_version"].(string) != "" {
+				smtpServer.Password = ""
+				if data.Id() == "" || data.HasChange("smtp_server.0.auth.0.password_wo_version") {
+					password, diags := data.GetRawConfigAt(cty.GetAttrPath("smtp_server").IndexInt(0).GetAttr("auth").IndexInt(0).GetAttr("password_wo"))
+					if diags.HasError() {
+						return nil, fmt.Errorf("error reading 'smtp_server.auth.password_wo' argument")
+					}
+					if !password.IsKnown() || password.IsNull() || !password.Type().Equals(cty.String) {
+						return nil, fmt.Errorf("'smtp_server.auth.password_wo' must be a known, non-null string")
+					}
+					smtpServer.Password = password.AsString()
+				}
+			}
 		} else if len(tokenAuthConfig) == 1 {
 			tokenAuth := tokenAuthConfig[0].(map[string]interface{})
 
@@ -1477,7 +1520,11 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 				auth := make(map[string]interface{})
 
 				auth["username"] = realm.SmtpServer.User
-				auth["password"] = realm.SmtpServer.Password
+				if passwordVersion, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok {
+					auth["password_wo_version"] = passwordVersion.(string)
+				} else {
+					auth["password"] = realm.SmtpServer.Password
+				}
 
 				smtpSettings["auth"] = []interface{}{auth}
 			}
@@ -1728,6 +1775,16 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
+		// The SMTP settings are replaced as a whole. Echo the server's masked password
+		// to preserve it when updating other realm settings without rotating the secret.
+		currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		realm.SmtpServer.Password = currentRealm.SmtpServer.Password
 	}
 
 	err = keycloakClient.ValidateRealm(ctx, realm)
