@@ -32,6 +32,12 @@ func resourceKeycloakGroupRoles() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"organization_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "When provided, the group is treated as an organization group and managed via the Organization API. Required for Keycloak 26.6.0+ organization groups.",
+			},
 			"role_ids": {
 				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
@@ -53,7 +59,7 @@ func groupRolesId(realmId, groupId string) string {
 
 func addRolesToGroup(ctx context.Context, keycloakClient *keycloak.KeycloakClient, clientRolesToAdd map[string][]*keycloak.Role, realmRolesToAdd []*keycloak.Role, group *keycloak.Group) error {
 	if len(realmRolesToAdd) != 0 {
-		err := keycloakClient.AddRealmRolesToGroup(ctx, group.RealmId, group.Id, realmRolesToAdd)
+		err := keycloakClient.AddRealmRolesToOrganizationGroup(ctx, group.RealmId, group.OrganizationId, group.Id, realmRolesToAdd)
 		if err != nil {
 			return err
 		}
@@ -61,7 +67,7 @@ func addRolesToGroup(ctx context.Context, keycloakClient *keycloak.KeycloakClien
 
 	for k, roles := range clientRolesToAdd {
 		if len(roles) != 0 {
-			err := keycloakClient.AddClientRolesToGroup(ctx, group.RealmId, group.Id, k, roles)
+			err := keycloakClient.AddClientRolesToOrganizationGroup(ctx, group.RealmId, group.OrganizationId, group.Id, k, roles)
 			if err != nil {
 				return err
 			}
@@ -73,7 +79,7 @@ func addRolesToGroup(ctx context.Context, keycloakClient *keycloak.KeycloakClien
 
 func removeRolesFromGroup(ctx context.Context, keycloakClient *keycloak.KeycloakClient, clientRolesToRemove map[string][]*keycloak.Role, realmRolesToRemove []*keycloak.Role, group *keycloak.Group) error {
 	if len(realmRolesToRemove) != 0 {
-		err := keycloakClient.RemoveRealmRolesFromGroup(ctx, group.RealmId, group.Id, realmRolesToRemove)
+		err := keycloakClient.RemoveRealmRolesFromOrganizationGroup(ctx, group.RealmId, group.OrganizationId, group.Id, realmRolesToRemove)
 		if err != nil {
 			return err
 		}
@@ -81,7 +87,7 @@ func removeRolesFromGroup(ctx context.Context, keycloakClient *keycloak.Keycloak
 
 	for k, roles := range clientRolesToRemove {
 		if len(roles) != 0 {
-			err := keycloakClient.RemoveClientRolesFromGroup(ctx, group.RealmId, group.Id, k, roles)
+			err := keycloakClient.RemoveClientRolesFromOrganizationGroup(ctx, group.RealmId, group.OrganizationId, group.Id, k, roles)
 			if err != nil {
 				return err
 			}
@@ -98,8 +104,9 @@ func resourceKeycloakGroupRolesReconcile(ctx context.Context, data *schema.Resou
 	groupId := data.Get("group_id").(string)
 	roleIds := interfaceSliceToStringSlice(data.Get("role_ids").(*schema.Set).List())
 	exhaustive := data.Get("exhaustive").(bool)
+	organizationId := data.Get("organization_id").(string)
 
-	group, err := keycloakClient.GetGroup(ctx, realmId, groupId)
+	group, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, groupId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -126,7 +133,10 @@ func resourceKeycloakGroupRolesReconcile(ctx context.Context, data *schema.Resou
 	}
 
 	// get the list of currently assigned roles. Due to default realm and client roles
-	roleMappings, err := keycloakClient.GetGroupRoleMappings(ctx, realmId, groupId)
+	roleMappings, err := keycloakClient.GetOrganizationGroupRoleMappings(ctx, realmId, organizationId, groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// sort into roles we need to add and roles we need to remove
 	updates := calculateRoleMappingUpdates(tfRoles, intoRoleMapping(roleMappings))
@@ -157,13 +167,14 @@ func resourceKeycloakGroupRolesRead(ctx context.Context, data *schema.ResourceDa
 	groupId := data.Get("group_id").(string)
 	sortedRoleIds := interfaceSliceToStringSlice(data.Get("role_ids").(*schema.Set).List())
 	exhaustive := data.Get("exhaustive").(bool)
+	organizationId := data.Get("organization_id").(string)
 
 	// check if group exists, remove from state if not found
-	if _, err := keycloakClient.GetGroup(ctx, realmId, groupId); err != nil {
+	if _, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, groupId); err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	roles, err := keycloakClient.GetGroupRoleMappings(ctx, realmId, groupId)
+	roles, err := keycloakClient.GetOrganizationGroupRoleMappings(ctx, realmId, organizationId, groupId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -195,8 +206,9 @@ func resourceKeycloakGroupRolesDelete(ctx context.Context, data *schema.Resource
 
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
+	organizationId := data.Get("organization_id").(string)
 
-	group, err := keycloakClient.GetGroup(ctx, realmId, groupId)
+	group, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, groupId)
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
@@ -219,24 +231,33 @@ func resourceKeycloakGroupRolesImport(ctx context.Context, d *schema.ResourceDat
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	parts := strings.Split(d.Id(), "/")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("Invalid import. Supported import format: {{realm}}/{{groupId}}.")
+	if len(parts) != 2 && len(parts) != 3 {
+		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realm}}/{{groupId}} or {{realm}}/{{organizationId}}/{{groupId}}.")
 	}
 
 	realmId := parts[0]
-	groupId := parts[1]
+	var organizationId, groupId string
+	if len(parts) == 3 {
+		organizationId = parts[1]
+		groupId = parts[2]
+	} else {
+		groupId = parts[1]
+	}
 
-	if _, err := keycloakClient.GetGroup(ctx, realmId, groupId); err != nil {
+	if _, err := keycloakClient.GetOrganizationGroup(ctx, realmId, organizationId, groupId); err != nil {
 		return nil, err
 	}
 
-	_, err := keycloakClient.GetGroupRoleMappings(ctx, realmId, groupId)
+	_, err := keycloakClient.GetOrganizationGroupRoleMappings(ctx, realmId, organizationId, groupId)
 	if err != nil {
 		return nil, err
 	}
 
 	d.Set("realm_id", realmId)
 	d.Set("group_id", groupId)
+	if organizationId != "" {
+		d.Set("organization_id", organizationId)
+	}
 	d.Set("exhaustive", true)
 
 	diagnostics := resourceKeycloakGroupRolesRead(ctx, d, meta)
