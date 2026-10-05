@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -275,12 +274,7 @@ func dataSourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resour
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
-	getClient := keycloakClient.GetOpenidClientByClientId
-	if clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm") {
-		getClient = keycloakClient.GetOpenidClientByClientIdSkipSecret
-	}
-	client, err := getClient(ctx, realmId, clientId)
-
+	client, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, clientId)
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
