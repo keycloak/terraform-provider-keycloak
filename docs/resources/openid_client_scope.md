@@ -27,6 +27,28 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 }
 ```
 
+## Example Usage (Dynamic Scope)
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
+resource "keycloak_openid_client_scope" "dynamic_scope" {
+  realm_id                            = keycloak_realm.realm.id
+  name                                = "my-dynamic-scope"
+  description                         = "When requested, this scope will map a user's group memberships to a claim"
+  include_in_token_scope              = true
+  gui_order                           = 1
+
+  extra_config = {
+    "is.dynamic.scope"     = "true"
+    "dynamic.scope.regexp" = "my-dynamic-scope:*"
+  }
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this client scope belongs to.
