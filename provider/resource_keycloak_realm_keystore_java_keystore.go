@@ -79,6 +79,7 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Password for the keys",
+				Sensitive:   true,
 			},
 			"key_alias": {
 				Type:        schema.TypeString,
@@ -89,6 +90,7 @@ func resourceKeycloakRealmKeystoreJavaKeystore() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Password for the private key",
+				Sensitive:   true,
 			},
 		},
 	}
