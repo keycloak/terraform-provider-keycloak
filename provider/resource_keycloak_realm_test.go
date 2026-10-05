@@ -2296,3 +2296,30 @@ resource "keycloak_realm" "realm" {
 }
 `, realm, displayName, displayNameHtml)
 }
+
+func TestAccKeycloakRealm_SmtpServerPasswordWriteOnly(t *testing.T) {
+	// Reuse the existing realm acceptance harness for a real Keycloak server.
+	realm := acctest.RandomWithPrefix("tf-acc-smtp-wo")
+	config := func(password, version, name string) string {
+		return strings.ReplaceAll(testKeycloakRealmSMTPPasswordWriteOnlyConfig(password, version, name), "smtp-test", realm)
+	}
+	check := resource.ComposeTestCheckFunc(
+		resource.TestCheckNoResourceAttr("keycloak_realm.realm", "smtp_server.0.auth.0.password_wo"),
+		resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.auth.0.password", ""),
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{Config: config("first-secret", "v1", "first"), Check: check},
+			{Config: config("second-secret", "v1", "first"), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: config("second-secret", "v1", "updated"), Check: check},
+			{Config: config("second-secret", "v2", "updated"), Check: check},
+			{Config: config("second-secret", "v2", "updated"), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), PlanOnly: true, ExpectError: regexp.MustCompile("SMTP destination settings changed")},
+			{Config: strings.ReplaceAll(config("second-secret", "v3", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), Check: check},
+			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `password_wo_version = "v2"`, ""), ExpectError: regexp.MustCompile("Missing required argument")},
+		},
+	})
+}
