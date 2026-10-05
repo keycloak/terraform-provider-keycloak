@@ -65,6 +65,7 @@ func resourceKeycloakRealmKeystoreRsa() *schema.Resource {
 			"private_key": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Sensitive:     true,
 				Description:   "Private RSA Key encoded in PEM format",
 				ConflictsWith: []string{"private_key_wo", "private_key_wo_version"},
 				ExactlyOneOf:  []string{"private_key", "private_key_wo"},
