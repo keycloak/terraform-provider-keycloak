@@ -16,6 +16,7 @@ var usersAdminPermissionScopes = []string{
 	"map-roles",
 	"manage-group-membership",
 	"impersonate",
+	"reset-password",
 }
 
 func resourceKeycloakUsersAdminPermissions() *schema.Resource {
