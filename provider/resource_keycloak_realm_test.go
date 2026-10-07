@@ -1207,7 +1207,9 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	// Keycloak falls back to its default signature algorithms for the passwordless policy if none are configured,
+	// which shows up as a diff. Therefore the random subset must never be empty.
+	signatureAlgorithms := append([]string{"ES256"}, randomStringSliceSubset([]string{"ES384", "ES512", "RS256", "RS384", "RS512"})...)
 	avoidSameAuthenticatorRegister := randomBool()
 	passwordlessPasskeysEnabled := randomBool()
 

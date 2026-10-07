@@ -80,6 +80,8 @@ func convertFromComponentToCustomUserFederation(component *component, realmName 
 		"cachePolicy":       true,
 		"fullSyncPeriod":    true,
 		"changedSyncPeriod": true,
+		// managed by Keycloak, older versions update this after every sync
+		"lastSync": true,
 	}
 	config := make(map[string][]string)
 	for k, v := range component.Config {
