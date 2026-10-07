@@ -1,5 +1,52 @@
 ## What's Changed
 
+## 5.10.0 (October 5, 2026)
+
+FEATURES:
+
+* feat: add keycloak_organization_memberships resource by @vlevshits in https://github.com/keycloak/terraform-provider-keycloak/pull/1656
+* feat: add keycloak_realm_keystore_rsa_enc_generated resource by @Scholdan in https://github.com/keycloak/terraform-provider-keycloak/pull/1712
+
+IMPROVEMENTS:
+
+* Add write-only bind credential support for LDAP federation by @datenzar in https://github.com/keycloak/terraform-provider-keycloak/pull/1497
+* feat(group_admin_permissions): add manage-membership-of-members and impersonate-members scopes by @baptistegh in https://github.com/keycloak/terraform-provider-keycloak/pull/1686
+* Support copying built-in authentication flows by @theo-ritense in https://github.com/keycloak/terraform-provider-keycloak/pull/1688
+* Support max_secondary_auth_failures in brute force detection by @theo-ritense in https://github.com/keycloak/terraform-provider-keycloak/pull/1682
+* Update to KC 26.7.3 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1694
+* feat(provider): add config map to keycloak_generic_client_authorization_policy by @alekc in https://github.com/keycloak/terraform-provider-keycloak/pull/1676
+* feat: support import for client scope bindings and authentication bindings by @Scholdan in https://github.com/keycloak/terraform-provider-keycloak/pull/1708
+* Update to KC26.7.4 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1709
+* feat: Add write-only arguments for keycloak_user initial password by @sventorben in https://github.com/keycloak/terraform-provider-keycloak/pull/1706
+* feat: support import for keycloak_realm_events by @Scholdan in https://github.com/keycloak/terraform-provider-keycloak/pull/1713
+* Update to Keycloak 26.8.0 and 26.7.5 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1717
+* Document Go 1.26 as the required development toolchain by @sschu with @Copilot in https://github.com/keycloak/terraform-provider-keycloak/pull/1697
+* Add support for ephemeral/write-only arguments for keycloak_realm_keystore_rsa by @amarkevich in https://github.com/keycloak/terraform-provider-keycloak/pull/1714
+
+BUG FIXES:
+
+* fix: sort multivalue attribute values on keycloak_role and organization resource before diff by @starsep in https://github.com/keycloak/terraform-provider-keycloak/pull/1690
+* fix(realm_client_registration_policy): let keycloak resolve the component parentId by @kchledowski in https://github.com/keycloak/terraform-provider-keycloak/pull/1683
+* fix(realm): convert KeycloakBoolQuoted to bool in SMTP state map by @tbobm in https://github.com/keycloak/terraform-provider-keycloak/pull/1555
+* fix: Add ability to update SMTP servers OAUTH client secret by @TrueTechy in https://github.com/keycloak/terraform-provider-keycloak/pull/1596
+* fix: let keycloak resolve the parentId of all realm components by @kchledowski in https://github.com/keycloak/terraform-provider-keycloak/pull/1699
+* Fix missing sensitive labels by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1723
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [vlevshits](https://github.com/vlevshits)
+- [Scholdan](https://github.com/Scholdan)
+- [datenzar](https://github.com/datenzar)
+- [baptistegh](https://github.com/baptistegh)
+- [theo-ritense](https://github.com/theo-ritense)
+- [alekc](https://github.com/alekc)
+- [sventorben](https://github.com/sventorben)
+- [amarkevich](https://github.com/amarkevich)
+- [starsep](https://github.com/starsep)
+- [kchledowski](https://github.com/kchledowski)
+- [tbobm](https://github.com/tbobm)
+- [TrueTechy](https://github.com/TrueTechy)
+
 ## 5.9.0 (July 31, 2026)
 
 FEATURES:
