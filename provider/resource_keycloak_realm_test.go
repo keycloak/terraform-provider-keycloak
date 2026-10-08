@@ -1170,7 +1170,7 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	signatureAlgorithms := randomNonEmptyStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
 	if len(signatureAlgorithms) == 0 {
 		signatureAlgorithms = []string{"ES256"}
 	}
@@ -1207,7 +1207,7 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	signatureAlgorithms := randomNonEmptyStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
 	avoidSameAuthenticatorRegister := randomBool()
 	passwordlessPasskeysEnabled := randomBool()
 
