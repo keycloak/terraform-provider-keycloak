@@ -156,8 +156,9 @@ func testAccCheckKeycloakAuthenticationExecutionConfigDestroy(s *terraform.State
 		}
 
 		config := &keycloak.AuthenticationExecutionConfig{
-			RealmId: rs.Primary.Attributes["realm_id"],
-			Id:      rs.Primary.ID,
+			RealmId:     rs.Primary.Attributes["realm_id"],
+			ExecutionId: rs.Primary.Attributes["execution_id"],
+			Id:          rs.Primary.ID,
 		}
 		if err := keycloakClient.GetAuthenticationExecutionConfig(testCtx, config); err == nil {
 			return fmt.Errorf("authentication execution config still exists")
