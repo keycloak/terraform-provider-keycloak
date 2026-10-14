@@ -17,6 +17,9 @@ By default, Keycloak sets the `profile`, `email`, `roles`, and `web-origins` sco
 created client. If you create this resource for the first time and do not include these scopes, a following run of
 `terraform plan` will result in changes.
 
+Additionally, if a scope is set as optional, this resource will remove and re-add it as a default scope.
+Warning: Defining an optional and a default resource for the same scope is undefined behavior.
+
 ## Example Usage
 
 ```hcl

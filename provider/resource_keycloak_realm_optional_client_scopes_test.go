@@ -149,3 +149,79 @@ resource "keycloak_realm_optional_client_scopes" "optional_scopes" {
 }
 	`, realmName)
 }
+
+// Keycloak throws a 500 if you attempt to mark a client scope as a realm optional scope while it is marked as a realm
+// default scope, but the provider will unmark the existing scope and re-mark it as a realm optional scope
+func TestAccKeycloakRealmOptionalClientScopes_duplicateScopeAssignment(t *testing.T) {
+	t.Parallel()
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmDefaultScopes_basic(realmName, clientScope),
+				Check: testAccCheckKeycloakRealmHasDefaultScopes(
+					"keycloak_realm_default_client_scopes.default_scopes",
+					[]string{"profile", "email", "roles", "role_list", "web-origins", clientScope},
+				),
+			},
+			// move the custom scope from default to optional while it is still marked as default
+			{
+				Config: testKeycloakRealmOptionalScopes_duplicateScopeAssignment(realmName, clientScope),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmHasOptionalScopes(
+						"keycloak_realm_optional_client_scopes.optional_scopes",
+						[]string{"address", "phone", "offline_access", clientScope},
+					),
+					testAccCheckKeycloakRealmHasDefaultScopes(
+						"keycloak_realm_default_client_scopes.default_scopes",
+						[]string{"profile", "email", "roles", "role_list", "web-origins"},
+					),
+				),
+			},
+		},
+	})
+}
+
+// the default scopes resource depends on the optional scopes resource so that the custom scope is still marked as a
+// realm default scope at the point it is marked as a realm optional scope
+func testKeycloakRealmOptionalScopes_duplicateScopeAssignment(realmName, clientScope string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name        = "%s"
+	realm_id    = keycloak_realm.realm.id
+
+	description = "test description"
+}
+
+resource "keycloak_realm_default_client_scopes" "default_scopes" {
+	realm_id       = keycloak_realm.realm.id
+	default_scopes = [
+		"profile",
+		"email",
+		"roles",
+		"role_list",
+		"web-origins"
+	]
+
+	depends_on = [keycloak_realm_optional_client_scopes.optional_scopes]
+}
+
+resource "keycloak_realm_optional_client_scopes" "optional_scopes" {
+	realm_id        = keycloak_realm.realm.id
+	optional_scopes = [
+		"address",
+		"phone",
+		"offline_access",
+		keycloak_openid_client_scope.client_scope.name
+	]
+}
+	`, realmName, clientScope)
+}

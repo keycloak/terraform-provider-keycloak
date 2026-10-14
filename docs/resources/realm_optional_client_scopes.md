@@ -9,6 +9,9 @@ Allows you to manage the set of optional client scopes for a Keycloak realm, whi
 Note that this resource attempts to be an **authoritative** source over the optional client scopes for a Keycloak realm,
 so any Keycloak defaults and manual adjustments will be overwritten.
 
+Additionally, if a scope is set as default, this resource will remove and re-add it as an optional scope.
+Warning: Defining an optional and a default resource for the same scope is undefined behavior.
+
 
 ## Example Usage
 

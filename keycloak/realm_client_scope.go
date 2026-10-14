@@ -65,6 +65,17 @@ func (keycloakClient *KeycloakClient) resolveAndHandleClientScopes(ctx context.C
 }
 
 func (keycloakClient *KeycloakClient) markClientScopeAs(ctx context.Context, realmId, scopeId, t string) error {
+	// Keycloak does not allow a client scope to be a realm default and a realm optional scope at the same time, so
+	// remove it from the conflicting type first, mirroring the behavior of the Keycloak admin console.
+	conflictingType := "default"
+	if t == "default" {
+		conflictingType = "optional"
+	}
+
+	if err := keycloakClient.unmarkClientScopeAs(ctx, realmId, scopeId, conflictingType); err != nil {
+		return err
+	}
+
 	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/default-%s-client-scopes/%s", realmId, t, scopeId), nil)
 }
 
@@ -81,7 +92,12 @@ func (keycloakClient *KeycloakClient) MarkClientScopesAsRealmOptional(ctx contex
 }
 
 func (keycloakClient *KeycloakClient) unmarkClientScopeAs(ctx context.Context, realmId, scopeId, t string) error {
-	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/default-%s-client-scopes/%s", realmId, t, scopeId), nil)
+	err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/default-%s-client-scopes/%s", realmId, t, scopeId), nil)
+	if err != nil && !ErrorIs404(err) {
+		return err
+	}
+
+	return nil
 }
 
 func (keycloakClient *KeycloakClient) UnmarkClientScopesAsRealmDefault(ctx context.Context, realmId string, scopeNames []string) error {

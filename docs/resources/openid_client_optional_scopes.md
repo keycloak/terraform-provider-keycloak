@@ -17,6 +17,9 @@ By default, Keycloak sets the `address`, `phone`, `offline_access`, and `micropr
 every newly created client. If you create this resource for the first time and do not include these scopes, a following
 run of `terraform plan` will result in changes.
 
+Additionally, if a scope is set as default, this resource will remove and re-add it as an optional scope.
+Warning: Defining an optional and a default resource for the same scope is undefined behavior.
+
 ## Example Usage
 
 ```hcl
