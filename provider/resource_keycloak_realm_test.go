@@ -253,12 +253,8 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 	}
 
 	realmTwo := &keycloak.Realm{
-		Realm:        realmOne.Realm,
-		DisplayName:  realmOne.DisplayName,
-		LoginTheme:   "keycloak",
-		AccountTheme: "keycloak.v3",
-		AdminTheme:   "keycloak.v2",
-		EmailTheme:   "keycloak",
+		Realm:       realmOne.Realm,
+		DisplayName: realmOne.DisplayName,
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -272,7 +268,13 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 			},
 			{
 				Config: testKeycloakRealm_themes(realmTwo),
-				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "login_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "account_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "admin_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "email_theme", ""),
+				),
 			},
 		},
 	})
@@ -1207,7 +1209,12 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	// An empty algorithm list is replaced by Keycloak's defaults, so it is not
+	// a stable configured policy. Match the non-passwordless test's valid input.
+	if len(signatureAlgorithms) == 0 {
+		signatureAlgorithms = []string{"ES256"}
+	}
 	avoidSameAuthenticatorRegister := randomBool()
 	passwordlessPasskeysEnabled := randomBool()
 
