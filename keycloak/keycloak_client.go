@@ -50,6 +50,9 @@ type KeycloakClient struct {
 	fgapv2Mu     sync.Mutex
 	fgapv2Cached *bool
 
+	// realmCache remembers realm ids and names for a short while, see GetRealmNameByUUID.
+	realmCache realmCache
+
 	serverInfo     *ServerInfo
 	serverInfoErr  error
 	serverInfoOnce sync.Once

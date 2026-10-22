@@ -183,6 +183,19 @@ func resourceKeycloakRealm() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmRead,
 		DeleteContext: resourceKeycloakRealmDelete,
 		UpdateContext: resourceKeycloakRealmUpdate,
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// Keycloak refuses this at apply time; fail early, at plan time
+			if diff.Id() == "master" && diff.HasChange("realm") {
+				return fmt.Errorf("the master realm cannot be renamed")
+			}
+
+			// the provider's token URL contains the name of the realm it authenticates against
+			if client, ok := meta.(*keycloak.KeycloakClient); ok && client != nil && diff.Id() != "" && diff.Id() == client.AuthRealm() && diff.HasChange("realm") {
+				return fmt.Errorf("the realm %q cannot be renamed, because the provider authenticates against it", diff.Id())
+			}
+
+			return nil
+		},
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -190,7 +203,6 @@ func resourceKeycloakRealm() *schema.Resource {
 			"realm": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
 			},
 			"internal_id": {
 				Type:     schema.TypeString,
@@ -1425,7 +1437,10 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
-	data.Set("internal_id", realm.Id)
+	// Keycloak leaves the id out for tokens that cannot see the realm (see GetRealmNameByUUID); keep what we know
+	if realm.Id != "" {
+		data.Set("internal_id", realm.Id)
+	}
 	data.Set("enabled", realm.Enabled)
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
@@ -1675,6 +1690,11 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 
 	err = keycloakClient.NewRealm(ctx, realm)
 	if err != nil {
+		if keycloak.ErrorIs409(err) && data.Get("internal_id").(string) == "" {
+			// a renamed realm keeps its internal id, which for realms created by this provider is the old name
+			return diag.Errorf("%s\n\nIf a realm called %q was renamed earlier, its internal id is still %q. Set internal_id to a different value on this realm.", err, realm.Realm, realm.Realm)
+		}
+
 		return diag.FromErr(err)
 	}
 
@@ -1735,9 +1755,18 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	err = keycloakClient.UpdateRealm(ctx, realm)
+	// the resource id is the current realm name; if "realm" changed, Keycloak renames the realm in place
+	renamed := data.Id() != realm.Realm
+	err = keycloakClient.UpdateRealmByName(ctx, data.Id(), realm)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if renamed {
+		// the roles in the access token belong to the old name; get one that matches the renamed realm
+		if err := keycloakClient.Refresh(ctx); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	setRealmData(data, realm, keycloakVersion)

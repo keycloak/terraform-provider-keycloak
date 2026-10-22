@@ -126,7 +126,7 @@ func resourceKeycloakRoleAdminPermissionsRead(ctx context.Context, data *schema.
 	if len(parts) != 2 {
 		return diag.Errorf("invalid resource id %q, expected realmId/permissionId", data.Id())
 	}
-	realmId, permId := parts[0], parts[1]
+	realmId, permId := realmNameOrIdPrefix(data, parts[0]), parts[1]
 
 	apClientId, err := kc.GetAdminPermissionsClientId(ctx, realmId)
 	if err != nil {
@@ -169,7 +169,7 @@ func resourceKeycloakRoleAdminPermissionsDelete(ctx context.Context, data *schem
 	if len(parts) != 2 {
 		return nil
 	}
-	realmId, permId := parts[0], parts[1]
+	realmId, permId := realmNameOrIdPrefix(data, parts[0]), parts[1]
 
 	apClientId, err := kc.GetAdminPermissionsClientId(ctx, realmId)
 	if err != nil {

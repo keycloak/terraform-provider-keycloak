@@ -281,6 +281,18 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		},
 	}
 
+	for name, dataSource := range provider.DataSourcesMap {
+		if name != "keycloak_realm" {
+			withRealmUuidDataSource(dataSource)
+		}
+	}
+
+	for name, resource := range provider.ResourcesMap {
+		if name != "keycloak_realm" {
+			withRealmUuid(resource)
+		}
+	}
+
 	provider.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 		if client != nil {
 			return client, nil
