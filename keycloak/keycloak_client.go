@@ -34,6 +34,7 @@ type KeycloakClient struct {
 	authUrl             string
 	realm               string
 	clientCredentials   *ClientCredentials
+	tokenMu             sync.RWMutex // guards the tokens in clientCredentials
 	httpClient          *http.Client
 	initialLogin        bool
 	userAgent           string
@@ -222,12 +223,11 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 			return err
 		}
 
-		keycloakClient.clientCredentials.AccessToken = clientCredentials.AccessToken
-		keycloakClient.clientCredentials.RefreshToken = clientCredentials.RefreshToken
-		keycloakClient.clientCredentials.TokenType = clientCredentials.TokenType
+		keycloakClient.setTokens(&clientCredentials)
 	} else {
+		_, accessToken := keycloakClient.tokenTypeAndAccessToken()
 		tflog.Debug(ctx, "Using provided access_token", map[string]interface{}{
-			"access_token": keycloakClient.clientCredentials.AccessToken,
+			"access_token": accessToken,
 		})
 	}
 
@@ -371,9 +371,7 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 		return err
 	}
 
-	keycloakClient.clientCredentials.AccessToken = clientCredentials.AccessToken
-	keycloakClient.clientCredentials.RefreshToken = clientCredentials.RefreshToken
-	keycloakClient.clientCredentials.TokenType = clientCredentials.TokenType
+	keycloakClient.setTokens(&clientCredentials)
 
 	return nil
 }
@@ -440,9 +438,25 @@ func (keycloakClient *KeycloakClient) applyAdditionalHeaders(request *http.Reque
 	}
 }
 
+// setTokens stores a new set of tokens. Requests are built on other goroutines while a token is refreshed.
+func (keycloakClient *KeycloakClient) setTokens(tokens *ClientCredentials) {
+	keycloakClient.tokenMu.Lock()
+	defer keycloakClient.tokenMu.Unlock()
+
+	keycloakClient.clientCredentials.AccessToken = tokens.AccessToken
+	keycloakClient.clientCredentials.RefreshToken = tokens.RefreshToken
+	keycloakClient.clientCredentials.TokenType = tokens.TokenType
+}
+
+func (keycloakClient *KeycloakClient) tokenTypeAndAccessToken() (string, string) {
+	keycloakClient.tokenMu.RLock()
+	defer keycloakClient.tokenMu.RUnlock()
+
+	return keycloakClient.clientCredentials.TokenType, keycloakClient.clientCredentials.AccessToken
+}
+
 func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
-	tokenType := keycloakClient.clientCredentials.TokenType
-	accessToken := keycloakClient.clientCredentials.AccessToken
+	tokenType, accessToken := keycloakClient.tokenTypeAndAccessToken()
 
 	keycloakClient.applyAdditionalHeaders(request)
 

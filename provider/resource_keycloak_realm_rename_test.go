@@ -191,6 +191,10 @@ data "keycloak_group" "group" {
 					resource.TestCheckResourceAttr("keycloak_role.role", "realm_id", renamedRealmName),
 					resource.TestCheckResourceAttr("keycloak_realm_keystore_aes_generated.aes", "realm_id", renamedRealmName),
 					resource.TestCheckResourceAttr("keycloak_default_groups.defaults", "realm_id", renamedRealmName),
+					// resources that are identified by their realm: the id is the realm name
+					resource.TestCheckResourceAttr("keycloak_authentication_bindings.bindings", "id", renamedRealmName),
+					resource.TestCheckResourceAttr("keycloak_authentication_bindings.bindings", "realm_id", renamedRealmName),
+					resource.TestCheckResourceAttr("keycloak_realm_events.events", "id", renamedRealmName),
 					// an id that contains the realm name follows the rename
 					resource.TestCheckResourceAttr("keycloak_default_groups.defaults", "id", renamedRealmName+"/default-groups"),
 					// these resources call the field "realm" instead of "realm_id"
@@ -258,6 +262,17 @@ resource "keycloak_realm_keystore_aes_generated" "aes" {
 resource "keycloak_default_groups" "defaults" {
 	{{REF}}
 	group_ids  = [keycloak_group.group.id]
+}
+
+resource "keycloak_authentication_bindings" "bindings" {
+	{{REF}}
+	browser_flow = "browser"
+}
+
+resource "keycloak_realm_events" "events" {
+	{{REF}}
+	events_enabled   = true
+	events_listeners = ["jboss-logging"]
 }
 
 resource "keycloak_authentication_flow" "flow" {

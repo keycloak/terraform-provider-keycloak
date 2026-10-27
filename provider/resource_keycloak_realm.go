@@ -1762,14 +1762,19 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	// the realm has been renamed: record that before anything else can fail
+	setRealmData(data, realm, keycloakVersion)
+
 	if renamed {
 		// the roles in the access token belong to the old name; get one that matches the renamed realm
 		if err := keycloakClient.Refresh(ctx); err != nil {
-			return diag.FromErr(err)
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but a new access token could not be requested",
+				Detail:   err.Error(),
+			}}
 		}
 	}
-
-	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }

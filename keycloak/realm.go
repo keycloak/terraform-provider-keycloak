@@ -371,7 +371,12 @@ func (keycloakClient *KeycloakClient) GetRealmNameByUUID(ctx context.Context, uu
 		}
 
 		// a token issued before the realm was created (or renamed) may not show it; try once with a new one
-		if attempt == 0 && keycloakClient.Refresh(ctx) == nil {
+		if attempt == 0 {
+			if err := keycloakClient.Refresh(ctx); err != nil {
+				// a failed refresh says nothing about the realm: do not report it as missing
+				return "", err
+			}
+
 			continue
 		}
 

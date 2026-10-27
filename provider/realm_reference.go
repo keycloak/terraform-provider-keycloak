@@ -17,18 +17,21 @@ import (
 // its realm is renamed.
 //
 // The wrapper is applied to the whole resources map, so individual resources need no changes.
-func withRealmUuid(resource *schema.Resource) {
-	addRealmUuid(resource, true)
+//
+// idIsRealmName is for resources that are identified by their realm, so that their id is the realm name and
+// follows a rename. It is not a general rule: the id of other resources can equal a realm name by chance.
+func withRealmUuid(resource *schema.Resource, idIsRealmName bool) {
+	addRealmUuid(resource, true, idIsRealmName)
 }
 
 // withRealmUuidDataSource does the same for data sources. They are read at plan time, so after
 // renaming a realm a data source that is still configured with the new name fails to find it
 // until the rename has been applied; with realm_uuid it resolves the realm that exists now.
 func withRealmUuidDataSource(dataSource *schema.Resource) {
-	addRealmUuid(dataSource, false)
+	addRealmUuid(dataSource, false, false)
 }
 
-func addRealmUuid(resource *schema.Resource, writable bool) {
+func addRealmUuid(resource *schema.Resource, writable bool, idIsRealmName bool) {
 	realmField := ""
 	for _, field := range []string{"realm_id", "realm"} {
 		if s, ok := resource.Schema[field]; ok && s.Type == schema.TypeString && s.Required {
@@ -65,13 +68,13 @@ func addRealmUuid(resource *schema.Resource, writable bool) {
 	}
 
 	if resource.CreateContext != nil {
-		resource.CreateContext = withRealmReference(realmField, resource.CreateContext, false)
+		resource.CreateContext = withRealmReference(realmField, resource.CreateContext, false, idIsRealmName)
 	}
 	if resource.ReadContext != nil {
-		resource.ReadContext = withRealmReference(realmField, resource.ReadContext, writable)
+		resource.ReadContext = withRealmReference(realmField, resource.ReadContext, writable, idIsRealmName)
 	}
 	if resource.UpdateContext != nil {
-		resource.UpdateContext = withRealmReference(realmField, resource.UpdateContext, false)
+		resource.UpdateContext = withRealmReference(realmField, resource.UpdateContext, false, idIsRealmName)
 	}
 	if resource.DeleteContext != nil {
 		deleteContext := resource.DeleteContext
@@ -88,7 +91,7 @@ func addRealmUuid(resource *schema.Resource, writable bool) {
 	}
 }
 
-func withRealmReference(realmField string, next func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics, removeIfRealmGone bool) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
+func withRealmReference(realmField string, next func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics, removeIfRealmGone bool, idIsRealmName bool) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
 	return func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		keycloakClient := meta.(*keycloak.KeycloakClient)
 		previousName := data.Get(realmField).(string)
@@ -110,7 +113,7 @@ func withRealmReference(realmField string, next func(context.Context, *schema.Re
 			return append(diags, diag.FromErr(err)...)
 		}
 
-		renameRealmInId(data, previousName, data.Get(realmField).(string))
+		renameRealmInId(data, previousName, data.Get(realmField).(string), idIsRealmName)
 
 		return diags
 	}
@@ -124,14 +127,10 @@ func resolveRealmIdFromUuid(ctx context.Context, keycloakClient *keycloak.Keyclo
 		return nil
 	}
 
-	storedName := data.Get(realmField).(string)
-	realmName, err := keycloakClient.GetRealmNameByUUID(ctx, realmUuid, storedName)
+	// The stored name is only a hint to avoid listing the realms. It is never used without checking that it
+	// still belongs to this uuid: after a rename the old name may belong to an unrelated realm.
+	realmName, err := keycloakClient.GetRealmNameByUUID(ctx, realmUuid, data.Get(realmField).(string))
 	if err != nil {
-		// the account may have lost view-realm since the uuid was stored; the stored name is the best we have
-		if keycloak.ErrorIs403(err) && storedName != "" {
-			return nil
-		}
-
 		return err
 	}
 
@@ -196,12 +195,28 @@ func withRealmUuidDiff(realmField string, next schema.CustomizeDiffFunc) schema.
 }
 
 // renameRealmInId keeps an id like "<realm>/<something>" in line with the realm after it was renamed.
-func renameRealmInId(data *schema.ResourceData, previousName string, currentName string) {
+func renameRealmInId(data *schema.ResourceData, previousName string, currentName string, idIsRealmName bool) {
 	if previousName == "" || currentName == "" || previousName == currentName {
+		return
+	}
+
+	if idIsRealmName && data.Id() == previousName {
+		data.SetId(currentName)
+
 		return
 	}
 
 	if id := data.Id(); strings.HasPrefix(id, previousName+"/") {
 		data.SetId(currentName + strings.TrimPrefix(id, previousName))
 	}
+}
+
+// realmNameOrId is the realm of a resource that is identified by its realm: realm_id follows a rename, the id
+// is only the name the realm had when the resource was created.
+func realmNameOrId(data *schema.ResourceData) string {
+	if realmId := data.Get("realm_id").(string); realmId != "" {
+		return realmId
+	}
+
+	return data.Id()
 }

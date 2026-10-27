@@ -292,6 +292,8 @@ Looking up a realm by its internal id requires that the provider's account can s
 from accounts that have no `view-realm` role on that realm (for example one that only has `manage-clients`), so grant
 that role (the `realm-management` client role of the realm) before using `realm_uuid`. Configurations that keep using
 `realm_id` are not affected. If the id is hidden, using `realm_uuid` fails with an error instead of replacing resources.
+Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_uuid` fail with that error until the
+role is granted again: the provider will not guess a realm from a name that may have been reused.
 
 Things to know about renaming:
 

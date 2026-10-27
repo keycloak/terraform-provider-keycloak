@@ -287,9 +287,17 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		}
 	}
 
+	// resources that are identified by their realm: their id is the realm name
+	identifiedByRealm := map[string]bool{
+		"keycloak_authentication_bindings":      true,
+		"keycloak_realm_default_client_scopes":  true,
+		"keycloak_realm_events":                 true,
+		"keycloak_realm_optional_client_scopes": true,
+		"keycloak_realm_user_profile":           true,
+	}
 	for name, resource := range provider.ResourcesMap {
 		if name != "keycloak_realm" {
-			withRealmUuid(resource)
+			withRealmUuid(resource, identifiedByRealm[name])
 		}
 	}
 
