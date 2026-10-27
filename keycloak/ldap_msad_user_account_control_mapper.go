@@ -13,6 +13,7 @@ type LdapMsadUserAccountControlMapper struct {
 	LdapUserFederationId string
 
 	LdapPasswordPolicyHintsEnabled bool
+	AlwaysReadEnabledValueFromLdap bool
 }
 
 func convertFromLdapMsadUserAccountControlMapperToComponent(ldapMsadUserAccountControlMapper *LdapMsadUserAccountControlMapper) *component {
@@ -26,12 +27,20 @@ func convertFromLdapMsadUserAccountControlMapperToComponent(ldapMsadUserAccountC
 			"ldap.password.policy.hints.enabled": {
 				strconv.FormatBool(ldapMsadUserAccountControlMapper.LdapPasswordPolicyHintsEnabled),
 			},
+			"always.read.enabled.value.from.ldap": {
+				strconv.FormatBool(ldapMsadUserAccountControlMapper.AlwaysReadEnabledValueFromLdap),
+			},
 		},
 	}
 }
 
 func convertFromComponentToLdapMsadUserAccountControlMapper(component *component, realmId string) (*LdapMsadUserAccountControlMapper, error) {
 	ldapPasswordPolicyHintsEnabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("ldap.password.policy.hints.enabled"))
+	if err != nil {
+		return nil, err
+	}
+
+	alwaysReadEnabledValueFromLdap, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("always.read.enabled.value.from.ldap"))
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +52,7 @@ func convertFromComponentToLdapMsadUserAccountControlMapper(component *component
 		LdapUserFederationId: component.ParentId,
 
 		LdapPasswordPolicyHintsEnabled: ldapPasswordPolicyHintsEnabled,
+		AlwaysReadEnabledValueFromLdap: alwaysReadEnabledValueFromLdap,
 	}, nil
 }
 
