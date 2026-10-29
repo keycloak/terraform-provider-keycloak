@@ -12,8 +12,14 @@ type ComponentType struct {
 }
 
 type ComponentTypeProperty struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Secret bool   `json:"secret"`
+}
+
+// IsMultiValued reports whether Keycloak models the property as multi-valued (an array of individual values).
+func (p ComponentTypeProperty) IsMultiValued() bool {
+	return p.Type == "MultivaluedString" || p.Type == "MultivaluedList"
 }
 
 type ProviderType struct {
@@ -67,13 +73,32 @@ func (serverInfo *ServerInfo) MultiValuedConfigKeys(componentType, providerId st
 		}
 
 		for _, p := range ct.Properties {
-			if p.Type == "MultivaluedString" || p.Type == "MultivaluedList" {
+			if p.IsMultiValued() {
 				keys[p.Name] = true
 			}
 		}
 	}
 
 	return keys
+}
+
+// ConfigProperties returns the config properties that the given component type and provider id
+// declare, keyed by name. Keycloak only returns and updates config keys that are declared here, and
+// masks the values of properties flagged as secret.
+func (serverInfo *ServerInfo) ConfigProperties(componentType, providerId string) map[string]ComponentTypeProperty {
+	properties := map[string]ComponentTypeProperty{}
+
+	for _, ct := range serverInfo.ComponentTypes[componentType] {
+		if ct.Id != providerId {
+			continue
+		}
+
+		for _, p := range ct.Properties {
+			properties[p.Name] = p
+		}
+	}
+
+	return properties
 }
 
 func (serverInfo *ServerInfo) ComponentTypeIsInstalled(componentType, componentTypeId string) bool {
