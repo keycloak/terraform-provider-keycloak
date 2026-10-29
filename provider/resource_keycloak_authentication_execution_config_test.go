@@ -210,3 +210,100 @@ resource "keycloak_authentication_execution_config" "config" {
 	}
 }`, testAccRealm.Realm, flowAlias, configAlias, configProvider)
 }
+
+// Keycloak >= 26.6.7 / 26.7.3 returns secret config properties masked as "**********".
+// The provider must keep the configured value in state so plans stay clean and secret rotation is still detected.
+func TestAccKeycloakAuthenticationExecutionConfig_maskedSecret(t *testing.T) {
+	t.Parallel()
+
+	flowAlias := acctest.RandomWithPrefix("tf-acc")
+	configAlias := acctest.RandomWithPrefix("tf-acc")
+	secretOne := acctest.RandomWithPrefix("tf-acc-secret")
+	secretTwo := acctest.RandomWithPrefix("tf-acc-secret")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKeycloakAuthenticationExecutionConfig_recaptcha(flowAlias, configAlias, secretOne),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.site.key", "site-key"),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.secret.key", secretOne),
+					testAccCheckKeycloakAuthenticationExecutionConfigSecretMasked("keycloak_authentication_execution_config.config", "secret.key", secretOne),
+				),
+			},
+			{
+				// no changes -> plan must be empty even though Keycloak returns the masked secret
+				Config:   testAccKeycloakAuthenticationExecutionConfig_recaptcha(flowAlias, configAlias, secretOne),
+				PlanOnly: true,
+			},
+			{
+				// rotating the secret must still be detected and applied
+				Config: testAccKeycloakAuthenticationExecutionConfig_recaptcha(flowAlias, configAlias, secretTwo),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.secret.key", secretTwo),
+					testAccCheckKeycloakAuthenticationExecutionConfigSecretMasked("keycloak_authentication_execution_config.config", "secret.key", secretTwo),
+				),
+			},
+		},
+	})
+}
+
+// testAccCheckKeycloakAuthenticationExecutionConfigSecretMasked asserts that Keycloak returns the given secret config key
+// either masked (Keycloak >= 26.6.7 / 26.7.3) or, on older versions that do not mask secrets yet, with the expected value.
+func testAccCheckKeycloakAuthenticationExecutionConfigSecretMasked(resourceName, key, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		var config keycloak.AuthenticationExecutionConfig
+		if err := testAccCheckKeycloakAuthenticationExecutionConfigExists(resourceName, &config)(s); err != nil {
+			return err
+		}
+		value, ok := config.Config[key]
+		if !ok {
+			return fmt.Errorf("expected config key %s to exist in Keycloak, got %+v", key, config.Config)
+		}
+		if value != keycloakMaskedSecret && value != expected {
+			return fmt.Errorf("expected config key %s to be %q or masked, got %q", key, expected, value)
+		}
+		return nil
+	}
+}
+
+func testAccKeycloakAuthenticationExecutionConfig_recaptcha(flowAlias, configAlias, secret string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_authentication_flow" "flow" {
+	realm_id = data.keycloak_realm.realm.id
+	alias    = "%s"
+}
+
+resource "keycloak_authentication_subflow" "form" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_flow.flow.alias
+	alias             = "%s-form"
+	provider_id       = "form-flow"
+	authenticator     = "registration-page-form"
+	requirement       = "REQUIRED"
+}
+
+resource "keycloak_authentication_execution" "execution" {
+	realm_id          = data.keycloak_realm.realm.id
+	parent_flow_alias = keycloak_authentication_subflow.form.alias
+	authenticator     = "registration-recaptcha-action"
+	requirement       = "REQUIRED"
+}
+
+resource "keycloak_authentication_execution_config" "config" {
+	realm_id     = data.keycloak_realm.realm.id
+	execution_id = keycloak_authentication_execution.execution.id
+	alias        = "%s"
+	config = {
+		"site.key"   = "site-key"
+		"secret.key" = "%s"
+	}
+}`, testAccRealm.Realm, flowAlias, flowAlias, configAlias, secret)
+}
