@@ -29,6 +29,10 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"display_on_consent_screen": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"include_in_token_scope": {
 				Type:     schema.TypeBool,
 				Computed: true,
