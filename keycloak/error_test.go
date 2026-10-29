@@ -20,6 +20,8 @@ func TestErrorIs5xx(t *testing.T) {
 		{"404", &ApiError{Code: http.StatusNotFound}, false},
 		{"500", &ApiError{Code: http.StatusInternalServerError}, true},
 		{"503", &ApiError{Code: http.StatusServiceUnavailable}, true},
+		{"599", &ApiError{Code: 599}, true},
+		{"600", &ApiError{Code: 600}, false},
 		{"wrapped 500", errwrap.Wrapf("context: {{err}}", &ApiError{Code: http.StatusInternalServerError}), true},
 	}
 
