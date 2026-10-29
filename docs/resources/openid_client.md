@@ -190,6 +190,24 @@ is set to `true`.
 - `service_account_user_id` - (Computed) When service accounts are enabled for this client, this attribute is the unique ID for the Keycloak user that represents this service account.
 - `resource_server_id` - (Computed) When authorization is enabled for this client, this attribute is the unique ID for the client (the same value as the `.id` attribute).
 
+- `suppress_client_secret` - (Optional) Omit credential retrieval and storage during resource reads. Defaults to `false`.
+
+## Reading configuration without credentials
+
+Set `suppress_client_secret = true` when credentials are owned outside this
+resource. Resource refresh will not call the secret endpoint or retain a secret
+included in the client representation. This setting remains effective if the
+client's access type is changed outside Terraform. It does not rotate credentials
+or prevent explicitly configured write-only secret updates. Explicit
+`client_secret` configuration is rejected with suppression enabled; use
+`client_secret_wo` for an intentional update without state persistence.
+
+Public clients and generated bearer-only admin clients omit secret retrieval
+regardless of this setting. Other clients retain the existing read behavior by
+default. Ordinary confidential-client CLI imports can still retrieve a secret
+before configured attributes are available; this option does not make those
+imports credential-safe.
+
 ## Import
 
 Clients can be imported using the format `{{realm_id}}/{{client_keycloak_id}}`, where `client_keycloak_id` is the unique ID that Keycloak
