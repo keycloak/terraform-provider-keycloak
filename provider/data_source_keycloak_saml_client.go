@@ -132,8 +132,9 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"signing_private_key": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:      schema.TypeString,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"encryption_certificate_sha1": {
 				Type:     schema.TypeString,

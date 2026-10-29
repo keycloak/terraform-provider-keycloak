@@ -235,6 +235,7 @@ func resourceKeycloakSamlClient() *schema.Resource {
 				DiffSuppressFunc: func(_, old, new string, _ *schema.ResourceData) bool {
 					return old == formatSigningPrivateKey(new)
 				},
+				Sensitive: true,
 			},
 			"encryption_certificate_sha1": {
 				Type:     schema.TypeString,
