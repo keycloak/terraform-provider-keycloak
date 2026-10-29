@@ -34,6 +34,7 @@ type LdapUserFederation struct {
 	KrbPrincipalAttribute  string
 	Debug                  string
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
+	Referral               string // component config expects follow or ignore
 
 	StartTls                    bool
 	UsePasswordModifyExtendedOp bool
@@ -171,6 +172,8 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 	} else {
 		componentConfig["searchScope"] = []string{"2"}
 	}
+
+	componentConfig["referral"] = []string{ldap.Referral}
 
 	if ldap.CustomUserSearchFilter != "" {
 		componentConfig["customUserSearchFilter"] = []string{ldap.CustomUserSearchFilter}
@@ -387,6 +390,8 @@ func convertFromComponentToLdapUserFederation(component *component, realmId stri
 	} else {
 		ldap.SearchScope = "SUBTREE"
 	}
+
+	ldap.Referral = component.getConfig("referral")
 
 	if useTruststoreSpi := component.getConfig("useTruststoreSpi"); useTruststoreSpi == "ldapsOnly" {
 		ldap.UseTruststoreSpi = "ONLY_FOR_LDAPS"

@@ -450,6 +450,28 @@ func TestAccKeycloakLdapUserFederation_searchScopeValidation(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakLdapUserFederation_referralValidation(t *testing.T) {
+	t.Parallel()
+	ldapName := acctest.RandomWithPrefix("tf-acc")
+	referral := randomStringInSlice(keycloakLdapUserFederationReferral)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapUserFederationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakLdapUserFederation_basicWithAttrValidation("referral", ldapName, acctest.RandString(10)),
+				ExpectError: regexp.MustCompile("expected referral to be one of .+ got .+"),
+			},
+			{
+				Config: testKeycloakLdapUserFederation_basicWithAttrValidation("referral", ldapName, referral),
+				Check:  resource.TestCheckResourceAttr("keycloak_ldap_user_federation.openldap", "referral", referral),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakLdapUserFederation_useTrustStoreValidation(t *testing.T) {
 	t.Parallel()
 	ldapName := acctest.RandomWithPrefix("tf-acc")
