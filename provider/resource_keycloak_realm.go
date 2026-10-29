@@ -21,6 +21,7 @@ var (
 const minKeycloakPasskeysVersion = "26.3.5"
 const minKeycloakDiscoverableCredentialVersion = "26.7.0"
 const minKeycloakMaxSecondaryAuthFailuresVersion = "26.6.0"
+const minKeycloakAdminPermissionsVersion = "26.2.0"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -1202,7 +1203,11 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 	}
 	realm.DefaultOptionalClientScopes = defaultOptionalClientScopes
 
-	realm.AdminPermissionsEnabled = data.Get("admin_permissions_enabled").(bool)
+	adminPermissionsEnabled, err := resolveAdminPermissionsEnabled(realm.Realm, data.Get("admin_permissions_enabled").(bool), keycloakVersion)
+	if err != nil {
+		return nil, err
+	}
+	realm.AdminPermissionsEnabled = adminPermissionsEnabled
 
 	//OTPPolicy
 	if v, ok := data.GetOk("otp_policy"); ok {
@@ -1371,6 +1376,26 @@ func supportsMaxSecondaryAuthFailures(keycloakVersion *version.Version) bool {
 	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
 }
 
+func supportsAdminPermissions(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakAdminPermissionsVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+// resolveAdminPermissionsEnabled decides what to send for admin_permissions_enabled given the target
+// Keycloak version: on supported versions the value is always sent (even when false, so disabling
+// admin permissions reaches Keycloak instead of being silently omitted); on unsupported versions it's
+// omitted (nil) unless the user enabled it, in which case this returns an explicit error rather than
+// letting Keycloak reject the request with a raw 400.
+func resolveAdminPermissionsEnabled(realmId string, adminPermissionsEnabled bool, keycloakVersion *version.Version) (*bool, error) {
+	if supportsAdminPermissions(keycloakVersion) {
+		return &adminPermissionsEnabled, nil
+	}
+	if adminPermissionsEnabled {
+		return nil, fmt.Errorf("admin_permissions_enabled for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realmId, minKeycloakAdminPermissionsVersion)
+	}
+	return nil, nil
+}
+
 // resolveMaxSecondaryAuthFailures decides what to do with a configured max_secondary_auth_failures
 // value given the target Keycloak version: on supported versions it's always returned (even when 0,
 // so resetting the field back to its default reaches Keycloak instead of being silently omitted); on
@@ -1431,7 +1456,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
 	data.Set("organizations_enabled", realm.OrganizationsEnabled)
-	data.Set("admin_permissions_enabled", realm.AdminPermissionsEnabled)
+	data.Set("admin_permissions_enabled", realm.AdminPermissionsEnabled != nil && *realm.AdminPermissionsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)
