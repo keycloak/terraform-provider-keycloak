@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -168,6 +169,13 @@ func (keycloakClient *KeycloakClient) NewOpenidClient(ctx context.Context, clien
 	return nil
 }
 
+// IsInternalAdminClient reports whether a client is one of Keycloak's internal admin clients
+// (realm-management, or <realm>-realm in master). Since Keycloak 26.8 reading their secret
+// requires manage-clients, which Keycloak never grants on internal clients, so it always returns 403.
+func IsInternalAdminClient(realmId, clientId string) bool {
+	return clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm")
+}
+
 func (keycloakClient *KeycloakClient) GetOpenidClients(ctx context.Context, realmId string, withSecrets bool) ([]*OpenidClient, error) {
 	var clients []*OpenidClient
 	var clientSecret OpenidClientSecret
@@ -179,7 +187,7 @@ func (keycloakClient *KeycloakClient) GetOpenidClients(ctx context.Context, real
 
 	for _, client := range clients {
 		client.RealmId = realmId
-		if !withSecrets {
+		if !withSecrets || IsInternalAdminClient(realmId, client.ClientId) {
 			continue
 		}
 
@@ -203,9 +211,11 @@ func (keycloakClient *KeycloakClient) GetOpenidClient(ctx context.Context, realm
 		return nil, err
 	}
 
-	err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, id), &clientSecret, nil)
-	if err != nil {
-		return nil, err
+	if !IsInternalAdminClient(realmId, client.ClientId) {
+		err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, id), &clientSecret, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client.RealmId = realmId
@@ -242,9 +252,11 @@ func (keycloakClient *KeycloakClient) GetOpenidClientByClientId(ctx context.Cont
 
 	client := clients[0]
 
-	err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, client.Id), &clientSecret, nil)
-	if err != nil {
-		return nil, err
+	if !IsInternalAdminClient(realmId, client.ClientId) {
+		err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, client.Id), &clientSecret, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client.RealmId = realmId
