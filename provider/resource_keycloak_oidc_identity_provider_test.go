@@ -687,3 +687,112 @@ func testAccCheckKeycloakIdentityProviderLinkOrganization(
 		return nil
 	}
 }
+
+func TestAccKeycloakOidcIdentityProvider_allowAdminRoleMapping(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_oidc_identity_provider.oidc"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_allowAdminRoleMapping(oidcName, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "allow_admin_role_mapping", "true"),
+					testAccCheckKeycloakOidcIdentityProviderAllowAdminRoleMapping(resourceName, true),
+				),
+			},
+			{
+				Config: testKeycloakOidcIdentityProvider_allowAdminRoleMapping(oidcName, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "allow_admin_role_mapping", "false"),
+					testAccCheckKeycloakOidcIdentityProviderAllowAdminRoleMapping(resourceName, false),
+				),
+			},
+		},
+	})
+}
+
+// a mapper that grants an admin role is rejected by Keycloak 26.8+ unless the identity provider allows it
+func TestAccKeycloakOidcIdentityProvider_allowAdminRoleMappingWithHardcodedRoleMapper(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_allowAdminRoleMappingWithMapper(oidcName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderAllowAdminRoleMapping("keycloak_oidc_identity_provider.oidc", true),
+					resource.TestCheckResourceAttr("keycloak_hardcoded_role_identity_provider_mapper.admin_role", "role", "realm-management.view-users"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakOidcIdentityProviderAllowAdminRoleMapping(resourceName string, expected bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		fetchedOidc, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if bool(fetchedOidc.Config.AllowAdminRoleMapping) != expected {
+			return fmt.Errorf("expected oidc provider to have allowAdminRoleMapping %t, but got %t", expected, bool(fetchedOidc.Config.AllowAdminRoleMapping))
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakOidcIdentityProvider_allowAdminRoleMapping(alias string, allow bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm                    = data.keycloak_realm.realm.id
+	alias                    = "%s"
+	authorization_url        = "https://example.com/auth"
+	token_url                = "https://example.com/token"
+	client_id                = "example_id"
+	client_secret            = "example_token"
+	allow_admin_role_mapping = %t
+}
+	`, testAccRealm.Realm, alias, allow)
+}
+
+func testKeycloakOidcIdentityProvider_allowAdminRoleMappingWithMapper(alias string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm                    = data.keycloak_realm.realm.id
+	alias                    = "%s"
+	authorization_url        = "https://example.com/auth"
+	token_url                = "https://example.com/token"
+	client_id                = "example_id"
+	client_secret            = "example_token"
+	allow_admin_role_mapping = true
+}
+
+resource "keycloak_hardcoded_role_identity_provider_mapper" "admin_role" {
+	realm                   = data.keycloak_realm.realm.id
+	name                    = "admin-role"
+	identity_provider_alias = keycloak_oidc_identity_provider.oidc.alias
+	role                    = "realm-management.view-users"
+}
+	`, testAccRealm.Realm, alias)
+}

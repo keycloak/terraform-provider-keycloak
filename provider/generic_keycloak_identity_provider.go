@@ -135,6 +135,12 @@ func resourceKeycloakIdentityProvider() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"allow_admin_role_mapping": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Allow identity provider mappers to grant administrative roles, either directly or through group membership. Requires Keycloak 26.8 or later, and the manage-realm permission to enable.",
+			},
 		},
 	}
 }
@@ -145,6 +151,7 @@ func getIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *ver
 		GuiOrder:                    data.Get("gui_order").(string),
 		SyncMode:                    data.Get("sync_mode").(string),
 		OrgDomain:                   data.Get("org_domain").(string),
+		AllowAdminRoleMapping:       types.KeycloakBoolQuoted(data.Get("allow_admin_role_mapping").(bool)),
 		OrgRedirectModeEmailMatches: types.KeycloakBoolQuoted(data.Get("org_redirect_mode_email_matches").(bool)),
 		ExtraConfig:                 getExtraConfigFromData(data),
 	}
@@ -191,6 +198,7 @@ func setIdentityProviderData(data *schema.ResourceData, identityProvider *keyclo
 	data.Set("gui_order", identityProvider.Config.GuiOrder)
 	data.Set("sync_mode", identityProvider.Config.SyncMode)
 	data.Set("org_domain", identityProvider.Config.OrgDomain)
+	data.Set("allow_admin_role_mapping", identityProvider.Config.AllowAdminRoleMapping)
 	data.Set("org_redirect_mode_email_matches", identityProvider.Config.OrgRedirectModeEmailMatches)
 	setExtraConfigData(data, identityProvider.Config.ExtraConfig)
 }
