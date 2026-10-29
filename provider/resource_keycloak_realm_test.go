@@ -1156,6 +1156,51 @@ func testAccCheckKeycloakRealm_default_client_scopes(resourceName string, defaul
 	}
 }
 
+func TestAccKeycloakRealm_organizationsEnabled(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_organizationsEnabled(realmName, true),
+				Check:  testAccCheckKeycloakRealmOrganizationsEnabled("keycloak_realm.realm", true),
+			},
+			{
+				Config: testKeycloakRealm_organizationsEnabled(realmName, false),
+				Check:  testAccCheckKeycloakRealmOrganizationsEnabled("keycloak_realm.realm", false),
+			},
+		},
+	})
+}
+
+func testKeycloakRealm_organizationsEnabled(realm string, organizationsEnabled bool) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm                 = "%s"
+	enabled               = true
+	organizations_enabled = %t
+}
+	`, realm, organizationsEnabled)
+}
+
+func testAccCheckKeycloakRealmOrganizationsEnabled(resourceName string, want bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.OrganizationsEnabled != want {
+			return fmt.Errorf("expected realm %s to have organizations_enabled = %t, got %t", realm.Realm, want, realm.OrganizationsEnabled)
+		}
+
+		return nil
+	}
+}
+
 func TestAccKeycloakRealm_admin_permissions_enabled(t *testing.T) {
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
 		t.Skip()
@@ -1285,7 +1330,10 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
+	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	if len(signatureAlgorithms) == 0 {
+		signatureAlgorithms = []string{"ES256"}
+	}
 	avoidSameAuthenticatorRegister := randomBool()
 	passwordlessPasskeysEnabled := randomBool()
 
