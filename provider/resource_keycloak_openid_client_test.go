@@ -899,6 +899,72 @@ func TestAccKeycloakOpenidClient_import(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_importDefaultBoolFieldMatrix(t *testing.T) {
+	t.Parallel()
+
+	boolPtr := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name                string
+		serverEnabled       bool
+		serverAlwaysDisplay bool
+		configEnabled       *bool // nil = omit from config
+		configAlwaysDisplay *bool
+		expectEnabled       bool
+		expectAlwaysDisplay bool
+	}{
+		// enabled: Default:true — omit means config declares true
+		{"enabled: server=true config=false", true, false, boolPtr(false), nil, false, false},
+		{"enabled: server=false config=true", false, false, boolPtr(true), nil, true, false},
+		{"enabled: server=false config=omit", false, false, nil, nil, true, false},
+		// always_display_in_console: Default:false — omit means config declares false
+		{"always_display: server=true config=false", true, true, nil, boolPtr(false), true, false},
+		{"always_display: server=true config=omit", true, true, nil, nil, true, false},
+		{"always_display: server=false config=true", true, false, nil, boolPtr(true), true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientId := acctest.RandomWithPrefix("tf-acc")
+
+			client := &keycloak.OpenidClient{
+				ClientId:               clientId,
+				RealmId:                testAccRealm.Realm,
+				Enabled:                tt.serverEnabled,
+				AlwaysDisplayInConsole: tt.serverAlwaysDisplay,
+			}
+			err := keycloakClient.NewOpenidClient(testCtx, client)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+				PreCheck:                 func() { testAccPreCheck(t) },
+				CheckDestroy:             testAccCheckKeycloakOpenidClientNotDestroyed(),
+				Steps: []resource.TestStep{
+					{
+						Config: testKeycloakOpenidClient_importBoolFields(clientId, tt.configEnabled, tt.configAlwaysDisplay),
+						Check: func(s *terraform.State) error {
+							c, err := getOpenidClientFromState(s, "keycloak_openid_client.client")
+							if err != nil {
+								return err
+							}
+							if c.Enabled != tt.expectEnabled {
+								return fmt.Errorf("expected enabled=%t, got %t", tt.expectEnabled, c.Enabled)
+							}
+							if c.AlwaysDisplayInConsole != tt.expectAlwaysDisplay {
+								return fmt.Errorf("expected always_display_in_console=%t, got %t", tt.expectAlwaysDisplay, c.AlwaysDisplayInConsole)
+							}
+							return nil
+						},
+					},
+				},
+			})
+		})
+	}
+}
+
 func TestAccKeycloakOpenidClient_useRefreshTokens(t *testing.T) {
 	t.Parallel()
 	clientId := acctest.RandomWithPrefix("tf-acc")
@@ -2475,6 +2541,28 @@ resource "keycloak_openid_client" "client" {
 	oauth2_jwt_authorization_grant_enabled = %t
 }
 	`, testAccRealm.Realm, clientId, oauth2JwtAuthorizationGrantEnabled)
+}
+
+func testKeycloakOpenidClient_importBoolFields(clientId string, enabled, alwaysDisplay *bool) string {
+	var fields string
+	if enabled != nil {
+		fields += fmt.Sprintf("\n\tenabled                    = %t", *enabled)
+	}
+	if alwaysDisplay != nil {
+		fields += fmt.Sprintf("\n\talways_display_in_console  = %t", *alwaysDisplay)
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id   = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	access_type = "PUBLIC"%s
+	import      = true
+}
+	`, testAccRealm.Realm, clientId, fields)
 }
 
 func testKeycloakOpenidClient_oauth2JwtAuthorizationGrant(clientId string, oauth2JwtAuthorizationGrantEnabled bool, oauth2JwtAuthorizationGrantIdp string) string {

@@ -696,6 +696,19 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 			return diag.FromErr(err)
 		}
 
+		// mergo treats false as a zero value and overwrites it with the existing
+		// value. Re-apply bool fields that have a schema Default, since data.Get()
+		// returns a valid value for these regardless of whether the user set them.
+		client.Enabled = data.Get("enabled").(bool)
+		client.FullScopeAllowed = data.Get("full_scope_allowed").(bool)
+		client.AlwaysDisplayInConsole = data.Get("always_display_in_console").(bool)
+		client.Attributes.UseRefreshTokens = types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool))
+		client.Attributes.UseRefreshTokensClientCredentials = types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool))
+		client.Attributes.StandardTokenExchangeEnabled = types.KeycloakBoolQuoted(data.Get("standard_token_exchange_enabled").(bool))
+		client.Attributes.BackchannelLogoutSessionRequired = types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool))
+		client.Attributes.Oauth2DeviceAuthorizationGrantEnabled = types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool))
+		client.Attributes.Oauth2JwtAuthorizationGrantEnabled = types.KeycloakBoolQuoted(data.Get("oauth2_jwt_authorization_grant_enabled").(bool))
+
 		err = keycloakClient.UpdateOpenidClient(ctx, client)
 		if err != nil {
 			return diag.FromErr(err)
