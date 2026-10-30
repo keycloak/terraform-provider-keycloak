@@ -167,6 +167,49 @@ func TestAccKeycloakSamlClientScope_displayOnConsentScreen(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakSamlClientScope_displayOnConsentScreenIgnoreChanges(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	consentText := acctest.RandString(10)
+	resourceName := "keycloak_saml_client_scope.client_scope"
+	clientScope := &keycloak.SamlClientScope{}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakSamlClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakSamlClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "first description"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientScopeFetch(resourceName, clientScope),
+					testAccCheckKeycloakSamlClientScopeHasConsentScreen(resourceName, true, consentText),
+				),
+			},
+			// "display on consent screen" is switched off outside of terraform and ignored by lifecycle.ignore_changes:
+			// an unrelated update must keep it
+			{
+				PreConfig: func() {
+					scope, err := keycloakClient.GetSamlClientScope(testCtx, clientScope.RealmId, clientScope.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					scope.Attributes.DisplayOnConsentScreen = false
+					if err := keycloakClient.UpdateSamlClientScope(testCtx, scope); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakSamlClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "second description"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "second description"),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "false"),
+					testAccCheckKeycloakSamlClientScopeHasConsentScreen(resourceName, false, consentText),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakSamlClientScope_guiOrder(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -393,6 +436,27 @@ resource "keycloak_saml_client_scope" "client_scope" {
 	display_on_consent_screen = %t
 }
 	`, testAccRealm.Realm, clientScopeName, consentText, displayOnConsentScreen)
+}
+
+func testKeycloakSamlClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, description string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_saml_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	description         = "%s"
+
+	consent_screen_text = "%s"
+
+	lifecycle {
+		ignore_changes = [display_on_consent_screen]
+	}
+}
+	`, testAccRealm.Realm, clientScopeName, description, consentText)
 }
 
 func testKeycloakSamlClientScope_withGuiOrder(clientScopeName string, guiOrder int) string {

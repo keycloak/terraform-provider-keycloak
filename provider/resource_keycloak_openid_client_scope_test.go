@@ -208,6 +208,71 @@ func TestAccKeycloakClientScope_displayOnConsentScreenDrift(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakClientScope_displayOnConsentScreenIgnoreChanges(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	consentText := acctest.RandString(10)
+	resourceName := "keycloak_openid_client_scope.client_scope"
+	clientScope := &keycloak.OpenidClientScope{}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "first description"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeFetch(resourceName, clientScope),
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, true, consentText),
+				),
+			},
+			// "display on consent screen" is switched off outside of terraform and ignored by lifecycle.ignore_changes:
+			// an unrelated update must keep it
+			{
+				PreConfig: func() {
+					scope, err := keycloakClient.GetOpenidClientScope(testCtx, clientScope.RealmId, clientScope.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					scope.Attributes.DisplayOnConsentScreen = false
+					if err := keycloakClient.UpdateOpenidClientScope(testCtx, scope); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "second description"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "second description"),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "false"),
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, false, consentText),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_displayOnConsentScreenUnknownConsentText(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client_scope.client_scope"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			// consent_screen_text is unknown during plan: display_on_consent_screen is derived during apply
+			{
+				Config: testKeycloakClientScope_withUnknownConsentText(clientScopeName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "true"),
+					resource.TestCheckResourceAttrPair(resourceName, "consent_screen_text", "keycloak_openid_client_scope.other", "id"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakClientScope_includeInTokenScope(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -522,6 +587,47 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	display_on_consent_screen = %t
 }
 	`, testAccRealm.Realm, clientScopeName, consentText, displayOnConsentScreen)
+}
+
+func testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, description string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	description         = "%s"
+
+	consent_screen_text = "%s"
+
+	lifecycle {
+		ignore_changes = [display_on_consent_screen]
+	}
+}
+	`, testAccRealm.Realm, clientScopeName, description, consentText)
+}
+
+func testKeycloakClientScope_withUnknownConsentText(clientScopeName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "other" {
+	name     = "%s-other"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	consent_screen_text = keycloak_openid_client_scope.other.id
+}
+	`, testAccRealm.Realm, clientScopeName, clientScopeName)
 }
 
 func testKeycloakClientScope_withIncludeInTokenScope(clientScopeName string, includeInTokenScope bool) string {

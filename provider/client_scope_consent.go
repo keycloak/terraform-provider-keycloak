@@ -23,7 +23,20 @@ func clientScopeDisplayOnConsentScreenDefault(consentScreenText string) bool {
 }
 
 // getClientScopeDisplayOnConsentScreen returns the display_on_consent_screen value to send to Keycloak.
+//
+// The planned value is used whenever it is known: it already contains the configured value, the value
+// derived by customizeDiffClientScopeDisplayOnConsentScreen, or - with lifecycle.ignore_changes - the
+// prior value. The raw configuration must not be used to decide this during apply, because Terraform
+// applies ignore_changes only to the configuration it sends during plan.
 func getClientScopeDisplayOnConsentScreen(data *schema.ResourceData) (bool, error) {
+	if rawPlan := data.GetRawPlan(); !rawPlan.IsNull() && rawPlan.IsKnown() {
+		plannedDisplayOnConsentScreen := rawPlan.GetAttr("display_on_consent_screen")
+		if plannedDisplayOnConsentScreen.IsKnown() && !plannedDisplayOnConsentScreen.IsNull() {
+			return plannedDisplayOnConsentScreen.True(), nil
+		}
+	}
+
+	// The planned value is unknown when it depends on values that are only known during apply.
 	rawDisplayOnConsentScreen, diags := data.GetRawConfigAt(cty.GetAttrPath("display_on_consent_screen"))
 	if diags.HasError() {
 		return false, fmt.Errorf("error reading display_on_consent_screen: %s", diags[0].Summary)
