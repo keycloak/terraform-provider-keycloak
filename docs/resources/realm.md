@@ -163,7 +163,9 @@ This block supports the following arguments:
 - `allow_utf8` - (Optional) When `true`, allows UTF-8 in the local part of the email address. Defaults to `false`.
 - `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
-    - `password` - (Required) The SMTP server password.
+    - `password` - (Optional) The SMTP server password. Stored in Terraform state. Exactly one of `password` or `password_wo` must be set.
+    - `password_wo` - (Optional, Write-Only) The SMTP server password. Accepts ephemeral values and is not stored in Terraform plan or state. Requires Terraform 1.11 or later and `password_wo_version`. Conflicts with `password`.
+    - `password_wo_version` - (Optional) A non-empty string identifying the password version. Required with `password_wo`. Change this value to rotate the password; changing only `password_wo` does not trigger rotation. Conflicts with `password`.
 - `token_auth` - (Optional) Enables authentication to the SMTP server through OAUTH2. Cannot be set alongside `auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
     - `url` - (Required) The auth token URL.
@@ -171,6 +173,35 @@ This block supports the following arguments:
     - `client_secret` - (Required) The auth token client secret.
     - `scope` - (Required) The auth token scope.
 
+
+For example, use an ephemeral variable to configure the SMTP password without storing it in Terraform plan or state:
+
+```hcl
+variable "smtp_password" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+
+resource "keycloak_realm" "realm" {
+  realm = "my-realm"
+
+  smtp_server {
+    host = "smtp.example.com"
+    from = "admin@example.com"
+
+    auth {
+      username            = "smtp-user"
+      password_wo         = var.smtp_password
+      password_wo_version = "v1"
+    }
+  }
+}
+```
+
+When migrating from `password`, remove it and configure both `password_wo` and `password_wo_version`. The password is applied and removed from the current state. Previous state snapshots can still contain the old password. After importing a realm, configure both write-only arguments to manage its SMTP password; the version cannot be recovered from Keycloak.
+
+When using `password_wo`, also change `password_wo_version` when changing the SMTP host, port, SSL, STARTTLS, sender (`from`), or username. Keycloak cannot preserve a masked password when these destination settings change, so the provider requires a new version to resend the real password. Other realm settings and SMTP display names can be updated without changing the password version.
 
 ### Internationalization
 
