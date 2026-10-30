@@ -129,6 +129,52 @@ func TestAccKeycloakRealmKeystoreCustom_update(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmKeystoreCustom_configOmitted(t *testing.T) {
+	t.Parallel()
+
+	keystoreName := acctest.RandomWithPrefix("tf-acc")
+	config := map[string]string{
+		"priority": "100",
+		"enabled":  "true",
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmKeystoreCustom_withoutConfig(testAccRealmUserFederation.Realm, keystoreName, "eddsa-generated"),
+				Check:  resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "0"),
+			},
+			{
+				Config: testKeycloakRealmKeystoreCustom_provider(testAccRealmUserFederation.Realm, keystoreName, "eddsa-generated", config),
+				Check:  testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", config, nil),
+			},
+			{
+				// config is computed, an empty config must still remove the keys
+				Config: testKeycloakRealmKeystoreCustom_provider(testAccRealmUserFederation.Realm, keystoreName, "eddsa-generated", nil),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", nil, []string{"priority", "enabled"}),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "0"),
+				),
+			},
+			{
+				Config: testKeycloakRealmKeystoreCustom_provider(testAccRealmUserFederation.Realm, keystoreName, "eddsa-generated", config),
+				Check:  testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", config, nil),
+			},
+			{
+				// config is computed, a config that is left out must still remove the keys
+				Config: testKeycloakRealmKeystoreCustom_withoutConfig(testAccRealmUserFederation.Realm, keystoreName, "eddsa-generated"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", nil, []string{"priority", "enabled"}),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmKeystoreCustom_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -498,4 +544,14 @@ resource "keycloak_realm_keystore_custom" "custom" {
 %s	}
 }
 	`, keystoreName, realm, providerId, configHcl)
+}
+
+func testKeycloakRealmKeystoreCustom_withoutConfig(realm, keystoreName, providerId string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_keystore_custom" "custom" {
+	name        = "%s"
+	realm_id    = "%s"
+	provider_id = "%s"
+}
+	`, keystoreName, realm, providerId)
 }

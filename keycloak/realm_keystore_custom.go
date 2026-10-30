@@ -47,12 +47,15 @@ func (keycloakClient *KeycloakClient) ValidateRealmKeystoreCustom(ctx context.Co
 		return fmt.Errorf("key provider with id %s is not installed on the server", keystore.ProviderId)
 	}
 
-	properties := serverInfo.ConfigProperties(realmKeystoreProviderType, keystore.ProviderId)
+	return validateRealmKeystoreCustomConfig(keystore.ProviderId, keystore.Config, serverInfo.ConfigProperties(realmKeystoreProviderType, keystore.ProviderId))
+}
 
-	for k, v := range keystore.Config {
-		if _, ok := properties[k]; !ok {
+func validateRealmKeystoreCustomConfig(providerId string, config map[string]string, properties map[string]ComponentTypeProperty) error {
+	for k, v := range config {
+		property, ok := properties[k]
+		if !ok {
 			if len(properties) == 0 {
-				return fmt.Errorf("config key %q is not declared by key provider %s, which declares no config keys", k, keystore.ProviderId)
+				return fmt.Errorf("config key %q is not declared by key provider %s, which declares no config keys", k, providerId)
 			}
 
 			declared := make([]string, 0, len(properties))
@@ -61,11 +64,20 @@ func (keycloakClient *KeycloakClient) ValidateRealmKeystoreCustom(ctx context.Co
 			}
 			sort.Strings(declared)
 
-			return fmt.Errorf("config key %q is not declared by key provider %s, declared keys are: %s", k, keystore.ProviderId, strings.Join(declared, ", "))
+			return fmt.Errorf("config key %q is not declared by key provider %s, declared keys are: %s", k, providerId, strings.Join(declared, ", "))
 		}
 
 		if strings.TrimSpace(v) == "" {
 			return fmt.Errorf("config key %q must not be empty, remove the key instead", k)
+		}
+
+		// multi-valued keys are split on ",", and Keycloak drops the empty elements
+		if property.IsMultiValued() {
+			for _, element := range strings.Split(v, ",") {
+				if strings.TrimSpace(element) == "" {
+					return fmt.Errorf("config key %q must not contain empty values, remove the empty comma-separated values instead", k)
+				}
+			}
 		}
 	}
 

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -39,8 +40,11 @@ func resourceKeycloakRealmKeystoreCustom() *schema.Resource {
 				Description: "The id of the key provider, as returned by the `getId` implementation of its `KeyProviderFactory`.",
 			},
 			"config": {
-				Type:        schema.TypeMap,
-				Optional:    true,
+				Type:     schema.TypeMap,
+				Optional: true,
+				// Computed so CustomizeDiff can suppress order-only changes of multi-valued keys via SetNew,
+				// which only operates on computed keys
+				Computed:    true,
 				Description: "Config of the key provider. Only keys that the key provider declares as config properties are allowed.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -162,14 +166,23 @@ func resourceKeycloakRealmKeystoreCustomUpdate(ctx context.Context, data *schema
 		return diag.FromErr(err)
 	}
 
-	// Keycloak keeps config keys that are missing from an update, so removed keys have to be sent without a value
-	oldConfig, _ := data.GetChange("config")
+	// Keycloak keeps config keys that are missing from an update. Only changed keys are sent, so Keycloak
+	// keeps unchanged values as they are stored, and removed keys are sent without a value.
+	oldRaw, _ := data.GetChange("config")
+	oldConfig := getRealmKeystoreCustomConfig(oldRaw)
+	changedConfig := map[string]string{}
+	for k, v := range keystore.Config {
+		if oldValue, ok := oldConfig[k]; !ok || oldValue != v {
+			changedConfig[k] = v
+		}
+	}
 	var removedKeys []string
-	for k := range getRealmKeystoreCustomConfig(oldConfig) {
+	for k := range oldConfig {
 		if _, ok := keystore.Config[k]; !ok {
 			removedKeys = append(removedKeys, k)
 		}
 	}
+	keystore.Config = changedConfig
 
 	err = keycloakClient.UpdateRealmKeystoreCustom(ctx, keystore, removedKeys)
 	if err != nil {
@@ -233,17 +246,62 @@ func resourceKeycloakRealmKeystoreCustomImport(ctx context.Context, d *schema.Re
 	return []*schema.ResourceData{d}, nil
 }
 
+// plannedRealmKeystoreCustomConfig returns the config to plan. Multi-valued keys keep the prior value if
+// they only differ in the order of their elements, so a reordered config doesn't cause an update.
+func plannedRealmKeystoreCustomConfig(prior, config map[string]string, properties map[string]keycloak.ComponentTypeProperty) map[string]string {
+	planned := map[string]string{}
+	for k, v := range config {
+		planned[k] = v
+		if priorValue, ok := prior[k]; ok && properties[k].IsMultiValued() && equalCommaSeparatedSet(priorValue, v) {
+			planned[k] = priorValue
+		}
+	}
+
+	return planned
+}
+
 // customizeDiffRealmKeystoreCustom validates the planned config against the server info, so a missing
-// key provider or an undeclared config key fails the plan instead of the apply.
+// key provider or an undeclared config key fails the plan instead of the apply, and suppresses
+// order-only changes of multi-valued keys.
 func customizeDiffRealmKeystoreCustom(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	if !diff.NewValueKnown("provider_id") || !diff.NewValueKnown("config") {
+	// config is computed, so a config that is left out or empty would keep the keys from the state
+	// (or be unknown on create) instead of removing them
+	configOmitted := false
+	if rawConfig := diff.GetRawConfig(); !rawConfig.IsNull() {
+		c := rawConfig.GetAttr("config")
+		configOmitted = c.IsNull() || (c.IsKnown() && c.LengthInt() == 0)
+	}
+
+	if !diff.NewValueKnown("provider_id") || (!configOmitted && !diff.NewValueKnown("config")) {
 		return nil
 	}
 
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	return keycloakClient.ValidateRealmKeystoreCustom(ctx, &keycloak.RealmKeystoreCustom{
-		ProviderId: diff.Get("provider_id").(string),
-		Config:     getRealmKeystoreCustomConfig(diff.Get("config")),
+	providerId := diff.Get("provider_id").(string)
+	oldRaw, newRaw := diff.GetChange("config")
+	config := getRealmKeystoreCustomConfig(newRaw)
+	if configOmitted {
+		config = map[string]string{}
+	}
+
+	err := keycloakClient.ValidateRealmKeystoreCustom(ctx, &keycloak.RealmKeystoreCustom{
+		ProviderId: providerId,
+		Config:     config,
 	})
+	if err != nil {
+		return err
+	}
+
+	properties, err := keycloakClient.RealmKeystoreCustomConfigProperties(ctx, providerId)
+	if err != nil {
+		return err
+	}
+
+	planned := plannedRealmKeystoreCustomConfig(getRealmKeystoreCustomConfig(oldRaw), config, properties)
+	if !configOmitted && reflect.DeepEqual(planned, getRealmKeystoreCustomConfig(newRaw)) {
+		return nil
+	}
+
+	return diff.SetNew("config", planned)
 }
