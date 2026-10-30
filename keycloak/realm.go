@@ -3,7 +3,10 @@ package keycloak
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -194,7 +197,12 @@ type SmtpServer struct {
 }
 
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
+	generation := keycloakClient.realmCache.currentGeneration()
 	_, _, err := keycloakClient.post(ctx, "/realms", realm)
+	if err == nil {
+		// Keycloak 26.0 hides a new realm's id from tokens issued before it existed, so remember it
+		keycloakClient.realmCache.remember(generation, realm.Id, realm.Realm)
+	}
 
 	return err
 }
@@ -232,10 +240,200 @@ func (keycloakClient *KeycloakClient) GetRealmKeys(ctx context.Context, name str
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealm(ctx context.Context, realm *Realm) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", realm.Realm), realm)
+	return keycloakClient.UpdateRealmByName(ctx, realm.Realm, realm)
+}
+
+// UpdateRealmByName updates the realm that is currently called currentName. When realm.Realm
+// differs from currentName, Keycloak renames the realm in place (its internal id stays the same).
+func (keycloakClient *KeycloakClient) UpdateRealmByName(ctx context.Context, currentName string, realm *Realm) error {
+	if currentName == realm.Realm {
+		return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), realm)
+	}
+
+	// forget before and after: a timeout may hide that the rename happened anyway
+	keycloakClient.realmCache.forget()
+	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), realm)
+	generation := keycloakClient.realmCache.currentGeneration()
+	keycloakClient.realmCache.forget()
+	if err == nil {
+		keycloakClient.realmCache.remember(generation+1, realm.Id, realm.Realm)
+	}
+
+	return err
+}
+
+// realmCacheTTL bounds how long a realm's id and name are trusted. A realm can be renamed outside
+// this client, so a remembered name must not live for long.
+const realmCacheTTL = 30 * time.Second
+
+type realmCacheEntry struct {
+	value string
+	at    time.Time
+}
+
+// realmCache maps a realm's internal id to its name and back. forget bumps the generation so that
+// a listing that started before a rename cannot put the old names back afterwards.
+type realmCache struct {
+	mu         sync.Mutex
+	generation uint64
+	names      map[string]realmCacheEntry // internal id -> name
+	ids        map[string]realmCacheEntry // name -> internal id
+}
+
+func (c *realmCache) get(m map[string]realmCacheEntry, key string) (string, bool) {
+	entry, ok := m[key]
+	if !ok || time.Since(entry.at) > realmCacheTTL {
+		return "", false
+	}
+
+	return entry.value, true
+}
+
+func (c *realmCache) name(uuid string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.get(c.names, uuid)
+}
+
+func (c *realmCache) id(name string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.get(c.ids, name)
+}
+
+func (c *realmCache) currentGeneration() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.generation
+}
+
+// remember stores a realm unless the cache was cleared since generation was read.
+func (c *realmCache) remember(generation uint64, uuid string, name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if generation != c.generation || name == "" {
+		return
+	}
+	if c.names == nil {
+		c.names, c.ids = map[string]realmCacheEntry{}, map[string]realmCacheEntry{}
+	}
+
+	now := time.Now()
+	if uuid != "" {
+		c.names[uuid] = realmCacheEntry{value: name, at: now}
+	}
+	c.ids[name] = realmCacheEntry{value: uuid, at: now}
+}
+
+func (c *realmCache) forget() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.generation++
+	c.names, c.ids = nil, nil
+}
+
+// GetRealmNameByUUID returns the current name of the realm with the given internal id. Keycloak's
+// admin API only addresses realms by name, so the name is looked up and then remembered for a short
+// while. knownName is the name last seen for the realm (may be empty); when it still points to the
+// realm, one request is enough, otherwise the realms are listed and matched on id.
+func (keycloakClient *KeycloakClient) GetRealmNameByUUID(ctx context.Context, uuid string, knownName string) (string, error) {
+	if name, ok := keycloakClient.realmCache.name(uuid); ok {
+		return name, nil
+	}
+
+	generation := keycloakClient.realmCache.currentGeneration()
+
+	if knownName != "" {
+		realm, err := keycloakClient.GetRealm(ctx, knownName)
+		if err == nil && realm.Id == uuid {
+			keycloakClient.realmCache.remember(generation, uuid, knownName)
+
+			return knownName, nil
+		}
+		// a missing realm, or one we may not read, is resolved by listing; anything else is a real error
+		if err != nil && !ErrorIs404(err) && !ErrorIs403(err) {
+			return "", err
+		}
+	}
+
+	for attempt := 0; ; attempt++ {
+		found, idsHidden, err := keycloakClient.findRealmNameInList(ctx, generation, uuid)
+		if err != nil {
+			return "", err
+		}
+		if found != "" {
+			return found, nil
+		}
+
+		// a token issued before the realm was created (or renamed) may not show it; try once with a new one
+		if attempt == 0 {
+			if err := keycloakClient.Refresh(ctx); err != nil {
+				// a failed refresh says nothing about the realm: do not report it as missing
+				return "", err
+			}
+
+			continue
+		}
+
+		if idsHidden {
+			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids from accounts without the view-realm role, which is needed to use realm_uuid", uuid)}
+		}
+
+		return "", &ApiError{Code: http.StatusNotFound, Message: fmt.Sprintf("realm with internal id %s not found", uuid)}
+	}
+}
+
+// findRealmNameInList lists the realms, remembers them, and returns the name of the one with the given
+// internal id (empty when it is not there). idsHidden reports realms that Keycloak did not show an id for.
+func (keycloakClient *KeycloakClient) findRealmNameInList(ctx context.Context, generation uint64, uuid string) (name string, idsHidden bool, err error) {
+	realms, err := keycloakClient.GetRealms(ctx)
+	if err != nil {
+		return "", false, err
+	}
+
+	for _, realm := range realms {
+		keycloakClient.realmCache.remember(generation, realm.Id, realm.Realm)
+		idsHidden = idsHidden || realm.Id == ""
+		if realm.Id == uuid {
+			name = realm.Realm
+		}
+	}
+
+	return name, idsHidden, nil
+}
+
+// GetRealmUUID returns the internal id of the realm with the given name, or an empty string when
+// Keycloak does not show it to this account. The answer is remembered for a short while.
+func (keycloakClient *KeycloakClient) GetRealmUUID(ctx context.Context, name string) (string, error) {
+	if uuid, ok := keycloakClient.realmCache.id(name); ok {
+		return uuid, nil
+	}
+
+	generation := keycloakClient.realmCache.currentGeneration()
+
+	realm, err := keycloakClient.GetRealm(ctx, name)
+	if err != nil {
+		return "", err
+	}
+
+	keycloakClient.realmCache.remember(generation, realm.Id, name)
+
+	return realm.Id, nil
+}
+
+// AuthRealm is the realm the provider authenticates against.
+func (keycloakClient *KeycloakClient) AuthRealm() string {
+	return keycloakClient.realm
 }
 
 func (keycloakClient *KeycloakClient) DeleteRealm(ctx context.Context, name string) error {
+	keycloakClient.realmCache.forget()
+
 	err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s", name), nil)
 	if err != nil {
 		// For whatever reason, this fails sometimes with a 500 during acceptance tests. try again

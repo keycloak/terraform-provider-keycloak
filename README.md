@@ -181,6 +181,26 @@ KEYCLOAK_URL="http://localhost:8080" \
 make testauth
 ```
 
+### Resources that live in a realm
+
+A realm can be renamed (see [Renaming a realm](docs/resources/realm.md#renaming-a-realm)), and its internal id stays the same.
+Every resource and data source with a required `realm_id` (or `realm`) argument automatically gets a `realm_uuid` argument
+as well. `provider/realm_reference.go` adds it to the whole provider, so a new resource needs no code for it. The provider
+resolves `realm_uuid` to the current realm name before it calls your create, read, update or delete function. To keep
+renames working in a new resource:
+
+- Use `data.Get("realm_id")` (or `realm`) to get the realm in create, read, update and delete. It always holds the current
+  realm name. Do not take the realm from `data.Id()`, and do not split it out of a composite id: such an id keeps the name the
+  realm had when the resource was created. Parsing the id in an import function is fine.
+- If the id of the resource is the realm name (as for `keycloak_realm_events`), add the resource to `identifiedByRealm` in
+  `provider/provider.go`, so that its id follows a rename.
+- If the id contains the realm name as its first part (`<realm>/<something>`), take the realm from `realm_id` and only the
+  other parts from the id. The id is updated after a rename.
+- Add the resource to `TestAccKeycloakRealm_renameWithMixedChildren` in
+  `provider/resource_keycloak_realm_rename_test.go`, using `realm_uuid`, and check that it is not replaced by a rename.
+- `TestRealmUuidIsOnEveryRealmScopedResource` fails for a resource without a realm argument. If the resource is not
+  scoped to a realm, add it to that test's exceptions.
+
 ### Run examples
 
 You can run examples against a Keycloak instance.

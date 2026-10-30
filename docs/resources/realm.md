@@ -79,7 +79,7 @@ resource "keycloak_realm" "realm" {
 
 ## Argument Reference
 
-- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak.
+- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak. Changing it renames the realm in place; see [Renaming a realm](#renaming-a-realm). The `master` realm cannot be renamed.
 - `enabled` - (Optional) When `false`, users and clients will not be able to access this realm. Defaults to `true`.
 - `display_name` - (Optional) The display name for the realm that is shown when logging in to the admin console.
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
@@ -295,6 +295,50 @@ Each of these attributes are blocks with the following attributes:
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
 - `extra_origins` - (Optional) A set of extra origins for non-web applications.
 - `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. This attribute is only valid inside a `web_authn_passwordless_policy` block and requires a Keycloak version that supports passwordless passkeys. Defaults to `false`.
+
+## Renaming a realm
+
+Changing `realm` renames the realm in place instead of replacing it, so its data is kept. Keycloak addresses a realm by
+its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
+Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
+
+To prevent that, reference the realm by its internal id, which never changes, using `realm_uuid` instead of `realm_id`:
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm = "my-realm"
+}
+
+resource "keycloak_group" "group" {
+  realm_uuid = keycloak_realm.realm.internal_id
+  name       = "group"
+}
+```
+
+`realm_uuid` is available on every resource and data source that has a `realm_id` (or `realm`) argument, which then
+holds the current realm name as a read-only value. Set exactly one of them. Data sources should use it too: they are
+read while planning, when a renamed realm does not exist under its new name yet.
+
+Looking up a realm by its internal id requires that the provider's account can see the realm's id. Keycloak hides it
+from accounts that have no `view-realm` role on that realm (for example one that only has `manage-clients`), so grant
+that role (the `realm-management` client role of the realm) before using `realm_uuid`. Configurations that keep using
+`realm_id` are not affected. If the id is hidden, using `realm_uuid` fails with an error instead of replacing resources.
+Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_uuid` fail with that error until the
+role is granted again: the provider will not guess a realm from a name that may have been reused.
+
+Things to know about renaming:
+
+- A realm keeps its internal id when it is renamed. Realms created by this provider get the realm name as internal id
+  unless `internal_id` is set, so after renaming `a` to `b` the id `a` stays taken. Creating a new realm called `a`
+  then fails; give it an `internal_id` of its own.
+- Resources whose id contains the realm name (for example `keycloak_default_groups`) get the new name in their id on
+  the next refresh.
+- A resource that still uses `realm_id` (the realm name) is replaced when the realm is renamed, because Terraform sees
+  the name change. Use `realm_uuid` to avoid that.
+
+To migrate an existing configuration, first upgrade the provider and run `terraform apply`, or `terraform apply -refresh-only`;
+`realm_uuid` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
+`realm_uuid = keycloak_realm.realm.internal_id`, which shows no changes. After that, `realm` can be changed safely.
 
 ## Default Client Scopes
 

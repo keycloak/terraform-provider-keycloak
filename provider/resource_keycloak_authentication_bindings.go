@@ -134,7 +134,7 @@ func resourceKeycloakAuthenticationBindingsRead(ctx context.Context, data *schem
 		return diag.FromErr(err)
 	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealm(ctx, realmNameOrId(data))
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
@@ -151,7 +151,7 @@ func resourceKeycloakAuthenticationBindingsDelete(ctx context.Context, data *sch
 		return diag.FromErr(err)
 	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealm(ctx, realmNameOrId(data))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -173,7 +173,7 @@ func resourceKeycloakAuthenticationBindingsUpdate(ctx context.Context, data *sch
 		return diag.FromErr(err)
 	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealm(ctx, realmNameOrId(data))
 	if err != nil {
 		return diag.FromErr(err)
 	}
