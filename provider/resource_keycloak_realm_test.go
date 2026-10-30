@@ -735,6 +735,61 @@ func TestResolveMaxSecondaryAuthFailures(t *testing.T) {
 	})
 }
 
+// Covers both branches of resolveAdminPermissionsEnabled whatever the Keycloak version under test,
+// since TestAccKeycloakRealm_admin_permissions_enabled skips entirely on Keycloak < 26.2.0 and so
+// never exercises the unsupported-version branch. It does not need TF_ACC, but like every test in
+// this package it still goes through TestMain, which requires a reachable Keycloak.
+func TestResolveAdminPermissionsEnabled(t *testing.T) {
+	oldVersion, err := version.NewVersion("26.1.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newVersion, err := version.NewVersion("26.2.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("old version, false, returns nil with no error", func(t *testing.T) {
+		got, err := resolveAdminPermissionsEnabled("test-realm", false, oldVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+	})
+
+	t.Run("old version, true, returns an explicit error", func(t *testing.T) {
+		got, err := resolveAdminPermissionsEnabled("test-realm", true, oldVersion)
+		if got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+		if err == nil || !strings.Contains(err.Error(), "not supported by your Keycloak version") {
+			t.Fatalf("expected an unsupported-version error, got %v", err)
+		}
+	})
+
+	t.Run("new version, true, returns a pointer to true with no error", func(t *testing.T) {
+		got, err := resolveAdminPermissionsEnabled("test-realm", true, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || !*got {
+			t.Fatalf("expected a pointer to true, got %v", got)
+		}
+	})
+
+	t.Run("new version, false, returns a pointer to false (not nil) so disabling reaches Keycloak", func(t *testing.T) {
+		got, err := resolveAdminPermissionsEnabled("test-realm", false, newVersion)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got == nil || *got {
+			t.Fatalf("expected a pointer to false, got %v", got)
+		}
+	})
+}
+
 func TestAccKeycloakRealm_securityDefenses(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
@@ -1101,6 +1156,51 @@ func testAccCheckKeycloakRealm_default_client_scopes(resourceName string, defaul
 	}
 }
 
+func TestAccKeycloakRealm_organizationsEnabled(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_organizationsEnabled(realmName, true),
+				Check:  testAccCheckKeycloakRealmOrganizationsEnabled("keycloak_realm.realm", true),
+			},
+			{
+				Config: testKeycloakRealm_organizationsEnabled(realmName, false),
+				Check:  testAccCheckKeycloakRealmOrganizationsEnabled("keycloak_realm.realm", false),
+			},
+		},
+	})
+}
+
+func testKeycloakRealm_organizationsEnabled(realm string, organizationsEnabled bool) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm                 = "%s"
+	enabled               = true
+	organizations_enabled = %t
+}
+	`, realm, organizationsEnabled)
+}
+
+func testAccCheckKeycloakRealmOrganizationsEnabled(resourceName string, want bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if realm.OrganizationsEnabled != want {
+			return fmt.Errorf("expected realm %s to have organizations_enabled = %t, got %t", realm.Realm, want, realm.OrganizationsEnabled)
+		}
+
+		return nil
+	}
+}
+
 func TestAccKeycloakRealm_admin_permissions_enabled(t *testing.T) {
 	if ok, _ := keycloakClient.VersionIsGreaterThanOrEqualTo(testCtx, keycloak.Version_26_2); !ok {
 		t.Skip()
@@ -1121,39 +1221,62 @@ func TestAccKeycloakRealm_admin_permissions_enabled(t *testing.T) {
 				ResourceName:  "keycloak_realm.realm",
 				ImportStateId: realmName,
 				ImportState:   true,
-				Config:        testKeycloakRealm_admin_permission_enabled(realmName),
+				Config:        testKeycloakRealm_admin_permission_enabled(realmName, true),
 				PreConfig: func() {
 					err := keycloakClient.NewRealm(testCtx, realm)
 					if err != nil {
 						t.Fatal(err)
 					}
 				},
-				Check: testAccCheckKeycloakRealm_admin_permissions_enabled(realmName),
+				Check: testAccCheckKeycloakRealm_admin_permissions_enabled(realmName, true),
 			},
 		},
 	})
 }
 
-func testKeycloakRealm_admin_permission_enabled(realm string) string {
+func TestAccKeycloakRealm_admin_permissions_disabled(t *testing.T) {
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_admin_permission_enabled(realmName, true),
+				Check:  testAccCheckKeycloakRealm_admin_permissions_enabled("keycloak_realm.realm", true),
+			},
+			{
+				Config: testKeycloakRealm_admin_permission_enabled(realmName, false),
+				Check:  testAccCheckKeycloakRealm_admin_permissions_enabled("keycloak_realm.realm", false),
+			},
+		},
+	})
+}
+
+func testKeycloakRealm_admin_permission_enabled(realm string, adminPermissionsEnabled bool) string {
 
 	return fmt.Sprintf(`
 resource "keycloak_realm" "realm" {
 	realm                          = "%s"
 	enabled                        = true
-	admin_permissions_enabled      = true
+	admin_permissions_enabled      = %t
 }
-	`, realm)
+	`, realm, adminPermissionsEnabled)
 }
 
-func testAccCheckKeycloakRealm_admin_permissions_enabled(resourceName string) resource.TestCheckFunc {
+func testAccCheckKeycloakRealm_admin_permissions_enabled(resourceName string, want bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
 		if err != nil {
 			return err
 		}
 
-		if !realm.AdminPermissionsEnabled {
-			return fmt.Errorf("expected realm %s to have admin permissions enabled but was %t", realm.Realm, realm.AdminPermissionsEnabled)
+		got := realm.AdminPermissionsEnabled != nil && *realm.AdminPermissionsEnabled
+		if got != want {
+			return fmt.Errorf("expected realm %s to have admin_permissions_enabled = %t, got %t", realm.Realm, want, got)
 		}
 
 		return nil
@@ -1170,7 +1293,7 @@ func TestAccKeycloakRealm_webauthn(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
+	signatureAlgorithms := randomNonEmptyStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
 	if len(signatureAlgorithms) == 0 {
 		signatureAlgorithms = []string{"ES256"}
 	}
@@ -1207,10 +1330,7 @@ func TestAccKeycloakRealm_webauthn_passwordless(t *testing.T) {
 	authenticatorAttachment := randomStringInSlice([]string{"platform", "cross-platform", "not specified"})
 	requireResidentKey := randomStringInSlice([]string{"Yes", "No", "not specified"})
 	userVerificationRequirement := randomStringInSlice([]string{"not specified", "required", "preferred", "discouraged"})
-	signatureAlgorithms := randomStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"})
-	if len(signatureAlgorithms) == 0 {
-		signatureAlgorithms = []string{"ES256"}
-	}
+	signatureAlgorithms := randomNonEmptyStringSliceSubset([]string{"ES256", "ES384", "ES512", "RS256", "ES384", "ES512"})
 	avoidSameAuthenticatorRegister := randomBool()
 	passwordlessPasskeysEnabled := randomBool()
 
@@ -2298,4 +2418,31 @@ resource "keycloak_realm" "realm" {
   display_name_html = "%s"
 }
 `, realm, displayName, displayNameHtml)
+}
+
+func TestAccKeycloakRealm_SmtpServerPasswordWriteOnly(t *testing.T) {
+	// Reuse the existing realm acceptance harness for a real Keycloak server.
+	realm := acctest.RandomWithPrefix("tf-acc-smtp-wo")
+	config := func(password, version, name string) string {
+		return strings.ReplaceAll(testKeycloakRealmSMTPPasswordWriteOnlyConfig(password, version, name), "smtp-test", realm)
+	}
+	check := resource.ComposeTestCheckFunc(
+		resource.TestCheckNoResourceAttr("keycloak_realm.realm", "smtp_server.0.auth.0.password_wo"),
+		resource.TestCheckResourceAttr("keycloak_realm.realm", "smtp_server.0.auth.0.password", ""),
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{Config: config("first-secret", "v1", "first"), Check: check},
+			{Config: config("second-secret", "v1", "first"), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: config("second-secret", "v1", "updated"), Check: check},
+			{Config: config("second-secret", "v2", "updated"), Check: check},
+			{Config: config("second-secret", "v2", "updated"), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), PlanOnly: true, ExpectError: regexp.MustCompile("SMTP destination settings changed")},
+			{Config: strings.ReplaceAll(config("second-secret", "v3", "updated"), `host = "smtp.example.com"`, `host = "other.example.com"`), Check: check},
+			{Config: strings.ReplaceAll(config("second-secret", "v2", "updated"), `password_wo_version = "v2"`, ""), ExpectError: regexp.MustCompile("Missing required argument")},
+		},
+	})
 }
