@@ -26,3 +26,9 @@ func ErrorIs409(err error) bool {
 
 	return ok && keycloakError != nil && keycloakError.Code == http.StatusConflict
 }
+
+func ErrorIs5xx(err error) bool {
+	keycloakError, ok := errwrap.GetType(err, &ApiError{}).(*ApiError)
+
+	return ok && keycloakError != nil && keycloakError.Code >= http.StatusInternalServerError && keycloakError.Code < 600
+}
