@@ -130,7 +130,8 @@ func createRealmWithId(testCtx context.Context, name, id string) *keycloak.Realm
 func createFGAPv2TestRealm(testCtx context.Context) *keycloak.Realm {
 	r := createTestRealm(testCtx)
 	if fgapv2, err := keycloakClient.FGAPv2IsEnabled(testCtx); err == nil && fgapv2 {
-		r.AdminPermissionsEnabled = true
+		adminPermissionsEnabled := true
+		r.AdminPermissionsEnabled = &adminPermissionsEnabled
 		if err := keycloakClient.UpdateRealm(testCtx, r); err != nil {
 			log.Fatalf("Unable to enable admin permissions on FGAPv2 test realm %s: %s", r.Realm, err)
 		}
