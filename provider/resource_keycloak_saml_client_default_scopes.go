@@ -15,6 +15,7 @@ func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
 		ReadContext:   resourceKeycloakSamlClientDefaultScopesRead,
+		CustomizeDiff: claimScopesOnPlan("default", "default_scopes", samlClientScopeOwnerKeyOnPlan),
 		DeleteContext: resourceKeycloakSamlClientDefaultScopesDelete,
 		UpdateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
 		Importer: &schema.ResourceImporter{
@@ -74,6 +75,12 @@ func resourceKeycloakSamldClientDefaultScopesReconcile(ctx context.Context, data
 	clientId := data.Get("client_id").(string)
 	tfSamlClientDefaultScopes := data.Get("default_scopes").(*schema.Set)
 
+	defer keycloakClient.LockScopeOwner(keycloak.SamlClientScopeOwnerKey(realmId, clientId))()
+
+	if err := keycloakClient.ClaimScopes(keycloak.SamlClientScopeOwnerKey(realmId, clientId), "default", interfaceSliceToStringSlice(tfSamlClientDefaultScopes.List())); err != nil {
+		return diag.FromErr(err)
+	}
+
 	keycloakSamlClientDefaultScopes, err := keycloakClient.GetSamlClientDefaultScopes(ctx, realmId, clientId)
 	if err != nil {
 		if keycloak.ErrorIs404(err) {
@@ -117,6 +124,9 @@ func resourceKeycloakSamlClientDefaultScopesDelete(ctx context.Context, data *sc
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 	defaultScopes := data.Get("default_scopes").(*schema.Set)
+
+	defer keycloakClient.LockScopeOwner(keycloak.SamlClientScopeOwnerKey(realmId, clientId))()
+	defer keycloakClient.ReleaseScopes(keycloak.SamlClientScopeOwnerKey(realmId, clientId), "default")
 
 	return diag.FromErr(keycloakClient.DetachSamlClientDefaultScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(defaultScopes.List())))
 }

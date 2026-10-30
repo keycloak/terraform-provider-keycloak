@@ -266,27 +266,40 @@ func TestAccKeycloakOpenidClientOptionalScopes_noImportNeeded(t *testing.T) {
 	})
 }
 
-// Keycloak throws a 500 if you attempt to attach an optional scope that is already attached as a default scope
+// Keycloak silently ignores an attempt to attach an optional scope that is already attached as a default scope,
+// but the provider will remove the existing scope and re-attach as an optional scope
 func TestAccKeycloakOpenidClientOptionalScopes_validateDuplicateScopeAssignment(t *testing.T) {
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
 
-	defaultClientScopes := append(preAssignedDefaultClientScopes, clientScope)
+	expectedOptionalClientScopes := append(getPreAssignedOptionalClientScopes(), clientScope)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			// attach default scopes, including the custom scope
 			{
-				Config: testKeycloakOpenidClientDefaultScopes_basic(client, clientScope),
-				Check:  testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", defaultClientScopes),
+				Config: testKeycloakOpenidClientDefaultScopes_noDefaultScopes(client, clientScope),
 			},
-			// attach optional scopes with the custom scope, expect an error since it is already in use
+			// attach the custom scope as default outside of terraform, so no resource owns it and cleans it up
 			{
-				Config:      testKeycloakOpenidClientOptionalScopes_duplicateScopeAssignment(client, clientScope),
-				ExpectError: regexp.MustCompile("validation error: scope .+ is already attached to client as a default scope"),
+				PreConfig: func() {
+					openidClient, err := keycloakClient.GetOpenidClientByClientId(testCtx, testAccRealm.Realm, client)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.AttachOpenidClientDefaultScopes(testCtx, testAccRealm.Realm, openidClient.Id, []string{clientScope})
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakOpenidClientOptionalScopes_duplicateScopeAssignment(client, clientScope),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientHasOptionalScopes("keycloak_openid_client_optional_scopes.optional_scopes", expectedOptionalClientScopes),
+					testAccCheckKeycloakOpenidClientDefaultScopeIsNotAttached("keycloak_openid_client.client", clientScope),
+				),
 			},
 		},
 	})
@@ -575,5 +588,5 @@ resource "keycloak_openid_client_optional_scopes" "optional_scopes" {
 		"${keycloak_openid_client_scope.client_scope.name}"
 	]
 }
-	`, testKeycloakOpenidClientDefaultScopes_basic(client, clientScope))
+	`, testKeycloakOpenidClientDefaultScopes_noDefaultScopes(client, clientScope))
 }

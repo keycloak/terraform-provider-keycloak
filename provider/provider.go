@@ -283,7 +283,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 	provider.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 		if client != nil {
-			return client, nil
+			// Terraform configures the provider for every run, so this gives each run its own scope claims.
+			return client.ForNewRun(), nil
 		}
 
 		url := data.Get("url").(string)

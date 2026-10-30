@@ -255,6 +255,52 @@ func TestAccKeycloakSamlClientDefaultScopes_validateScopeDoesNotExist(t *testing
 	})
 }
 
+// Keycloak silently ignores an attempt to attach a default scope that is already attached as an optional scope, but
+// the provider will detach the existing scope and re-attach it as a default scope.
+// Note that optional scopes cannot be managed for saml clients by this provider or by the Keycloak admin console, so
+// the conflicting optional scope is attached directly via the Keycloak API.
+func TestAccKeycloakSamlClientDefaultScopes_duplicateScopeAssignment(t *testing.T) {
+	t.Parallel()
+	client := acctest.RandomWithPrefix("tf-acc")
+	clientScope := acctest.RandomWithPrefix("tf-acc")
+
+	clientScopes := append(preAssignedDefaultSamlClientScopes, clientScope)
+
+	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
+	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) +
+		testKeycloakSamlClientDefaultScopes_clientScope(clientScope)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_listOfScopes(preAssignedDefaultSamlClientScopes),
+				Check:  testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", preAssignedDefaultSamlClientScopes),
+			},
+			// attach the custom scope as an optional scope, then let terraform attach it as a default scope
+			{
+				PreConfig: func() {
+					samlClient, err := keycloakClient.GetSamlClientByClientId(testCtx, testAccRealm.Realm, client)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.AttachSamlClientOptionalScopes(testCtx, testAccRealm.Realm, samlClient.Id, []string{clientScope})
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: baseConfig + testKeycloakSamlClientDefaultScopes_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakSamlClientHasDefaultScopes("keycloak_saml_client_default_scopes.default_scopes", clientScopes),
+					testAccCheckKeycloakSamlClientOptionalScopeIsNotAttached("keycloak_saml_client_default_scopes.default_scopes", clientScope),
+				),
+			},
+		},
+	})
+}
+
 // this resource doesn't support import because it can be created even if the desired state already exists in keycloak
 func TestAccKeycloakSamlClientDefaultScopes_noImportNeeded(t *testing.T) {
 	t.Parallel()
@@ -367,6 +413,28 @@ func testAccCheckKeycloakSamlClientDefaultScopeIsNotAttached(resourceName, clien
 		for _, keycloakDefaultClientScope := range keycloakDefaultClientScopes {
 			if keycloakDefaultClientScope.Name == clientScope {
 				return fmt.Errorf("expected client scope with name %s to not be attached to client", clientScope)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakSamlClientOptionalScopeIsNotAttached(resourceName, clientScope string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		keycloakOptionalClientScopes, err := keycloakClient.GetSamlClientOptionalScopes(testCtx, testAccRealm.Realm, rs.Primary.Attributes["client_id"])
+		if err != nil {
+			return err
+		}
+
+		for _, keycloakOptionalClientScope := range keycloakOptionalClientScopes {
+			if keycloakOptionalClientScope.Name == clientScope {
+				return fmt.Errorf("expected client scope with name %s to not be attached to client as an optional scope", clientScope)
 			}
 		}
 
