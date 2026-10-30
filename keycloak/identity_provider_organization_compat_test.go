@@ -82,14 +82,15 @@ func TestLegacyIdentityProviderReadProjection(t *testing.T) {
 		wantRedirect, wantError                                                  bool
 	}{
 		{name: "legacy", links: "[]", domains: "[]"},
-		{name: "single", links: `[{"organizationId":"org"}]`, domains: `[{"name":"example.com","identityProviderAlias":"idp","autoRedirect":true}]`, wantOrg: "org", wantDomain: "example.com", wantRedirect: true},
+		{name: "single", links: `[{"organizationId":"org"}]`, domains: `[{"name":"example.com","identityProviderAlias":"idp","autoRedirect":true}]`, preferredOrg: "org", wantOrg: "org", wantDomain: "example.com", wantRedirect: true},
 		{name: "any retained for one domain", links: `[{"organizationId":"org"}]`, domains: `[{"name":"example.com","identityProviderAlias":"idp"}]`, preferredOrg: "org", preferredDomain: "ANY", wantOrg: "org", wantDomain: "ANY"},
-		{name: "all domains import", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp"},{"name":"b.com","identityProviderAlias":"idp"}]`, wantOrg: "org", wantDomain: "ANY"},
-		{name: "ambiguous import", links: `[{"organizationId":"org"},{"organizationId":"other"}]`, domains: "[]", wantError: true},
+		{name: "all domains", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp"},{"name":"b.com","identityProviderAlias":"idp"}]`, preferredOrg: "org", wantOrg: "org", wantDomain: "ANY"},
+		{name: "link not adopted", links: `[{"organizationId":"org"}]`, domains: `[{"name":"example.com","identityProviderAlias":"idp","autoRedirect":true}]`},
+		{name: "links of several organizations not adopted", links: `[{"organizationId":"org"},{"organizationId":"other"}]`, domains: "[]"},
 		{name: "known organization", links: `[{"organizationId":"org"},{"organizationId":"other"}]`, domains: "[]", preferredOrg: "org", wantOrg: "org"},
 		{name: "removed association", links: `[{"organizationId":"other"}]`, domains: "[]", preferredOrg: "org"},
-		{name: "mixed redirects", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp","autoRedirect":true},{"name":"b.com","identityProviderAlias":"idp"}]`, wantError: true},
-		{name: "subset cannot be represented", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp"},{"name":"b.com","identityProviderAlias":"idp"},{"name":"c.com"}]`, wantError: true},
+		{name: "mixed redirects", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp","autoRedirect":true},{"name":"b.com","identityProviderAlias":"idp"}]`, preferredOrg: "org", wantError: true},
+		{name: "subset cannot be represented", links: `[{"organizationId":"org"}]`, domains: `[{"name":"a.com","identityProviderAlias":"idp"},{"name":"b.com","identityProviderAlias":"idp"},{"name":"c.com"}]`, preferredOrg: "org", wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client := legacyCompatClient(t, "26.8.0", func(w http.ResponseWriter, r *http.Request) {

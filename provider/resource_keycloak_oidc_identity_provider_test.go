@@ -152,6 +152,53 @@ func TestAccKeycloakOidcIdentityProvider_linkOrganization(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcIdentityProvider_importLinkedToOrganization(t *testing.T) {
+	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	domainName := acctest.RandomWithPrefix("tf-acc") + ".example.com"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_linkOrganizationDomain(oidcName, organizationName, domainName),
+			},
+			{
+				// Removes the identity provider from the state only, so that the next step imports it.
+				Config: testKeycloakOidcIdentityProvider_removedFromState(organizationName, domainName),
+			},
+			{
+				// On Keycloak 26.8 or later an import does not read the organization link.
+				Config:             testKeycloakOidcIdentityProvider_linkOrganizationDomain(oidcName, organizationName, domainName),
+				ResourceName:       "keycloak_oidc_identity_provider.oidc",
+				ImportState:        true,
+				ImportStateId:      testAccRealm.Realm + "/" + oidcName,
+				ImportStatePersist: true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if organizationId := states[0].Attributes["organization_id"]; organizationId != "" {
+						return fmt.Errorf("expected the import to leave organization_id empty, got %s", organizationId)
+					}
+					return nil
+				},
+			},
+			{
+				// The apply after the import keeps the link that already exists.
+				Config: testKeycloakOidcIdentityProvider_linkOrganizationDomain(oidcName, organizationName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_oidc_identity_provider.oidc"),
+					testAccCheckKeycloakOrganizationHasIdentityProvider("keycloak_organization.org", oidcName, true, "MANAGED"),
+					testAccCheckKeycloakOrganizationDomainRoutesTo("keycloak_organization.org", domainName, oidcName, true),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcIdentityProvider_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -485,6 +532,61 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	org_redirect_mode_email_matches = true
 }
 	`, testAccRealm.Realm, organizationName, oidc)
+}
+
+func testKeycloakOidcIdentityProvider_linkOrganizationDomain(oidc, organizationName, domainName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm = data.keycloak_realm.realm.id
+	name  = "%s"
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	organization_id                 = keycloak_organization.org.id
+	org_domain                      = "%s"
+	org_redirect_mode_email_matches = true
+}
+	`, testAccRealm.Realm, organizationName, domainName, oidc, domainName)
+}
+
+func testKeycloakOidcIdentityProvider_removedFromState(organizationName, domainName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm = data.keycloak_realm.realm.id
+	name  = "%s"
+
+	domain {
+		name = "%s"
+	}
+}
+
+removed {
+	from = keycloak_oidc_identity_provider.oidc
+
+	lifecycle {
+		destroy = false
+	}
+}
+	`, testAccRealm.Realm, organizationName, domainName)
 }
 
 func TestAccKeycloakOidcIdentityProvider_clientSecretWriteOnlyFromComputedValue(t *testing.T) {
