@@ -23,6 +23,7 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOpenidClientScopeImport,
 		},
+		CustomizeDiff: customizeDiffClientScopeDisplayOnConsentScreen,
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -41,6 +42,11 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 			"consent_screen_text": {
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+			"display_on_consent_screen": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
 			},
 			"include_in_token_scope": {
 				Type:     schema.TypeBool,
@@ -65,7 +71,7 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 	}
 }
 
-func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
+func getOpenidClientScopeFromData(data *schema.ResourceData) (*keycloak.OpenidClientScope, error) {
 
 	description, descriptionOk := data.GetOkExists("description")
 
@@ -79,12 +85,13 @@ func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidCli
 		clientScope.Description = description.(string)
 	}
 
-	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
-		clientScope.Attributes.ConsentScreenText = consentScreenText.(string)
-		clientScope.Attributes.DisplayOnConsentScreen = true
-	} else {
-		clientScope.Attributes.DisplayOnConsentScreen = false
+	clientScope.Attributes.ConsentScreenText = data.Get("consent_screen_text").(string)
+
+	displayOnConsentScreen, err := getClientScopeDisplayOnConsentScreen(data)
+	if err != nil {
+		return nil, err
 	}
+	clientScope.Attributes.DisplayOnConsentScreen = types.KeycloakBoolQuoted(displayOnConsentScreen)
 
 	clientScope.Attributes.IncludeInTokenScope = types.KeycloakBoolQuoted(data.Get("include_in_token_scope").(bool))
 
@@ -97,7 +104,7 @@ func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidCli
 
 	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
 
-	return clientScope
+	return clientScope, nil
 }
 
 func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.OpenidClientScope) {
@@ -106,10 +113,8 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	data.Set("realm_id", clientScope.RealmId)
 	data.Set("name", clientScope.Name)
 	data.Set("description", clientScope.Description)
-
-	if clientScope.Attributes.DisplayOnConsentScreen {
-		data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
-	}
+	data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
+	data.Set("display_on_consent_screen", bool(clientScope.Attributes.DisplayOnConsentScreen))
 
 	data.Set("include_in_token_scope", clientScope.Attributes.IncludeInTokenScope)
 	data.Set("include_in_openid_provider_metadata", clientScope.Attributes.IncludeInOpenidProviderMetadata)
@@ -123,9 +128,12 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 func resourceKeycloakOpenidClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getOpenidClientScopeFromData(data)
+	clientScope, err := getOpenidClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.NewOpenidClientScope(ctx, clientScope)
+	err = keycloakClient.NewOpenidClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -154,9 +162,12 @@ func resourceKeycloakOpenidClientScopeRead(ctx context.Context, data *schema.Res
 func resourceKeycloakOpenidClientScopeUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getOpenidClientScopeFromData(data)
+	clientScope, err := getOpenidClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.UpdateOpenidClientScope(ctx, clientScope)
+	err = keycloakClient.UpdateOpenidClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
