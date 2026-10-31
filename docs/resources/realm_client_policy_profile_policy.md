@@ -37,7 +37,7 @@ resource "keycloak_realm_client_policy_profile" "profile" {
 }
 
 resource "keycloak_realm_client_policy_profile_policy" "policy" {
-  name        = "my-profile"
+  name        = "my-policy"
   realm_id    = keycloak_realm.realm.id
   description = "Some desc"
   profiles = [
@@ -54,7 +54,7 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
   condition {
     name = "client-attributes"
     configuration = {
-      is-negative-logic = false
+      is_negative_logic = false
       attributes        = jsonencode([{ "key" : "test-key", "value" : "test-value" }])
     }
   }
@@ -64,15 +64,26 @@ resource "keycloak_realm_client_policy_profile_policy" "policy" {
 
 ### Attribute Arguments
 
-- `name` - (Required) The name of the attribute.
+- `name` - (Required) The name of the policy.
 - `realm_id` - (Required) The realm id.
+- `description` - (Optional) The description of the policy.
+- `enabled` - (Optional) When `false`, the policy is not applied. Defaults to `true`.
+- `profiles` - (Required) The names of the client policy profiles that are applied when the conditions of this policy match.
 - `condition` - (Optional) An ordered list of [condition](#condition-arguments)
 
 #### Condition Arguments
 
-- `name` - (Required) The name of the executor. NOTE! The executor needs to exist
+- `name` - (Required) The name of the condition. NOTE! The condition needs to exist
 - `configuration` - (Optional) - A map of configuration values
 
 ## Import
 
-This resource currently does not support importing.
+This resource can be imported using the format `{{realm_id}}/{{name}}`. Keycloak does not assign an ID to client policies, the name is the identifier within the realm.
+
+Example:
+
+```bash
+$ terraform import keycloak_realm_client_policy_profile_policy.policy my-realm/my-policy
+```
+
+Note: values in `configuration` are stored as strings in the state. JSON objects and arrays are stored as JSON strings, booleans and numbers as `"true"`, `"false"` or `"5"`.

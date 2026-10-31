@@ -17,6 +17,9 @@ func resourceKeycloakRealmClientPolicyProfile() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmClientPolicyProfileRead,
 		DeleteContext: resourceKeycloakRealmClientPolicyProfileDelete,
 		UpdateContext: resourceKeycloakRealmClientPolicyProfileUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmClientPolicyProfileImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -145,10 +148,36 @@ func resourceKeycloakRealmClientPolicyProfileRead(ctx context.Context, data *sch
 			if err != nil {
 				return diag.FromErr(err)
 			}
+			return nil
 		}
 	}
 
+	// the profile has been removed outside of terraform
+	data.SetId("")
+
 	return nil
+}
+
+func resourceKeycloakRealmClientPolicyProfileImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	parts := strings.SplitN(d.Id(), "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}/{{name}}.")
+	}
+
+	realmId := parts[0]
+	name := parts[1]
+
+	if _, err := keycloakClient.GetRealmClientPolicyProfileByName(ctx, realmId, name); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.Set("name", name)
+	d.SetId(fmt.Sprintf("%s/realm-client-policy-profiles/%s", realmId, name))
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func mapFromDataToRealmClientPolicyProfile(data *schema.ResourceData) *keycloak.RealmClientPolicyProfile {
@@ -200,23 +229,32 @@ func mapFromRealmClientPolicyProfileToData(data *schema.ResourceData, profile *k
 		}
 
 		if ex.Configuration != nil {
-			configurations := make(map[string]interface{})
-			for k, v := range ex.Configuration {
-				switch v.(type) {
-				// handle json objects and arrays
-				case map[string]interface{}, []interface{}:
-					s, _ := json.Marshal(v)
-					configurations[k] = string(s)
-				default:
-					configurations[k] = v
-				}
-			}
-			executorMap["configuration"] = configurations
+			executorMap["configuration"] = mapFromClientPolicyConfigurationToData(ex.Configuration)
 		}
 		executors = append(executors, executorMap)
 	}
 
-	data.Set("executor", executors)
+	return data.Set("executor", executors)
+}
 
-	return nil
+// mapFromClientPolicyConfigurationToData converts the configuration of a client policy executor or condition into
+// a map of strings. Keycloak may return json objects, arrays, booleans or numbers (e.g. for objects created via the
+// admin console), which are stored as their json representation.
+func mapFromClientPolicyConfigurationToData(configuration map[string]interface{}) map[string]interface{} {
+	configurations := make(map[string]interface{})
+	for k, v := range configuration {
+		switch v := v.(type) {
+		case string:
+			configurations[k] = v
+		default:
+			s, err := json.Marshal(v)
+			if err != nil {
+				configurations[k] = fmt.Sprint(v)
+				continue
+			}
+			configurations[k] = string(s)
+		}
+	}
+
+	return configurations
 }
