@@ -51,12 +51,20 @@ func resourceKeycloakRealmClientPolicyProfile() *schema.Resource {
 	}
 }
 
+// Keycloak only allows replacing the whole list of client policy profiles of a realm, so every
+// create/update/delete is a read-modify-write of that list. All of them must share one lock per
+// realm, otherwise concurrent operations overwrite each other's changes. Read is not locked: a
+// single GET is consistent on its own, and Create calls Read while still holding the lock.
+func realmClientPolicyProfilesMutexKey(realmId string) string {
+	return fmt.Sprintf("realm-client-policy-profiles:%s", realmId)
+}
+
 func resourceKeycloakRealmClientPolicyProfileUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	profile := mapFromDataToRealmClientPolicyProfile(data)
 	realmId := profile.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileUpdate:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileUpdate:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilesMutexKey(realmId))
 	realmClientPolicyProfiles, err := keycloakClient.GetAllRealmClientPolicyProfiles(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -81,8 +89,8 @@ func resourceKeycloakRealmClientPolicyProfileDelete(ctx context.Context, data *s
 	slicedProfiles := []keycloak.RealmClientPolicyProfile{}
 	profile := mapFromDataToRealmClientPolicyProfile(data)
 	realmId := profile.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileDelete:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileDelete:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilesMutexKey(realmId))
 	realmClientPolicyProfiles, err := keycloakClient.GetAllRealmClientPolicyProfiles(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -109,8 +117,8 @@ func resourceKeycloakRealmClientPolicyProfileCreate(ctx context.Context, data *s
 	profile := mapFromDataToRealmClientPolicyProfile(data)
 
 	realmId := profile.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileCreate:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfileCreate:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilesMutexKey(realmId))
 	name := profile.Name
 	data.SetId(fmt.Sprintf("%s/realm-client-policy-profiles/%s", realmId, name))
 
