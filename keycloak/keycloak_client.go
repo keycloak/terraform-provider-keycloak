@@ -696,7 +696,9 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 
 	if caCert != "" {
 		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM([]byte(caCert))
+		if !caCertPool.AppendCertsFromPEM([]byte(caCert)) {
+			return nil, fmt.Errorf("root_ca_certificate does not contain a valid PEM certificate; it must be the PEM content of the CA certificate, not a file path")
+		}
 		transport.TLSClientConfig.RootCAs = caCertPool
 	}
 
