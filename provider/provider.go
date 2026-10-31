@@ -45,6 +45,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_realm_client_policy_profile_policy":                resourceKeycloakRealmClientPolicyProfilePolicy(),
 			"keycloak_realm_client_registration_policy":                  resourceKeycloakRealmClientRegistrationPolicy(),
 			"keycloak_realm_keystore_aes_generated":                      resourceKeycloakRealmKeystoreAesGenerated(),
+			"keycloak_realm_keystore_ecdh_generated":                     resourceKeycloakRealmKeystoreEcdhGenerated(),
 			"keycloak_realm_keystore_ecdsa_generated":                    resourceKeycloakRealmKeystoreEcdsaGenerated(),
 			"keycloak_realm_keystore_hmac_generated":                     resourceKeycloakRealmKeystoreHmacGenerated(),
 			"keycloak_realm_keystore_java_keystore":                      resourceKeycloakRealmKeystoreJavaKeystore(),
