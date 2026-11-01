@@ -57,6 +57,12 @@ func (keycloakClient *KeycloakClient) getUserCredentials(ctx context.Context, re
 func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Context, credential *UserOtpCredential) error {
 	userPath := fmt.Sprintf("/realms/%s/users/%s", credential.RealmId, credential.UserId)
 
+	// The new credential's ID is found by diffing the credential list around the PUT, so concurrent
+	// creations for the same user must not interleave.
+	lockKey := fmt.Sprintf("CreateUserOtpCredential:%s:%s", credential.RealmId, credential.UserId)
+	keycloakClient.Mutex.Lock(lockKey)
+	defer keycloakClient.Mutex.Unlock(lockKey)
+
 	existingCredentials, err := keycloakClient.getUserCredentials(ctx, credential.RealmId, credential.UserId)
 	if err != nil {
 		return err
@@ -103,7 +109,8 @@ func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Contex
 	}
 	user["requiredActions"] = requiredActions
 
-	if err := keycloakClient.put(ctx, userPath, user); err != nil {
+	// the request body contains the TOTP secret
+	if err := keycloakClient.put(withRedactedRequestBody(ctx), userPath, user); err != nil {
 		return err
 	}
 

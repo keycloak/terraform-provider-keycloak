@@ -110,7 +110,19 @@ func TestAccKeycloakUserOtpCredential_removedOutOfBand(t *testing.T) {
 					}
 				},
 				Config: testKeycloakUserOtpCredential_basic(username, "JBSWY3DPEHPK3PXP", ""),
-				Check:  testAccCheckKeycloakUserHasOtpCredential("keycloak_user_otp_credential.otp"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserHasOtpCredential("keycloak_user_otp_credential.otp"),
+					func(s *terraform.State) error {
+						rs := s.RootModule().Resources["keycloak_user_otp_credential.otp"]
+						recreatedId := userOtpCredentialIdFromResourceId(rs.Primary.ID)
+						if recreatedId == credentialId {
+							return fmt.Errorf("expected the OTP credential to be recreated with a new ID")
+						}
+						credentialId = recreatedId
+
+						return nil
+					},
+				),
 			},
 			// the credential is deleted when the resource is removed
 			{

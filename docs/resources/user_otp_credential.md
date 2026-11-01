@@ -35,14 +35,16 @@ resource "keycloak_user" "user" {
   }
 }
 
-resource "random_id" "totp_secret" {
-  byte_length = 20
+# A Base32-encoded secret generated outside of Terraform, for example with `openssl rand 20 | base32`
+variable "totp_secret" {
+  type      = string
+  sensitive = true
 }
 
 resource "keycloak_user_otp_credential" "otp" {
   realm_id   = keycloak_realm.realm.id
   user_id    = keycloak_user.user.id
-  secret     = random_id.totp_secret.b32_std
+  secret     = var.totp_secret
   user_label = "Provisioned by Terraform"
 }
 ```
