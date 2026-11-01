@@ -62,3 +62,38 @@ resource "keycloak_openid_audience_protocol_mapper" "audience_mapper" {
 }
 `, testAccRealm.Realm, name, acctest.RandString(10), acctest.RandString(10), randomBool())
 }
+
+// Keycloak creates the built-in offline_access scope without these attributes and treats a missing one as true.
+func TestAccKeycloakDataSourceOpenidClientScope_missingAttributesAreTrue(t *testing.T) {
+	t.Parallel()
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	dataSourceName := "data.keycloak_openid_client_scope.offline_access"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKeycloakOpenidClientScopeConfig_builtIn(realmName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "include_in_token_scope", "true"),
+					resource.TestCheckResourceAttr(dataSourceName, "include_in_openid_provider_metadata", "true"),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakOpenidClientScopeConfig_builtIn(realmName string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+data "keycloak_openid_client_scope" "offline_access" {
+	name     = "offline_access"
+	realm_id = keycloak_realm.realm.id
+}
+`, realmName)
+}

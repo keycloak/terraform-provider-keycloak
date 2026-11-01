@@ -3,7 +3,6 @@ package keycloak
 import (
 	"encoding/json"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
@@ -26,7 +25,7 @@ func unmarshalExtraConfig(data []byte, reflectValue reflect.Value, extraConfig *
 					if field.Kind() == reflect.String {
 						field.SetString(configValue.(string))
 					} else if field.Kind() == reflect.Bool {
-						boolVal, err := strconv.ParseBool(configValue.(string))
+						boolVal, err := parseBoolAndTreatEmptyStringAsFalse(configValue.(string))
 						if err == nil {
 							field.Set(reflect.ValueOf(types.KeycloakBoolQuoted(boolVal)))
 						}

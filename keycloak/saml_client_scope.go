@@ -113,6 +113,9 @@ func IncludeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFi
 }
 
 func (f *SamlClientScopeAttributes) UnmarshalJSON(data []byte) error {
+	// Keycloak treats this attribute as true when it is not stored (ClientScopeModel).
+	f.DisplayOnConsentScreen = true
+
 	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
 }
 
