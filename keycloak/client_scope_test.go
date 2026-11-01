@@ -21,7 +21,7 @@ func TestOpenidClientScopeAttributes_missingBooleansAreTrue(t *testing.T) {
 }
 
 func TestOpenidClientScopeAttributes_storedBooleansAreRead(t *testing.T) {
-	for _, stored := range []string{"false", ""} {
+	for _, stored := range []string{"false", "", "no", "fAlSe"} {
 		var clientScope OpenidClientScope
 		data := fmt.Sprintf(`{"name":"phone","attributes":{"display.on.consent.screen":%[1]q,"include.in.token.scope":%[1]q,"include.in.openid.provider.metadata":%[1]q}}`, stored)
 		if err := json.Unmarshal([]byte(data), &clientScope); err != nil {

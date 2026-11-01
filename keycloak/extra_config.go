@@ -26,9 +26,11 @@ func unmarshalExtraConfig(data []byte, reflectValue reflect.Value, extraConfig *
 						field.SetString(configValue.(string))
 					} else if field.Kind() == reflect.Bool {
 						boolVal, err := parseBoolAndTreatEmptyStringAsFalse(configValue.(string))
-						if err == nil {
-							field.Set(reflect.ValueOf(types.KeycloakBoolQuoted(boolVal)))
+						if err != nil {
+							// Keycloak reads a stored value it cannot parse as false
+							boolVal = false
 						}
+						field.Set(reflect.ValueOf(types.KeycloakBoolQuoted(boolVal)))
 					} else if field.Kind() == reflect.TypeOf([]string{}).Kind() {
 						var sliceQuoted types.KeycloakSliceQuoted
 						var sliceHashDelimited types.KeycloakSliceHashDelimited

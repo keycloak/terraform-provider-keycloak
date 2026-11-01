@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"slices"
@@ -479,11 +480,16 @@ func testAccCheckKeycloakRealmOpenidProviderMetadataListsScope(realmResourceName
 		}
 
 		url := fmt.Sprintf("%s/realms/%s/.well-known/openid-configuration", strings.TrimSuffix(os.Getenv("KEYCLOAK_URL"), "/"), rs.Primary.ID)
-		response, err := http.Get(url)
+		response, err := keycloakClient.GetHttpClient().Get(url)
 		if err != nil {
 			return err
 		}
 		defer response.Body.Close()
+
+		if response.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(response.Body)
+			return fmt.Errorf("unexpected status %d reading %s: %s", response.StatusCode, url, body)
+		}
 
 		var metadata struct {
 			ScopesSupported []string `json:"scopes_supported"`
