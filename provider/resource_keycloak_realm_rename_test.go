@@ -540,16 +540,18 @@ resource "keycloak_realm" "second" {
 // Keycloak 26.0 does not show a realm to a token that was issued before the realm was created. A realm uuid
 // that cannot be found is retried with a new token.
 func TestAccKeycloakRealm_uuidOfRealmCreatedOutsideTerraform(t *testing.T) {
-	t.Parallel()
-
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmUuid := acctest.RandomWithPrefix("uuid")
 
-	// another client, so the client used by the provider keeps the token it got before the realm existed
+	// Another client, so the client used by the provider keeps the token it got before the realm existed. It reads
+	// the process-wide credentials, which the provider tests that run in parallel change, so it is created before
+	// this test becomes parallel.
 	otherClient, err := keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), "", "", "", "", "", true, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), "", false, map[string]string{}, os.Getenv("KEYCLOAK_VERSION"))
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -570,6 +572,51 @@ resource "keycloak_group" "group" {
 }
 `, realmUuid),
 				Check: resource.TestCheckResourceAttr("keycloak_group.group", "realm_id", realmName),
+			},
+		},
+	})
+}
+
+// A child that still names the realm with realm_id from keycloak_realm.x.realm sees the new name in the plan of the
+// rename, so it is replaced in that apply. realm_uuid avoids that, which the documentation recommends.
+//
+// A child that takes the name from keycloak_realm.x.id sees the old name in that plan, because the id only changes
+// while the realm is updated, and the next refresh brings it up to date. The test framework cannot express that: it
+// wants the plans with and without refresh after an apply to agree. It was verified by hand, and is documented.
+func TestAccKeycloakRealm_renameWithChildUsingRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	renamedRealmName := acctest.RandomWithPrefix("tf-acc-renamed")
+
+	config := func(realm string) string {
+		return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_group" "group" {
+	realm_id = keycloak_realm.realm.realm
+	name     = "group"
+}
+`, realm)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{Config: config(realmName)},
+			{
+				Config: config(renamedRealmName),
+				Check:  testAccRefreshClientToken,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("keycloak_realm.realm", plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction("keycloak_group.group", plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
 			},
 		},
 	})

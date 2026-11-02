@@ -333,8 +333,12 @@ Things to know about renaming:
   then fails; give it an `internal_id` of its own.
 - Resources whose id contains the realm name (for example `keycloak_default_groups`) get the new name in their id on
   the next refresh.
-- A resource that still uses `realm_id` (the realm name) is replaced when the realm is renamed, because Terraform sees
-  the name change. Use `realm_uuid` to avoid that.
+- A resource that still uses `realm_id` (the realm name) depends on where the name comes from. If it comes from
+  `keycloak_realm.x.realm`, the plan of the rename already shows the new name, so the resource is replaced in that
+  apply. If it comes from `keycloak_realm.x.id`, the plan of the rename still shows the old name, because the id only
+  changes while the realm is updated. The next refresh then brings the resource up to date, so it is not replaced, but
+  adding or changing such a resource in the same apply as the rename fails with `Provider produced inconsistent final
+  plan`, after the realm has already been renamed. Use `realm_uuid` for all resources of a realm that you want to rename.
 
 To migrate an existing configuration, first upgrade the provider and run `terraform apply`, or `terraform apply -refresh-only`;
 `realm_uuid` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
