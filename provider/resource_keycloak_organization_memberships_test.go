@@ -67,8 +67,11 @@ func TestAccKeycloakOrganizationMemberships_adoptPreExistingMembers(t *testing.T
 			// Step 2: Declare memberships with `managedUser` only. This should adopt the organization,
 			// adding `managedUser` and removing the pre-existing `preExistingUser`.
 			{
-				Config: testKeycloakOrganizationMemberships_basic(organizationName, managedUser),
+				// Retain both users so reconciliation cannot race with deletion of
+				// the pre-existing member's underlying user account.
+				Config: testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser),
 				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists("keycloak_user.pre_existing_user"),
 					testAccCheckUserBelongsToOrganization("keycloak_organization_memberships.org_members", managedUser),
 					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{preExistingUser}),
 				),
@@ -496,6 +499,16 @@ resource "keycloak_user" "user" {
 	username = "%s"
 }
 	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), preExistingUser, managedUser)
+}
+
+func testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser string) string {
+	return testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser) + `
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	members         = [keycloak_user.user.username]
+}
+`
 }
 
 func testKeycloakOrganizationMemberships_moreThan50members(organizationName string) string {
