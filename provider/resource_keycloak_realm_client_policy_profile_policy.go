@@ -17,6 +17,9 @@ func resourceKeycloakRealmClientPolicyProfilePolicy() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmClientPolicyProfilePolicyRead,
 		DeleteContext: resourceKeycloakRealmClientPolicyProfilePolicyDelete,
 		UpdateContext: resourceKeycloakRealmClientPolicyProfilePolicyUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmClientPolicyProfilePolicyImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -157,10 +160,36 @@ func resourceKeycloakRealmClientPolicyProfilePolicyRead(ctx context.Context, dat
 			if err != nil {
 				return diag.FromErr(err)
 			}
+			return nil
 		}
 	}
 
+	// the policy has been removed outside of terraform
+	data.SetId("")
+
 	return nil
+}
+
+func resourceKeycloakRealmClientPolicyProfilePolicyImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	parts := strings.SplitN(d.Id(), "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}/{{name}}.")
+	}
+
+	realmId := parts[0]
+	name := parts[1]
+
+	if _, err := keycloakClient.GetRealmClientPolicyProfilePolicyByName(ctx, realmId, name); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.Set("name", name)
+	d.SetId(fmt.Sprintf("%s/realm-client-policy-profile-policies/%s", realmId, name))
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func mapFromDataToRealmClientPolicyProfilePolicy(data *schema.ResourceData) *keycloak.RealmClientPolicyProfilePolicy {
@@ -221,23 +250,10 @@ func mapFromRealmClientPolicyProfilePolicyToData(data *schema.ResourceData, poli
 		}
 
 		if cond.Configuration != nil {
-			configurations := make(map[string]interface{})
-			for k, v := range cond.Configuration {
-				switch v.(type) {
-				// handle json objects and arrays
-				case map[string]interface{}, []interface{}:
-					s, _ := json.Marshal(v)
-					configurations[k] = string(s)
-				default:
-					configurations[k] = v
-				}
-			}
-			conditionMap["configuration"] = configurations
+			conditionMap["configuration"] = mapFromClientPolicyConfigurationToData(cond.Configuration)
 		}
 		conditions = append(conditions, conditionMap)
 	}
 
-	data.Set("condition", conditions)
-
-	return nil
+	return data.Set("condition", conditions)
 }
