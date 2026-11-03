@@ -368,12 +368,27 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	var clientCredentials ClientCredentials
 	err = json.Unmarshal(body, &clientCredentials)
 	if err != nil {
-		return err
+		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint (%s): %w; response: %s", refreshTokenResponse.Status, err, responseSnippet(body))
 	}
 
 	keycloakClient.setTokens(&clientCredentials)
 
 	return nil
+}
+
+// responseSnippet is the start of a response body, for error messages. A body that mentions a token is left out.
+func responseSnippet(body []byte) string {
+	const limit = 120
+
+	text := strings.TrimSpace(string(body))
+	if strings.Contains(text, "token") {
+		return "(left out, it mentions a token)"
+	}
+	if len(text) > limit {
+		text = text[:limit] + "..."
+	}
+
+	return text
 }
 
 func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Context, kc_url string) (url.Values, error) {
@@ -568,7 +583,12 @@ func (keycloakClient *KeycloakClient) get(ctx context.Context, path string, reso
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(body, resource)
+
+	if err := json.Unmarshal(body, resource); err != nil {
+		return fmt.Errorf("error reading the response of GET %s: %w; response: %s", path, err, responseSnippet(body))
+	}
+
+	return nil
 }
 
 func (keycloakClient *KeycloakClient) getRaw(ctx context.Context, path string, params map[string]string) ([]byte, error) {

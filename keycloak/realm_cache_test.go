@@ -274,3 +274,36 @@ func TestGetRealmUUIDRemembersThatARealmIsForbidden(t *testing.T) {
 		t.Errorf("the lookup was repeated: %d requests more", after-before)
 	}
 }
+
+// A token endpoint that answers with something that is not JSON must be recognisable in the error.
+func TestRefreshExplainsAnUnreadableTokenResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"error" e}`))
+	}))
+	t.Cleanup(server.Close)
+
+	client := &KeycloakClient{
+		authUrl: server.URL, realm: "master", httpClient: server.Client(), initialLogin: true,
+		clientCredentials: &ClientCredentials{GrantType: "client_credentials", ClientId: "c", ClientSecret: "s"},
+	}
+
+	err := client.Refresh(t.Context())
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, expected := range []string{"refreshing credentials", "503", `{"error" e}`} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Errorf("the error %q does not mention %q", err, expected)
+		}
+	}
+}
+
+func TestResponseSnippetLeavesTokensOut(t *testing.T) {
+	if snippet := responseSnippet([]byte(`{"access_token":"secret`)); strings.Contains(snippet, "secret") {
+		t.Errorf("a token ended up in %q", snippet)
+	}
+	if snippet := responseSnippet([]byte(strings.Repeat("x", 500))); len(snippet) > 130 {
+		t.Errorf("the snippet is too long: %d", len(snippet))
+	}
+}
