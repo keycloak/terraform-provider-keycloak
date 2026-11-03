@@ -100,6 +100,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `default_scopes` - (Optional) The scopes to be sent when asking for authorization. It can be a space-separated list of scopes. Defaults to `openid`.
 - `organization_id` - (Optional) The ID of the organization to link this identity provider to.
 - `org_domain` - (Optional) The organization domain to associate this identity provider with. it is used to map users to an organization based on their email domain and to authenticate them accordingly in the scope of the organization.
+- `allow_admin_role_mapping` - (Optional) When `true`, mappers of this identity provider may grant administrative roles, either directly or through membership of groups that carry administrative roles. Defaults to `false`. Requires Keycloak 26.8 or later, where mappers that grant admin roles are rejected unless this is enabled. Enabling it requires the `manage-realm` permission.
 - `org_redirect_mode_email_matches` - (Optional) Indicates whether to automatically redirect user to this identity provider when email domain matches domain.
 - `sync_mode` - (Optional) The default sync mode to use for all mappers attached to this identity provider. Can be once of `IMPORT`, `FORCE`, or `LEGACY`.
 - `gui_order` - (Optional) A number defining the order of this identity provider in the GUI.
