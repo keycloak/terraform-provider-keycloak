@@ -9,6 +9,9 @@ Allows you to manage the set of optional client scopes for a Keycloak realm, whi
 Note that this resource attempts to be an **authoritative** source over the optional client scopes for a Keycloak realm,
 so any Keycloak defaults and manual adjustments will be overwritten.
 
+Additionally, if a scope is set as default, this resource will remove and re-add it as an optional scope.
+Warning: Configuring the same scope in both this resource and `keycloak_realm_default_client_scopes` for the same realm is an error, and the plan fails with `scopes [...] are configured as both default and optional scopes`. The check covers resources in the same Terraform configuration. If the realm is created in the same run, the error is reported during apply instead.
+
 
 ## Example Usage
 

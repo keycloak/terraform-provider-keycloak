@@ -332,29 +332,39 @@ func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Conte
 		}
 	}
 
-	var attachedClientScopes []*OpenidClientScope
-	var duplicateScopeAssignmentErrorMessage string
-	switch t {
-	case "optional":
-		attachedDefaultClientScopes, err := keycloakClient.GetOpenidClientDefaultScopes(ctx, realmId, clientId)
-		if err != nil {
-			return err
-		}
-		attachedClientScopes = append(attachedClientScopes, attachedDefaultClientScopes...)
-		duplicateScopeAssignmentErrorMessage = "validation error: scope %s is already attached to client as a default scope"
-	case "default":
-		attachedOptionalClientScopes, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId)
-		if err != nil {
-			return err
-		}
-		attachedClientScopes = append(attachedClientScopes, attachedOptionalClientScopes...)
-		duplicateScopeAssignmentErrorMessage = "validation error: scope %s is already attached to client as an optional scope"
+	currentScopes, err := keycloakClient.getOpenidClientScopes(ctx, realmId, clientId, t)
+	if err != nil {
+		return err
+	}
+
+	// Keycloak does not allow a client scope to be attached as a default and an optional scope at the same time, so
+	// detach it from the conflicting type first, mirroring the behavior of the Keycloak admin console.
+	conflictingType := otherScopeType(t)
+	conflictingScopes, err := keycloakClient.getOpenidClientScopes(ctx, realmId, clientId, conflictingType)
+	if err != nil {
+		return err
+	}
+
+	attached := make(map[string]bool, len(currentScopes))
+	for _, s := range currentScopes {
+		attached[s.Id] = true
+	}
+	conflicting := make(map[string]bool, len(conflictingScopes))
+	for _, s := range conflictingScopes {
+		conflicting[s.Id] = true
 	}
 
 	for _, openidClientScope := range allOpenidClientScopes {
-		for _, attachedClientScope := range attachedClientScopes {
-			if openidClientScope.Id == attachedClientScope.Id {
-				return fmt.Errorf(duplicateScopeAssignmentErrorMessage, attachedClientScope.Name)
+		if attached[openidClientScope.Id] {
+			continue
+		}
+
+		// Keycloak ignores the scope type on DELETE, so only delete scopes that are attached as the conflicting type.
+		// Deleting any other scope would detach it whatever its type.
+		if conflicting[openidClientScope.Id] {
+			err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, conflictingType, openidClientScope.Id), nil)
+			if err != nil && !ErrorIs404(err) {
+				return err
 			}
 		}
 
@@ -390,14 +400,35 @@ func (keycloakClient *KeycloakClient) AttachOpenidClientOptionalScopes(ctx conte
 }
 
 func (keycloakClient *KeycloakClient) detachOpenidClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
-	allOpenidClientScopes, err := keycloakClient.ListOpenidClientScopesWithFilter(ctx, realmId, IncludeOpenidClientScopesMatchingNames(scopeNames))
+	// Keycloak ignores the scope type on DELETE and removes the assignment whatever its type, so only detach scopes
+	// that are currently attached as this type to avoid undoing a scope that has since moved to the other type.
+	currentScopes, err := keycloakClient.getOpenidClientScopes(ctx, realmId, clientId, t)
+	if ErrorIs404(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	currentNames := make(map[string]bool, len(currentScopes))
+	for _, s := range currentScopes {
+		currentNames[s.Name] = true
+	}
+
+	var namesToDetach []string
+	for _, name := range scopeNames {
+		if currentNames[name] {
+			namesToDetach = append(namesToDetach, name)
+		}
+	}
+
+	allOpenidClientScopes, err := keycloakClient.ListOpenidClientScopesWithFilter(ctx, realmId, IncludeOpenidClientScopesMatchingNames(namesToDetach))
 	if err != nil {
 		return err
 	}
 
 	for _, openidClientScope := range allOpenidClientScopes {
 		err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/clients/%s/%s-client-scopes/%s", realmId, clientId, t, openidClientScope.Id), nil)
-		if err != nil {
+		if err != nil && !ErrorIs404(err) {
 			return err
 		}
 	}
