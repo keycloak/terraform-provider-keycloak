@@ -25,18 +25,18 @@ func TestAccKeycloakRealmKeystoreCustom_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, map[string]string{
-					"priority":             "100",
-					"ecdhEllipticCurveKey": "P-384",
-					"ecdhAlgorithm":        "ECDH-ES+A192KW",
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, map[string]string{
+					"priority":              "100",
+					"ecdsaEllipticCurveKey": "P-384",
+					"enabled":               "true",
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", map[string]string{
-						"priority":             "100",
-						"ecdhEllipticCurveKey": "P-384",
-						"ecdhAlgorithm":        "ECDH-ES+A192KW",
+						"priority":              "100",
+						"ecdsaEllipticCurveKey": "P-384",
+						"enabled":               "true",
 					}, nil),
-					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "provider_id", "ecdh-generated"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "provider_id", "ecdsa-generated"),
 					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "3"),
 				),
 			},
@@ -50,7 +50,7 @@ func TestAccKeycloakRealmKeystoreCustom_basic(t *testing.T) {
 				ResourceName:      "keycloak_realm_keystore_custom.custom",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     fmt.Sprintf("%s/%s/ecdh-generated", testAccRealmUserFederation.Realm, keystoreName),
+				ImportStateId:     fmt.Sprintf("%s/%s/ecdsa-generated", testAccRealmUserFederation.Realm, keystoreName),
 			},
 		},
 	})
@@ -92,37 +92,33 @@ func TestAccKeycloakRealmKeystoreCustom_update(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, map[string]string{
-					"priority":             "100",
-					"enabled":              "true",
-					"active":               "true",
-					"ecdhEllipticCurveKey": "P-256",
-					"ecdhAlgorithm":        "ECDH-ES",
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, map[string]string{
+					"priority":              "100",
+					"enabled":               "true",
+					"active":                "true",
+					"ecdsaEllipticCurveKey": "P-256",
 				}),
 				Check: testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", map[string]string{
-					"priority":             "100",
-					"enabled":              "true",
-					"active":               "true",
-					"ecdhEllipticCurveKey": "P-256",
-					"ecdhAlgorithm":        "ECDH-ES",
+					"priority":              "100",
+					"enabled":               "true",
+					"active":                "true",
+					"ecdsaEllipticCurveKey": "P-256",
 				}, nil),
 			},
 			{
 				// change values and remove keys: keycloak must drop the removed keys
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName+"-renamed", map[string]string{
-					"priority":             "200",
-					"active":               "false",
-					"ecdhEllipticCurveKey": "P-521",
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName+"-renamed", map[string]string{
+					"priority":              "200",
+					"ecdsaEllipticCurveKey": "P-521",
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", map[string]string{
-						"priority":             "200",
-						"active":               "false",
-						"ecdhEllipticCurveKey": "P-521",
-					}, []string{"enabled", "ecdhAlgorithm"}),
+						"priority":              "200",
+						"ecdsaEllipticCurveKey": "P-521",
+					}, []string{"enabled", "active"}),
 					testAccCheckRealmKeystoreCustomName("keycloak_realm_keystore_custom.custom", keystoreName+"-renamed"),
 					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "name", keystoreName+"-renamed"),
-					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "3"),
+					resource.TestCheckResourceAttr("keycloak_realm_keystore_custom.custom", "config.%", "2"),
 				),
 			},
 		},
@@ -189,7 +185,7 @@ func TestAccKeycloakRealmKeystoreCustom_createAfterManualDestroy(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, config),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, config),
 				Check:  testAccCheckRealmKeystoreCustomFetch("keycloak_realm_keystore_custom.custom", keystore),
 			},
 			{
@@ -199,7 +195,7 @@ func TestAccKeycloakRealmKeystoreCustom_createAfterManualDestroy(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, config),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, config),
 				Check:  testAccCheckRealmKeystoreCustomFetch("keycloak_realm_keystore_custom.custom", keystore),
 			},
 		},
@@ -213,8 +209,8 @@ func TestAccKeycloakRealmKeystoreCustom_driftIsReverted(t *testing.T) {
 
 	keystoreName := acctest.RandomWithPrefix("tf-acc")
 	config := map[string]string{
-		"priority":      "100",
-		"ecdhAlgorithm": "ECDH-ES+A128KW",
+		"priority": "100",
+		"active":   "true",
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -223,21 +219,21 @@ func TestAccKeycloakRealmKeystoreCustom_driftIsReverted(t *testing.T) {
 		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, config),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, config),
 				Check:  testAccCheckRealmKeystoreCustomFetch("keycloak_realm_keystore_custom.custom", keystore),
 			},
 			{
 				PreConfig: func() {
 					keystore.Name = keystoreName
-					keystore.ProviderId = "ecdh-generated"
+					keystore.ProviderId = "ecdsa-generated"
 					keystore.Config = map[string]string{"priority": "999"}
 
-					err := keycloakClient.UpdateRealmKeystoreCustom(testCtx, keystore, []string{"ecdhAlgorithm"})
+					err := keycloakClient.UpdateRealmKeystoreCustom(testCtx, keystore, []string{"active"})
 					if err != nil {
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, config),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, config),
 				Check:  testAccCheckRealmKeystoreCustomConfig("keycloak_realm_keystore_custom.custom", config, nil),
 			},
 		},
@@ -259,11 +255,11 @@ func TestAccKeycloakRealmKeystoreCustom_validation(t *testing.T) {
 				ExpectError: regexp.MustCompile("key provider with id tf-acc-not-installed is not installed on the server"),
 			},
 			{
-				Config:      testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, map[string]string{"keySize": "2048"}),
-				ExpectError: regexp.MustCompile(`config key "keySize" is not declared by key provider ecdh-generated`),
+				Config:      testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, map[string]string{"keySize": "2048"}),
+				ExpectError: regexp.MustCompile(`config key "keySize" is not declared by key provider ecdsa-generated`),
 			},
 			{
-				Config:      testKeycloakRealmKeystoreCustom_ecdh(testAccRealmUserFederation.Realm, keystoreName, map[string]string{"priority": ""}),
+				Config:      testKeycloakRealmKeystoreCustom_ecdsa(testAccRealmUserFederation.Realm, keystoreName, map[string]string{"priority": ""}),
 				ExpectError: regexp.MustCompile(`config key "priority" must not be empty`),
 			},
 		},
@@ -367,12 +363,12 @@ func TestAccKeycloakRealmKeystoreCustom_parentIdDifferentFromRealmName(t *testin
 					})
 				},
 				// create: keycloak must default the omitted parentId to the realm's internal id
-				Config: testKeycloakRealmKeystoreCustom_ecdh(realmName, keystoreName, map[string]string{"priority": "100"}),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(realmName, keystoreName, map[string]string{"priority": "100"}),
 				Check:  testAccCheckRealmKeystoreCustomParentId("keycloak_realm_keystore_custom.custom", internalId),
 			},
 			{
 				// update: the omitted parentId must leave the stored parent untouched
-				Config: testKeycloakRealmKeystoreCustom_ecdh(realmName, keystoreName, map[string]string{"priority": "200"}),
+				Config: testKeycloakRealmKeystoreCustom_ecdsa(realmName, keystoreName, map[string]string{"priority": "200"}),
 				Check:  testAccCheckRealmKeystoreCustomParentId("keycloak_realm_keystore_custom.custom", internalId),
 			},
 		},
@@ -518,8 +514,8 @@ func getKeycloakRealmKeystoreCustomFromState(s *terraform.State, resourceName st
 	return keystore, nil
 }
 
-func testKeycloakRealmKeystoreCustom_ecdh(realm, keystoreName string, config map[string]string) string {
-	return testKeycloakRealmKeystoreCustom_provider(realm, keystoreName, "ecdh-generated", config)
+func testKeycloakRealmKeystoreCustom_ecdsa(realm, keystoreName string, config map[string]string) string {
+	return testKeycloakRealmKeystoreCustom_provider(realm, keystoreName, "ecdsa-generated", config)
 }
 
 func testKeycloakRealmKeystoreCustom_provider(realm, keystoreName, providerId string, config map[string]string) string {
