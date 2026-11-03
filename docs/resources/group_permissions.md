@@ -76,6 +76,7 @@ resource "keycloak_group_permissions" "test" {
 The following arguments are supported:
 
 - `realm_id` - (Required) The realm in which to manage fine-grained role permissions.
+- `organization_id` - (Optional) Not supported by this resource. This is the Fine-Grained Admin Permissions v1 resource, whose REST API is realm-scoped and cannot manage organization groups; setting a non-empty value returns an error. To manage an organization group's fine-grained permissions, use [`keycloak_group_admin_permissions`](group_admin_permissions.md) (FGA v2).
 - `group_id` - (Required) The id of the group.
 
 
@@ -99,3 +100,13 @@ In addition to the arguments listed above, the following computed attributes are
 
 - `enabled` - When true, this indicates that fine-grained role permissions are enabled. This will always be `true`.
 - `authorization_resource_server_id` - Resource server id representing the realm management client on which these permissions are managed.
+
+### Import
+
+This resource can be imported using the format `{{realm_id}}/{{group_id}}`.
+
+Example:
+
+```bash
+$ terraform import keycloak_group_permissions.test my-realm/18cc6b87-2ce7-4e59-bdc8-b9d49ec98a94
+```
