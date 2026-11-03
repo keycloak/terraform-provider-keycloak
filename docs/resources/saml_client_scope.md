@@ -29,7 +29,8 @@ resource "keycloak_saml_client_scope" "saml_client_scope" {
 - `realm_id` - (Required) The realm this client scope belongs to.
 - `name` - (Required) The display name of this client scope in the GUI.
 - `description` - (Optional) The description of this client scope in the GUI.
-- `consent_screen_text` - (Optional) When set, a consent screen will be displayed to users authenticating to clients with this scope attached. The consent screen will display the string value of this attribute.
+- `consent_screen_text` - (Optional) The text that is displayed on the consent screen for this client scope. If not set, the consent screen displays the name of the client scope.
+- `display_on_consent_screen` - (Optional) When `true`, this client scope is displayed on the consent screen of clients that require consent. When `false`, it is not displayed, and existing consents remain valid if the scope is added to a client later. If not set, it is `true` when `consent_screen_text` is set and `false` otherwise.
 - `gui_order` - (Optional) Specify order of the client scope in GUI (such as in Consent page) as integer.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration attributes to this client scope. This can be used for custom attributes or to add configuration attributes that are not yet supported by this Terraform provider. Use this attribute at your own risk, as it may conflict with top-level configuration attributes in future provider updates.
   ``` hcl
