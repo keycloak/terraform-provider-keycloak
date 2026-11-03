@@ -230,6 +230,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 							Type:     schema.TypeBool,
 							Computed: true,
 						},
+						"allow_utf8": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 						"auth": {
 							Type:     schema.TypeList,
 							Computed: true,
