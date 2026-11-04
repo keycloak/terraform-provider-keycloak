@@ -1,7 +1,12 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -331,6 +336,33 @@ func TestAccKeycloakClientScope_includeInOpenidProviderMetadata(t *testing.T) {
 	})
 }
 
+// Keycloak creates the built-in phone scope without include.in.openid.provider.metadata and lists it,
+// so an imported phone scope with include_in_openid_provider_metadata = false must be updated.
+func TestAccKeycloakClientScope_importedBuiltInIncludeInOpenidProviderMetadata(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_4)
+	t.Parallel()
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_realm(realmName),
+				Check:  testAccCheckKeycloakRealmOpenidProviderMetadataListsScope("keycloak_realm.realm", "phone", true),
+			},
+			{
+				Config: testKeycloakClientScope_importedBuiltIn(realmName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("keycloak_openid_client_scope.phone", "include_in_openid_provider_metadata", "false"),
+					testAccCheckKeycloakRealmOpenidProviderMetadataListsScope("keycloak_realm.realm", "phone", false),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
@@ -433,6 +465,41 @@ func testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInOpenidProviderMeta
 
 		if clientScope.Attributes.IncludeInOpenidProviderMetadata != types.KeycloakBoolQuoted(includeInOpenidProviderMetadata) {
 			return fmt.Errorf("expected openid client scope includeInOpenidProviderMetadata to have %t, but got %t", includeInOpenidProviderMetadata, clientScope.Attributes.IncludeInOpenidProviderMetadata)
+		}
+
+		return nil
+	}
+}
+
+// The realm's discovery document shows what Keycloak stored, independently of how the provider reads client scopes.
+func testAccCheckKeycloakRealmOpenidProviderMetadataListsScope(realmResourceName, scopeName string, listed bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[realmResourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", realmResourceName)
+		}
+
+		url := fmt.Sprintf("%s/realms/%s/.well-known/openid-configuration", strings.TrimSuffix(os.Getenv("KEYCLOAK_URL"), "/"), rs.Primary.ID)
+		response, err := keycloakClient.GetHttpClient().Get(url)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+
+		if response.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(response.Body)
+			return fmt.Errorf("unexpected status %d reading %s: %s", response.StatusCode, url, body)
+		}
+
+		var metadata struct {
+			ScopesSupported []string `json:"scopes_supported"`
+		}
+		if err := json.NewDecoder(response.Body).Decode(&metadata); err != nil {
+			return fmt.Errorf("error reading %s: %s", url, err)
+		}
+
+		if slices.Contains(metadata.ScopesSupported, scopeName) != listed {
+			return fmt.Errorf("expected scope %s listed in the OpenID provider metadata to be %t, but scopes_supported is %v", scopeName, listed, metadata.ScopesSupported)
 		}
 
 		return nil
@@ -662,6 +729,44 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	include_in_openid_provider_metadata = %t
 }
 	`, testAccRealm.Realm, clientScopeName, includeInOpenidProviderMetadata)
+}
+
+func testKeycloakClientScope_realm(realmName string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+	`, realmName)
+}
+
+func testKeycloakClientScope_importedBuiltIn(realmName string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+data "keycloak_openid_client_scope" "phone" {
+	name     = "phone"
+	realm_id = keycloak_realm.realm.id
+}
+
+import {
+	to = keycloak_openid_client_scope.phone
+	id = "${keycloak_realm.realm.id}/${data.keycloak_openid_client_scope.phone.id}"
+}
+
+# everything else as Keycloak created it, so that the metadata flag is the only change
+resource "keycloak_openid_client_scope" "phone" {
+	name                   = "phone"
+	realm_id               = keycloak_realm.realm.id
+	description            = data.keycloak_openid_client_scope.phone.description
+	consent_screen_text    = data.keycloak_openid_client_scope.phone.consent_screen_text
+	include_in_token_scope = data.keycloak_openid_client_scope.phone.include_in_token_scope
+	gui_order              = data.keycloak_openid_client_scope.phone.gui_order
+
+	include_in_openid_provider_metadata = false
+}
+	`, realmName)
 }
 
 func testKeycloakClientScope_withGuiOrder(clientScopeName string, guiOrder int) string {

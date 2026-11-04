@@ -130,6 +130,12 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 }
 
 func (f *OpenidClientScopeAttributes) UnmarshalJSON(data []byte) error {
+	// Keycloak treats these attributes as true when they are not stored (ClientScopeModel),
+	// for example in the built-in client scopes it creates with a realm.
+	f.DisplayOnConsentScreen = true
+	f.IncludeInTokenScope = true
+	f.IncludeInOpenidProviderMetadata = true
+
 	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
 }
 
