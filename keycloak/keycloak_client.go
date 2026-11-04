@@ -662,6 +662,13 @@ func RetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, err
 		return true, ctx.Err()
 	}
 
+	// Connection errors come without a response, so let the default
+	// policy decide (it retries unless the error is permanent, e.g. a
+	// TLS certificate verification failure).
+	if err != nil || resp == nil {
+		return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	}
+
 	// 429 Too Many Requests is recoverable. Sometimes the server puts
 	// a Retry-After response header to indicate when the server is
 	// available to start processing request from client.
@@ -713,10 +720,16 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	retryClient.RetryMax = 5
 	retryClient.RetryWaitMin = time.Second * 1
 	retryClient.RetryWaitMax = time.Second * 60
+	// Requests are sent through retryClient, so it needs the configured
+	// transport. Setting it on the returned client instead would replace
+	// the retrying RoundTripper and disable retries.
+	retryClient.HTTPClient.Transport = transport
+	// Hand the last response back to the caller once retries run out, so
+	// the Keycloak error body and status code are still reported.
+	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = time.Second * time.Duration(clientTimeout)
-	httpClient.Transport = transport
 	httpClient.Jar = cookieJar
 
 	return httpClient, nil
