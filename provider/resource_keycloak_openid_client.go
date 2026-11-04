@@ -111,6 +111,12 @@ func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 		},
+		"suppress_client_secret": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Do not retrieve or store the computed client secret during resource reads.",
+		},
 		"client_authenticator_type": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -384,6 +390,20 @@ func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
 
 func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 	return customdiff.All(
+		func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			if !d.Get("suppress_client_secret").(bool) {
+				return nil
+			}
+			config := d.GetRawConfig()
+			if config.IsNull() {
+				return nil
+			}
+			secret := config.GetAttr("client_secret")
+			if secret.IsKnown() && !secret.IsNull() && secret.AsString() != "" {
+				return fmt.Errorf("suppress_client_secret cannot be combined with client_secret; use client_secret_wo for explicit secret updates")
+			}
+			return nil
+		},
 		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			return d.HasChange("service_accounts_enabled")
 		}),
@@ -646,7 +666,15 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 		data.Set("service_account_user_id", "")
 	}
 
-	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+	// Persist the configuration-only default during refresh of older state.
+	// Otherwise its absent value produces an unnecessary client update.
+	suppressClientSecret, hasSuppression := data.Get("suppress_client_secret").(bool)
+	if hasSuppression {
+		data.Set("suppress_client_secret", suppressClientSecret)
+	}
+	if suppressClientSecret {
+		data.Set("client_secret", "")
+	} else if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
 		data.Set("client_secret_wo_version", v.(string))
 	} else {
 		data.Set("client_secret", client.ClientSecret)
@@ -721,7 +749,13 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 	realmId := data.Get("realm_id").(string)
 	id := data.Id()
 
-	client, err := keycloakClient.GetOpenidClient(ctx, realmId, id)
+	var client *keycloak.OpenidClient
+	var err error
+	if data.Get("suppress_client_secret").(bool) {
+		client, err = keycloakClient.GetOpenidClientWithoutSecret(ctx, realmId, id)
+	} else {
+		client, err = keycloakClient.GetOpenidClient(ctx, realmId, id)
+	}
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
