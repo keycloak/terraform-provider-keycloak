@@ -181,6 +181,12 @@ The following arguments are supported:
 - `additional_headers` - (Optional) A map of custom HTTP headers to add to each request to the Keycloak API. The `Host` header is supported and will override the host used for the outgoing request.
 - `keycloak_version` - (Optional) The Keycloak version to assume when the server does not report it via the `/admin/serverinfo` endpoint. Defaults to the environment variable `KEYCLOAK_VERSION`. This is only needed on Keycloak 26.4+ when the service account cannot read `/admin/serverinfo` (see the note below). When the server does report its version, this attribute is ignored and the server-reported version is used. The provider uses the version to enable or disable API behavior that differs between Keycloak releases, so pinning the wrong version may cause incorrect plans. Example: `26.4.7`.
 
+## Renaming realms
+
+Resources that belong to a realm accept either `realm_id` (the realm's name) or `realm_uuid` (the realm's internal id,
+e.g. `keycloak_realm.realm.internal_id`). Use `realm_uuid` if you want to be able to rename the realm without
+Terraform replacing everything in it. See [Renaming a realm](resources/realm.md#renaming-a-realm).
+
 ## A note for users of Keycloak 26.4+
 
 Starting with Keycloak 26.4, the `/admin/serverinfo` endpoint only returns system information (including the server
