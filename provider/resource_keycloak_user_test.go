@@ -513,6 +513,72 @@ func TestAccKeycloakUser_import(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakUser_importDefaultBoolFieldMatrix(t *testing.T) {
+	t.Parallel()
+
+	boolPtr := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name                string
+		serverEnabled       bool
+		serverEmailVerified bool
+		configEnabled       *bool // nil = omit from config
+		configEmailVerified *bool
+		expectEnabled       bool
+		expectEmailVerified bool
+	}{
+		// enabled: Default:true — omit means config declares true
+		{"enabled: server=true config=false", true, false, boolPtr(false), nil, false, false},
+		{"enabled: server=false config=true", false, false, boolPtr(true), nil, true, false},
+		{"enabled: server=false config=omit", false, false, nil, nil, true, false},
+		// email_verified: Default:false — omit means config declares false
+		{"email_verified: server=true config=false", true, true, nil, boolPtr(false), true, false},
+		{"email_verified: server=true config=omit", true, true, nil, nil, true, false},
+		{"email_verified: server=false config=true", true, false, nil, boolPtr(true), true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			username := acctest.RandomWithPrefix("tf-acc")
+
+			user := &keycloak.User{
+				RealmId:       testAccRealm.Realm,
+				Username:      username,
+				Enabled:       tt.serverEnabled,
+				EmailVerified: tt.serverEmailVerified,
+			}
+			err := keycloakClient.NewUser(testCtx, user)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+				PreCheck:                 func() { testAccPreCheck(t) },
+				CheckDestroy:             testAccCheckKeycloakUserNotDestroyed(),
+				Steps: []resource.TestStep{
+					{
+						Config: testKeycloakUser_importWithBoolFields(testAccRealm.Realm, username, tt.configEnabled, tt.configEmailVerified),
+						Check: func(s *terraform.State) error {
+							fetchedUser, err := getUserFromState(s, "keycloak_user.user")
+							if err != nil {
+								return err
+							}
+							if fetchedUser.Enabled != tt.expectEnabled {
+								return fmt.Errorf("expected enabled=%t, got %t", tt.expectEnabled, fetchedUser.Enabled)
+							}
+							if fetchedUser.EmailVerified != tt.expectEmailVerified {
+								return fmt.Errorf("expected email_verified=%t, got %t", tt.expectEmailVerified, fetchedUser.EmailVerified)
+							}
+							return nil
+						},
+					},
+				},
+			})
+		})
+	}
+}
+
 func TestAccKeycloakUser_multiValuedAttributeNoDrift(t *testing.T) {
 	username := acctest.RandomWithPrefix("tf-acc")
 	attributeName := acctest.RandomWithPrefix("tf-acc-tenant-roles")
@@ -1032,4 +1098,24 @@ resource "keycloak_user" "user" {
 	import = "true"
 }
 	`, realmId, username)
+}
+
+func testKeycloakUser_importWithBoolFields(realmId, username string, enabled, emailVerified *bool) string {
+	var fields string
+	if enabled != nil {
+		fields += fmt.Sprintf("\n\tenabled        = %t", *enabled)
+	}
+	if emailVerified != nil {
+		fields += fmt.Sprintf("\n\temail_verified = %t", *emailVerified)
+	}
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"%s
+	import   = "true"
+}
+	`, realmId, username, fields)
 }

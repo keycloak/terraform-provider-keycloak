@@ -329,6 +329,13 @@ func resourceKeycloakUserCreate(ctx context.Context, data *schema.ResourceData, 
 		if err = mergo.Merge(user, existingUser); err != nil {
 			return diag.FromErr(err)
 		}
+
+		// mergo treats false as a zero value and overwrites it with the existing
+		// value. Re-apply bool fields that have a schema Default, since data.Get()
+		// returns a valid value for these regardless of whether the user set them.
+		user.Enabled = data.Get("enabled").(bool)
+		user.EmailVerified = data.Get("email_verified").(bool)
+
 		err = keycloakClient.UpdateUser(ctx, user)
 		if err != nil {
 			return diag.FromErr(err)
