@@ -110,11 +110,13 @@ func (keycloakClient *KeycloakClient) GetOpenidClientServiceAccountUserId(ctx co
 }
 
 func (keycloakClient *KeycloakClient) ValidateOpenidClient(ctx context.Context, client *OpenidClient) error {
-	if client.BearerOnly && (client.StandardFlowEnabled || client.ImplicitFlowEnabled || client.DirectAccessGrantsEnabled || client.ServiceAccountsEnabled) {
+	// Generated bearer-only clients retain standardFlowEnabled=true, although
+	// the server never issues tokens for them. Preserve that stored flag.
+	if client.BearerOnly && ((client.Id == "" && client.StandardFlowEnabled) || client.ImplicitFlowEnabled || client.DirectAccessGrantsEnabled || client.ServiceAccountsEnabled) {
 		return fmt.Errorf("validation error: Keycloak cannot issue tokens for bearer-only clients; no oauth2 flows can be enabled for this client")
 	}
 
-	if (client.StandardFlowEnabled || client.ImplicitFlowEnabled) && len(client.ValidRedirectUris) == 0 {
+	if !client.BearerOnly && (client.StandardFlowEnabled || client.ImplicitFlowEnabled) && len(client.ValidRedirectUris) == 0 {
 		return fmt.Errorf("validation error: standard (authorization code) and implicit flows require at least one valid redirect uri")
 	}
 
@@ -306,15 +308,14 @@ func (keycloakClient *KeycloakClient) GetOpenidClientOptionalScopes(ctx context.
 }
 
 func (keycloakClient *KeycloakClient) attachOpenidClientScopes(ctx context.Context, realmId, clientId, t string, scopeNames []string) error {
-	openidClient, err := keycloakClient.GetOpenidClient(ctx, realmId, clientId)
+	var openidClient OpenidClient
+	// Validate existence without reading credentials: attaching scopes does not
+	// need a secret, and internal admin clients can forbid secret retrieval.
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s", realmId, clientId), &openidClient, nil)
 	if err != nil && ErrorIs404(err) {
 		return fmt.Errorf("validation error: client with id %s does not exist", clientId)
 	} else if err != nil {
 		return err
-	}
-
-	if openidClient.BearerOnly {
-		return fmt.Errorf("validation error: client with id %s uses access type BEARER-ONLY which does not use scopes", clientId)
 	}
 
 	allOpenidClientScopes, err := keycloakClient.ListOpenidClientScopesWithFilter(ctx, realmId, IncludeOpenidClientScopesMatchingNames(scopeNames))
