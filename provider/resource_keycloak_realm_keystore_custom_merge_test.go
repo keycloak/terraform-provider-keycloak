@@ -28,10 +28,40 @@ func TestMergeRealmKeystoreCustomConfig(t *testing.T) {
 			want:   map[string]string{"pins": "a,b"},
 		},
 		{
-			name:   "partly masked multi-valued secret is taken from keycloak",
-			prior:  map[string]string{"pins": "a,b"},
+			name:   "multi-valued secret with an unchanged vault reference keeps the prior value",
+			prior:  map[string]string{"pins": "local-pin,${vault.pin}"},
 			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
-			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+			want:   map[string]string{"pins": "local-pin,${vault.pin}"},
+		},
+		{
+			name:   "reordered multi-valued secret with a vault reference keeps the prior value",
+			prior:  map[string]string{"pins": "${vault.pin},local-pin"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+			want:   map[string]string{"pins": "${vault.pin},local-pin"},
+		},
+		{
+			name:   "multi-valued secret with a changed vault reference is taken from keycloak",
+			prior:  map[string]string{"pins": "local-pin,${vault.pin}"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.other}"},
+			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.other}"},
+		},
+		{
+			name:   "multi-valued secret with a different number of values is taken from keycloak",
+			prior:  map[string]string{"pins": "a,b"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue},
+			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue},
+		},
+		{
+			name:   "reordered multi-valued secret of vault references keeps the prior value",
+			prior:  map[string]string{"pins": "${vault.a},${vault.b}"},
+			remote: map[string]string{"pins": "${vault.b},${vault.a}"},
+			want:   map[string]string{"pins": "${vault.a},${vault.b}"},
+		},
+		{
+			name:   "single-valued secret with a comma keeps the prior value",
+			prior:  map[string]string{"privateKey": "a,b"},
+			remote: map[string]string{"privateKey": keycloak.RealmKeystoreSecretValue},
+			want:   map[string]string{"privateKey": "a,b"},
 		},
 		{
 			name:   "keys added by keycloak are ignored",

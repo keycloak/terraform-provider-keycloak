@@ -92,8 +92,9 @@ func setRealmKeystoreCustomData(data *schema.ResourceData, keystore *keycloak.Re
 // certificate), which would otherwise show up as a permanent diff. A key that was removed outside of
 // Terraform is left out, so it shows up as a diff.
 //
-// Keycloak masks the values of secret properties, so a masked value keeps the value from the state.
-// Multi-valued keys keep the value from the state if they only differ in the order of their elements.
+// Keycloak masks the values of secret properties except vault references, so a masked value keeps the
+// value from the state. Multi-valued keys keep the value from the state if they only differ in the order
+// of their elements.
 func mergeRealmKeystoreCustomConfig(prior, remote map[string]string, properties map[string]keycloak.ComponentTypeProperty) map[string]string {
 	config := map[string]string{}
 	for k, priorValue := range prior {
@@ -104,7 +105,7 @@ func mergeRealmKeystoreCustomConfig(prior, remote map[string]string, properties 
 
 		property := properties[k]
 		switch {
-		case property.Secret && isMaskedRealmKeystoreSecret(remoteValue):
+		case property.Secret && keepsPriorRealmKeystoreSecret(priorValue, remoteValue, property.IsMultiValued()):
 			config[k] = priorValue
 		case property.IsMultiValued() && equalCommaSeparatedSet(priorValue, remoteValue):
 			config[k] = priorValue
@@ -126,6 +127,43 @@ func isMaskedRealmKeystoreSecret(value string) bool {
 	}
 
 	return true
+}
+
+// keepsPriorRealmKeystoreSecret reports whether the value of a secret property from Keycloak matches
+// the value from the state. Keycloak masks each value of a multi-valued secret on its own and returns
+// vault references as they are, so the visible values must still be in the prior value, in any order,
+// and the number of values must match.
+func keepsPriorRealmKeystoreSecret(prior, remote string, multiValued bool) bool {
+	if !multiValued {
+		return isMaskedRealmKeystoreSecret(remote)
+	}
+
+	priorElements := splitTrimComma(prior)
+	remoteElements := splitTrimComma(remote)
+	if len(priorElements) != len(remoteElements) {
+		return false
+	}
+
+	remaining := map[string]int{}
+	for _, element := range priorElements {
+		remaining[element]++
+	}
+
+	masked := false
+	for _, element := range remoteElements {
+		if element == keycloak.RealmKeystoreSecretValue {
+			masked = true
+			continue
+		}
+
+		if remaining[element] == 0 {
+			return false
+		}
+		remaining[element]--
+	}
+
+	// without a masked value, the multi-valued comparison decides
+	return masked
 }
 
 func resourceKeycloakRealmKeystoreCustomCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -29,7 +29,7 @@ func TestConvertFromComponentToRealmKeystoreCustomKeepsAllValues(t *testing.T) {
 }
 
 func TestConvertRealmKeystoreCustomRoundTrip(t *testing.T) {
-	multiValuedKeys := map[string]bool{"hosts": true}
+	multiValuedKeys := map[string]bool{"hosts": true, "tokens": true}
 
 	keystore := &RealmKeystoreCustom{
 		Id:         "id",
@@ -39,6 +39,7 @@ func TestConvertRealmKeystoreCustomRoundTrip(t *testing.T) {
 		Config: map[string]string{
 			"priority": "100",
 			"hosts":    "a, b,c",
+			"tokens":   " token-1 ",
 			"label":    "x,y",
 		},
 	}
@@ -55,6 +56,7 @@ func TestConvertRealmKeystoreCustomRoundTrip(t *testing.T) {
 	wantConfig := map[string][]string{
 		"priority": {"100"},
 		"hosts":    {"a", "b", "c"},
+		"tokens":   {"token-1"},
 		"label":    {"x,y"},
 		"removed":  {},
 	}
@@ -67,6 +69,7 @@ func TestConvertRealmKeystoreCustomRoundTrip(t *testing.T) {
 	wantKeystoreConfig := map[string]string{
 		"priority": "100",
 		"hosts":    "a,b,c",
+		"tokens":   "token-1",
 		"label":    "x,y",
 	}
 	if !reflect.DeepEqual(got.Config, wantKeystoreConfig) {

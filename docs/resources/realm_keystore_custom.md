@@ -64,9 +64,10 @@ resource "keycloak_realm_keystore_custom" "eddsa" {
   The plan fails for an undeclared key and lists the declared keys. The declared keys are shown in the admin console
   and returned by the `/admin/serverinfo` endpoint under `componentTypes["org.keycloak.keys.KeyProvider"]`.
 - All values are strings, including numbers and booleans, and must not be empty. Remove a key to unset it.
-- Values of multi-valued properties are written as a comma-separated string without empty elements. A different order of the elements does not cause a diff.
-- Keycloak does not return the values of secret properties. Terraform keeps the value from the state for them, so a
-  change made outside of Terraform is not detected.
+- Values of multi-valued properties are written as a comma-separated string without empty elements. Whitespace around
+  the elements is removed, and a different order of the elements does not cause a diff.
+- Keycloak does not return the values of secret properties, except vault references. Terraform keeps the value from
+  the state for them, so a change made outside of Terraform is not detected.
 - `config` is sensitive, because it can contain private keys or credentials. The plan output therefore does not show
   its values.
 - Some key providers add keys to the config on their own, for example the `rsa` key provider generates a certificate

@@ -99,7 +99,9 @@ func (keycloakClient *KeycloakClient) multiValuedRealmKeystoreConfigKeys(ctx con
 func convertFromRealmKeystoreCustomToComponent(keystore *RealmKeystoreCustom, multiValuedKeys map[string]bool, removedKeys []string) *component {
 	config := map[string][]string{}
 	for k, v := range keystore.Config {
-		if multiValuedKeys[k] && strings.Contains(v, ",") {
+		// multi-valued keys are always split and trimmed, also with a single element, the same way the
+		// plan compares them
+		if multiValuedKeys[k] {
 			parts := strings.Split(v, ",")
 			for i := range parts {
 				parts[i] = strings.TrimSpace(parts[i])
