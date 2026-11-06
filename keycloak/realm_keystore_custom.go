@@ -172,6 +172,12 @@ func (keycloakClient *KeycloakClient) GetRealmKeystoreCustom(ctx context.Context
 		return nil, err
 	}
 
+	// the components endpoint returns components of all types, an import by id must not take over
+	// (and later delete) a user federation or another non-key-provider component
+	if component.ProviderType != realmKeystoreProviderType {
+		return nil, fmt.Errorf("component %s in realm %s is not a key provider, its provider type is %s", id, realmId, component.ProviderType)
+	}
+
 	return convertFromComponentToRealmKeystoreCustom(component, realmId), nil
 }
 

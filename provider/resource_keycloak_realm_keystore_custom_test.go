@@ -56,6 +56,38 @@ func TestAccKeycloakRealmKeystoreCustom_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmKeystoreCustom_importNonKeyProviderComponent(t *testing.T) {
+	t.Parallel()
+
+	keystoreName := acctest.RandomWithPrefix("tf-acc")
+	policyName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreCustomDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmKeystoreCustom_withClientRegistrationPolicy(testAccRealmUserFederation.Realm, keystoreName, policyName),
+			},
+			{
+				// the components endpoint also returns a client registration policy by its id
+				ResourceName: "keycloak_realm_keystore_custom.custom",
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources["keycloak_realm_client_registration_policy.policy"]
+					if !ok {
+						return "", fmt.Errorf("resource not found: keycloak_realm_client_registration_policy.policy")
+					}
+
+					return fmt.Sprintf("%s/%s", testAccRealmUserFederation.Realm, rs.Primary.ID), nil
+				},
+				ExpectError: regexp.MustCompile("is not a key provider"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmKeystoreCustom_eddsaGenerated(t *testing.T) {
 	t.Parallel()
 
@@ -540,6 +572,22 @@ resource "keycloak_realm_keystore_custom" "custom" {
 %s	}
 }
 	`, keystoreName, realm, providerId, configHcl)
+}
+
+func testKeycloakRealmKeystoreCustom_withClientRegistrationPolicy(realm, keystoreName, policyName string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "keycloak_realm_client_registration_policy" "policy" {
+	realm_id    = "%s"
+	name        = "%s"
+	provider_id = "max-clients"
+	sub_type    = "anonymous"
+	config = {
+		"max-clients" = "200"
+	}
+}
+	`, testKeycloakRealmKeystoreCustom_ecdsa(realm, keystoreName, map[string]string{"priority": "100"}), realm, policyName)
 }
 
 func testKeycloakRealmKeystoreCustom_withoutConfig(realm, keystoreName, providerId string) string {

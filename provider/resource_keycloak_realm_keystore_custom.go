@@ -44,7 +44,10 @@ func resourceKeycloakRealmKeystoreCustom() *schema.Resource {
 				Optional: true,
 				// Computed so CustomizeDiff can suppress order-only changes of multi-valued keys via SetNew,
 				// which only operates on computed keys
-				Computed:    true,
+				Computed: true,
+				// the config can contain private keys or HSM credentials, and the state keeps the values of
+				// secret properties that Keycloak masks
+				Sensitive:   true,
 				Description: "Config of the key provider. Only keys that the key provider declares as config properties are allowed.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -101,7 +104,7 @@ func mergeRealmKeystoreCustomConfig(prior, remote map[string]string, properties 
 
 		property := properties[k]
 		switch {
-		case property.Secret && remoteValue == keycloak.RealmKeystoreSecretValue:
+		case property.Secret && isMaskedRealmKeystoreSecret(remoteValue):
 			config[k] = priorValue
 		case property.IsMultiValued() && equalCommaSeparatedSet(priorValue, remoteValue):
 			config[k] = priorValue
@@ -111,6 +114,18 @@ func mergeRealmKeystoreCustomConfig(prior, remote map[string]string, properties 
 	}
 
 	return config
+}
+
+// isMaskedRealmKeystoreSecret reports whether every element of a value is masked. Read joins the values
+// of a key, so a secret with several values comes back as several masks.
+func isMaskedRealmKeystoreSecret(value string) bool {
+	for _, element := range strings.Split(value, ",") {
+		if element != keycloak.RealmKeystoreSecretValue {
+			return false
+		}
+	}
+
+	return true
 }
 
 func resourceKeycloakRealmKeystoreCustomCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

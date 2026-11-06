@@ -12,6 +12,7 @@ func TestMergeRealmKeystoreCustomConfig(t *testing.T) {
 		"priority":   {Name: "priority", Type: "String"},
 		"privateKey": {Name: "privateKey", Type: "File", Secret: true},
 		"hosts":      {Name: "hosts", Type: "MultivaluedString"},
+		"pins":       {Name: "pins", Type: "MultivaluedString", Secret: true},
 	}
 
 	cases := []struct {
@@ -20,6 +21,18 @@ func TestMergeRealmKeystoreCustomConfig(t *testing.T) {
 		remote map[string]string
 		want   map[string]string
 	}{
+		{
+			name:   "masked multi-valued secret keeps the prior value",
+			prior:  map[string]string{"pins": "a,b"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + "," + keycloak.RealmKeystoreSecretValue},
+			want:   map[string]string{"pins": "a,b"},
+		},
+		{
+			name:   "partly masked multi-valued secret is taken from keycloak",
+			prior:  map[string]string{"pins": "a,b"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+		},
 		{
 			name:   "keys added by keycloak are ignored",
 			prior:  map[string]string{"priority": "100"},

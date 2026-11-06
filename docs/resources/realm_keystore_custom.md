@@ -56,7 +56,7 @@ resource "keycloak_realm_keystore_custom" "eddsa" {
 - `name` - (Required) Display name of provider when linked in admin console.
 - `realm_id` - (Required) The realm this keystore exists in.
 - `provider_id` - (Required) The id of the key provider, as returned by the `getId` implementation of its `KeyProviderFactory`. Changing this forces a new resource.
-- `config` - (Optional) A map of config keys and values of the key provider. Common keys are `priority`, `enabled` and `active`, the other keys depend on the key provider.
+- `config` - (Optional, Sensitive) A map of config keys and values of the key provider. Common keys are `priority`, `enabled` and `active`, the other keys depend on the key provider.
 
 ### Config
 
@@ -66,7 +66,9 @@ resource "keycloak_realm_keystore_custom" "eddsa" {
 - All values are strings, including numbers and booleans, and must not be empty. Remove a key to unset it.
 - Values of multi-valued properties are written as a comma-separated string without empty elements. A different order of the elements does not cause a diff.
 - Keycloak does not return the values of secret properties. Terraform keeps the value from the state for them, so a
-  change made outside of Terraform is not detected. Pass secret values through a sensitive variable to keep them out of the plan output.
+  change made outside of Terraform is not detected.
+- `config` is sensitive, because it can contain private keys or credentials. The plan output therefore does not show
+  its values.
 - Some key providers add keys to the config on their own, for example the `rsa` key provider generates a certificate
   if none is given. Keys that are not in `config` are ignored.
 - The plan fails if the key provider is not installed on the server.
@@ -78,6 +80,8 @@ Realm keystores can be imported using one of the following formats:
 - `{{realmId}}/{{keystoreId}}`, you can find the keystore id in the web UI.
 - `{{realmId}}/{{name}}/{{providerId}}`, which lets you import keystores with static values in an `import` block.
   The import fails if more than one keystore of the realm has this name and provider id.
+
+The import fails if the id belongs to a component that is not a key provider, for example a user federation.
 
 The import takes all config keys that Keycloak returns, with secret values masked as `**********`. Keys that are
 missing from the `config` of the resource are removed on the next apply, and secret values are set again.
