@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -129,13 +130,17 @@ func isMaskedRealmKeystoreSecret(value string) bool {
 	return true
 }
 
+// realmKeystoreVaultReference matches the values that Keycloak returns unmasked for a secret property,
+// the same pattern as Keycloak's StripSecretsUtils
+var realmKeystoreVaultReference = regexp.MustCompile(`^\$\{vault\..+}$`)
+
 // keepsPriorRealmKeystoreSecret reports whether the value of a secret property from Keycloak matches
-// the value from the state. Keycloak masks each value of a multi-valued secret on its own and returns
-// vault references as they are, so the visible values must still be in the prior value, in any order,
-// and the number of values must match.
+// the value from the state. Keycloak masks each value of a secret on its own and returns vault references
+// as they are, so the prior value is kept if the vault references of both values match in any order and
+// the other values are masked. A vault reference that was replaced outside of Terraform shows up as a diff.
 func keepsPriorRealmKeystoreSecret(prior, remote string, multiValued bool) bool {
 	if !multiValued {
-		return isMaskedRealmKeystoreSecret(remote)
+		return !realmKeystoreVaultReference.MatchString(prior) && isMaskedRealmKeystoreSecret(remote)
 	}
 
 	priorElements := splitTrimComma(prior)
@@ -144,9 +149,11 @@ func keepsPriorRealmKeystoreSecret(prior, remote string, multiValued bool) bool 
 		return false
 	}
 
-	remaining := map[string]int{}
+	references := map[string]int{}
 	for _, element := range priorElements {
-		remaining[element]++
+		if realmKeystoreVaultReference.MatchString(element) {
+			references[element]++
+		}
 	}
 
 	masked := false
@@ -156,10 +163,13 @@ func keepsPriorRealmKeystoreSecret(prior, remote string, multiValued bool) bool 
 			continue
 		}
 
-		if remaining[element] == 0 {
+		references[element]--
+	}
+
+	for _, count := range references {
+		if count != 0 {
 			return false
 		}
-		remaining[element]--
 	}
 
 	// without a masked value, the multi-valued comparison decides

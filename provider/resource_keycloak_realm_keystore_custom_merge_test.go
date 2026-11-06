@@ -46,6 +46,24 @@ func TestMergeRealmKeystoreCustomConfig(t *testing.T) {
 			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.other}"},
 		},
 		{
+			name:   "multi-valued secret with a vault reference replaced by a literal is taken from keycloak",
+			prior:  map[string]string{"pins": "local-pin,${vault.pin}"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + "," + keycloak.RealmKeystoreSecretValue},
+			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + "," + keycloak.RealmKeystoreSecretValue},
+		},
+		{
+			name:   "multi-valued secret with a literal replaced by a vault reference is taken from keycloak",
+			prior:  map[string]string{"pins": "a,b"},
+			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+			want:   map[string]string{"pins": keycloak.RealmKeystoreSecretValue + ",${vault.pin}"},
+		},
+		{
+			name:   "secret with a vault reference replaced by a literal is taken from keycloak",
+			prior:  map[string]string{"privateKey": "${vault.key}"},
+			remote: map[string]string{"privateKey": keycloak.RealmKeystoreSecretValue},
+			want:   map[string]string{"privateKey": keycloak.RealmKeystoreSecretValue},
+		},
+		{
 			name:   "multi-valued secret with a different number of values is taken from keycloak",
 			prior:  map[string]string{"pins": "a,b"},
 			remote: map[string]string{"pins": keycloak.RealmKeystoreSecretValue},
