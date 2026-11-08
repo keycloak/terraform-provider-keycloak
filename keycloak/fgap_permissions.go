@@ -25,11 +25,13 @@ func (keycloakClient *KeycloakClient) FindFGAPv2PermissionByName(ctx context.Con
 }
 
 // GetFGAPv2Permission reads a single FGAPv2 scope permission and returns it
-// with scope NAMES (not internal scope UUIDs) and policies populated.
-// Resources are intentionally not populated: Keycloak's /resources sub-endpoint
-// returns internal authorization resource IDs which differ from the entity UUIDs
-// (role/group/client IDs) used when creating the permission. Entity IDs are
-// therefore kept in Terraform state as configured rather than re-read from the API.
+// with scope NAMES (not internal scope UUIDs), policies and resources populated.
+// Resources come back as the authorization resources' NAMES: Keycloak names a
+// permission's per-entity resource after the entity's id
+// (AdminPermissionsSchema.getOrCreateResource), and a type-wide permission's
+// resource after the resource type ("Users", "Groups", ...), so a caller gets
+// the entity ids it configured plus, for a type-wide permission, the type's
+// name; the internal resource UUIDs are not returned.
 func (keycloakClient *KeycloakClient) GetFGAPv2Permission(ctx context.Context, realmId, apClientId, permId string) (*OpenidClientAuthorizationPermission, error) {
 	perm := &OpenidClientAuthorizationPermission{
 		RealmId:          realmId,
@@ -62,8 +64,15 @@ func (keycloakClient *KeycloakClient) GetFGAPv2Permission(ctx context.Context, r
 		perm.Scopes = append(perm.Scopes, s.Name)
 	}
 
-	// Entity UUIDs cannot be recovered from the /resources endpoint.
+	var resources []OpenidClientAuthorizationResource
+	err = keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/permission/%s/resources", realmId, apClientId, permId), &resources, nil)
+	if err != nil {
+		return nil, err
+	}
 	perm.Resources = nil
+	for _, r := range resources {
+		perm.Resources = append(perm.Resources, r.Name)
+	}
 
 	return perm, nil
 }

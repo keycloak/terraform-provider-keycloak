@@ -253,6 +253,19 @@ func (keycloakClient *KeycloakClient) GetOpenidClientByClientId(ctx context.Cont
 	return &client, nil
 }
 
+// GetOpenidClientSecret reads a confidential client's secret by the client's
+// internal id. Keycloak refuses it for its internal clients.
+func (keycloakClient *KeycloakClient) GetOpenidClientSecret(ctx context.Context, realmId, id string) (string, error) {
+	var clientSecret OpenidClientSecret
+
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, id), &clientSecret, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return clientSecret.Value, nil
+}
+
 func (keycloakClient *KeycloakClient) GetOpenidClientByClientIdSkipSecret(ctx context.Context, realmId, clientId string) (*OpenidClient, error) {
 	var clients []OpenidClient
 

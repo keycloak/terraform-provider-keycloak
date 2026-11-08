@@ -275,14 +275,29 @@ func dataSourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resour
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
-	getClient := keycloakClient.GetOpenidClientByClientId
-	if clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm") {
-		getClient = keycloakClient.GetOpenidClientByClientIdSkipSecret
-	}
-	client, err := getClient(ctx, realmId, clientId)
-
+	client, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, clientId)
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
+	}
+
+	// The secret of an internal client is not readable: realm-management and
+	// the master realm's -realm clients, and, since Keycloak treats it as
+	// internal too (keycloak/keycloak#51630), the realm's admin-permissions
+	// client. Reading those clients still serves their id, which fine-grained
+	// admin permissions policies need as their resource server.
+	skipSecret := clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm")
+	if !skipSecret {
+		skipSecret, err = keycloakClient.IsAdminPermissionsClient(ctx, realmId, client.Id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if !skipSecret {
+		secret, err := keycloakClient.GetOpenidClientSecret(ctx, realmId, client.Id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		client.ClientSecret = secret
 	}
 
 	err = setOpenidClientData(ctx, keycloakClient, data, client)

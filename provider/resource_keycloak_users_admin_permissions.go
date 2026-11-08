@@ -47,7 +47,12 @@ func resourceKeycloakUsersAdminPermissions() *schema.Resource {
 				Default:      "UNANIMOUS",
 				ValidateFunc: validation.StringInSlice(keycloakOpenidClientResourcePermissionDecisionStrategies, false),
 			},
-			// No entity ID field: user permissions are always realm-wide (resources: []).
+			"user_ids": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "User UUIDs this permission applies to. Leave empty to target all users in the realm. Read back from Keycloak, so a change made elsewhere shows in the plan.",
+			},
 			"scopes": {
 				Type:     schema.TypeSet,
 				Required: true,
@@ -151,6 +156,15 @@ func resourceKeycloakUsersAdminPermissionsRead(ctx context.Context, data *schema
 	data.Set("decision_strategy", ds)
 	data.Set("scopes", schema.NewSet(schema.HashString, stringsToInterfaces(perm.Scopes)))
 	data.Set("policies", schema.NewSet(schema.HashString, stringsToInterfaces(perm.Policies)))
+	// The permission's resources are the user ids it targets; a type-wide
+	// permission's one resource is named after the type and means no user_ids.
+	var userIds []string
+	for _, r := range perm.Resources {
+		if r != "Users" {
+			userIds = append(userIds, r)
+		}
+	}
+	data.Set("user_ids", schema.NewSet(schema.HashString, stringsToInterfaces(userIds)))
 	data.Set("enabled", true)
 	data.Set("authorization_resource_server_id", apClientId)
 
@@ -184,7 +198,7 @@ func buildUsersAdminPermission(data *schema.ResourceData, realmId, apClientId, p
 		DecisionStrategy: data.Get("decision_strategy").(string),
 		Type:             "scope",
 		ResourceType:     "Users",
-		Resources:        []string{},
+		Resources:        setToStringSlice(data.Get("user_ids").(*schema.Set)),
 		Scopes:           setToStringSlice(data.Get("scopes").(*schema.Set)),
 		Policies:         setToStringSlice(data.Get("policies").(*schema.Set)),
 	}

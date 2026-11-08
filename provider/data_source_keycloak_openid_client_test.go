@@ -131,3 +131,41 @@ data "keycloak_openid_client" "test_extra_config" {
 }
 `, testAccRealm.Realm, clientId, clientId)
 }
+
+// The realm's admin-permissions client is an internal client (Keycloak
+// 26.8.2, keycloak/keycloak#51630): its secret cannot be read by anyone, and
+// the data source must still serve its id, the resource server of every
+// fine-grained admin permission policy.
+func TestAccKeycloakDataSourceOpenidClient_adminPermissions(t *testing.T) {
+	t.Parallel()
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+	dataSourceName := "data.keycloak_openid_client.admin_permissions"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKeycloakOpenidClientConfig_adminPermissions(testAccRealmFGAPv2.Realm),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
+					resource.TestCheckResourceAttr(dataSourceName, "client_id", "admin-permissions"),
+					resource.TestCheckResourceAttr(dataSourceName, "client_secret", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKeycloakOpenidClientConfig_adminPermissions(realm string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+data "keycloak_openid_client" "admin_permissions" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = "admin-permissions"
+}
+`, realm)
+}

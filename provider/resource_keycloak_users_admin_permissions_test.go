@@ -138,3 +138,55 @@ resource "keycloak_users_admin_permissions" "test" {
 }
 `, testAccRealmFGAPv2.Realm, groupName, groupName, groupName)
 }
+
+// A permission on named users, not the whole realm: user_ids reach Keycloak as
+// the permission's resources and are read back from them, so a target changed
+// outside Terraform shows in the plan.
+func TestAccKeycloakUsersAdminPermissions_userIds(t *testing.T) {
+	t.Parallel()
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+	name := acctest.RandomWithPrefix("tf-acc-users-self")
+	resourceName := "keycloak_users_admin_permissions.self"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKeycloakUsersAdminPermissions_userIds(testAccRealmFGAPv2.Realm, name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "user_ids.#", "1"),
+					resource.TestCheckResourceAttrPair(resourceName, "user_ids.0", "keycloak_user.target", "id"),
+					resource.TestCheckResourceAttr(resourceName, "scopes.#", "1"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccKeycloakUsersAdminPermissions_userIds(realm, name string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_user" "target" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_users_admin_permissions" "self" {
+	realm_id          = data.keycloak_realm.realm.id
+	name              = "%s"
+	user_ids          = [keycloak_user.target.id]
+	scopes            = ["view"]
+	description       = "view one user, not the realm"
+	decision_strategy = "UNANIMOUS"
+}
+`, realm, name, name)
+}
