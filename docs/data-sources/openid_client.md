@@ -30,3 +30,5 @@ data "keycloak_role" "admin" {
 ## Attributes Reference
 
 See the docs for the `keycloak_openid_client` resource for details on the exported attributes.
+
+`client_secret` is empty for Keycloak's internal clients, whose secret the server does not serve: `realm-management`, the master realm's `-realm` clients, and the realm's `admin-permissions` client (Keycloak 26.8.2 and later). The data source still serves such a client's `id`, which fine-grained admin permission policies need as their `resource_server_id`.
