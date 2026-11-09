@@ -720,22 +720,52 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	retryClient.RetryMax = 5
 	retryClient.RetryWaitMin = time.Second * 1
 	retryClient.RetryWaitMax = time.Second * 60
-	// Requests are sent through retryClient, so it needs the configured
-	// transport. Setting it on the returned client instead would replace
-	// the retrying RoundTripper and disable retries.
-	retryClient.HTTPClient.Transport = transport
 	// Hand the last response back to the caller once retries run out, so
 	// the Keycloak error body and status code are still reported.
 	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
-	// The inner client follows redirects, so it needs the cookie jar to
-	// keep cookies set by intermediate responses. The returned client gets
-	// no jar of its own, or each cookie would be sent twice.
-	retryClient.HTTPClient.Jar = cookieJar
+	// The cookie jar sits in the transport, so every redirect hop and every
+	// retry attempt gets the jar's current cookies on a copy of the request.
+	// A Jar on either http.Client would append them to the reused request
+	// instead, sending stale and rotated cookies together on a retry.
+	retryClient.HTTPClient.Transport = &cookieJarTransport{jar: cookieJar, next: transport}
 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = time.Second * time.Duration(clientTimeout)
 
 	return httpClient, nil
+}
+
+// cookieJarTransport adds the jar's cookies to a copy of each outgoing request
+// and stores the cookies set by each response, the way http.Client does with
+// its Jar. Unlike http.Client, it never changes the caller's request, so a
+// retried request does not carry the cookies of an earlier attempt.
+type cookieJarTransport struct {
+	jar  http.CookieJar
+	next http.RoundTripper
+}
+
+func (t *cookieJarTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	cookieURL := req.URL
+	if req.Host != "" {
+		u := *req.URL
+		u.Host = req.Host
+		cookieURL = &u
+	}
+	if cookies := t.jar.Cookies(cookieURL); len(cookies) > 0 {
+		// Clone so the caller's request keeps only the cookies it set.
+		req = req.Clone(req.Context())
+		for _, cookie := range cookies {
+			req.AddCookie(cookie)
+		}
+	}
+	resp, err := t.next.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		t.jar.SetCookies(cookieURL, cookies)
+	}
+	return resp, nil
 }
 
 func NewSignedJWT(ctx context.Context, url, clientId, alg, jwtSigningKey string) (string, error) {

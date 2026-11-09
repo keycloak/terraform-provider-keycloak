@@ -127,3 +127,65 @@ func TestRetryPolicy_connectionErrorWithoutResponse(t *testing.T) {
 		t.Error("expected a connection error to be retried")
 	}
 }
+
+func TestNewHttpClient_retryAfterCookieRotationSendsOnlyNewCookie(t *testing.T) {
+	attempts := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "session", Value: "old", Path: "/"})
+		_, _ = io.WriteString(w, "ok")
+	})
+	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		cookies := r.Header.Values("Cookie")
+		if attempts == 1 {
+			// Rotate the session cookie on a retryable response.
+			http.SetCookie(w, &http.Cookie{Name: "session", Value: "new", Path: "/"})
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		if len(cookies) != 1 || cookies[0] != "extra=1; session=new" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(w, strings.Join(cookies, " | "))
+			return
+		}
+		_, _ = io.WriteString(w, "ok")
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	httpClient, err := newHttpClient(false, 15, "", "", "")
+	if err != nil {
+		t.Fatalf("newHttpClient: %v", err)
+	}
+
+	resp, err := httpClient.Get(server.URL + "/login")
+	if err != nil {
+		t.Fatalf("GET /login: %v", err)
+	}
+	resp.Body.Close()
+
+	// A cookie set by the caller must be kept on every attempt, while the
+	// jar cookies must be rebuilt, so the retry sends the rotated value only.
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/api", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.AddCookie(&http.Cookie{Name: "extra", Value: "1"})
+	resp, err = httpClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET /api: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200 after retry, got %d (Cookie headers %q)", resp.StatusCode, body)
+	}
+	if attempts != 2 {
+		t.Errorf("expected 2 attempts, got %d", attempts)
+	}
+	if got := req.Header.Values("Cookie"); len(got) != 1 || got[0] != "extra=1" {
+		t.Errorf("caller's request was modified, Cookie headers %q", got)
+	}
+}
