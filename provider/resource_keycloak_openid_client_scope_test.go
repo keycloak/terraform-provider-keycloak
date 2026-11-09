@@ -334,7 +334,9 @@ func TestAccKeycloakClientScope_includeInOpenidProviderMetadata(t *testing.T) {
 func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
-	guiOrder := acctest.RandIntRange(0, 1000)
+	// gui_order is a plain Optional int, so a zero is indistinguishable from
+	// unset: the resource would not send it and gui.order would stay empty
+	guiOrder := acctest.RandIntRange(1, 1000)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
