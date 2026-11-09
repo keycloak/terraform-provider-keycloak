@@ -144,6 +144,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_group_permissions":                                 resourceKeycloakGroupPermissions(),
 			"keycloak_role_admin_permissions":                            resourceKeycloakRoleAdminPermissions(),
 			"keycloak_group_admin_permissions":                           resourceKeycloakGroupAdminPermissions(),
+			"keycloak_organization_admin_permissions":                    resourceKeycloakOrganizationAdminPermissions(),
 			"keycloak_openid_client_admin_permissions":                   resourceKeycloakOpenidClientAdminPermissions(),
 			"keycloak_users_admin_permissions":                           resourceKeycloakUsersAdminPermissions(),
 			"keycloak_authentication_bindings":                           resourceKeycloakAuthenticationBindings(),
