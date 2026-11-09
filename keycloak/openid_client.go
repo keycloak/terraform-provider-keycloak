@@ -279,7 +279,16 @@ func (keycloakClient *KeycloakClient) GetOpenidClientByClientIdSkipSecret(ctx co
 func (keycloakClient *KeycloakClient) UpdateOpenidClient(ctx context.Context, client *OpenidClient) error {
 	client.Protocol = "openid-connect"
 
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s", client.RealmId, client.Id), client)
+	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s", client.RealmId, client.Id), client)
+	if err != nil {
+		return err
+	}
+
+	if client.AuthorizationServicesEnabled && client.AuthorizationSettings != nil {
+		return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server", client.RealmId, client.Id), client.AuthorizationSettings)
+	}
+
+	return nil
 }
 
 func (keycloakClient *KeycloakClient) DeleteOpenidClient(ctx context.Context, realmId, id string) error {
