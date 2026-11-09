@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -76,6 +77,44 @@ func TestNewHttpClient_returnsLastResponseWhenRetriesRunOut(t *testing.T) {
 	// One initial attempt plus RetryMax (5) retries.
 	if got := attempts.Load(); got != 6 {
 		t.Errorf("expected 6 attempts, got %d", got)
+	}
+}
+
+func TestNewHttpClient_keepsCookiesAcrossRedirects(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "session", Value: "abc", Path: "/"})
+		http.Redirect(w, r, "/target", http.StatusFound)
+	})
+	mux.HandleFunc("/target", func(w http.ResponseWriter, r *http.Request) {
+		cookies := r.Header.Values("Cookie")
+		if len(cookies) != 1 || cookies[0] != "session=abc" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(w, strings.Join(cookies, "; "))
+			return
+		}
+		_, _ = io.WriteString(w, "ok")
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	httpClient, err := newHttpClient(false, 15, "", "", "")
+	if err != nil {
+		t.Fatalf("newHttpClient: %v", err)
+	}
+
+	// The cookie set by the redirect response must reach the redirect
+	// target, and later requests must send it exactly once.
+	for _, path := range []string{"/start", "/target"} {
+		resp, err := httpClient.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("GET %s: expected status 200, got %d (Cookie headers %q)", path, resp.StatusCode, body)
+		}
 	}
 }
 

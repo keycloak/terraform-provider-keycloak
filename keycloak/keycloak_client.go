@@ -727,10 +727,13 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	// Hand the last response back to the caller once retries run out, so
 	// the Keycloak error body and status code are still reported.
 	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
+	// The inner client follows redirects, so it needs the cookie jar to
+	// keep cookies set by intermediate responses. The returned client gets
+	// no jar of its own, or each cookie would be sent twice.
+	retryClient.HTTPClient.Jar = cookieJar
 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = time.Second * time.Duration(clientTimeout)
-	httpClient.Jar = cookieJar
 
 	return httpClient, nil
 }
