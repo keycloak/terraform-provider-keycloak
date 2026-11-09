@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -723,49 +724,52 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	// Hand the last response back to the caller once retries run out, so
 	// the Keycloak error body and status code are still reported.
 	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
-	// The cookie jar sits in the transport, so every redirect hop and every
-	// retry attempt gets the jar's current cookies on a copy of the request.
-	// A Jar on either http.Client would append them to the reused request
-	// instead, sending stale and rotated cookies together on a retry.
-	retryClient.HTTPClient.Transport = &cookieJarTransport{jar: cookieJar, next: transport}
+	// The inner client follows redirects, so it holds the cookie jar: it
+	// keeps cookies set by intermediate responses and, like any http.Client
+	// with a Jar, lets them replace same-name cookies the caller set.
+	retryClient.HTTPClient.Jar = cookieJar
+	retryClient.HTTPClient.Transport = transport
+	// http.Client adds the jar's cookies to the request it is given, and
+	// retryablehttp reuses that request for every attempt, so reset the
+	// Cookie header to what the caller sent before each retry. Otherwise a
+	// retry after a response that rotated a cookie sends both values.
+	retryClient.PrepareRetry = restoreCallerCookies
 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = time.Second * time.Duration(clientTimeout)
+	httpClient.Transport = &callerCookiesTransport{next: httpClient.Transport}
 
 	return httpClient, nil
 }
 
-// cookieJarTransport adds the jar's cookies to a copy of each outgoing request
-// and stores the cookies set by each response, the way http.Client does with
-// its Jar. Unlike http.Client, it never changes the caller's request, so a
-// retried request does not carry the cookies of an earlier attempt.
-type cookieJarTransport struct {
-	jar  http.CookieJar
+type callerCookiesKey struct{}
+
+// callerCookiesTransport records the Cookie header the caller set, for
+// restoreCallerCookies, and works on a copy of the request so the caller's
+// request is not changed by the jar.
+type callerCookiesTransport struct {
 	next http.RoundTripper
 }
 
-func (t *cookieJarTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	cookieURL := req.URL
-	if req.Host != "" {
-		u := *req.URL
-		u.Host = req.Host
-		cookieURL = &u
+func (t *callerCookiesTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	cookies := slices.Clone(req.Header.Values("Cookie"))
+	ctx := context.WithValue(req.Context(), callerCookiesKey{}, cookies)
+	return t.next.RoundTrip(req.Clone(ctx))
+}
+
+func restoreCallerCookies(req *http.Request) error {
+	cookies, ok := req.Context().Value(callerCookiesKey{}).([]string)
+	if !ok {
+		return nil
 	}
-	if cookies := t.jar.Cookies(cookieURL); len(cookies) > 0 {
-		// Clone so the caller's request keeps only the cookies it set.
-		req = req.Clone(req.Context())
-		for _, cookie := range cookies {
-			req.AddCookie(cookie)
-		}
+	// retryablehttp makes a shallow copy of the request before a retry, so
+	// the header map is still shared with the previous attempt.
+	req.Header = req.Header.Clone()
+	req.Header.Del("Cookie")
+	for _, cookie := range cookies {
+		req.Header.Add("Cookie", cookie)
 	}
-	resp, err := t.next.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	if cookies := resp.Cookies(); len(cookies) > 0 {
-		t.jar.SetCookies(cookieURL, cookies)
-	}
-	return resp, nil
+	return nil
 }
 
 func NewSignedJWT(ctx context.Context, url, clientId, alg, jwtSigningKey string) (string, error) {

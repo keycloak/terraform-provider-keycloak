@@ -189,3 +189,46 @@ func TestNewHttpClient_retryAfterCookieRotationSendsOnlyNewCookie(t *testing.T) 
 		t.Errorf("caller's request was modified, Cookie headers %q", got)
 	}
 }
+
+func TestNewHttpClient_redirectReplacesCallerCookie(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+		// Rotate one caller cookie and delete another, then redirect.
+		http.SetCookie(w, &http.Cookie{Name: "session", Value: "new", Path: "/"})
+		http.SetCookie(w, &http.Cookie{Name: "gone", Value: "", Path: "/", MaxAge: -1})
+		http.Redirect(w, r, "/target", http.StatusFound)
+	})
+	mux.HandleFunc("/target", func(w http.ResponseWriter, r *http.Request) {
+		cookies := r.Header.Values("Cookie")
+		if len(cookies) != 1 || cookies[0] != "extra=1; session=new" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(w, strings.Join(cookies, " | "))
+			return
+		}
+		_, _ = io.WriteString(w, "ok")
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	httpClient, err := newHttpClient(false, 15, "", "", "")
+	if err != nil {
+		t.Fatalf("newHttpClient: %v", err)
+	}
+
+	// Cookies the caller set (e.g. through additional_headers) must be
+	// replaced or removed when a redirect response sets the same name.
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/start", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Cookie", "session=old; gone=1; extra=1")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET /start: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d (Cookie headers %q)", resp.StatusCode, body)
+	}
+}
