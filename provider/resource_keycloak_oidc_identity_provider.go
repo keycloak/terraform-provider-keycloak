@@ -19,6 +19,7 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.CustomizeDiff = customizeDiffOidcIdentityProviderRequiredUrls
 	oidcResource.SchemaVersion = 1
 	oidcResource.StateUpgraders = []schema.StateUpgrader{
 		{
@@ -58,8 +59,8 @@ func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 		},
 		"authorization_url": {
 			Type:        schema.TypeString,
-			Required:    true,
-			Description: "OIDC authorization URL.",
+			Optional:    true,
+			Description: "OIDC authorization URL. Required for the provider ids oidc and keycloak-oidc.",
 		},
 		"client_id": {
 			Type:        schema.TypeString,
@@ -109,8 +110,8 @@ func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 		},
 		"token_url": {
 			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Token URL.",
+			Optional:    true,
+			Description: "Token URL. Required for the provider ids oidc and keycloak-oidc.",
 		},
 		"logout_url": {
 			Type:        schema.TypeString,
@@ -159,6 +160,44 @@ func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 		},
 	}
 	return mergeSchemas(resourceKeycloakIdentityProvider().Schema, oidcSchema)
+}
+
+// oidcIdentityProviderIdsWithRequiredUrls are the built-in provider ids that send the user to the
+// authorization_url and exchange the code at the token_url. Other provider ids, such as social
+// providers (github, google, microsoft) or identity providers from extensions, may determine
+// their endpoints on their own.
+var oidcIdentityProviderIdsWithRequiredUrls = map[string]bool{
+	"oidc":          true,
+	"keycloak-oidc": true,
+}
+
+// customizeDiffOidcIdentityProviderRequiredUrls requires authorization_url and token_url for the
+// provider ids in oidcIdentityProviderIdsWithRequiredUrls.
+func customizeDiffOidcIdentityProviderRequiredUrls(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	return validateOidcIdentityProviderRequiredUrls(d.Get("provider_id").(string), d.NewValueKnown("provider_id"), d.GetRawConfig())
+}
+
+// validateOidcIdentityProviderRequiredUrls skips unknown values, because they may only be known
+// during apply. Only a missing url counts as missing: an empty string was accepted while the urls
+// were required, and it is not sent to Keycloak.
+func validateOidcIdentityProviderRequiredUrls(providerId string, providerIdKnown bool, rawConfig cty.Value) error {
+	if !providerIdKnown || !oidcIdentityProviderIdsWithRequiredUrls[providerId] {
+		return nil
+	}
+
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return nil
+	}
+
+	var errs []error
+	for _, attribute := range []string{"authorization_url", "token_url"} {
+		// An unknown value is not null.
+		if rawConfig.GetAttr(attribute).IsNull() {
+			errs = append(errs, fmt.Errorf("%q is required when provider_id is %q", attribute, providerId))
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {

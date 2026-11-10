@@ -66,16 +66,31 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 }
 ```
 
+## Example Usage with a custom `provider_id`
+
+Identity providers other than `oidc` and `keycloak-oidc`, for example from a Keycloak extension, may determine their
+endpoints on their own. For them, `authorization_url` and `token_url` can be left out.
+
+```hcl
+resource "keycloak_oidc_identity_provider" "custom_identity_provider" {
+  realm         = keycloak_realm.realm.id
+  alias         = "my-custom-idp"
+  provider_id   = "my-custom-oidc"
+  client_id     = "clientID"
+  client_secret = "clientSecret"
+}
+```
+
 ## Argument Reference
 
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `alias` - (Required) The alias uniquely identifies an identity provider, and it is also used to build the redirect uri.
-- `authorization_url` - (Required) The Authorization Url.
+- `authorization_url` - (Optional) The Authorization Url. Required when `provider_id` is `oidc` or `keycloak-oidc`.
 - `client_id` - (Required) The client or client identifier registered within the identity provider.
 - `client_secret` - (Optional) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format. Required without `client_secret_wo` and `client_secret_wo_version`.
 - `client_secret_wo` - (Optional, Write-Only) The secret for clients with an `access_type` of `CONFIDENTIAL` or `BEARER-ONLY`. This is a write-only argument and Terraform does not store them in state or plan files. If omitted, this will fallback to use `client_secret`.
 - `client_secret_wo_version` - (Optional) Functions as a flag and/or trigger to indicate Terraform when to use the input value in `client_secret_wo` to execute a Create or Update operation. The value of this argument is stored in the state and plan files. Required when using `client_secret_wo`.
-- `token_url` - (Required) The Token URL.
+- `token_url` - (Optional) The Token URL. Required when `provider_id` is `oidc` or `keycloak-oidc`.
 - `display_name` - (Optional) Display name for the identity provider in the GUI.
 - `enabled` - (Optional) When `true`, users will be able to log in to this realm using this identity provider. Defaults to `true`.
 - `store_token` - (Optional) When `true`, tokens will be stored after authenticating users. Defaults to `true`.
