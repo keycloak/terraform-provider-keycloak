@@ -84,7 +84,7 @@ resource "keycloak_oidc_identity_provider" "realm_identity_provider" {
 - `trust_email` - (Optional) When `true`, email addresses for users in this provider will automatically be verified regardless of the realm's email verification policy. Defaults to `false`.
 - `first_broker_login_flow_alias` - (Optional) The authentication flow to use when users log in for the first time through this identity provider. Defaults to `first broker login`.
 - `post_broker_login_flow_alias` - (Optional) The authentication flow to use after users have successfully logged in, which can be used to perform additional user verification (such as OTP checking). Defaults to an empty string, which means no post login flow will be used.
-- `provider_id` - (Optional) The ID of the identity provider to use. Defaults to `oidc`, which should be used unless you have extended Keycloak and provided your own implementation.
+- `provider_id` - (Optional) The ID of the identity provider to use. Defaults to `oidc`, which should be used unless you have extended Keycloak and provided your own implementation. Changing this forces a new resource, because Keycloak does not change the provider of an existing identity provider.
 - `backchannel_supported` - (Optional) Does the external IDP support backchannel logout? Defaults to `true`.
 - `validate_signature` - (Optional) Enable/disable signature validation of external IDP signatures. Defaults to `false`.
 - `user_info_url` - (Optional) User Info URL.
