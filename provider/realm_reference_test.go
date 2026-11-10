@@ -6,15 +6,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Every resource and data source that is scoped to a realm must accept realm_uuid. Without this
+// Every resource and data source that is scoped to a realm must accept realm_internal_id. Without this
 // check a new resource that the wrapper does not recognise would silently miss the feature.
-func TestRealmUuidIsOnEveryRealmScopedResource(t *testing.T) {
+func TestRealmInternalIdIsOnEveryRealmScopedResource(t *testing.T) {
 	p := KeycloakProvider(nil)
 
 	check := func(kind, name string, r *schema.Resource, writable bool) {
 		if name == "keycloak_realm" {
-			if _, ok := r.Schema["realm_uuid"]; ok {
-				t.Errorf("%s %s is the realm itself and must not have realm_uuid", kind, name)
+			if _, ok := r.Schema["realm_internal_id"]; ok {
+				t.Errorf("%s %s is the realm itself and must not have realm_internal_id", kind, name)
 			}
 			return
 		}
@@ -29,9 +29,9 @@ func TestRealmUuidIsOnEveryRealmScopedResource(t *testing.T) {
 			return
 		}
 
-		uuid, ok := r.Schema["realm_uuid"]
+		uuid, ok := r.Schema["realm_internal_id"]
 		if !ok {
-			t.Errorf("%s %s has no realm_uuid", kind, name)
+			t.Errorf("%s %s has no realm_internal_id", kind, name)
 			return
 		}
 
@@ -39,13 +39,13 @@ func TestRealmUuidIsOnEveryRealmScopedResource(t *testing.T) {
 			t.Errorf("%s %s: %s must be optional and computed", kind, name, realmField)
 		}
 		if !uuid.Optional || !uuid.Computed {
-			t.Errorf("%s %s: realm_uuid must be optional and computed", kind, name)
+			t.Errorf("%s %s: realm_internal_id must be optional and computed", kind, name)
 		}
 		if len(realm.ExactlyOneOf) != 2 || len(uuid.ExactlyOneOf) != 2 {
-			t.Errorf("%s %s: %s and realm_uuid must be ExactlyOneOf each other", kind, name, realmField)
+			t.Errorf("%s %s: %s and realm_internal_id must be ExactlyOneOf each other", kind, name, realmField)
 		}
 		if writable && (!realm.ForceNew || !uuid.ForceNew) {
-			t.Errorf("%s %s: %s and realm_uuid must force a new resource, a resource cannot move to another realm", kind, name, realmField)
+			t.Errorf("%s %s: %s and realm_internal_id must force a new resource, a resource cannot move to another realm", kind, name, realmField)
 		}
 	}
 

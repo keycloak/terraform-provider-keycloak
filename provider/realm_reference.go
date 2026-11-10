@@ -10,28 +10,28 @@ import (
 )
 
 // Resources that live inside a realm identify it with realm_id (a few use "realm"), which is the realm's name. A
-// realm can be renamed, but its internal id never changes. withRealmUuid adds an optional
-// realm_uuid attribute (typically keycloak_realm.x.internal_id) to such resources. Keycloak's admin
-// API only addresses realms by name, so the realm_uuid is resolved to the current name before each
-// create, read, update and delete. A resource that uses realm_uuid is therefore not replaced when
+// realm can be renamed, but its internal id never changes. withRealmInternalId adds an optional
+// realm_internal_id attribute (typically keycloak_realm.x.internal_id) to such resources. Keycloak's admin
+// API only addresses realms by name, so the realm_internal_id is resolved to the current name before each
+// create, read, update and delete. A resource that uses realm_internal_id is therefore not replaced when
 // its realm is renamed.
 //
 // The wrapper is applied to the whole resources map, so individual resources need no changes.
 //
 // idIsRealmName is for resources that are identified by their realm, so that their id is the realm name and
 // follows a rename. It is not a general rule: the id of other resources can equal a realm name by chance.
-func withRealmUuid(resource *schema.Resource, idIsRealmName bool) {
-	addRealmUuid(resource, true, idIsRealmName)
+func withRealmInternalId(resource *schema.Resource, idIsRealmName bool) {
+	addRealmInternalId(resource, true, idIsRealmName)
 }
 
-// withRealmUuidDataSource does the same for data sources. They are read at plan time, so after
+// withRealmInternalIdDataSource does the same for data sources. They are read at plan time, so after
 // renaming a realm a data source that is still configured with the new name fails to find it
-// until the rename has been applied; with realm_uuid it resolves the realm that exists now.
-func withRealmUuidDataSource(dataSource *schema.Resource) {
-	addRealmUuid(dataSource, false, false)
+// until the rename has been applied; with realm_internal_id it resolves the realm that exists now.
+func withRealmInternalIdDataSource(dataSource *schema.Resource) {
+	addRealmInternalId(dataSource, false, false)
 }
 
-func addRealmUuid(resource *schema.Resource, writable bool, idIsRealmName bool) {
+func addRealmInternalId(resource *schema.Resource, writable bool, idIsRealmName bool) {
 	realmField := ""
 	for _, field := range []string{"realm_id", "realm"} {
 		if s, ok := resource.Schema[field]; ok && s.Type == schema.TypeString && s.Required {
@@ -45,16 +45,16 @@ func addRealmUuid(resource *schema.Resource, writable bool, idIsRealmName bool) 
 
 	realmId := resource.Schema[realmField]
 
-	// the realm name becomes computed so it can be derived from realm_uuid; it is kept in sync on every read
-	exactlyOneOf := []string{realmField, "realm_uuid"}
+	// the realm name becomes computed so it can be derived from realm_internal_id; it is kept in sync on every read
+	exactlyOneOf := []string{realmField, "realm_internal_id"}
 	realmId.Required = false
 	realmId.Optional = true
 	realmId.Computed = true
-	// the stored realm_uuid would otherwise win over an edited realm name, and a resource cannot move to another realm anyway
+	// the stored realm_internal_id would otherwise win over an edited realm name, and a resource cannot move to another realm anyway
 	realmId.ForceNew = writable || realmId.ForceNew
 	realmId.ExactlyOneOf = exactlyOneOf
 
-	resource.Schema["realm_uuid"] = &schema.Schema{
+	resource.Schema["realm_internal_id"] = &schema.Schema{
 		Type:         schema.TypeString,
 		Optional:     true,
 		Computed:     true,
@@ -64,7 +64,7 @@ func addRealmUuid(resource *schema.Resource, writable bool, idIsRealmName bool) 
 	}
 
 	if writable {
-		resource.CustomizeDiff = withRealmUuidDiff(realmField, resource.CustomizeDiff)
+		resource.CustomizeDiff = withRealmInternalIdDiff(realmField, resource.CustomizeDiff)
 	}
 
 	if resource.CreateContext != nil {
@@ -79,7 +79,7 @@ func addRealmUuid(resource *schema.Resource, writable bool, idIsRealmName bool) 
 	if resource.DeleteContext != nil {
 		deleteContext := resource.DeleteContext
 		resource.DeleteContext = func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-			if err := resolveRealmIdFromUuid(ctx, meta.(*keycloak.KeycloakClient), data, realmField); err != nil {
+			if err := resolveRealmIdFromInternalId(ctx, meta.(*keycloak.KeycloakClient), data, realmField); err != nil {
 				if keycloak.ErrorIs404(err) {
 					return nil // the realm is gone, and so is everything in it
 				}
@@ -96,7 +96,7 @@ func withRealmReference(realmField string, next func(context.Context, *schema.Re
 		keycloakClient := meta.(*keycloak.KeycloakClient)
 		previousName := data.Get(realmField).(string)
 
-		if err := resolveRealmIdFromUuid(ctx, keycloakClient, data, realmField); err != nil {
+		if err := resolveRealmIdFromInternalId(ctx, keycloakClient, data, realmField); err != nil {
 			// a resource whose realm is gone is gone too; a data source must report it
 			if removeIfRealmGone {
 				return handleNotFoundError(ctx, err, data)
@@ -109,7 +109,7 @@ func withRealmReference(realmField string, next func(context.Context, *schema.Re
 			return diags
 		}
 
-		if err := setRealmUuid(ctx, keycloakClient, data, realmField); err != nil {
+		if err := setRealmInternalId(ctx, keycloakClient, data, realmField); err != nil {
 			return append(diags, diag.FromErr(err)...)
 		}
 
@@ -119,17 +119,17 @@ func withRealmReference(realmField string, next func(context.Context, *schema.Re
 	}
 }
 
-// resolveRealmIdFromUuid points realm_id at the current name of the realm that realm_uuid refers to.
+// resolveRealmIdFromInternalId points realm_id at the current name of the realm that realm_internal_id refers to.
 // Resources that only know realm_id are left alone.
-func resolveRealmIdFromUuid(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmField string) error {
-	realmUuid := data.Get("realm_uuid").(string)
-	if realmUuid == "" {
+func resolveRealmIdFromInternalId(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmField string) error {
+	realmInternalId := data.Get("realm_internal_id").(string)
+	if realmInternalId == "" {
 		return nil
 	}
 
 	// The stored name is only a hint to avoid listing the realms. It is never used without checking that it
 	// still belongs to this uuid: after a rename the old name may belong to an unrelated realm.
-	realmName, err := keycloakClient.GetRealmNameByUUID(ctx, realmUuid, data.Get(realmField).(string))
+	realmName, err := keycloakClient.GetRealmNameByInternalId(ctx, realmInternalId, data.Get(realmField).(string))
 	if err != nil {
 		return err
 	}
@@ -137,20 +137,20 @@ func resolveRealmIdFromUuid(ctx context.Context, keycloakClient *keycloak.Keyclo
 	return data.Set(realmField, realmName)
 }
 
-// setRealmUuid fills in realm_uuid for resources that were configured with realm_id only. This is
+// setRealmInternalId fills in realm_internal_id for resources that were configured with realm_id only. This is
 // best effort: an account that may manage a realm's contents but not view the realm itself gets no
-// realm id from Keycloak, and that must not break resources that never asked for realm_uuid.
-func setRealmUuid(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmField string) error {
-	if data.Get("realm_uuid").(string) != "" {
+// realm id from Keycloak, and that must not break resources that never asked for realm_internal_id.
+func setRealmInternalId(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, realmField string) error {
+	if data.Get("realm_internal_id").(string) != "" {
 		return nil
 	}
 
-	realmUuid, err := keycloakClient.GetRealmUUID(ctx, data.Get(realmField).(string))
-	if err != nil || realmUuid == "" {
+	realmInternalId, err := keycloakClient.GetRealmInternalId(ctx, data.Get(realmField).(string))
+	if err != nil || realmInternalId == "" {
 		return nil
 	}
 
-	return data.Set("realm_uuid", realmUuid)
+	return data.Set("realm_internal_id", realmInternalId)
 }
 
 // realmNameOrIdPrefix is for the few resources whose id starts with the realm name. The id keeps the
@@ -163,23 +163,23 @@ func realmNameOrIdPrefix(data *schema.ResourceData, idPrefix string) string {
 	return idPrefix
 }
 
-// withRealmUuidDiff guards the move from realm_id to realm_uuid on an existing resource. When the
-// state has no realm_uuid (Keycloak hides realm ids from accounts without the view-realm role), the
+// withRealmInternalIdDiff guards the move from realm_id to realm_internal_id on an existing resource. When the
+// state has no realm_internal_id (Keycloak hides realm ids from accounts without the view-realm role), the
 // configured uuid looks like a different realm and would replace the resource. If it resolves to
 // the realm the resource is already in, nothing changes; if it cannot be resolved, fail instead of
 // replacing something that may hold data.
-func withRealmUuidDiff(realmField string, next schema.CustomizeDiffFunc) schema.CustomizeDiffFunc {
+func withRealmInternalIdDiff(realmField string, next schema.CustomizeDiffFunc) schema.CustomizeDiffFunc {
 	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-		if keycloakClient, ok := meta.(*keycloak.KeycloakClient); ok && keycloakClient != nil && diff.Id() != "" && diff.HasChange("realm_uuid") {
-			oldUuid, newUuid := diff.GetChange("realm_uuid")
-			if oldUuid.(string) == "" && newUuid.(string) != "" && diff.NewValueKnown("realm_uuid") {
-				realmName, err := keycloakClient.GetRealmNameByUUID(ctx, newUuid.(string), diff.Get(realmField).(string))
+		if keycloakClient, ok := meta.(*keycloak.KeycloakClient); ok && keycloakClient != nil && diff.Id() != "" && diff.HasChange("realm_internal_id") {
+			oldInternalId, newInternalId := diff.GetChange("realm_internal_id")
+			if oldInternalId.(string) == "" && newInternalId.(string) != "" && diff.NewValueKnown("realm_internal_id") {
+				realmName, err := keycloakClient.GetRealmNameByInternalId(ctx, newInternalId.(string), diff.Get(realmField).(string))
 				if err != nil {
 					return err
 				}
 
 				if realmName == diff.Get(realmField).(string) {
-					if err := diff.Clear("realm_uuid"); err != nil {
+					if err := diff.Clear("realm_internal_id"); err != nil {
 						return err
 					}
 				}

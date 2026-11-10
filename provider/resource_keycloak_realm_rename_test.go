@@ -22,17 +22,17 @@ func testAccRefreshClientToken(*terraform.State) error {
 }
 
 // Walks through the migration path: a group that identifies its realm by name is switched to
-// realm_uuid, after which the realm is renamed. The group must be neither replaced nor drift.
-func TestAccKeycloakRealm_renameWithRealmUuidChildren(t *testing.T) {
+// realm_internal_id, after which the realm is renamed. The group must be neither replaced nor drift.
+func TestAccKeycloakRealm_renameWithRealmInternalIdChildren(t *testing.T) {
 	t.Parallel()
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	renamedRealmName := acctest.RandomWithPrefix("tf-acc-renamed")
 
-	var groupId, realmUuid string
+	var groupId, realmInternalId string
 	recordIds := func(s *terraform.State) error {
 		groupId = s.RootModule().Resources["keycloak_group.group"].Primary.ID
-		realmUuid = s.RootModule().Resources["keycloak_realm.realm"].Primary.Attributes["internal_id"]
+		realmInternalId = s.RootModule().Resources["keycloak_realm.realm"].Primary.Attributes["internal_id"]
 		return nil
 	}
 	checkGroupAndRealmKept := func(expectedRealmName string) resource.TestCheckFunc {
@@ -41,13 +41,13 @@ func TestAccKeycloakRealm_renameWithRealmUuidChildren(t *testing.T) {
 				if id := s.RootModule().Resources["keycloak_group.group"].Primary.ID; id != groupId {
 					return fmt.Errorf("group was replaced: id %s -> %s", groupId, id)
 				}
-				if id := s.RootModule().Resources["keycloak_realm.realm"].Primary.Attributes["internal_id"]; id != realmUuid {
-					return fmt.Errorf("realm internal id changed: %s -> %s", realmUuid, id)
+				if id := s.RootModule().Resources["keycloak_realm.realm"].Primary.Attributes["internal_id"]; id != realmInternalId {
+					return fmt.Errorf("realm internal id changed: %s -> %s", realmInternalId, id)
 				}
 				return nil
 			},
 			resource.TestCheckResourceAttr("keycloak_realm.realm", "id", expectedRealmName),
-			resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_uuid", "keycloak_realm.realm", "internal_id"),
+			resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_internal_id", "keycloak_realm.realm", "internal_id"),
 		)
 	}
 
@@ -57,11 +57,11 @@ func TestAccKeycloakRealm_renameWithRealmUuidChildren(t *testing.T) {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				// realm_uuid is filled in on create even when only realm_id is configured
+				// realm_internal_id is filled in on create even when only realm_id is configured
 				Config: testKeycloakRealmRename_byName(realmName),
 				Check: resource.ComposeTestCheckFunc(
 					recordIds,
-					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_uuid", "keycloak_realm.realm", "internal_id"),
+					resource.TestCheckResourceAttrPair("keycloak_group.group", "realm_internal_id", "keycloak_realm.realm", "internal_id"),
 				),
 			},
 			{
@@ -114,7 +114,7 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_group" "group" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "group"
 }
 `, realm)
@@ -172,7 +172,7 @@ func TestAccKeycloakRealm_renameWithMixedChildren(t *testing.T) {
 				// data sources are read while planning, before the realm has been renamed
 				Config: testKeycloakRealmRename_mixedChildren(renamedRealmName) + `
 data "keycloak_group" "group" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "group"
 }
 `,
@@ -206,12 +206,12 @@ data "keycloak_group" "group" {
 				// a follow-up change must still work on the renamed realm
 				Config: testKeycloakRealmRename_mixedChildren(renamedRealmName) + `
 data "keycloak_group" "group" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "group"
 }
 
 resource "keycloak_group" "another" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "another"
 }
 `,
@@ -222,10 +222,10 @@ resource "keycloak_group" "another" {
 }
 
 func testKeycloakRealmRename_mixedChildren(realm string) string {
-	return testKeycloakRealmRename_mixedChildrenTemplate(realm, "realm_uuid = keycloak_realm.realm.internal_id", "realm_uuid = keycloak_realm.realm.internal_id")
+	return testKeycloakRealmRename_mixedChildrenTemplate(realm, "realm_internal_id = keycloak_realm.realm.internal_id", "realm_internal_id = keycloak_realm.realm.internal_id")
 }
 
-// the same resources as written before realm_uuid existed
+// the same resources as written before realm_internal_id existed
 func testKeycloakRealmRename_mixedChildrenLegacy(realm string) string {
 	return testKeycloakRealmRename_mixedChildrenTemplate(realm, "realm_id = keycloak_realm.realm.id", "realm = keycloak_realm.realm.id")
 }
@@ -326,8 +326,8 @@ resource "keycloak_authentication_execution_config" "config" {
 	return strings.NewReplacer("{{REF}}", ref, "{{REALM_REF}}", realmRef).Replace(template)
 }
 
-// Upgrading from a provider version without realm_uuid: nothing may change in the plan, switching
-// to realm_uuid must not replace anything, and the realm can be renamed afterwards.
+// Upgrading from a provider version without realm_internal_id: nothing may change in the plan, switching
+// to realm_internal_id must not replace anything, and the realm can be renamed afterwards.
 func TestAccKeycloakRealm_renameAfterUpgrade(t *testing.T) {
 	t.Parallel()
 
@@ -461,30 +461,30 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_group_admin_permissions" "group" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "group-permission"
 	scopes     = ["view"]
 }
 
 resource "keycloak_users_admin_permissions" "users" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "users-permission"
 	scopes     = ["view"]
 }
 
 resource "keycloak_openid_client_admin_permissions" "client" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "client-permission"
 	scopes     = ["view"]
 }
 
 resource "keycloak_role" "role" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "role"
 }
 
 resource "keycloak_role_admin_permissions" "role" {
-	realm_uuid = keycloak_realm.realm.internal_id
+	realm_internal_id = keycloak_realm.realm.internal_id
 	name       = "role-permission"
 	role_ids   = [keycloak_role.role.id]
 	scopes     = ["map-role"]
@@ -492,21 +492,50 @@ resource "keycloak_role_admin_permissions" "role" {
 `, realm)
 }
 
-// A renamed realm keeps its internal id, which is the old name for realms created by this provider, so a
-// new realm with the old name is refused. The error has to say why.
+// A renamed realm keeps its internal id. For realms created by older provider versions that is the old name, which
+// the first realm gets here through internal_id. The old name can be used again by a realm that Keycloak gives a
+// generated id, but not by one that is given the old name as internal id.
 func TestAccKeycloakRealm_reuseRenamedRealmName(t *testing.T) {
 	t.Parallel()
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	renamedRealmName := acctest.RandomWithPrefix("tf-acc-renamed")
 
-	realm := func(resourceName, name string) string {
-		return fmt.Sprintf(`
-resource "keycloak_realm" "%s" {
+	firstRealm := func(name string, internalId string) string {
+		if internalId == "" {
+			return fmt.Sprintf(`
+resource "keycloak_realm" "first" {
 	realm = "%s"
 }
-`, resourceName, name)
+`, name)
+		}
+
+		return fmt.Sprintf(`
+resource "keycloak_realm" "first" {
+	realm       = "%s"
+	internal_id = "%s"
+}
+`, name, internalId)
 	}
+
+	secondRealm := func(name string, internalId string) string {
+		if internalId == "" {
+			return fmt.Sprintf(`
+resource "keycloak_realm" "second" {
+	realm = "%s"
+}
+`, name)
+		}
+
+		return fmt.Sprintf(`
+resource "keycloak_realm" "second" {
+	realm       = "%s"
+	internal_id = "%s"
+}
+`, name, internalId)
+	}
+
+	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
@@ -514,24 +543,30 @@ resource "keycloak_realm" "%s" {
 		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: realm("first", realmName),
+				// as created by older provider versions: the internal id is the realm name
+				Config: firstRealm(realmName, realmName),
+				Check:  resource.TestCheckResourceAttr("keycloak_realm.first", "internal_id", realmName),
 			},
 			{
-				Config: realm("first", renamedRealmName),
-				Check:  testAccRefreshClientToken,
+				// the internal id is no longer configured, and does not change
+				Config: firstRealm(renamedRealmName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					testAccRefreshClientToken,
+					resource.TestCheckResourceAttr("keycloak_realm.first", "internal_id", realmName),
+				),
 			},
 			{
-				Config:      realm("first", renamedRealmName) + realm("second", realmName),
-				ExpectError: regexp.MustCompile(`internal id is still`),
+				// the old name is the internal id of the renamed realm, which is taken
+				Config:      firstRealm(renamedRealmName, "") + secondRealm(realmName, realmName),
+				ExpectError: regexp.MustCompile(`(?i)409|conflict`),
 			},
 			{
-				// with an internal id of its own the old name can be used again
-				Config: realm("first", renamedRealmName) + fmt.Sprintf(`
-resource "keycloak_realm" "second" {
-	realm       = "%s"
-	internal_id = "%s-second"
-}
-`, realmName, realmName),
+				// with an internal id generated by Keycloak the old name can be used again
+				Config: firstRealm(renamedRealmName, "") + secondRealm(realmName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("keycloak_realm.second", "internal_id", uuid),
+					resource.TestCheckResourceAttr("keycloak_realm.second", "realm", realmName),
+				),
 			},
 		},
 	})
@@ -541,7 +576,7 @@ resource "keycloak_realm" "second" {
 // that cannot be found is retried with a new token.
 func TestAccKeycloakRealm_uuidOfRealmCreatedOutsideTerraform(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
-	realmUuid := acctest.RandomWithPrefix("uuid")
+	realmInternalId := acctest.RandomWithPrefix("uuid")
 
 	// Another client, so the client used by the provider keeps the token it got before the realm existed. It reads
 	// the process-wide credentials, which the provider tests that run in parallel change, so it is created before
@@ -560,17 +595,17 @@ func TestAccKeycloakRealm_uuidOfRealmCreatedOutsideTerraform(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
-					if err := otherClient.NewRealm(testCtx, &keycloak.Realm{Id: realmUuid, Realm: realmName, Enabled: true}); err != nil {
+					if err := otherClient.NewRealm(testCtx, &keycloak.Realm{Id: realmInternalId, Realm: realmName, Enabled: true}); err != nil {
 						t.Fatal(err)
 					}
 					t.Cleanup(func() { _ = otherClient.DeleteRealm(testCtx, realmName) })
 				},
 				Config: fmt.Sprintf(`
 resource "keycloak_group" "group" {
-	realm_uuid = "%s"
+	realm_internal_id = "%s"
 	name       = "group"
 }
-`, realmUuid),
+`, realmInternalId),
 				Check: resource.TestCheckResourceAttr("keycloak_group.group", "realm_id", realmName),
 			},
 		},
@@ -578,7 +613,7 @@ resource "keycloak_group" "group" {
 }
 
 // A child that still names the realm with realm_id from keycloak_realm.x.realm sees the new name in the plan of the
-// rename, so it is replaced in that apply. realm_uuid avoids that, which the documentation recommends.
+// rename, so it is replaced in that apply. realm_internal_id avoids that, which the documentation recommends.
 //
 // A child that takes the name from keycloak_realm.x.id sees the old name in that plan, because the id only changes
 // while the realm is updated, and the next refresh brings it up to date. The test framework cannot express that: it

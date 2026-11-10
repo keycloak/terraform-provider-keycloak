@@ -183,8 +183,8 @@ The following arguments are supported:
 
 ## Renaming realms
 
-Resources that belong to a realm accept either `realm_id` (the realm's name) or `realm_uuid` (the realm's internal id,
-e.g. `keycloak_realm.realm.internal_id`). Use `realm_uuid` if you want to be able to rename the realm without
+Resources that belong to a realm accept either `realm_id` (the realm's name) or `realm_internal_id` (the realm's internal id,
+e.g. `keycloak_realm.realm.internal_id`). Use `realm_internal_id` if you want to be able to rename the realm without
 Terraform replacing everything in it. See [Renaming a realm](resources/realm.md#renaming-a-realm).
 
 ## A note for users of Keycloak 26.4+

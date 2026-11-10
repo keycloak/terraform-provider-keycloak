@@ -199,8 +199,9 @@ type SmtpServer struct {
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
 	generation := keycloakClient.realmCache.currentGeneration()
 	_, _, err := keycloakClient.post(ctx, "/realms", realm)
-	if err == nil {
-		// Keycloak 26.0 hides a new realm's id from tokens issued before it existed, so remember it
+	if err == nil && realm.Id != "" {
+		// Keycloak 26.0 hides a new realm's id from tokens issued before it existed, so remember it.
+		// Without an id in the request Keycloak picks one, which is only known once the realm is read.
 		keycloakClient.realmCache.remember(generation, realm.Id, realm.Realm)
 	}
 
@@ -357,11 +358,11 @@ func (c *realmCache) forget() {
 	c.names, c.unreadable = nil, nil
 }
 
-// GetRealmNameByUUID returns the current name of the realm with the given internal id. Keycloak's admin API only
+// GetRealmNameByInternalId returns the current name of the realm with the given internal id. Keycloak's admin API only
 // addresses realms by name, so the realms are searched for the id. The names we expect it to have (knownName, the
 // name last seen in state, and what this client remembers) are tried first, but only an id that Keycloak confirms
 // counts: a name can be reused by another realm after a rename. If that fails the realms are listed.
-func (keycloakClient *KeycloakClient) GetRealmNameByUUID(ctx context.Context, uuid string, knownName string) (string, error) {
+func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Context, uuid string, knownName string) (string, error) {
 	generation := keycloakClient.realmCache.currentGeneration()
 
 	candidates := []string{}
@@ -412,7 +413,7 @@ func (keycloakClient *KeycloakClient) GetRealmNameByUUID(ctx context.Context, uu
 
 		// A realm we may not read is not a realm that does not exist: callers treat "not found" as "gone".
 		if idsHidden || forbidden {
-			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids, or the realm itself, from accounts without the view-realm role, which is needed to use realm_uuid", uuid)}
+			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids, or the realm itself, from accounts without the view-realm role, which is needed to use realm_internal_id", uuid)}
 		}
 
 		return "", &ApiError{Code: http.StatusNotFound, Message: fmt.Sprintf("realm with internal id %s not found", uuid)}
@@ -444,10 +445,10 @@ func (keycloakClient *KeycloakClient) findRealmNameInList(ctx context.Context, g
 	return name, idsHidden, nil
 }
 
-// GetRealmUUID returns the internal id of the realm with the given name, or an empty string when Keycloak does not
+// GetRealmInternalId returns the internal id of the realm with the given name, or an empty string when Keycloak does not
 // show it to this account. The id is always asked for again, because the name may belong to another realm than it
 // did a moment ago; only the fact that an account cannot see it is remembered, for a short while.
-func (keycloakClient *KeycloakClient) GetRealmUUID(ctx context.Context, name string) (string, error) {
+func (keycloakClient *KeycloakClient) GetRealmInternalId(ctx context.Context, name string) (string, error) {
 	if keycloakClient.realmCache.isUnreadable(name) {
 		return "", nil
 	}

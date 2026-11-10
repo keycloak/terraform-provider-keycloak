@@ -283,7 +283,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 
 	for name, dataSource := range provider.DataSourcesMap {
 		if name != "keycloak_realm" {
-			withRealmUuidDataSource(dataSource)
+			withRealmInternalIdDataSource(dataSource)
 		}
 	}
 
@@ -297,7 +297,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 	}
 	for name, resource := range provider.ResourcesMap {
 		if name != "keycloak_realm" {
-			withRealmUuid(resource, identifiedByRealm[name])
+			withRealmInternalId(resource, identifiedByRealm[name])
 		}
 	}
 

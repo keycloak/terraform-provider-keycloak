@@ -86,7 +86,7 @@ resource "keycloak_realm" "realm" {
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm.
-- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
+- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, Keycloak generates a UUID. Realms created by earlier versions of this provider may still have the realm's name as internal ID.
 - `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 
 ### Login Settings
@@ -302,7 +302,7 @@ Changing `realm` renames the realm in place instead of replacing it, so its data
 its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
 Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
 
-To prevent that, reference the realm by its internal id, which never changes, using `realm_uuid` instead of `realm_id`:
+To prevent that, reference the realm by its internal id, which never changes, using `realm_internal_id` instead of `realm_id`:
 
 ```hcl
 resource "keycloak_realm" "realm" {
@@ -310,27 +310,28 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_group" "group" {
-  realm_uuid = keycloak_realm.realm.internal_id
+  realm_internal_id = keycloak_realm.realm.internal_id
   name       = "group"
 }
 ```
 
-`realm_uuid` is available on every resource and data source that has a `realm_id` (or `realm`) argument, which then
+`realm_internal_id` is available on every resource and data source that has a `realm_id` (or `realm`) argument, which then
 holds the current realm name as a read-only value. Set exactly one of them. Data sources should use it too: they are
 read while planning, when a renamed realm does not exist under its new name yet.
 
 Looking up a realm by its internal id requires that the provider's account can see the realm's id. Keycloak hides it
 from accounts that have no `view-realm` role on that realm (for example one that only has `manage-clients`), so grant
-that role (the `realm-management` client role of the realm) before using `realm_uuid`. Configurations that keep using
-`realm_id` are not affected. If the id is hidden, using `realm_uuid` fails with an error instead of replacing resources.
-Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_uuid` fail with that error until the
+that role (the `realm-management` client role of the realm) before using `realm_internal_id`. Configurations that keep using
+`realm_id` are not affected. If the id is hidden, using `realm_internal_id` fails with an error instead of replacing resources.
+Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_internal_id` fail with that error until the
 role is granted again: the provider will not guess a realm from a name that may have been reused.
 
 Things to know about renaming:
 
-- A realm keeps its internal id when it is renamed. Realms created by this provider get the realm name as internal id
-  unless `internal_id` is set, so after renaming `a` to `b` the id `a` stays taken. Creating a new realm called `a`
-  then fails; give it an `internal_id` of its own.
+- A realm keeps its internal id when it is renamed, and the name of a renamed realm can be reused by a new realm. The
+  exception is a realm whose internal id is its old name: realms created by earlier versions of this provider got the
+  realm name as internal id. After renaming such a realm from `a` to `b` its id `a` stays taken, so creating a new realm
+  called `a` with `internal_id = "a"` fails. Leave `internal_id` unset so that Keycloak generates a UUID.
 - Resources whose id contains the realm name (for example `keycloak_default_groups`) get the new name in their id on
   the next refresh.
 - A resource that still uses `realm_id` (the realm name) depends on where the name comes from. If it comes from
@@ -338,11 +339,11 @@ Things to know about renaming:
   apply. If it comes from `keycloak_realm.x.id`, the plan of the rename still shows the old name, because the id only
   changes while the realm is updated. The next refresh then brings the resource up to date, so it is not replaced, but
   adding or changing such a resource in the same apply as the rename fails with `Provider produced inconsistent final
-  plan`, after the realm has already been renamed. Use `realm_uuid` for all resources of a realm that you want to rename.
+  plan`, after the realm has already been renamed. Use `realm_internal_id` for all resources of a realm that you want to rename.
 
 To migrate an existing configuration, first upgrade the provider and run `terraform apply`, or `terraform apply -refresh-only`;
-`realm_uuid` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
-`realm_uuid = keycloak_realm.realm.internal_id`, which shows no changes. After that, `realm` can be changed safely.
+`realm_internal_id` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
+`realm_internal_id = keycloak_realm.realm.internal_id`, which shows no changes. After that, `realm` can be changed safely.
 
 ## Default Client Scopes
 

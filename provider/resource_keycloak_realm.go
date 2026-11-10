@@ -953,18 +953,15 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		defaultLocale = internationalizationSettings["default_locale"].(string)
 	}
 
-	realmId := data.Get("realm")
-	internalId := data.Get("internal_id")
-	if internalId != "" {
-		realmId = internalId
-	}
+	// when internal_id is not set, Keycloak generates the realm's internal id
+	internalId := data.Get("internal_id").(string)
 
 	// Use GetOkExists for string fields to preserve empty strings
 	displayName, displayNameOk := data.GetOkExists("display_name")
 	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
 
 	realm := &keycloak.Realm{
-		Id:                   realmId.(string),
+		Id:                   internalId,
 		Realm:                data.Get("realm").(string),
 		Enabled:              data.Get("enabled").(bool),
 		UserManagedAccess:    data.Get("user_managed_access").(bool),
@@ -1249,7 +1246,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
-			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Id, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
+			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Realm, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
 			if err != nil {
 				return nil, err
 			}
@@ -1532,7 +1529,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.PermanentLockout = false
 	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
-	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Id, 0, keycloakVersion)
+	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Realm, 0, keycloakVersion)
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60
@@ -1545,7 +1542,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
-	// Keycloak leaves the id out for tokens that cannot see the realm (see GetRealmNameByUUID); keep what we know
+	// Keycloak leaves the id out for tokens that cannot see the realm (see GetRealmNameByInternalId); keep what we know
 	if realm.Id != "" {
 		data.Set("internal_id", realm.Id)
 	}
@@ -1802,11 +1799,6 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 
 	err = keycloakClient.NewRealm(ctx, realm)
 	if err != nil {
-		if keycloak.ErrorIs409(err) && data.Get("internal_id").(string) == "" {
-			// a renamed realm keeps its internal id, which for realms created by this provider is the old name
-			return diag.Errorf("%s\n\nIf a realm called %q was renamed earlier, its internal id is still %q. Set internal_id to a different value on this realm.", err, realm.Realm, realm.Realm)
-		}
-
 		return diag.FromErr(err)
 	}
 
