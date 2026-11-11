@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -27,7 +28,7 @@ type clientScopeAssignments struct {
 
 func resourceKeycloakClientScopeAssignments() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakClientScopeAssignmentsReconcile,
+		CreateContext: resourceKeycloakClientScopeAssignmentsCreate,
 		ReadContext:   resourceKeycloakClientScopeAssignmentsRead,
 		UpdateContext: resourceKeycloakClientScopeAssignmentsReconcile,
 		DeleteContext: resourceKeycloakClientScopeAssignmentsDelete,
@@ -42,9 +43,10 @@ func resourceKeycloakClientScopeAssignments() *schema.Resource {
 				ForceNew: true,
 			},
 			"client_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.StringIsNotEmpty,
 			},
 			"default_scopes": {
 				Type:     schema.TypeSet,
@@ -149,13 +151,18 @@ func readClientClientScopeAssignments(ctx context.Context, keycloakClient *keycl
 		return nil, err
 	}
 
+	protocol := client.Protocol
+	if protocol == "" {
+		// Keycloak accepts openid-connect scopes for clients without a protocol.
+		protocol = keycloakClientScopeProtocolOpenidConnect
+	}
 	assignments := &clientScopeAssignments{
-		clientProtocol:   client.Protocol,
+		clientProtocol:   protocol,
 		clientBearerOnly: client.BearerOnly,
 		scopeIDs:         make(map[string]string),
 		scopeProtocols:   make(map[string]string),
 	}
-	switch client.Protocol {
+	switch protocol {
 	case keycloakClientScopeProtocolOpenidConnect:
 		defaultScopes, err := keycloakClient.GetOpenidClientDefaultScopes(ctx, realmId, clientId)
 		if err != nil {
@@ -367,6 +374,17 @@ func planClientScopeAssignmentChanges(current, desired *clientScopeAssignments) 
 	return changes
 }
 
+func resourceKeycloakClientScopeAssignmentsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	diags := resourceKeycloakClientScopeAssignmentsReconcile(ctx, data, meta)
+	if diags.HasError() {
+		// Do not persist a failed create: Terraform would taint it and destroy it
+		// before retrying, detaching assignments that were never meant to change.
+		// Create reconciles against live assignments, so a plain retry is safe.
+		data.SetId("")
+	}
+	return diags
+}
+
 func resourceKeycloakClientScopeAssignmentsReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	desired := &clientScopeAssignments{
 		defaultScopes:  scopeNamesFromSet(data.Get("default_scopes")),
@@ -396,8 +414,6 @@ func resourceKeycloakClientScopeAssignmentsReconcile(ctx context.Context, data *
 		return diag.Errorf("validation error: client with id %s uses access type BEARER-ONLY which does not use scopes", clientId)
 	}
 
-	// Retain the target in state if a later write fails after partial mutation.
-	data.SetId(clientScopeAssignmentsId(realmId, clientId))
 	if err := applyClientScopeAssignmentChanges(ctx, keycloakClient, realmId, clientId, "default", changes.removeDefaults, scopeIDs, false); err != nil {
 		return diag.FromErr(err)
 	}

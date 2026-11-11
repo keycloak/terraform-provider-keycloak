@@ -41,7 +41,8 @@ resource "keycloak_client_scope_assignments" "web_client" {
   realm_id  = keycloak_realm.realm.id
   client_id = keycloak_openid_client.web.id
 
-  default_scopes = ["profile", "email"]
+  # Keep Keycloak's built-in defaults; omitting them removes their token claims.
+  default_scopes = ["profile", "email", "roles", "web-origins", "acr", "basic"]
   optional_scopes = [
     keycloak_client_scope.groups.name,
   ]
@@ -51,7 +52,7 @@ resource "keycloak_client_scope_assignments" "web_client" {
 ## Argument Reference
 
 - `realm_id` - (Required) The target realm.
-- `client_id` - (Optional, ForceNew) The Keycloak-generated ID of the client. If omitted, assignments apply to the realm.
+- `client_id` - (Optional, ForceNew) The Keycloak-generated ID of the client. If omitted, assignments apply to the realm. Must not be empty when set.
 - `default_scopes` - (Required) Set of client-scope names assigned as defaults.
 - `optional_scopes` - (Required) Set of client-scope names assigned as optional.
 
@@ -81,8 +82,10 @@ same target's assignments with a deprecated assignment resource, or manage realm
 `keycloak_realm.default_default_client_scopes` or `keycloak_realm.default_optional_client_scopes`. These independent
 resources cannot validate each other's ownership and will overwrite each other's assignments.
 
-To migrate without detaching assignments, remove the old resource from configuration, run `terraform state rm` for its
-address, then import the target into this resource using the import format below. Review the resulting plan before applying.
+To migrate without detaching assignments, remove every old assignment resource for the target from configuration (for
+example, both the default and optional scopes resources), run `terraform state rm` for each of their addresses, then
+import the target into this resource using the import format below. Removing only one leaves the other managing the same
+target, or detaching its assignments when it is later removed. Review the resulting plan before applying.
 
 ## Replacing scope definitions
 
@@ -99,7 +102,7 @@ referencing the IDs of the scope definitions it uses:
 resource "keycloak_client_scope_assignments" "web_client" {
   realm_id        = keycloak_realm.realm.id
   client_id       = keycloak_openid_client.web.id
-  default_scopes  = ["profile", "email"]
+  default_scopes  = ["profile", "email", "roles", "web-origins", "acr", "basic"]
   optional_scopes = [keycloak_client_scope.groups.name]
 
   lifecycle {

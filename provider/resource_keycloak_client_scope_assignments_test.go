@@ -10,9 +10,12 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -265,104 +268,176 @@ func TestKeycloakClientScopeAssignmentsMoveReusesAssignedScopeIDs(t *testing.T) 
 	}
 }
 
-func TestKeycloakClientScopeAssignmentsFailedCreateRetainsTarget(t *testing.T) {
+// clientScopeAssignmentsMockServer serves one realm and one client whose
+// assignments live in memory. failPut makes the first PUT for that scope fail.
+type clientScopeAssignmentsMockServer struct {
+	mu        sync.Mutex
+	clientRep string
+	defaults  map[string][]string
+	failPut   string
+	writes    []string
+}
+
+func (m *clientScopeAssignmentsMockServer) serve(t *testing.T) *httptest.Server {
+	scopes := []string{"keep", "old", "first", "second"}
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		path := r.URL.Path
+		target := ""
+		switch {
+		case strings.HasPrefix(path, "/admin/realms/realm/default-default-client-scopes"):
+			target = "realm"
+		case strings.HasPrefix(path, "/admin/realms/realm/clients/client/default-client-scopes"):
+			target = "client"
+		}
+		scopeName := path[strings.LastIndex(path, "/")+1:]
+		encodeScopes := func(names []string) {
+			reps := []map[string]string{}
+			for _, name := range names {
+				reps = append(reps, map[string]string{"id": name, "name": name, "protocol": "openid-connect"})
+			}
+			if err := json.NewEncoder(w).Encode(reps); err != nil {
+				t.Error(err)
+			}
+		}
+		switch {
+		case r.Method == http.MethodGet && path == "/admin/serverinfo":
+			fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
+		case r.Method == http.MethodGet && path == "/admin/realms/realm/clients/client":
+			fmt.Fprint(w, m.clientRep)
+		case r.Method == http.MethodGet && (path == "/admin/realms/realm/default-optional-client-scopes" || path == "/admin/realms/realm/clients/client/optional-client-scopes"):
+			fmt.Fprint(w, `[]`)
+		case r.Method == http.MethodGet && path == "/admin/realms/realm/client-scopes":
+			encodeScopes(scopes)
+		case r.Method == http.MethodGet && target != "":
+			encodeScopes(m.defaults[target])
+		case r.Method == http.MethodPut && target != "":
+			if scopeName == m.failPut {
+				m.failPut = ""
+				http.Error(w, `{"error":"simulated server failure"}`, http.StatusInternalServerError)
+				return
+			}
+			m.writes = append(m.writes, r.Method+" "+target+"/"+scopeName)
+			m.defaults[target] = append(m.defaults[target], scopeName)
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodDelete && target != "":
+			m.writes = append(m.writes, r.Method+" "+target+"/"+scopeName)
+			remaining := []string{}
+			for _, name := range m.defaults[target] {
+				if name != scopeName {
+					remaining = append(remaining, name)
+				}
+			}
+			m.defaults[target] = remaining
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, path)
+			http.NotFound(w, r)
+		}
+	}))
+}
+
+func clientScopeAssignmentsMockProviderFactories(t *testing.T, serverURL string) map[string]func() (tfprotov5.ProviderServer, error) {
+	client, err := keycloak.NewKeycloakClient(context.Background(), serverURL, "", "", "", "", "master", "", "", "test-token", "", "", "", "", false, 10, "", false, "", "", "", false, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := &schema.Provider{
+		ResourcesMap: map[string]*schema.Resource{"keycloak_client_scope_assignments": resourceKeycloakClientScopeAssignments()},
+		ConfigureContextFunc: func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+			return client, nil
+		},
+	}
+	return protoV5ProviderFactories(provider)
+}
+
+func TestKeycloakClientScopeAssignments_failedCreateRetryKeepsUnchangedAssignments(t *testing.T) {
 	for _, clientId := range []string{"", "client"} {
 		t.Run(clientScopeAssignmentsId("realm", clientId), func(t *testing.T) {
-			defaultPath := "/admin/realms/realm/default-default-client-scopes"
-			optionalPath := "/admin/realms/realm/default-optional-client-scopes"
+			target := "realm"
+			clientIdAttr := ""
 			if clientId != "" {
-				defaultPath = "/admin/realms/realm/clients/client/default-client-scopes"
-				optionalPath = "/admin/realms/realm/clients/client/optional-client-scopes"
+				target = "client"
+				clientIdAttr = fmt.Sprintf("client_id = %q", clientId)
 			}
-			defaults := []map[string]string{{"id": "old", "name": "old", "protocol": "openid-connect"}}
-			failSecond := true
-			var writes []string
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				switch request := r.Method + " " + r.URL.Path; request {
-				case "GET /admin/serverinfo":
-					fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
-				case "GET /admin/realms/realm/clients/client":
-					fmt.Fprint(w, `{"id":"client","protocol":"openid-connect"}`)
-				case "GET " + defaultPath:
-					if err := json.NewEncoder(w).Encode(defaults); err != nil {
-						t.Error(err)
-					}
-				case "GET " + optionalPath:
-					fmt.Fprint(w, `[]`)
-				case "GET /admin/realms/realm/client-scopes":
-					fmt.Fprint(w, `[{"id":"old","name":"old","protocol":"openid-connect"},{"id":"first","name":"first","protocol":"openid-connect"},{"id":"second","name":"second","protocol":"openid-connect"}]`)
-				case "DELETE " + defaultPath + "/old":
-					defaults = nil
-					writes = append(writes, request)
-					w.WriteHeader(http.StatusNoContent)
-				case "PUT " + defaultPath + "/first", "PUT " + defaultPath + "/second":
-					name := strings.TrimPrefix(r.URL.Path, defaultPath+"/")
-					if name == "second" && failSecond {
-						failSecond = false
-						http.Error(w, `{"error":"simulated server failure"}`, http.StatusInternalServerError)
-						return
-					}
-					defaults = append(defaults, map[string]string{"id": name, "name": name, "protocol": "openid-connect"})
-					writes = append(writes, request)
-					w.WriteHeader(http.StatusNoContent)
-				default:
-					t.Errorf("unexpected request: %s", request)
-					http.NotFound(w, r)
-				}
-			}))
+			// The client omits its protocol, which Keycloak treats as openid-connect.
+			mock := &clientScopeAssignmentsMockServer{
+				clientRep: `{"id":"client"}`,
+				defaults:  map[string][]string{target: {"keep", "old"}},
+				failPut:   "second",
+			}
+			server := mock.serve(t)
 			defer server.Close()
-			ctx := context.Background()
-			client, err := keycloak.NewKeycloakClient(ctx, server.URL, "", "", "", "", "master", "", "", "test-token", "", "", "", "", false, 10, "", false, "", "", "", false, nil, "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			r := resourceKeycloakClientScopeAssignments()
-			rawConfig := map[string]interface{}{
-				"realm_id": "realm", "client_id": clientId,
-				"default_scopes": []interface{}{"first", "second"}, "optional_scopes": []interface{}{},
-			}
-			config := sdkterraform.NewResourceConfigRaw(rawConfig)
-			diff, err := r.Diff(ctx, nil, config, client)
-			if err != nil {
-				t.Fatal(err)
-			}
-			state, diags := r.Apply(ctx, nil, diff, client)
-			if !diags.HasError() || !strings.Contains(diags[0].Summary+" "+diags[0].Detail, "simulated server failure") {
-				t.Fatalf("expected simulated write failure, got %v", diags)
-			}
-			if state == nil || state.ID != clientScopeAssignmentsId("realm", clientId) {
-				t.Fatalf("partially mutated target was not retained: %#v", state)
-			}
 
-			data := schema.TestResourceDataRaw(t, r.Schema, rawConfig)
-			data.SetId(state.ID)
-			if diags := r.ReadContext(ctx, data, client); diags.HasError() {
-				t.Fatal(diags)
-			}
-			if got := scopeNamesFromSet(data.Get("default_scopes")); !reflect.DeepEqual(got, []string{"first"}) {
-				t.Fatalf("got refreshed assignments %v, want [first]", got)
-			}
-			diff, err = r.Diff(ctx, data.State(), config, client)
-			if err != nil {
-				t.Fatal(err)
-			}
-			state, diags = r.Apply(ctx, data.State(), diff, client)
-			if diags.HasError() {
-				t.Fatal(diags)
-			}
-			if state.Attributes["default_scopes.#"] != "2" {
-				t.Fatalf("retry did not restore desired assignments: %#v", state.Attributes)
-			}
-			wantWrites := []string{
-				"DELETE " + defaultPath + "/old",
-				"PUT " + defaultPath + "/first",
-				"PUT " + defaultPath + "/second",
-			}
-			if !reflect.DeepEqual(writes, wantWrites) {
-				t.Fatalf("got successful writes %v, want %v", writes, wantWrites)
-			}
+			config := fmt.Sprintf(`
+resource "keycloak_client_scope_assignments" "assignments" {
+	realm_id        = "realm"
+	%s
+	default_scopes  = ["keep", "first", "second"]
+	optional_scopes = []
+}`, clientIdAttr)
+			resource.UnitTest(t, resource.TestCase{
+				ProtoV5ProviderFactories: clientScopeAssignmentsMockProviderFactories(t, server.URL),
+				Steps: []resource.TestStep{
+					{
+						Config:      config,
+						ExpectError: regexp.MustCompile(`simulated server failure`),
+					},
+					{
+						// A tainted failed create would be destroyed first, detaching "keep".
+						Config: config,
+						Check: func(*terraform.State) error {
+							mock.mu.Lock()
+							defer mock.mu.Unlock()
+							want := []string{"DELETE " + target + "/old", "PUT " + target + "/first", "PUT " + target + "/second"}
+							if !reflect.DeepEqual(mock.writes, want) {
+								return fmt.Errorf("got writes %v, want %v", mock.writes, want)
+							}
+							return nil
+						},
+					},
+				},
+			})
 		})
+	}
+}
+
+func TestKeycloakClientScopeAssignments_rejectEmptyClientId(t *testing.T) {
+	mock := &clientScopeAssignmentsMockServer{
+		clientRep: `{"id":"client","protocol":"openid-connect"}`,
+		defaults:  map[string][]string{"realm": {"keep"}},
+	}
+	server := mock.serve(t)
+	defer server.Close()
+
+	config := func(clientId string) string {
+		return fmt.Sprintf(`
+resource "keycloak_client_scope_assignments" "assignments" {
+	realm_id        = "realm"
+	client_id       = %s
+	default_scopes  = []
+	optional_scopes = []
+}`, clientId)
+	}
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: clientScopeAssignmentsMockProviderFactories(t, server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config:      config(`""`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`expected "client_id" to not be an empty string`),
+			},
+			{
+				// Unknown during planning; Terraform revalidates once known at apply.
+				Config:      config(`substr(timestamp(), 0, 0)`),
+				ExpectError: regexp.MustCompile(`expected "client_id" to not be an empty string`),
+			},
+		},
+	})
+	if len(mock.writes) != 0 {
+		t.Fatalf("empty client_id mutated assignments: %v", mock.writes)
 	}
 }
 
