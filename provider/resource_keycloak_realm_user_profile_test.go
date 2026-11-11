@@ -280,6 +280,63 @@ func TestAccKeycloakRealmUserProfile_attributeValidator(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakRealmUserProfile_attributeValidatorNumbers(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+
+	withLength := &keycloak.RealmUserProfile{
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"}, // Version >=23 needs these
+			{
+				Name: "attribute",
+				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
+					"length": map[string]interface{}{"min": "3", "max": "255"},
+				},
+			},
+		},
+	}
+
+	// The same profile with numbers in the validator config, as in
+	// Keycloak's default user profile.
+	withNumbers := &keycloak.RealmUserProfile{
+		Attributes: []*keycloak.RealmUserProfileAttribute{
+			{Name: "username"}, {Name: "email"},
+			{
+				Name: "attribute",
+				Validations: map[string]keycloak.RealmUserProfileValidationConfig{
+					"length": map[string]interface{}{"min": 3, "max": 255},
+				},
+			},
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmUserProfileDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmUserProfile_template(realmName, withLength),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", withLength,
+				),
+			},
+			{
+				PreConfig: func() {
+					if err := keycloakClient.UpdateRealmUserProfile(testCtx, realmName, withNumbers); err != nil {
+						t.Fatal(err)
+					}
+				},
+				// The refresh reads the numbers as the configured strings, so
+				// there is no diff and Keycloak keeps the profile as it is.
+				Config: testKeycloakRealmUserProfile_template(realmName, withLength),
+				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
+					"keycloak_realm_user_profile.realm_user_profile", withNumbers,
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealmUserProfile_attributePermissions(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 
