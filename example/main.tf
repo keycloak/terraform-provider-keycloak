@@ -249,23 +249,27 @@ resource "keycloak_openid_client" "test_client" {
   }
 }
 
-resource "keycloak_openid_client_scope" "test_default_client_scope" {
+resource "keycloak_client_scope" "test_default_client_scope" {
   name     = "test-default-client-scope"
   realm_id = keycloak_realm.test.id
 
   description         = "test"
   consent_screen_text = "hello"
+
+  openid_connect {}
 }
 
-resource "keycloak_openid_client_scope" "test_optional_client_scope" {
+resource "keycloak_client_scope" "test_optional_client_scope" {
   name     = "test-optional-client-scope"
   realm_id = keycloak_realm.test.id
 
   description         = "test"
   consent_screen_text = "hello"
+
+  openid_connect {}
 }
 
-resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
+resource "keycloak_client_scope_assignments" "client_scopes" {
   realm_id  = keycloak_realm.test.id
   client_id = keycloak_openid_client.test_client.id
 
@@ -274,20 +278,14 @@ resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
     "email",
     "roles",
     "web-origins",
-    keycloak_openid_client_scope.test_default_client_scope.name,
+    keycloak_client_scope.test_default_client_scope.name,
   ]
-}
-
-resource "keycloak_openid_client_optional_scopes" "optional_client_scopes" {
-  realm_id  = keycloak_realm.test.id
-  client_id = keycloak_openid_client.test_client.id
-
   optional_scopes = [
     "address",
     "phone",
     "offline_access",
     "microprofile-jwt",
-    keycloak_openid_client_scope.test_optional_client_scope.name,
+    keycloak_client_scope.test_optional_client_scope.name,
   ]
 }
 
@@ -498,7 +496,7 @@ resource "keycloak_openid_user_attribute_protocol_mapper" "map_user_permissions_
 resource "keycloak_openid_user_attribute_protocol_mapper" "map_user_attributes_client_scope" {
   name            = "tf-test-open-id-user-attribute-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
   user_attribute  = "foo2"
   claim_name      = "bar2"
 }
@@ -513,7 +511,7 @@ resource "keycloak_openid_group_membership_protocol_mapper" "map_group_membershi
 resource "keycloak_openid_group_membership_protocol_mapper" "map_group_memberships_client_scope" {
   name            = "tf-test-open-id-group-membership-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_optional_client_scope.id
+  client_scope_id = keycloak_client_scope.test_optional_client_scope.id
   claim_name      = "bar2"
 }
 
@@ -526,7 +524,7 @@ resource "keycloak_openid_full_name_protocol_mapper" "map_full_names_client" {
 resource "keycloak_openid_full_name_protocol_mapper" "map_full_names_client_scope" {
   name            = "tf-test-open-id-full-name-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 }
 
 resource "keycloak_openid_user_property_protocol_mapper" "map_user_properties_client" {
@@ -540,7 +538,7 @@ resource "keycloak_openid_user_property_protocol_mapper" "map_user_properties_cl
 resource "keycloak_openid_user_property_protocol_mapper" "map_user_properties_client_scope" {
   name            = "tf-test-open-id-user-property-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_optional_client_scope.id
+  client_scope_id = keycloak_client_scope.test_optional_client_scope.id
   user_property   = "foo2"
   claim_name      = "bar2"
 }
@@ -557,7 +555,7 @@ resource "keycloak_openid_hardcoded_claim_protocol_mapper" "hardcoded_claim_clie
 resource "keycloak_openid_hardcoded_claim_protocol_mapper" "hardcoded_claim_client_scope" {
   name            = "tf-test-open-id-hardcoded-claim-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 
   claim_name  = "foo"
   claim_value = "bar"
@@ -574,7 +572,7 @@ resource "keycloak_openid_user_realm_role_protocol_mapper" "user_realm_role_clie
 resource "keycloak_openid_user_realm_role_protocol_mapper" "user_realm_role_client_scope" {
   name            = "tf-test-open-id-user-realm-role-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 
   claim_name = "foo"
 }
@@ -598,7 +596,7 @@ resource "keycloak_openid_user_client_role_protocol_mapper" "user_client_role_cl
 resource "keycloak_openid_user_client_role_protocol_mapper" "user_client_role_client_scope" {
   name            = "tf-test-open-id-user-client-role-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 
   claim_name  = "foo"
   multivalued = false
@@ -627,7 +625,7 @@ resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_
 resource "keycloak_openid_user_session_note_protocol_mapper" "user_session_note_client_scope" {
   name            = "tf-test-open-id-user-session-note-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 
   claim_name       = "foo2"
   claim_value_type = "String"
@@ -649,7 +647,7 @@ resource "keycloak_openid_client" "bearer_only_client" {
 resource "keycloak_openid_audience_protocol_mapper" "audience_client_scope" {
   name            = "tf-test-openid-audience-protocol-mapper-client-scope"
   realm_id        = keycloak_realm.test.id
-  client_scope_id = keycloak_openid_client_scope.test_default_client_scope.id
+  client_scope_id = keycloak_client_scope.test_default_client_scope.id
 
   add_to_id_token     = true
   add_to_access_token = false

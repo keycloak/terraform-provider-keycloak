@@ -16,10 +16,12 @@ resource "keycloak_openid_client" "pet_api" {
 }
 
 // Optional client scope for mapping additional client role
-resource "keycloak_openid_client_scope" "extended_pet_details" {
-  realm_id  = keycloak_realm.roles_example.id
-  name      = "extended-pet-details"
+resource "keycloak_client_scope" "extended_pet_details" {
+  realm_id    = keycloak_realm.roles_example.id
+  name        = "extended-pet-details"
   description = "Optional scope offering additional information when getting pets"
+
+  openid_connect {}
 }
 
 resource "keycloak_role" "pet_api_create_pet" {
@@ -59,9 +61,9 @@ resource "keycloak_role" "pet_api_read_pet_details" {
 
 // Map a role from the "pet_api" api client to the "extended_pet_details" client scope
 resource "keycloak_generic_role_mapper" "pet_api_read_pet_details_role_mapping" {
-  realm_id  = keycloak_realm.roles_example.id
-  client_scope_id = keycloak_openid_client_scope.extended_pet_details.id
-  role_id   = keycloak_role.pet_api_read_pet_details.id
+  realm_id        = keycloak_realm.roles_example.id
+  client_scope_id = keycloak_client_scope.extended_pet_details.id
+  role_id         = keycloak_role.pet_api_read_pet_details.id
 }
 
 resource "keycloak_role" "pet_api_admin" {
@@ -102,12 +104,13 @@ resource "keycloak_openid_client" "pet_app" {
   full_scope_allowed = false
 }
 
-resource "keycloak_openid_client_optional_scopes" "pet_app_optional_scopes" {
-  realm_id       = keycloak_realm.roles_example.id
-  client_id      = keycloak_openid_client.pet_app.id
+resource "keycloak_client_scope_assignments" "pet_app_scopes" {
+  realm_id  = keycloak_realm.roles_example.id
+  client_id = keycloak_openid_client.pet_app.id
 
+  default_scopes = ["profile", "email", "roles", "web-origins", "acr", "basic"]
   optional_scopes = [
-    keycloak_openid_client_scope.extended_pet_details.name
+    keycloak_client_scope.extended_pet_details.name
   ]
 }
 
@@ -186,16 +189,18 @@ resource "keycloak_role" "realm_admin" {
 
 // Client scope for realm roles mapping
 
-resource "keycloak_openid_client_scope" "petstore_api_access_scope" {
-  realm_id  = keycloak_realm.roles_example.id
+resource "keycloak_client_scope" "petstore_api_access_scope" {
+  realm_id    = keycloak_realm.roles_example.id
   name        = "petstore-api-access"
   description = "Optional scope offering additional information for petstore api access"
+
+  openid_connect {}
 }
 
 resource "keycloak_generic_role_mapper" "petstore_api_access_scope_admin" {
-    realm_id  = keycloak_realm.roles_example.id
-    client_scope_id =  keycloak_openid_client_scope.petstore_api_access_scope.id
-    role_id         = keycloak_role.realm_admin.id
+  realm_id        = keycloak_realm.roles_example.id
+  client_scope_id = keycloak_client_scope.petstore_api_access_scope.id
+  role_id         = keycloak_role.realm_admin.id
 }
 
 // Users and groups

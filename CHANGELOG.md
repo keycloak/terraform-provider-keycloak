@@ -1,5 +1,15 @@
 ## What's Changed
 
+## Unreleased
+
+FEATURES:
+
+* Add unified `keycloak_client_scope` and `keycloak_client_scope_assignments` resources.
+
+DEPRECATIONS:
+
+* Deprecate the protocol-specific client-scope definition and split client-scope assignment resources in favor of the unified resources.
+
 ## 5.10.0 (October 5, 2026)
 
 FEATURES:
