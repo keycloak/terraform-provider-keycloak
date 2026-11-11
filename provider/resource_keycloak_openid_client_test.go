@@ -1262,7 +1262,7 @@ func TestAccKeycloakOpenidClient_authorizationNoPerpetualDiff(t *testing.T) {
 	config := testKeycloakOpenidClient_withAuthorizationNoRemoteResourceManagement(clientId)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		PreCheck:          func() { testAccPreCheck(t) },
 		CheckDestroy:      testAccCheckKeycloakOpenidClientDestroy(),
 		Steps: []resource.TestStep{
