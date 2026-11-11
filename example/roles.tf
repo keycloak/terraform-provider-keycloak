@@ -108,7 +108,8 @@ resource "keycloak_client_scope_assignments" "pet_app_scopes" {
   realm_id  = keycloak_realm.roles_example.id
   client_id = keycloak_openid_client.pet_app.id
 
-  default_scopes = ["profile", "email", "roles", "web-origins", "acr", "basic"]
+  // service_account is assigned by Keycloak 26.1+ when service accounts are enabled
+  default_scopes = ["profile", "email", "roles", "web-origins", "acr", "basic", "service_account"]
   optional_scopes = [
     keycloak_client_scope.extended_pet_details.name
   ]

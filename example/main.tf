@@ -278,6 +278,8 @@ resource "keycloak_client_scope_assignments" "client_scopes" {
     "email",
     "roles",
     "web-origins",
+    // assigned by Keycloak 26.1+ when service accounts are enabled
+    "service_account",
     keycloak_client_scope.test_default_client_scope.name,
   ]
   optional_scopes = [

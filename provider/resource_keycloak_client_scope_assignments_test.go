@@ -209,6 +209,52 @@ func TestKeycloakClientScopeAssignmentsDeleteSkipsStaleAssignments(t *testing.T)
 	}
 }
 
+func TestKeycloakClientScopeAssignmentsOpenidClientAcceptsOid4vcScope(t *testing.T) {
+	var attached bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method + " " + r.URL.Path {
+		case "GET /admin/serverinfo":
+			fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
+		case "GET /admin/realms/realm/clients/client":
+			fmt.Fprint(w, `{"id":"client","protocol":"openid-connect"}`)
+		case "GET /admin/realms/realm/clients/client/default-client-scopes":
+			if attached {
+				fmt.Fprint(w, `[{"id":"vc-id","name":"vc","protocol":"oid4vc"}]`)
+			} else {
+				fmt.Fprint(w, `[]`)
+			}
+		case "GET /admin/realms/realm/clients/client/optional-client-scopes":
+			fmt.Fprint(w, `[]`)
+		case "GET /admin/realms/realm/client-scopes":
+			fmt.Fprint(w, `[{"id":"vc-id","name":"vc","protocol":"oid4vc"}]`)
+		case "PUT /admin/realms/realm/clients/client/default-client-scopes/vc-id":
+			attached = true
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := keycloak.NewKeycloakClient(context.Background(), server.URL, "", "", "", "", "master", "", "", "test-token", "", "", "", "", false, 10, "", false, "", "", "", false, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := schema.TestResourceDataRaw(t, resourceKeycloakClientScopeAssignments().Schema, map[string]interface{}{
+		"realm_id": "realm", "client_id": "client",
+		"default_scopes":  []interface{}{"vc"},
+		"optional_scopes": []interface{}{},
+	})
+	if diags := resourceKeycloakClientScopeAssignmentsReconcile(context.Background(), data, client); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !attached {
+		t.Fatal("oid4vc scope was not attached to the openid-connect client")
+	}
+}
+
 func TestKeycloakClientScopeAssignmentsMoveReusesAssignedScopeIDs(t *testing.T) {
 	var requests []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

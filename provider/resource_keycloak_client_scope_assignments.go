@@ -241,6 +241,15 @@ func (assignments *clientScopeAssignments) allScopes() []string {
 	return append(append([]string{}, assignments.defaultScopes...), assignments.optionalScopes...)
 }
 
+// Mirrors Keycloak's KeycloakModelUtils.getAcceptedClientScopeProtocols:
+// openid-connect clients also accept oid4vc (verifiable credential) scopes.
+func clientAcceptsClientScopeProtocol(clientProtocol, scopeProtocol string) bool {
+	if clientProtocol == keycloakClientScopeProtocolOpenidConnect {
+		return scopeProtocol == keycloakClientScopeProtocolOpenidConnect || scopeProtocol == keycloakClientScopeProtocolOid4vc
+	}
+	return scopeProtocol == clientProtocol
+}
+
 func resolveClientScopeAssignmentIDs(ctx context.Context, keycloakClient *keycloak.KeycloakClient, realmId, clientId string, current, desired *clientScopeAssignments) (map[string]string, error) {
 	scopeIDs := make(map[string]string, len(current.scopeIDs))
 	scopeProtocols := make(map[string]string, len(current.scopeProtocols))
@@ -285,8 +294,8 @@ func resolveClientScopeAssignmentIDs(ctx context.Context, keycloakClient *keyclo
 		if scopeIDs[name] == "" {
 			return nil, fmt.Errorf("validation error: client scope %q does not exist in realm %q", name, realmId)
 		}
-		if clientId != "" && scopeProtocols[name] != current.clientProtocol {
-			return nil, fmt.Errorf("validation error: client scope %q uses protocol %q, but client %q uses protocol %q", name, scopeProtocols[name], clientId, current.clientProtocol)
+		if clientId != "" && !clientAcceptsClientScopeProtocol(current.clientProtocol, scopeProtocols[name]) {
+			return nil, fmt.Errorf("validation error: client scope %q uses protocol %q, which client %q with protocol %q does not accept", name, scopeProtocols[name], clientId, current.clientProtocol)
 		}
 	}
 

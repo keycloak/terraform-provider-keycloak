@@ -16,6 +16,7 @@ import (
 const (
 	keycloakClientScopeProtocolOpenidConnect = "openid-connect"
 	keycloakClientScopeProtocolSaml          = "saml"
+	keycloakClientScopeProtocolOid4vc        = "oid4vc"
 
 	clientScopeAttributeConsentScreenText               = "consent.screen.text"
 	clientScopeAttributeDisplayOnConsentScreen          = "display.on.consent.screen"
