@@ -437,9 +437,13 @@ func baseTransport(t *testing.T, httpClient *http.Client) *http.Transport {
 	if !ok {
 		t.Fatalf("expected *retryablehttp.RoundTripper, got %T", cookies.next)
 	}
-	transport, ok := retrying.Client.HTTPClient.Transport.(*http.Transport)
+	replaced, ok := retrying.Client.HTTPClient.Transport.(*replacedCallerCookiesTransport)
 	if !ok {
-		t.Fatalf("expected *http.Transport, got %T", retrying.Client.HTTPClient.Transport)
+		t.Fatalf("expected *replacedCallerCookiesTransport, got %T", retrying.Client.HTTPClient.Transport)
+	}
+	transport, ok := replaced.next.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected *http.Transport, got %T", replaced.next)
 	}
 	return transport
 }

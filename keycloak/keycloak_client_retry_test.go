@@ -232,3 +232,61 @@ func TestNewHttpClient_redirectReplacesCallerCookie(t *testing.T) {
 		t.Errorf("expected status 200, got %d (Cookie headers %q)", resp.StatusCode, body)
 	}
 }
+
+func TestNewHttpClient_retryAfterRedirectKeepsReplacedCallerCookies(t *testing.T) {
+	var starts, targets atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+		// Only the first pass rotates one caller cookie and deletes another.
+		if starts.Add(1) == 1 {
+			http.SetCookie(w, &http.Cookie{Name: "session", Value: "new", Path: "/"})
+			http.SetCookie(w, &http.Cookie{Name: "gone", Value: "", Path: "/", MaxAge: -1})
+		}
+		http.Redirect(w, r, "/target", http.StatusFound)
+	})
+	mux.HandleFunc("/target", func(w http.ResponseWriter, r *http.Request) {
+		cookies := r.Header.Values("Cookie")
+		if targets.Add(1) == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		if len(cookies) != 1 || cookies[0] != "extra=1; session=new" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(w, strings.Join(cookies, " | "))
+			return
+		}
+		_, _ = io.WriteString(w, "ok")
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	httpClient, err := newHttpClient(false, 15, "", "", "")
+	if err != nil {
+		t.Fatalf("newHttpClient: %v", err)
+	}
+
+	// The retry starts again at /start. The caller cookies that the first
+	// redirect replaced or deleted must stay replaced or deleted, so the
+	// stale values are not sent next to the jar's newer ones.
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/start", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Cookie", "session=old; gone=1; extra=1")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET /start: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200 after retry, got %d (Cookie headers %q)", resp.StatusCode, body)
+	}
+	if got := targets.Load(); got != 2 {
+		t.Errorf("expected 2 requests to /target, got %d", got)
+	}
+	if got := req.Header.Values("Cookie"); len(got) != 1 || got[0] != "session=old; gone=1; extra=1" {
+		t.Errorf("caller's request was modified, Cookie headers %q", got)
+	}
+}

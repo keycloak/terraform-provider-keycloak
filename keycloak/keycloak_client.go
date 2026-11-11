@@ -730,7 +730,7 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 	// keeps cookies set by intermediate responses and, like any http.Client
 	// with a Jar, lets them replace same-name cookies the caller set.
 	retryClient.HTTPClient.Jar = cookieJar
-	retryClient.HTTPClient.Transport = transport
+	retryClient.HTTPClient.Transport = &replacedCallerCookiesTransport{next: transport}
 	// http.Client adds the jar's cookies to the request it is given, and
 	// retryablehttp reuses that request for every attempt, so reset the
 	// Cookie header to what the caller sent before each retry. Otherwise a
@@ -746,6 +746,49 @@ func newHttpClient(tlsInsecureSkipVerify bool, clientTimeout int, caCert string,
 
 type callerCookiesKey struct{}
 
+// callerCookies holds the Cookie header the caller set. A response that sets
+// a cookie with the same name removes it, so a retry does not bring back a
+// value that a redirect already replaced or deleted.
+type callerCookies struct {
+	mu     sync.Mutex
+	header []string
+}
+
+// drop removes the caller cookies that set replaces, the same way
+// http.Client does for the redirect that follows such a response.
+func (c *callerCookies) drop(set []*http.Cookie) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.header) == 0 || len(set) == 0 {
+		return
+	}
+	names := make(map[string]bool, len(set))
+	for _, cookie := range set {
+		names[cookie.Name] = true
+	}
+	parsed := (&http.Request{Header: http.Header{"Cookie": c.header}}).Cookies()
+	kept := make([]string, 0, len(parsed))
+	for _, cookie := range parsed {
+		if !names[cookie.Name] {
+			kept = append(kept, cookie.Name+"="+cookie.Value)
+		}
+	}
+	if len(kept) == len(parsed) {
+		return
+	}
+	c.header = nil
+	if len(kept) > 0 {
+		slices.Sort(kept)
+		c.header = []string{strings.Join(kept, "; ")}
+	}
+}
+
+func (c *callerCookies) values() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return slices.Clone(c.header)
+}
+
 // callerCookiesTransport records the Cookie header the caller set, for
 // restoreCallerCookies, and works on a copy of the request so the caller's
 // request is not changed by the jar.
@@ -754,13 +797,31 @@ type callerCookiesTransport struct {
 }
 
 func (t *callerCookiesTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	cookies := slices.Clone(req.Header.Values("Cookie"))
+	cookies := &callerCookies{header: slices.Clone(req.Header.Values("Cookie"))}
 	ctx := context.WithValue(req.Context(), callerCookiesKey{}, cookies)
 	return t.next.RoundTrip(req.Clone(ctx))
 }
 
+// replacedCallerCookiesTransport sits under the inner client, so it sees
+// every response of every attempt, redirects included, and removes the
+// caller cookies that a response replaced or deleted. The jar keeps the
+// newer values.
+type replacedCallerCookiesTransport struct {
+	next http.RoundTripper
+}
+
+func (t *replacedCallerCookiesTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.next.RoundTrip(req)
+	if err == nil && len(resp.Header["Set-Cookie"]) > 0 {
+		if cookies, ok := req.Context().Value(callerCookiesKey{}).(*callerCookies); ok {
+			cookies.drop(resp.Cookies())
+		}
+	}
+	return resp, err
+}
+
 func restoreCallerCookies(req *http.Request) error {
-	cookies, ok := req.Context().Value(callerCookiesKey{}).([]string)
+	cookies, ok := req.Context().Value(callerCookiesKey{}).(*callerCookies)
 	if !ok {
 		return nil
 	}
@@ -768,7 +829,7 @@ func restoreCallerCookies(req *http.Request) error {
 	// the header map is still shared with the previous attempt.
 	req.Header = req.Header.Clone()
 	req.Header.Del("Cookie")
-	for _, cookie := range cookies {
+	for _, cookie := range cookies.values() {
 		req.Header.Add("Cookie", cookie)
 	}
 	return nil
