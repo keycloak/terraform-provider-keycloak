@@ -7,7 +7,8 @@ page_title: "keycloak_client_scope_assignments Resource"
 Authoritatively manages both default and optional client-scope assignments for one realm or one client. Omit `client_id`
 to manage realm defaults; specify the Keycloak-generated client ID to manage a client's assignments. SAML clients support
 both assignment categories through Keycloak's default and optional client-scope endpoints. Only `openid-connect` and
-`saml` clients are supported, and client assignments must use scopes of the client's protocol.
+`saml` clients are supported. SAML clients require `saml` scopes; OpenID Connect clients accept both `openid-connect`
+and `oid4vc` (verifiable-credential) scopes.
 
 Declare one resource per target and configure both sets together. A scope cannot appear in both sets; Terraform validates
 this overlap during planning when both sets are known, and checks again before writing at apply time. Moving a scope
