@@ -166,10 +166,11 @@ func getKeycloakClientScopeFromData(data *schema.ResourceData) (*keycloak.Client
 	}, nil
 }
 
-// clientScopeBoolAttribute mirrors Keycloak, which treats a missing boolean scope attribute as true.
+// clientScopeBoolAttribute mirrors Keycloak, which treats a missing boolean scope attribute as true
+// and otherwise uses Boolean.parseBoolean, so present-but-empty values are false.
 func clientScopeBoolAttribute(attributes map[string]string, key string) bool {
 	value, ok := attributes[key]
-	if !ok || strings.TrimSpace(value) == "" {
+	if !ok {
 		return true
 	}
 	return strings.EqualFold(value, "true")

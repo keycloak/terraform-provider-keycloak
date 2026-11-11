@@ -75,13 +75,13 @@ func TestKeycloakClientScopeReadKeycloakDefaults(t *testing.T) {
 	data := schema.TestResourceDataRaw(t, resourceKeycloakClientScope().Schema, nil)
 	err := setKeycloakClientScopeData(data, &keycloak.ClientScope{
 		Id: "scope-id", RealmId: "realm", Name: "legacy", Protocol: "openid-connect",
-		Attributes: map[string]string{"gui.order": "", "include.in.token.scope": "false"},
+		Attributes: map[string]string{"gui.order": "", "include.in.token.scope": "false", "display.on.consent.screen": ""},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for key, want := range map[string]interface{}{
-		"display_on_consent_screen":                            true,
+		"display_on_consent_screen":                            false,
 		"gui_order":                                            0,
 		"openid_connect.0.include_in_token_scope":              false,
 		"openid_connect.0.include_in_openid_provider_metadata": true,

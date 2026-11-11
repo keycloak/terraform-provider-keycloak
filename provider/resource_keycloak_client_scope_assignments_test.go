@@ -21,6 +21,16 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
+func TestKeycloakClientScopeAssignmentsImportRejectsEmptyComponents(t *testing.T) {
+	for _, id := range []string{"realm/", "client/my-realm/", "client//my-client", "client/my-realm/my-client/extra"} {
+		data := resourceKeycloakClientScopeAssignments().TestResourceData()
+		data.SetId(id)
+		if _, err := resourceKeycloakClientScopeAssignmentsImport(context.Background(), data, nil); err == nil {
+			t.Errorf("%q: expected import error", id)
+		}
+	}
+}
+
 func TestKeycloakClientScopeAssignmentsDiff(t *testing.T) {
 	tests := []struct {
 		name           string

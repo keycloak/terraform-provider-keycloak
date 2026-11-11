@@ -443,11 +443,11 @@ func resourceKeycloakClientScopeAssignmentsDelete(ctx context.Context, data *sch
 func resourceKeycloakClientScopeAssignmentsImport(_ context.Context, data *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
 	parts := strings.Split(data.Id(), "/")
 	switch {
-	case len(parts) == 2 && parts[0] == clientScopeOwnerRealm:
+	case len(parts) == 2 && parts[0] == clientScopeOwnerRealm && parts[1] != "":
 		if err := data.Set("realm_id", parts[1]); err != nil {
 			return nil, err
 		}
-	case len(parts) == 3 && parts[0] == clientScopeOwnerClient:
+	case len(parts) == 3 && parts[0] == clientScopeOwnerClient && parts[1] != "" && parts[2] != "":
 		if err := data.Set("realm_id", parts[1]); err != nil {
 			return nil, err
 		}
