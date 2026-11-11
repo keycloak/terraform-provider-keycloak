@@ -4,6 +4,8 @@ page_title: "keycloak_realm_optional_client_scopes Resource"
 
 # keycloak\_realm\_optional\_client\_scopes Resource
 
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope_assignments` with `default_scopes` and `optional_scopes` instead.
+
 Allows you to manage the set of optional client scopes for a Keycloak realm, which are used when new clients are created.
 
 Note that this resource attempts to be an **authoritative** source over the optional client scopes for a Keycloak realm,

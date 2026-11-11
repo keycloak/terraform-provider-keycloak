@@ -16,10 +16,11 @@ import (
 
 func resourceKeycloakSamlClientScope() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakSamlClientScopeCreate,
-		ReadContext:   resourceKeycloakSamlClientScopeRead,
-		DeleteContext: resourceKeycloakSamlClientScopeDelete,
-		UpdateContext: resourceKeycloakSamlClientScopeUpdate,
+		DeprecationMessage: "please use keycloak_client_scope instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakSamlClientScopeCreate,
+		ReadContext:        resourceKeycloakSamlClientScopeRead,
+		DeleteContext:      resourceKeycloakSamlClientScopeDelete,
+		UpdateContext:      resourceKeycloakSamlClientScopeUpdate,
 		// This resource can be imported using {{realm}}/{{client_scope_id}}. The Client Scope ID is displayed in the GUI
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakSamlClientScopeImport,

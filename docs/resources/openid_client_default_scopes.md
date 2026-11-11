@@ -4,6 +4,8 @@ page_title: "keycloak_openid_client_default_scopes Resource"
 
 # keycloak\_openid\_client\_default\_scopes Resource
 
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope_assignments` with `default_scopes` and `optional_scopes` instead.
+
 Allows for managing a Keycloak client's default client scopes. A default scope that is attached to a client using the
 OpenID Connect protocol will automatically use the protocol mappers defined within that scope to build claims for this
 client regardless of the provided OAuth2.0 `scope` parameter.

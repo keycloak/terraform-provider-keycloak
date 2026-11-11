@@ -4,6 +4,8 @@ page_title: "keycloak_openid_client_scope Resource"
 
 # keycloak\_openid\_client\_scope Resource
 
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope` with an `openid_connect` block instead.
+
 Allows for creating and managing Keycloak client scopes that can be attached to clients that use the OpenID Connect protocol.
 
 Client Scopes can be used to share common protocol and role mappings between multiple clients within a realm. They can also

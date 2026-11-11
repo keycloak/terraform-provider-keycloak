@@ -4,6 +4,8 @@ page_title: "keycloak_saml_client_scope Resource"
 
 # keycloak\_saml\_client\_scope Resource
 
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope` with an empty `saml {}` block instead.
+
 Allows for creating and managing Keycloak client scopes that can be attached to clients that use the SAML protocol.
 
 Client Scopes can be used to share common protocol and role mappings between multiple clients within a realm.

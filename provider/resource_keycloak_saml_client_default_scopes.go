@@ -13,10 +13,11 @@ import (
 
 func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
-		ReadContext:   resourceKeycloakSamlClientDefaultScopesRead,
-		DeleteContext: resourceKeycloakSamlClientDefaultScopesDelete,
-		UpdateContext: resourceKeycloakSamldClientDefaultScopesReconcile,
+		DeprecationMessage: "please use keycloak_client_scope_assignments instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakSamldClientDefaultScopesReconcile,
+		ReadContext:        resourceKeycloakSamlClientDefaultScopesRead,
+		DeleteContext:      resourceKeycloakSamlClientDefaultScopesDelete,
+		UpdateContext:      resourceKeycloakSamldClientDefaultScopesReconcile,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakSamlClientDefaultScopesImport,
 		},
