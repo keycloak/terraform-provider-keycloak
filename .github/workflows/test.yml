@@ -78,6 +78,21 @@ jobs:
     concurrency:
       group: ${{ github.head_ref || github.run_id }}-${{ matrix.keycloak-version }}-${{ matrix.fgap-version || 'default' }}
       cancel-in-progress: true
+    # Keycloak runs on PostgreSQL, as in docker-compose.yml and in production.
+    # On the in-memory H2 database (dev-mem) the parallel tests deadlocked on
+    # client deletes and failed at random with a 500 (#1792).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: keycloak
+          POSTGRES_USER: keycloak
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd "pg_isready -U keycloak -d keycloak"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -141,9 +156,15 @@ jobs:
           fi
 
           docker run -d --name keycloak \
+          --network ${{ job.services.postgres.network }} \
           -p 8080:8080 \
           -p 8443:8443 \
-          -e KC_DB=dev-mem \
+          -e KC_DB=postgres \
+          -e KC_DB_URL_HOST=postgres \
+          -e KC_DB_URL_PORT=5432 \
+          -e KC_DB_URL_DATABASE=keycloak \
+          -e KC_DB_USERNAME=keycloak \
+          -e KC_DB_PASSWORD=password \
           -e KC_LOG_LEVEL=INFO \
           -e KC_HTTP_ACCESS_LOG_ENABLED=true \
           -e KEYCLOAK_ADMIN=keycloak \
