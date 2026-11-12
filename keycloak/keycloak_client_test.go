@@ -2,6 +2,7 @@ package keycloak
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"os"
 	"strconv"
@@ -124,15 +125,24 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth_rejected(t *testing.T) {
 		t.Fatalf("failed to read untrusted client key: %v", err)
 	}
 
+	untrustedClientKeyPair, err := tls.X509KeyPair(untrustedClientCert, untrustedClientKey)
+	if err != nil {
+		t.Fatalf("failed to parse untrusted client certificate and key: %v", err)
+	}
+
 	tests := []struct {
-		name                string
-		tlsClientCert       string
-		tlsClientPrivateKey string
+		name string
+		// clientCertificate is sent no matter which CAs Keycloak asks for
+		clientCertificate *tls.Certificate
+		// unexpectedError must not be part of the error
+		unexpectedError string
 	}{
 		{
-			name:                "untrusted client certificate",
-			tlsClientCert:       string(untrustedClientCert),
-			tlsClientPrivateKey: string(untrustedClientKey),
+			name:              "untrusted client certificate",
+			clientCertificate: &untrustedClientKeyPair,
+			// Keycloak must reject the certificate it got, not complain about
+			// a missing one.
+			unexpectedError: "certificate required",
 		},
 		{
 			name: "no client certificate",
@@ -141,16 +151,37 @@ func TestAccKeycloakClientConnectHttpsMtlsAuth_rejected(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// initialLogin makes NewKeycloakClient request a token right away,
-			// which needs a completed TLS handshake.
-			_, err := NewKeycloakClient(ctx, keycloakUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), "", "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), true, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, tt.tlsClientCert, tt.tlsClientPrivateKey, "", false, map[string]string{}, "")
-			if err == nil {
-				t.Fatal("expected Keycloak to reject the TLS handshake, but the initial login succeeded")
+			keycloakClient, err := NewKeycloakClient(ctx, keycloakUrl, "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), "", "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), os.Getenv("KEYCLOAK_JWT_TOKEN_FILE"), false, clientTimeout, os.Getenv("KEYCLOAK_TLS_CA_CERT"), true, "", "", "", false, map[string]string{}, "")
+			if err != nil {
+				t.Fatalf("%s", err)
 			}
+
+			if tt.clientCertificate != nil {
+				transport, ok := keycloakClient.httpClient.Transport.(*http.Transport)
+				if !ok {
+					t.Fatalf("expected *http.Transport, got %T", keycloakClient.httpClient.Transport)
+				}
+				// Keycloak names the CAs it accepts in its certificate request,
+				// and Go doesn't send a configured certificate whose issuer
+				// isn't among them. Send it anyway, so that Keycloak has to
+				// reject it.
+				transport.TLSClientConfig.GetClientCertificate = func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return tt.clientCertificate, nil
+				}
+			}
+
+			err = keycloakClient.login(ctx)
+			if err == nil {
+				t.Fatal("expected Keycloak to reject the TLS handshake, but the login succeeded")
+			}
+			t.Logf("login failed as expected: %v", err)
 			// Make sure the failure comes from the TLS layer and not, for
 			// example, from wrong credentials or an unreachable server.
 			if !strings.Contains(err.Error(), "tls: ") {
 				t.Fatalf("expected a TLS handshake error, got: %v", err)
+			}
+			if tt.unexpectedError != "" && strings.Contains(err.Error(), tt.unexpectedError) {
+				t.Fatalf("expected Keycloak to reject the sent client certificate, got: %v", err)
 			}
 		})
 	}
