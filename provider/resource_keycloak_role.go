@@ -200,20 +200,18 @@ func resourceKeycloakRoleRead(ctx context.Context, data *schema.ResourceData, me
 
 	mapFromRoleToData(data, role)
 
+	var compositeRoleIds []string
 	if role.Composite {
 		composites, err := keycloakClient.GetRoleComposites(ctx, role)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
-		var compositeRoleIds []string
-
 		for _, composite := range composites {
 			compositeRoleIds = append(compositeRoleIds, composite.Id)
 		}
-
-		data.Set("composite_roles", compositeRoleIds)
 	}
+	data.Set("composite_roles", compositeRoleIds)
 
 	if _, ok := data.GetOk("import"); !ok {
 		data.Set("import", false)
