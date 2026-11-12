@@ -360,3 +360,68 @@ func keycloakClientChecks(t *testing.T, err error, keycloakClient *KeycloakClien
 		t.Fatalf("%s", "Server Version not found")
 	}
 }
+
+func TestNewHttpClient_rootCaCertificate(t *testing.T) {
+	t.Parallel()
+
+	validCaCert, err := os.ReadFile("../provider/testdata/tls/ca-cert.pem")
+	if err != nil {
+		t.Fatalf("failed to read test CA certificate: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		caCert      string
+		expectError string
+	}{
+		{
+			name: "no root CA certificate",
+		},
+		{
+			name:   "valid PEM root CA certificate",
+			caCert: string(validCaCert),
+		},
+		{
+			name:        "file path instead of PEM content",
+			caCert:      "../provider/testdata/tls/ca-cert.pem",
+			expectError: "root_ca_certificate does not contain a valid PEM certificate",
+		},
+		{
+			name:        "malformed PEM",
+			caCert:      "-----BEGIN CERTIFICATE-----\nnot-base64\n-----END CERTIFICATE-----\n",
+			expectError: "root_ca_certificate does not contain a valid PEM certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			httpClient, err := newHttpClient(false, 5, tt.caCert, "", "")
+			if tt.expectError != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.expectError)
+				}
+				if !strings.Contains(err.Error(), tt.expectError) {
+					t.Fatalf("expected error containing %q, got %q", tt.expectError, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			transport, ok := httpClient.Transport.(*http.Transport)
+			if !ok {
+				t.Fatalf("expected *http.Transport, got %T", httpClient.Transport)
+			}
+			if tt.caCert == "" && transport.TLSClientConfig.RootCAs != nil {
+				t.Fatalf("expected no custom root CAs when root_ca_certificate is empty")
+			}
+			if tt.caCert != "" && transport.TLSClientConfig.RootCAs == nil {
+				t.Fatalf("expected custom root CAs to be set")
+			}
+		})
+	}
+}

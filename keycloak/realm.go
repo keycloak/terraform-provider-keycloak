@@ -30,7 +30,7 @@ type Realm struct {
 	DisplayName          string `json:"displayName"`
 	DisplayNameHtml      string `json:"displayNameHtml"`
 	UserManagedAccess    bool   `json:"userManagedAccessAllowed"`
-	OrganizationsEnabled bool   `json:"organizationsEnabled,omitempty"`
+	OrganizationsEnabled bool   `json:"organizationsEnabled"`
 
 	// Login Config
 	RegistrationAllowed         bool   `json:"registrationAllowed"`
@@ -62,7 +62,7 @@ type Realm struct {
 	SsoSessionMaxLifespanRememberMe     int    `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
 	OfflineSessionIdleTimeout           int    `json:"offlineSessionIdleTimeout,omitempty"`
 	OfflineSessionMaxLifespan           int    `json:"offlineSessionMaxLifespan,omitempty"`
-	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled,omitempty"`
+	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled"`
 	ClientSessionIdleTimeout            int    `json:"clientSessionIdleTimeout,omitempty"`
 	ClientSessionMaxLifespan            int    `json:"clientSessionMaxLifespan,omitempty"`
 	AccessTokenLifespan                 int    `json:"accessTokenLifespan,omitempty"`
@@ -101,7 +101,7 @@ type Realm struct {
 	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
 	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
 
-	AdminPermissionsEnabled bool `json:"adminPermissionsEnabled,omitempty"`
+	AdminPermissionsEnabled *bool `json:"adminPermissionsEnabled,omitempty"`
 	AdminPermissionsClient  *struct {
 		Id string `json:"id"`
 	} `json:"adminPermissionsClient,omitempty"`

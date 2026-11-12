@@ -11,7 +11,7 @@ type RealmEventsConfig struct {
 	EnabledEventTypes         []string `json:"enabledEventTypes"`
 	EventsEnabled             bool     `json:"eventsEnabled"`
 	EventsExpiration          int      `json:"eventsExpiration"`
-	EventsListeners           []string `json:"eventsListeners,omitempty"`
+	EventsListeners           []string `json:"eventsListeners"`
 }
 
 func (keycloakClient *KeycloakClient) GetRealmEventsConfig(ctx context.Context, realmId string) (*RealmEventsConfig, error) {

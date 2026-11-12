@@ -19,6 +19,7 @@ Available scopes:
 - `map-roles` — assign or remove realm roles on users
 - `manage-group-membership` — add or remove users from groups
 - `impersonate` — impersonate a user
+- `reset-password` — reset user passwords
 
 > **Note:** The `user-impersonated` scope from v1 (`keycloak_users_permissions`) has no equivalent in FGAPv2 and is not available in this resource.
 
@@ -98,7 +99,7 @@ resource "keycloak_users_admin_permissions" "auditors_view_users" {
 - `name` - (Required) The name of the permission. Must be unique within the `admin-permissions` resource server. On first apply, if a permission with this name already exists it is adopted; otherwise a new one is created.
 - `description` - (Optional) Description of the permission.
 - `decision_strategy` - (Optional) Decision strategy. One of `UNANIMOUS`, `AFFIRMATIVE`, or `CONSENSUS`. Defaults to `UNANIMOUS`.
-- `scopes` - (Required) Set of scopes this permission grants. Valid values: `view`, `manage`, `map-roles`, `manage-group-membership`, `impersonate`.
+- `scopes` - (Required) Set of scopes this permission grants. Valid values: `view`, `manage`, `map-roles`, `manage-group-membership`, `impersonate`, `reset-password`.
 - `policies` - (Optional) Set of policy IDs to attach to the permission.
 
 ## Attributes Reference
