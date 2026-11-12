@@ -630,6 +630,8 @@ func getImportedInstanceState(states []*terraform.InstanceState, id string) (*te
 	}
 
 	return nil, fmt.Errorf("imported resource with id %s not found", id)
+}
+
 // Creates and deletes several profiles and policies of the same realm in one apply. Terraform runs
 // these operations in parallel; without a shared lock per realm they overwrite each other's list.
 func TestAccKeycloakRealmClientPolicyProfile_parallel(t *testing.T) {
