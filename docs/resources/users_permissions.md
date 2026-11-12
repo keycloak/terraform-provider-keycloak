@@ -135,7 +135,7 @@ The configuration block for each of these scopes supports the following argument
 
 - `policies` - (Optional) Assigned policies to the permission. Each element within this list should be a policy ID.
 - `description` - (Optional) Description of the permission.
-- `decision_strategy` - (Optional) Decision strategy of the permission.
+- `decision_strategy` - (Optional) Decision strategy of the permission. Defaults to `UNANIMOUS`.
 
 ### Attributes Reference
 

@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -300,6 +303,100 @@ func testAccCheckKeycloakRealmClientPolicyProfilePolicyMatches(realm string, pol
 			if !equalsIgnoreType(got, want) {
 				return fmt.Errorf("Client policy profile policy condition configuration does not match: want %v, got %v", want, got)
 			}
+		}
+
+		return nil
+	}
+}
+
+// Creates and deletes several profiles and policies of the same realm in one apply. Terraform runs
+// these operations in parallel; without a shared lock per realm they overwrite each other's list.
+func TestAccKeycloakRealmClientPolicyProfile_parallel(t *testing.T) {
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	firstNames := []string{"parallel-0", "parallel-1", "parallel-2", "parallel-3", "parallel-4"}
+	secondNames := []string{"parallel-0", "parallel-1", "parallel-5", "parallel-6", "parallel-7"}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealmClientPolicyProfile_parallel(realmName, firstNames),
+				Check:  testAccCheckKeycloakRealmClientPolicyProfilesAndPoliciesAre(realmName, "parallel-", firstNames),
+			},
+			{
+				Config: testKeycloakRealmClientPolicyProfile_parallel(realmName, secondNames),
+				Check:  testAccCheckKeycloakRealmClientPolicyProfilesAndPoliciesAre(realmName, "parallel-", secondNames),
+			},
+		},
+	})
+}
+
+func testKeycloakRealmClientPolicyProfile_parallel(realm string, names []string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+locals {
+	names = %s
+}
+
+resource "keycloak_realm_client_policy_profile" "profile" {
+	count = length(local.names)
+
+	realm_id = keycloak_realm.realm.realm
+	name     = local.names[count.index]
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "policy" {
+	count = length(local.names)
+
+	realm_id = keycloak_realm.realm.realm
+	name     = local.names[count.index]
+	profiles = [keycloak_realm_client_policy_profile.profile[count.index].name]
+
+	condition {
+		name = "client-type"
+		configuration = {
+			protocol = "openid-connect"
+		}
+	}
+}
+	`, realm, arrayOfStringsForTerraformResource(names))
+}
+
+func testAccCheckKeycloakRealmClientPolicyProfilesAndPoliciesAre(realm string, prefix string, expectedNames []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		profiles, err := keycloakClient.GetAllRealmClientPolicyProfiles(testCtx, realm)
+		if err != nil {
+			return err
+		}
+		var profileNames []string
+		for _, profile := range profiles.Profiles {
+			if strings.HasPrefix(profile.Name, prefix) {
+				profileNames = append(profileNames, profile.Name)
+			}
+		}
+
+		policies, err := keycloakClient.GetAllRealmClientPolicyProfilePolices(testCtx, realm)
+		if err != nil {
+			return err
+		}
+		var policyNames []string
+		for _, policy := range policies.Policies {
+			if strings.HasPrefix(policy.Name, prefix) {
+				policyNames = append(policyNames, policy.Name)
+			}
+		}
+
+		sort.Strings(profileNames)
+		sort.Strings(policyNames)
+		if !slices.Equal(profileNames, expectedNames) {
+			return fmt.Errorf("expected client policy profiles %v, got %v", expectedNames, profileNames)
+		}
+		if !slices.Equal(policyNames, expectedNames) {
+			return fmt.Errorf("expected client policies %v, got %v", expectedNames, policyNames)
 		}
 
 		return nil
