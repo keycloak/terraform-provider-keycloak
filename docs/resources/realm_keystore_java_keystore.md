@@ -41,7 +41,7 @@ resource "keycloak_realm_keystore_java_keystore" "java_keystore" {
 - `key_alias` - (Required) Alias for the private key.
 - `key_password` - (Required) Password for the private key.
 - `enabled` - (Optional) When `false`, key is not accessible in this realm. Defaults to `true`.
-- `active` - (Optional) When `false`, key in not used for signing. Defaults to `true`.
+- `active` - (Optional) When `false`, key is not used for signing. Defaults to `true`.
 - `priority` - (Optional) Priority for the provider. Defaults to `0`
 - `algorithm` - (Optional) Intended algorithm for the key. Defaults to `RS256`
 
