@@ -220,6 +220,86 @@ func (keycloakClient *KeycloakClient) RemoveUsersFromGroup(ctx context.Context, 
 	return nil
 }
 
+// AddUserToOrganizationGroup adds a user to a group. When organizationId is
+// non-empty, the organization-scoped endpoint is used:
+//
+//	PUT /realms/{realm}/organizations/{orgId}/groups/{groupId}/members/{userId}
+//
+// When organizationId is empty, the realm-level user-centric endpoint is used
+// (Keycloak does not expose a group-centric membership endpoint at the realm level):
+//
+//	PUT /realms/{realm}/users/{userId}/groups/{groupId}
+func (keycloakClient *KeycloakClient) AddUserToOrganizationGroup(ctx context.Context, realmId, organizationId, groupId, userId string) error {
+	var url string
+	if organizationId != "" {
+		url = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s/members/%s", realmId, organizationId, groupId, userId)
+	} else {
+		url = fmt.Sprintf("/realms/%s/users/%s/groups/%s", realmId, userId, groupId)
+	}
+	return keycloakClient.put(ctx, url, nil)
+}
+
+// RemoveUserFromOrganizationGroup removes a user from a group. When
+// organizationId is non-empty, the organization-scoped endpoint is used:
+//
+//	DELETE /realms/{realm}/organizations/{orgId}/groups/{groupId}/members/{userId}
+//
+// When organizationId is empty, the realm-level user-centric endpoint is used
+// (Keycloak does not expose a group-centric membership endpoint at the realm level):
+//
+//	DELETE /realms/{realm}/users/{userId}/groups/{groupId}
+func (keycloakClient *KeycloakClient) RemoveUserFromOrganizationGroup(ctx context.Context, realmId, organizationId, groupId, userId string) error {
+	var url string
+	if organizationId != "" {
+		url = fmt.Sprintf("/realms/%s/organizations/%s/groups/%s/members/%s", realmId, organizationId, groupId, userId)
+	} else {
+		url = fmt.Sprintf("/realms/%s/users/%s/groups/%s", realmId, userId, groupId)
+	}
+	return keycloakClient.delete(ctx, url, nil)
+}
+
+// AddUsersToOrganizationGroup adds each of the given users (by username) to a
+// group, resolving each username to a user ID first.
+func (keycloakClient *KeycloakClient) AddUsersToOrganizationGroup(ctx context.Context, realmId, organizationId, groupId string, users []interface{}) error {
+	for _, username := range users {
+		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string)) // we need the user's id in order to add them to a group
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			return fmt.Errorf("user with username %s does not exist", username.(string))
+		}
+
+		err = keycloakClient.AddUserToOrganizationGroup(ctx, realmId, organizationId, groupId, user.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// RemoveUsersFromOrganizationGroup removes each of the given users (by username)
+// from a group, resolving each username to a user ID first.
+func (keycloakClient *KeycloakClient) RemoveUsersFromOrganizationGroup(ctx context.Context, realmId, organizationId, groupId string, usernames []interface{}) error {
+	for _, username := range usernames {
+		user, err := keycloakClient.GetUserByUsername(ctx, realmId, username.(string)) // we need the user's id in order to remove them from a group
+		if err != nil {
+			return err
+		}
+		if user == nil {
+			return fmt.Errorf("user with username %s does not exist", username.(string))
+		}
+
+		err = keycloakClient.RemoveUserFromOrganizationGroup(ctx, realmId, organizationId, groupId, user.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (keycloakClient *KeycloakClient) AddUserToGroups(ctx context.Context, groupIds []string, userId string, realmId string) error {
 	for _, groupId := range groupIds {
 		var user User

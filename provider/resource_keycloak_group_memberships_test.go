@@ -337,6 +337,7 @@ func testAccGetUsersInGroupFromGroupMembershipsState(resourceName string, s *ter
 	}
 
 	realmId := rs.Primary.Attributes["realm_id"]
+	organizationId := rs.Primary.Attributes["organization_id"]
 
 	var groupId string
 	if strings.HasPrefix(resourceName, "keycloak_group_membership") {
@@ -345,7 +346,7 @@ func testAccGetUsersInGroupFromGroupMembershipsState(resourceName string, s *ter
 		groupId = rs.Primary.ID
 	}
 
-	return keycloakClient.GetGroupMembers(testCtx, realmId, groupId)
+	return keycloakClient.GetOrganizationGroupMembers(testCtx, realmId, organizationId, groupId)
 }
 
 func testAccCheckUserBelongsToGroup(resourceName, user string) resource.TestCheckFunc {
@@ -591,4 +592,136 @@ resource "keycloak_group_memberships" "group_members" {
 	]
 }
 	`, testAccRealm.Realm, group, username, hardcodedUsername)
+}
+
+func TestAccKeycloakGroupMemberships_import(t *testing.T) {
+	t.Parallel()
+
+	groupName := acctest.RandomWithPrefix("tf-acc")
+	username := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_group_memberships.group_members"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroupMemberships_basic(groupName, username),
+				Check:  testAccCheckUserBelongsToGroup(resourceName, username),
+			},
+			{
+				// import using the two-part (realm-level) format
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: testAccGetGroupMembershipsImportId(resourceName),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakGroupMemberships_organization(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	groupName := acctest.RandomWithPrefix("tf-acc")
+	username := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_group_memberships.group_members"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGroupMemberships_organization(organizationName, groupName, username),
+				Check:  testAccCheckUserBelongsToGroup(resourceName, username),
+			},
+			{
+				// import using the three-part (organization-scoped) format
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: testAccGetGroupMembershipsOrganizationImportId(resourceName),
+			},
+		},
+	})
+}
+
+func testAccGetGroupMembershipsImportId(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		realmId := rs.Primary.Attributes["realm_id"]
+		groupId := rs.Primary.Attributes["group_id"]
+
+		return fmt.Sprintf("%s/%s", realmId, groupId), nil
+	}
+}
+
+func testAccGetGroupMembershipsOrganizationImportId(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		realmId := rs.Primary.Attributes["realm_id"]
+		organizationId := rs.Primary.Attributes["organization_id"]
+		groupId := rs.Primary.Attributes["group_id"]
+
+		return fmt.Sprintf("%s/%s/%s", realmId, organizationId, groupId), nil
+	}
+}
+
+func testKeycloakGroupMemberships_organization(organization, group, username string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s.example.com"
+	}
+}
+
+resource "keycloak_group" "group" {
+	name            = "%s"
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+}
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id          = data.keycloak_realm.realm.id
+	organization_id   = keycloak_organization.organization.id
+
+	members = [
+		keycloak_user.user.username
+	]
+}
+
+resource "keycloak_group_memberships" "group_members" {
+	realm_id          = data.keycloak_realm.realm.id
+	organization_id   = keycloak_organization.organization.id
+	group_id          = keycloak_group.group.id
+
+	members = [
+		keycloak_user.user.username
+	]
+
+	depends_on = [keycloak_organization_memberships.org_members]
+}
+	`, testAccRealm.Realm, organization, organization, group, username)
 }
