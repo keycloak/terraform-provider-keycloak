@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -67,8 +68,11 @@ func TestAccKeycloakOrganizationMemberships_adoptPreExistingMembers(t *testing.T
 			// Step 2: Declare memberships with `managedUser` only. This should adopt the organization,
 			// adding `managedUser` and removing the pre-existing `preExistingUser`.
 			{
-				Config: testKeycloakOrganizationMemberships_basic(organizationName, managedUser),
+				// Retain both users so reconciliation cannot race with deletion of
+				// the pre-existing member's underlying user account.
+				Config: testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser),
 				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists("keycloak_user.pre_existing_user"),
 					testAccCheckUserBelongsToOrganization("keycloak_organization_memberships.org_members", managedUser),
 					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{preExistingUser}),
 				),
@@ -260,6 +264,81 @@ func TestAccKeycloakOrganizationMemberships_authoritativeRemove(t *testing.T) {
 	})
 }
 
+// a MANAGED member belongs to the identity provider: the resource must never remove it, as Keycloak
+// would delete the user account, and it must not stop the resource from managing the other members
+func TestAccKeycloakOrganizationMemberships_managedMember(t *testing.T) {
+	t.Parallel()
+	// the membership-type endpoint, which makes a member MANAGED, was added in Keycloak 26.8
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	userA := acctest.RandomWithPrefix("tf-acc")
+	managedUser := acctest.RandomWithPrefix("tf-acc")
+	userC := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// the organization gets a MANAGED member out of band
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, nil),
+				Check: func(s *terraform.State) error {
+					org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+					if err != nil {
+						return err
+					}
+					user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, managedUser)
+					if err != nil {
+						return err
+					}
+					if err := keycloakClient.AddUserToOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id); err != nil {
+						return err
+					}
+					return keycloakClient.UpdateOrganizationMembershipType(testCtx, testAccRealm.Realm, org.Id, user.Id, "MANAGED")
+				},
+			},
+			// create
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "1"),
+				),
+			},
+			// update
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a", "user_c"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED", userC: "UNMANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "2"),
+				),
+			},
+			// a listed managed member is kept in state
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a", "managed_user", "user_c"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED", userC: "UNMANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "3"),
+				),
+			},
+			// unlisting a managed member leaves its membership in place
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "1"),
+				),
+			},
+			// destroy
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, nil),
+				Check:  testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{managedUser: "MANAGED"}),
+			},
+		},
+	})
+}
+
 // --- State helpers ---
 
 func testAccGetUsersInOrganizationFromState(resourceName string, s *terraform.State) ([]*keycloak.OrganizationMember, error) {
@@ -343,6 +422,32 @@ func testAccCheckOrganizationHasNoMembers(resourceName string) resource.TestChec
 
 		if len(members) != 0 {
 			return fmt.Errorf("expected organization %s to have no members, but it has %d", organizationId, len(members))
+		}
+
+		return nil
+	}
+}
+
+// checks the organization's members in Keycloak (username -> membership type), whatever the resource's state says
+func testAccCheckOrganizationMembershipTypes(resourceName string, expected map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		members, err := keycloakClient.GetOrganizationMembers(testCtx, rs.Primary.Attributes["realm"], rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		actual := make(map[string]string)
+		for _, member := range members {
+			actual[member.Username] = member.MembershipType
+		}
+
+		if !reflect.DeepEqual(actual, expected) {
+			return fmt.Errorf("expected organization members %v, got %v", expected, actual)
 		}
 
 		return nil
@@ -496,6 +601,70 @@ resource "keycloak_user" "user" {
 	username = "%s"
 }
 	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), preExistingUser, managedUser)
+}
+
+func testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser string) string {
+	return testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser) + `
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	members         = [keycloak_user.user.username]
+}
+`
+}
+
+// members lists keycloak_user resource names; nil leaves out the memberships resource
+func testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC string, members []string) string {
+	config := fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "user_a" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_user" "managed_user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+
+	# destroyed before the organization, as deleting an organization deletes its managed members
+	depends_on = [keycloak_organization.organization]
+}
+
+resource "keycloak_user" "user_c" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), userA, managedUser, userC)
+
+	if members == nil {
+		return config
+	}
+
+	var membersInterpolated []string
+	for _, member := range members {
+		membersInterpolated = append(membersInterpolated, fmt.Sprintf("${keycloak_user.%s.username}", member))
+	}
+
+	return config + fmt.Sprintf(`
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = %s
+}
+	`, arrayOfStringsForTerraformResource(membersInterpolated))
 }
 
 func testKeycloakOrganizationMemberships_moreThan50members(organizationName string) string {

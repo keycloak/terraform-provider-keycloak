@@ -688,6 +688,178 @@ func testAccCheckKeycloakIdentityProviderLinkOrganization(
 	}
 }
 
+func TestAccKeycloakOidcIdentityProvider_urlsMissing(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakOidcIdentityProvider_providerIdWithoutUrls(oidcName, "oidc"),
+				ExpectError: regexp.MustCompile(`"authorization_url" is required when provider_id is "oidc"`),
+			},
+			{
+				Config:      testKeycloakOidcIdentityProvider_providerIdWithoutUrls(oidcName, "keycloak-oidc"),
+				ExpectError: regexp.MustCompile(`"token_url" is required when provider_id is "keycloak-oidc"`),
+			},
+		},
+	})
+}
+
+// A provider id other than oidc and keycloak-oidc, such as a social provider or an identity
+// provider from an extension, may determine its endpoints on its own.
+func TestAccKeycloakOidcIdentityProvider_providerIdWithoutUrls(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_providerIdWithUrls(oidcName, "github"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderUrls("keycloak_oidc_identity_provider.oidc", "https://example.com/auth", "https://example.com/token"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "authorization_url", "https://example.com/auth"),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "token_url", "https://example.com/token"),
+				),
+			},
+			{
+				// removing the urls removes them in Keycloak
+				Config: testKeycloakOidcIdentityProvider_providerIdWithoutUrls(oidcName, "github"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderUrls("keycloak_oidc_identity_provider.oidc", "", ""),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "authorization_url", ""),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "token_url", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOidcIdentityProvider_providerIdWithoutUrlsCreate(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_providerIdWithoutUrls(oidcName, "github"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcIdentityProviderUrls("keycloak_oidc_identity_provider.oidc", "", ""),
+					resource.TestCheckResourceAttr("keycloak_oidc_identity_provider.oidc", "provider_id", "github"),
+				),
+			},
+		},
+	})
+}
+
+// The urls may only be known during apply, so they must not be reported as missing during plan (cf. #1604).
+func TestAccKeycloakOidcIdentityProvider_urlsFromComputedValue(t *testing.T) {
+	t.Parallel()
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_urlsFromComputedValue(oidcName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("keycloak_oidc_identity_provider.oidc", "authorization_url", regexp.MustCompile(`^https://example\.com/.+/auth$`)),
+					resource.TestMatchResourceAttr("keycloak_oidc_identity_provider.oidc", "token_url", regexp.MustCompile(`^https://example\.com/.+/token$`)),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakOidcIdentityProviderUrls(resourceName, authorizationUrl, tokenUrl string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		idp, err := getKeycloakOidcIdentityProviderFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+		if idp.Config.AuthorizationUrl != authorizationUrl {
+			return fmt.Errorf("expected authorization url %q, got %q", authorizationUrl, idp.Config.AuthorizationUrl)
+		}
+		if idp.Config.TokenUrl != tokenUrl {
+			return fmt.Errorf("expected token url %q, got %q", tokenUrl, idp.Config.TokenUrl)
+		}
+		return nil
+	}
+}
+
+func testKeycloakOidcIdentityProvider_providerIdWithUrls(oidc, providerId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	provider_id       = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+}
+	`, testAccRealm.Realm, oidc, providerId)
+}
+
+func testKeycloakOidcIdentityProvider_providerIdWithoutUrls(oidc, providerId string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm         = data.keycloak_realm.realm.id
+	alias         = "%s"
+	provider_id   = "%s"
+	client_id     = "example_id"
+	client_secret = "example_token"
+}
+	`, testAccRealm.Realm, oidc, providerId)
+}
+
+func testKeycloakOidcIdentityProvider_urlsFromComputedValue(oidc string) string {
+	// the id of the client is unknown during plan
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "url_source" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s-url-source"
+	access_type = "PUBLIC"
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/${keycloak_openid_client.url_source.id}/auth"
+	token_url         = "https://example.com/${keycloak_openid_client.url_source.id}/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+}
+	`, testAccRealm.Realm, oidc, oidc)
+}
+
 func TestAccKeycloakOidcIdentityProvider_allowAdminRoleMapping(t *testing.T) {
 	t.Parallel()
 

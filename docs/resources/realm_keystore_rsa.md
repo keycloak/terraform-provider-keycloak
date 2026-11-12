@@ -75,7 +75,7 @@ resource "keycloak_realm_keystore_rsa" "keystore_rsa" {
 - `certificate_wo` - (Optional, Write-Only) X509 Certificate encoded in PEM format. Not stored in state or plan files. Requires `certificate_wo_version`. The certificate is sent on every update, since Keycloak requires it.
 - `certificate_wo_version` - (Optional) Version of the `certificate_wo` argument. Stored in state.
 - `enabled` - (Optional) When `false`, key is not accessible in this realm. Defaults to `true`.
-- `active` - (Optional) When `false`, key in not used for signing. Defaults to `true`.
+- `active` - (Optional) When `false`, key is not used for signing. Defaults to `true`.
 - `priority` - (Optional) Priority for the provider. Defaults to `0`
 - `algorithm` - (Optional) Intended algorithm for the key. Defaults to `RS256`. Use `RSA-OAEP` for encryption keys
 - `keystore_size` - (Optional) Size for the generated keys. Defaults to `2048`.
