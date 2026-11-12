@@ -15,6 +15,10 @@ import (
 const (
 	clientScopeOwnerRealm  = "realm"
 	clientScopeOwnerClient = "client"
+
+	keycloakClientScopeProtocolOpenidConnect = "openid-connect"
+	keycloakClientScopeProtocolSaml          = "saml"
+	keycloakClientScopeProtocolOid4vc        = "oid4vc"
 )
 
 type clientScopeAssignments struct {

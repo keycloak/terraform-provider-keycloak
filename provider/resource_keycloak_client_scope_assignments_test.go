@@ -598,11 +598,9 @@ func TestAccKeycloakClientScopeAssignments_samlDefaultOptionalMove(t *testing.T)
 	scope := acctest.RandomWithPrefix("tf-acc")
 	signingPrivateKeyExpr := testKeycloakSamlClientDefaultScopes_signingPrivateKeyExpr(t)
 	baseConfig := testKeycloakSamlClientDefaultScopes_base(client, signingPrivateKeyExpr) + fmt.Sprintf(`
-resource "keycloak_client_scope" "scope" {
+resource "keycloak_saml_client_scope" "scope" {
 	realm_id = data.keycloak_realm.realm.id
 	name     = %q
-
-	saml {}
 }
 `, scope)
 
@@ -613,7 +611,7 @@ resource "keycloak_client_scope_assignments" "assignments" {
 	client_id       = keycloak_saml_client.client.id
 	default_scopes  = %s
 	optional_scopes = %s
-	depends_on      = [keycloak_client_scope.scope]
+	depends_on      = [keycloak_saml_client_scope.scope]
 }
 `, arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
 	}
@@ -663,18 +661,14 @@ resource "keycloak_openid_client" "client" {
 	access_type = "PUBLIC"
 }
 
-resource "keycloak_client_scope" "custom_default" {
+resource "keycloak_openid_client_scope" "custom_default" {
 	realm_id = data.keycloak_realm.realm.id
 	name     = %q
-
-	openid_connect {}
 }
 
-resource "keycloak_client_scope" "custom_optional" {
+resource "keycloak_openid_client_scope" "custom_optional" {
 	realm_id = data.keycloak_realm.realm.id
 	name     = %q
-
-	openid_connect {}
 }
 
 resource "keycloak_client_scope_assignments" "assignments" {
@@ -682,7 +676,7 @@ resource "keycloak_client_scope_assignments" "assignments" {
 	client_id       = keycloak_openid_client.client.id
 	default_scopes  = %s
 	optional_scopes = %s
-	depends_on      = [keycloak_client_scope.custom_default, keycloak_client_scope.custom_optional]
+	depends_on      = [keycloak_openid_client_scope.custom_default, keycloak_openid_client_scope.custom_optional]
 }
 `, testAccRealm.Realm, client, customDefault, customOptional, arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
 	}
@@ -722,18 +716,16 @@ resource "keycloak_realm" "realm" {
 	realm = %q
 }
 
-resource "keycloak_client_scope" "scope" {
+resource "keycloak_openid_client_scope" "scope" {
 	realm_id = keycloak_realm.realm.id
 	name     = %q
-
-	openid_connect {}
 }
 
 resource "keycloak_client_scope_assignments" "assignments" {
 	realm_id        = keycloak_realm.realm.id
 	default_scopes  = %s
 	optional_scopes = %s
-	depends_on      = [keycloak_client_scope.scope]
+	depends_on      = [keycloak_openid_client_scope.scope]
 }
 `, realm, scope, arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
 	}

@@ -31,11 +31,9 @@ resource "keycloak_openid_client" "web" {
   access_type = "CONFIDENTIAL"
 }
 
-resource "keycloak_client_scope" "groups" {
+resource "keycloak_openid_client_scope" "groups" {
   realm_id = keycloak_realm.realm.id
   name     = "groups"
-
-  openid_connect {}
 }
 
 resource "keycloak_client_scope_assignments" "web_client" {
@@ -45,7 +43,7 @@ resource "keycloak_client_scope_assignments" "web_client" {
   # Keep Keycloak's built-in defaults; omitting them removes their token claims.
   default_scopes = ["profile", "email", "roles", "web-origins", "acr", "basic"]
   optional_scopes = [
-    keycloak_client_scope.groups.name,
+    keycloak_openid_client_scope.groups.name,
   ]
 }
 ```
@@ -90,9 +88,9 @@ target, or detaching its assignments when it is later removed. Review the result
 
 ## Replacing scope definitions
 
-Assignments refer to scope names, not IDs. Replacing a scope without changing its name (for example, by switching
-between its `openid_connect` and `saml` blocks or using `terraform apply -replace=keycloak_client_scope.groups`) deletes
-the old scope's assignments.
+Assignments refer to scope names, not IDs. Replacing a scope without changing its name (for example, by moving it
+between `keycloak_openid_client_scope` and `keycloak_saml_client_scope` or using
+`terraform apply -replace=keycloak_openid_client_scope.groups`) deletes the old scope's assignments.
 Terraform may see no change to the configured name sets, so the replacement scope can remain unassigned after that apply.
 Referencing the scope's `name` or adding `depends_on` orders operations but does not force reassignment.
 
@@ -104,10 +102,10 @@ resource "keycloak_client_scope_assignments" "web_client" {
   realm_id        = keycloak_realm.realm.id
   client_id       = keycloak_openid_client.web.id
   default_scopes  = ["profile", "email", "roles", "web-origins", "acr", "basic"]
-  optional_scopes = [keycloak_client_scope.groups.name]
+  optional_scopes = [keycloak_openid_client_scope.groups.name]
 
   lifecycle {
-    replace_triggered_by = [keycloak_client_scope.groups.id]
+    replace_triggered_by = [keycloak_openid_client_scope.groups.id]
   }
 }
 ```

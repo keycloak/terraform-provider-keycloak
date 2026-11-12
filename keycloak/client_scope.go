@@ -14,38 +14,6 @@ type ClientScope struct {
 	Attributes  map[string]string `json:"attributes"`
 }
 
-func (keycloakClient *KeycloakClient) NewClientScope(ctx context.Context, clientScope *ClientScope) error {
-	_, location, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/client-scopes", clientScope.RealmId), clientScope)
-	if err != nil {
-		return err
-	}
-
-	clientScope.Id = getIdFromLocationHeader(location)
-
-	return nil
-}
-
-func (keycloakClient *KeycloakClient) GetClientScope(ctx context.Context, realmId, id string) (*ClientScope, error) {
-	var clientScope ClientScope
-
-	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/client-scopes/%s", realmId, id), &clientScope, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	clientScope.RealmId = realmId
-
-	return &clientScope, nil
-}
-
-func (keycloakClient *KeycloakClient) UpdateClientScope(ctx context.Context, clientScope *ClientScope) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/client-scopes/%s", clientScope.RealmId, clientScope.Id), clientScope)
-}
-
-func (keycloakClient *KeycloakClient) DeleteClientScope(ctx context.Context, realmId, id string) error {
-	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/client-scopes/%s", realmId, id), nil)
-}
-
 func (keycloakClient *KeycloakClient) ListClientScopes(ctx context.Context, realmId string) ([]ClientScope, error) {
 	var scopes []ClientScope
 
