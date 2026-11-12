@@ -36,6 +36,7 @@ func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 		"provider_id": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    true,
 			Default:     "oidc",
 			Description: "provider id, is always oidc, unless you have a custom implementation",
 		},
