@@ -174,6 +174,23 @@ func resourceKeycloakRealm() *schema.Resource {
 
 	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
 	maps.Copy(webAuthnPasswordlessSchema, webAuthnSchema)
+	for block, policySchema := range map[string]map[string]*schema.Schema{
+		"web_authn_policy":              webAuthnSchema,
+		"web_authn_passwordless_policy": webAuthnPasswordlessSchema,
+	} {
+		legacy := *policySchema["signature_algorithms"]
+		legacy.ConflictsWith = []string{block + ".0.signature_algorithms_ordered"}
+		policySchema["signature_algorithms"] = &legacy
+		policySchema["signature_algorithms_ordered"] = &schema.Schema{
+			Type:          schema.TypeList,
+			Elem:          &schema.Schema{Type: schema.TypeString},
+			Optional:      true,
+			Computed:      true,
+			Description:   "Signature algorithms in preference order. Conflicts with signature_algorithms.",
+			ConflictsWith: []string{block + ".0.signature_algorithms"},
+		}
+	}
+
 	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Description: "Enable passkeys for passwordless WebAuthn authentication",
@@ -923,6 +940,25 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keyc
 	}
 }
 
+// Select the ordered input only when configured. Both representations are computed
+// on read, so preferring a populated list would change existing set configurations.
+func getRealmSignatureAlgorithms(data *schema.ResourceData, block string, policy map[string]interface{}) ([]string, error) {
+	if rawConfig := data.GetRawConfig(); !rawConfig.IsNull() && rawConfig.IsKnown() {
+		rawPolicy := rawConfig.GetAttr(block)
+		if rawPolicy.IsNull() || !rawPolicy.IsKnown() || rawPolicy.LengthInt() == 0 {
+			return interfaceSliceToStringSlice(policy["signature_algorithms"].(*schema.Set).List()), nil
+		}
+		ordered, diags := data.GetRawConfigAt(cty.GetAttrPath(block).IndexInt(0).GetAttr("signature_algorithms_ordered"))
+		if diags.HasError() {
+			return nil, fmt.Errorf("error reading %s.signature_algorithms_ordered", block)
+		}
+		if ordered.IsKnown() && !ordered.IsNull() {
+			return interfaceSliceToStringSlice(policy["signature_algorithms_ordered"].([]interface{})), nil
+		}
+	}
+	return interfaceSliceToStringSlice(policy["signature_algorithms"].(*schema.Set).List()), nil
+}
+
 func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.Realm, error) {
 	internationalizationEnabled := false
 	supportLocales := make([]string, 0)
@@ -1366,7 +1402,11 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyRpId = webAuthnPolicyRpId.(string)
 		}
 
-		realm.WebAuthnPolicySignatureAlgorithms = interfaceSliceToStringSlice(webAuthnPolicy["signature_algorithms"].(*schema.Set).List())
+		signatureAlgorithms, err := getRealmSignatureAlgorithms(data, "web_authn_policy", webAuthnPolicy)
+		if err != nil {
+			return nil, err
+		}
+		realm.WebAuthnPolicySignatureAlgorithms = signatureAlgorithms
 
 		if webAuthnPolicyUserVerificationRequirement, ok := webAuthnPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyUserVerificationRequirement = webAuthnPolicyUserVerificationRequirement.(string)
@@ -1436,7 +1476,11 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.WebAuthnPolicyPasswordlessRpId = webAuthnPolicyPasswordlessRpId.(string)
 		}
 
-		realm.WebAuthnPolicyPasswordlessSignatureAlgorithms = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["signature_algorithms"].(*schema.Set).List())
+		signatureAlgorithms, err := getRealmSignatureAlgorithms(data, "web_authn_passwordless_policy", webAuthnPasswordlessPolicy)
+		if err != nil {
+			return nil, err
+		}
+		realm.WebAuthnPolicyPasswordlessSignatureAlgorithms = signatureAlgorithms
 
 		if webAuthnPolicyPasswordlessUserVerificationRequirement, ok := webAuthnPasswordlessPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyPasswordlessUserVerificationRequirement = webAuthnPolicyPasswordlessUserVerificationRequirement.(string)
@@ -1678,6 +1722,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyRpEntityName
 	webAuthnPolicy["relying_party_id"] = realm.WebAuthnPolicyRpId
 	webAuthnPolicy["signature_algorithms"] = realm.WebAuthnPolicySignatureAlgorithms
+	webAuthnPolicy["signature_algorithms_ordered"] = realm.WebAuthnPolicySignatureAlgorithms
 	webAuthnPolicy["user_verification_requirement"] = realm.WebAuthnPolicyUserVerificationRequirement
 	data.Set("web_authn_policy", []interface{}{webAuthnPolicy})
 
@@ -1705,6 +1750,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	webAuthnPasswordlessPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyPasswordlessRpEntityName
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
+	webAuthnPasswordlessPolicy["signature_algorithms_ordered"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
 
 	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
