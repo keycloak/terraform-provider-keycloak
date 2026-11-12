@@ -25,6 +25,7 @@ func TestAccKeycloakDataSourceSamlClientScope_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(dataSourceName, "name", resourceName, "name"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "description", resourceName, "description"),
 					resource.TestCheckResourceAttrPair(dataSourceName, "consent_screen_text", resourceName, "consent_screen_text"),
+					resource.TestCheckResourceAttrPair(dataSourceName, "display_on_consent_screen", resourceName, "display_on_consent_screen"),
 				),
 			},
 		},

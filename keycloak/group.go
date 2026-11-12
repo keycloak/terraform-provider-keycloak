@@ -312,6 +312,44 @@ func (keycloakClient *KeycloakClient) GetGroupMembers(ctx context.Context, realm
 	return users, nil
 }
 
+// GetOrganizationGroupMembers returns the members of a group, paginating the
+// result set by 50. When organizationId is non-empty, the organization-scoped
+// endpoint is used:
+//
+//	GET /realms/{realm}/organizations/{orgId}/groups/{groupId}/members
+//
+// When organizationId is empty, the realm-level endpoint is used:
+//
+//	GET /realms/{realm}/groups/{groupId}/members
+func (keycloakClient *KeycloakClient) GetOrganizationGroupMembers(ctx context.Context, realmId, organizationId, groupId string) ([]*User, error) {
+	var users []*User
+	var first, pagination = 0, 50
+	var iterationUsers []*User
+
+	memberURL := func(offset int) string {
+		if organizationId != "" {
+			return fmt.Sprintf("/realms/%s/organizations/%s/groups/%s/members?max=%d&first=%d", realmId, organizationId, groupId, pagination, offset)
+		}
+		return fmt.Sprintf("/realms/%s/groups/%s/members?max=%d&first=%d", realmId, groupId, pagination, offset)
+	}
+
+	for ok := true; ok; ok = len(iterationUsers) > 0 {
+		iterationUsers = nil
+		err := keycloakClient.get(ctx, memberURL(first), &iterationUsers, nil)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, iterationUsers...)
+		first += pagination
+	}
+
+	for _, user := range users {
+		user.RealmId = realmId
+	}
+
+	return users, nil
+}
+
 func defaultGroupURL(realmName, groupId string) string {
 	return fmt.Sprintf("/realms/%s/default-groups/%s", realmName, groupId)
 }
