@@ -117,6 +117,10 @@ func (keycloakClient *KeycloakClient) AddUserToOrganization(ctx context.Context,
 	return err
 }
 
+func (keycloakClient *KeycloakClient) UpdateOrganizationMembershipType(ctx context.Context, realm, orgId, userId, membershipType string) error {
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/organizations/%s/members/%s/membership-type", realm, orgId, userId), membershipType)
+}
+
 func (keycloakClient *KeycloakClient) RemoveUserFromOrganization(ctx context.Context, realm, orgId, userId string) error {
 	return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/organizations/%s/members/%s", realm, orgId, userId), nil)
 }
