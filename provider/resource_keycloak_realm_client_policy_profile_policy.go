@@ -66,12 +66,17 @@ func resourceKeycloakRealmClientPolicyProfilePolicy() *schema.Resource {
 	}
 }
 
+// See realmClientPolicyProfilesMutexKey: the same applies to the list of client policies of a realm.
+func realmClientPolicyProfilePoliciesMutexKey(realmId string) string {
+	return fmt.Sprintf("realm-client-policy-policies:%s", realmId)
+}
+
 func resourceKeycloakRealmClientPolicyProfilePolicyUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 	realmId := policy.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyUpdate:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyUpdate:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilePoliciesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilePoliciesMutexKey(realmId))
 	realmClientPolicyProfilePolicies, err := keycloakClient.GetAllRealmClientPolicyProfilePolices(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -96,8 +101,8 @@ func resourceKeycloakRealmClientPolicyProfilePolicyDelete(ctx context.Context, d
 	slicedPolicies := []keycloak.RealmClientPolicyProfilePolicy{}
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 	realmId := policy.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyDelete:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyDelete:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilePoliciesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilePoliciesMutexKey(realmId))
 	realmClientPolicyProfilePolicies, err := keycloakClient.GetAllRealmClientPolicyProfilePolices(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -124,8 +129,8 @@ func resourceKeycloakRealmClientPolicyProfilePolicyCreate(ctx context.Context, d
 	policy := mapFromDataToRealmClientPolicyProfilePolicy(data)
 
 	realmId := policy.RealmId
-	keycloakClient.Mutex.Lock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyCreate:%s", realmId))
-	defer keycloakClient.Mutex.Unlock(fmt.Sprintf("resourceKeycloakRealmClientPolicyProfilePolicyCreate:%s", realmId))
+	keycloakClient.Mutex.Lock(realmClientPolicyProfilePoliciesMutexKey(realmId))
+	defer keycloakClient.Mutex.Unlock(realmClientPolicyProfilePoliciesMutexKey(realmId))
 	name := policy.Name
 	data.SetId(fmt.Sprintf("%s/realm-client-policy-profile-policies/%s", realmId, name))
 
