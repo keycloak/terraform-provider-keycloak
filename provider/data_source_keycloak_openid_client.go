@@ -14,6 +14,8 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 		ReadContext: dataSourceKeycloakOpenidClientRead,
 
 		Schema: map[string]*schema.Schema{
+			"surrogate_auth_required":      {Type: schema.TypeBool, Computed: true},
+			"node_re_registration_timeout": {Type: schema.TypeInt, Computed: true},
 			"client_id": {
 				Type:     schema.TypeString,
 				Required: true,

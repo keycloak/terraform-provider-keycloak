@@ -31,6 +31,8 @@ type OpenidClientAuthorizationSettings struct {
 }
 
 type OpenidClient struct {
+	SurrogateAuthRequired              *bool                                    `json:"surrogateAuthRequired,omitempty"`
+	NodeReRegistrationTimeout          *int                                     `json:"nodeReRegistrationTimeout,omitempty"`
 	Id                                 string                                   `json:"id,omitempty"`
 	ClientId                           string                                   `json:"clientId"`
 	RealmId                            string                                   `json:"-"`

@@ -176,6 +176,8 @@ is set to `true`.
 - `backchannel_logout_session_required` - (Optional) When `true`, a sid (session ID) claim will be included in the logout token when the backchannel logout URL is used. Defaults to `true`.
 - `backchannel_logout_revoke_offline_sessions` - (Optional) Specifying whether a "revoke_offline_access" event is included in the Logout Token when the Backchannel Logout URL is used. Keycloak will revoke offline sessions when receiving a Logout Token with this event.
 - `always_display_in_console` - (Optional) Always list this client in the Account UI, even if the user does not have an active session.
+- `surrogate_auth_required` - (Optional, Computed) Whether client-role access in tokens requires caller verification. Omit to preserve the observed value. Explicit false clears the setting.
+- `node_re_registration_timeout` - (Optional, Computed) Legacy periodic node re-registration timeout in seconds, at least -1. Nonpositive values disable periodic re-registration; the server then accepts all registered nodes without removing timed-out entries. Explicit zero and -1 are preserved; omit to keep the server setting.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration attributes to this client. This can be used for custom attributes, or to add configuration attributes that are not yet supported by this Terraform provider. Use this attribute at your own risk, as it may conflict with top-level configuration attributes in future provider updates. For example, the `extra_config` map can be used to set Authentication Context Class Reference (ACR) to Level of Authentication (LoA) mapping
 	``` hcl
 	extra_config = {

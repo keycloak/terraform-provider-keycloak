@@ -652,6 +652,10 @@ func resourceKeycloakRealm() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type: schema.TypeBool, Optional: true, Default: true,
+										Description: "Enable brute-force protection. False retains ownership of the configured thresholds while protection remains disabled.",
+									},
 									"permanent_lockout": { //Permanent Lockout
 										Type:     schema.TypeBool,
 										Optional: true,
@@ -707,6 +711,20 @@ func resourceKeycloakRealm() *schema.Resource {
 						},
 					},
 				},
+			},
+
+			"required_credentials": {
+				Type: schema.TypeSet, Optional: true, Computed: true,
+				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: validation.StringIsNotEmpty},
+				Description: "Required credential types. Omit to preserve the server configuration.",
+			},
+			"scim_api_enabled": {
+				Type: schema.TypeBool, Optional: true, Computed: true,
+				Description: "Realm SCIM API switch (Keycloak >=26.6). Server feature gating can mask the persisted value; this reports effective enablement.",
+			},
+			"verifiable_credentials_enabled": {
+				Type: schema.TypeBool, Optional: true, Computed: true,
+				Description: "Realm verifiable-credential switch (Keycloak >=26.1). Server feature gating can mask the persisted value; this reports effective enablement.",
 			},
 
 			// authentication password policy
@@ -1266,7 +1284,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		bruteForceDetectionConfig := securityDefensesSettings["brute_force_detection"].([]interface{})
 		if len(bruteForceDetectionConfig) == 1 {
 			bruteForceDetectionSettings := bruteForceDetectionConfig[0].(map[string]interface{})
-			realm.BruteForceProtected = true
+			realm.BruteForceProtected = bruteForceDetectionSettings["enabled"].(bool)
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
@@ -1488,6 +1506,28 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		}
 	}
 
+	if configuredPublicField(data, "required_credentials") {
+		values := make([]string, 0)
+		for _, value := range data.Get("required_credentials").(*schema.Set).List() {
+			values = append(values, value.(string))
+		}
+		realm.RequiredCredentials = &values
+	}
+	for _, setting := range []struct {
+		name, minimum string
+		target        **bool
+	}{
+		{"scim_api_enabled", "26.6.0", &realm.ScimApiEnabled},
+		{"verifiable_credentials_enabled", "26.1.0", &realm.VerifiableCredentialsEnabled},
+	} {
+		if configuredPublicField(data, setting.name) {
+			if keycloakVersion.LessThan(version.Must(version.NewVersion(setting.minimum))) {
+				return nil, fmt.Errorf("%s requires Keycloak >= %s", setting.name, setting.minimum)
+			}
+			value := data.Get(setting.name).(bool)
+			*setting.target = &value
+		}
+	}
 	return realm, nil
 }
 
@@ -1571,10 +1611,34 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.MaxTemporaryLockouts = nil
 }
 
-func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
+// Computed observations must not turn omitted optional settings into writers.
+// Import/legacy state alone is deliberately not a configuration ownership signal.
+func configuredPublicField(data *schema.ResourceData, name string) bool {
+	raw := data.GetRawConfig()
+	if raw.IsNull() || !raw.IsKnown() || !raw.Type().HasAttribute(name) {
+		return false
+	}
+	value := raw.GetAttr(name)
+	return value.IsKnown() && !value.IsNull()
+}
+
+func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version, retainDisabledBruteForce bool) {
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
+	requiredCredentials := []string{}
+	if realm.RequiredCredentials != nil {
+		requiredCredentials = *realm.RequiredCredentials
+	}
+	// Keycloak omits the representation field when the stored set is empty.
+	data.Set("required_credentials", requiredCredentials)
+	if realm.ScimApiEnabled != nil {
+		data.Set("scim_api_enabled", *realm.ScimApiEnabled)
+	}
+	if realm.VerifiableCredentialsEnabled != nil {
+		data.Set("verifiable_credentials_enabled", *realm.VerifiableCredentialsEnabled)
+	}
+
 	data.Set("internal_id", realm.Id)
 	data.Set("enabled", realm.Enabled)
 	data.Set("display_name", realm.DisplayName)
@@ -1680,22 +1744,22 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	}
 
 	if v, ok := data.GetOk("security_defenses"); ok {
-		oldHeadersConfig := v.([]interface{})[0].(map[string]interface{})["headers"].([]interface{})
-		if len(oldHeadersConfig) == 0 && !realm.BruteForceProtected {
+		old := v.([]interface{})[0].(map[string]interface{})
+		oldHeaders := old["headers"].([]interface{})
+		oldBruteForce := old["brute_force_detection"].([]interface{})
+		settings := map[string]interface{}{}
+		if len(oldHeaders) == 1 {
+			settings["headers"] = []interface{}{getHeaderSettings(realm)}
+		}
+		// Existing/configured block opts into observing disabled thresholds. An
+		// absent block retains historical behavior for old configurations/imports.
+		if realm.BruteForceProtected || (retainDisabledBruteForce && len(oldBruteForce) == 1) {
+			settings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
+		}
+		if len(settings) == 0 {
 			data.Set("security_defenses", nil)
-		} else if len(oldHeadersConfig) == 1 && realm.BruteForceProtected {
-			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
-			data.Set("security_defenses", []interface{}{securityDefensesSettings})
-		} else if len(oldHeadersConfig) == 1 {
-			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
-			data.Set("security_defenses", []interface{}{securityDefensesSettings})
-		} else if realm.BruteForceProtected {
-			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
-			data.Set("security_defenses", []interface{}{securityDefensesSettings})
+		} else {
+			data.Set("security_defenses", []interface{}{settings})
 		}
 	}
 
@@ -1782,6 +1846,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 
 func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *version.Version) map[string]interface{} {
 	bruteForceDetectionSettings := make(map[string]interface{})
+	bruteForceDetectionSettings["enabled"] = realm.BruteForceProtected
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
 	bruteForceDetectionSettings["brute_force_strategy"] = realm.BruteForceStrategy
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
@@ -1842,7 +1907,7 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	setRealmData(data, realm, keycloakVersion, true)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
 }
@@ -1872,7 +1937,7 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		data.Set("terraform_deletion_protection", false)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	setRealmData(data, realm, keycloakVersion, true)
 
 	return nil
 }
@@ -1912,7 +1977,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	setRealmData(data, realm, keycloakVersion, true)
 
 	return nil
 }
