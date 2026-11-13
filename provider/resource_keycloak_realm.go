@@ -1883,6 +1883,14 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 	setRealmData(data, realm, keycloakVersion)
 
 	if renamed {
+		if keycloakClient.AccessTokenProvided() {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but the access_token cannot be refreshed",
+				Detail:   "Some Keycloak versions only show a renamed realm in full to tokens issued after the rename. If looking up resources by realm_internal_id fails from now on, run Terraform again with a newly issued access_token.",
+			}}
+		}
+
 		// the roles in the access token belong to the old name; get one that matches the renamed realm
 		if err := keycloakClient.Refresh(ctx); err != nil {
 			return diag.Diagnostics{{

@@ -283,6 +283,7 @@ type realmCache struct {
 	mu         sync.Mutex
 	generation uint64
 	names      map[string]realmCacheEntry // internal id -> name
+	idsByName  map[string]string          // name -> internal id, so that a name is claimed by one realm without a scan
 	unreadable map[string]time.Time       // name -> when
 }
 
@@ -325,15 +326,18 @@ func (c *realmCache) remember(generation uint64, uuid string, name string) {
 	}
 	if c.names == nil {
 		c.names = map[string]realmCacheEntry{}
+		c.idsByName = map[string]string{}
 	}
 
-	for otherUuid, entry := range c.names {
-		if entry.name == name && otherUuid != uuid {
-			delete(c.names, otherUuid)
-		}
+	if otherUuid, ok := c.idsByName[name]; ok && otherUuid != uuid {
+		delete(c.names, otherUuid)
+	}
+	if previous, ok := c.names[uuid]; ok && previous.name != name && c.idsByName[previous.name] == uuid {
+		delete(c.idsByName, previous.name)
 	}
 	delete(c.unreadable, name)
 	c.names[uuid] = realmCacheEntry{name: name, at: time.Now()}
+	c.idsByName[name] = uuid
 }
 
 func (c *realmCache) markUnreadable(generation uint64, name string) {
@@ -355,7 +359,7 @@ func (c *realmCache) forget() {
 	defer c.mu.Unlock()
 
 	c.generation++
-	c.names, c.unreadable = nil, nil
+	c.names, c.idsByName, c.unreadable = nil, nil, nil
 }
 
 // GetRealmNameByInternalId returns the current name of the realm with the given internal id. Keycloak's admin API only
@@ -414,6 +418,12 @@ func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Conte
 		// A realm we may not read is not a realm that does not exist: callers treat "not found" as "gone".
 		if idsHidden || forbidden {
 			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids, or the realm itself, from accounts without the view-realm role, which is needed to use realm_internal_id", uuid)}
+		}
+
+		// Keycloak leaves out the realms an account may not see, so a realm that is not in the list may have been
+		// renamed to a name this account cannot read, which is not the same as deleted.
+		if !keycloakClient.canListAllRealms() {
+			return "", fmt.Errorf("cannot tell whether the realm with internal id %s was deleted or renamed: it is not in the list of realms, but this account may not see every realm, so it is not treated as deleted. If the realm was deleted, remove its resources from the state with terraform state rm. Authenticating in the master realm with an account that has the admin role avoids this", uuid)
 		}
 
 		return "", &ApiError{Code: http.StatusNotFound, Message: fmt.Sprintf("realm with internal id %s not found", uuid)}

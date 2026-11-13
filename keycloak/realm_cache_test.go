@@ -1,6 +1,7 @@
 package keycloak
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -84,8 +85,23 @@ type fakeRealms struct {
 	forbidden map[string]bool
 	// when set, the token endpoint fails
 	tokenFails bool
+	// when set, the account does not have the admin role of the master realm, so its realm list may be incomplete
+	notAdmin bool
 
 	requests atomic.Int32
+}
+
+// testAccessToken is an unsigned token with the given realm roles, which is all that is read from it.
+func testAccessToken(roles ...string) string {
+	encode := func(value interface{}) string {
+		encoded, _ := json.Marshal(value)
+
+		return base64.RawURLEncoding.EncodeToString(encoded)
+	}
+
+	return encode(map[string]string{"alg": "HS256", "typ": "JWT"}) + "." +
+		encode(map[string]interface{}{"realm_access": map[string][]string{"roles": roles}}) + "." +
+		base64.RawURLEncoding.EncodeToString([]byte("signature"))
 }
 
 type fakeRealm struct {
@@ -133,10 +149,15 @@ func (f *fakeRealms) client(t *testing.T) *KeycloakClient {
 	}))
 	t.Cleanup(server.Close)
 
+	accessToken := testAccessToken("admin")
+	if f.notAdmin {
+		accessToken = testAccessToken("view-realm")
+	}
+
 	return &KeycloakClient{
 		baseUrl: server.URL, authUrl: server.URL, realm: "master", httpClient: server.Client(), initialLogin: true,
 		accessTokenProvided: !f.tokenFails,
-		clientCredentials:   &ClientCredentials{AccessToken: "test", TokenType: "Bearer", GrantType: "client_credentials", ClientId: "c", ClientSecret: "s"},
+		clientCredentials:   &ClientCredentials{AccessToken: accessToken, TokenType: "Bearer", GrantType: "client_credentials", ClientId: "c", ClientSecret: "s"},
 	}
 }
 
@@ -296,6 +317,98 @@ func TestRefreshExplainsAnUnreadableTokenResponse(t *testing.T) {
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("the error %q does not mention %q", err, expected)
 		}
+	}
+}
+
+// A realm that is not in the list may have been renamed to a name this account cannot read.
+func TestGetRealmNameByInternalIdDoesNotCallARealmGoneWhenTheListMayBeIncomplete(t *testing.T) {
+	fake := &fakeRealms{realms: []fakeRealm{{Realm: "other", Id: "u2"}}, notAdmin: true}
+	client := fake.client(t)
+
+	_, err := client.GetRealmNameByInternalId(t.Context(), "u1", "a")
+	if err == nil || ErrorIs404(err) {
+		t.Fatalf("err = %v, want an error that is not a 404", err)
+	}
+	if !strings.Contains(err.Error(), "deleted or renamed") {
+		t.Errorf("the error does not explain itself: %v", err)
+	}
+}
+
+// A token endpoint error that is valid JSON must not replace a working token with an empty one.
+func TestRefreshKeepsTheTokenWhenTheTokenEndpointFails(t *testing.T) {
+	for name, response := range map[string]struct {
+		status int
+		body   string
+	}{
+		"error answer":        {http.StatusServiceUnavailable, `{"error":"temporarily_unavailable"}`},
+		"unauthorized answer": {http.StatusUnauthorized, `{"error":"invalid_client"}`},
+		"no access token":     {http.StatusOK, `{"token_type":"Bearer"}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(response.status)
+				_, _ = w.Write([]byte(response.body))
+			}))
+			t.Cleanup(server.Close)
+
+			client := &KeycloakClient{
+				authUrl: server.URL, realm: "master", httpClient: server.Client(), initialLogin: true,
+				clientCredentials: &ClientCredentials{GrantType: "client_credentials", ClientId: "c", ClientSecret: "s", AccessToken: "working", TokenType: "Bearer"},
+			}
+
+			if err := client.Refresh(t.Context()); err == nil {
+				t.Fatal("expected an error")
+			}
+			if _, accessToken := client.tokenTypeAndAccessToken(); accessToken != "working" {
+				t.Errorf("the access token was replaced by %q", accessToken)
+			}
+		})
+	}
+}
+
+// What a failed read says about the response must not contain the response, which can be a secret.
+func TestGetErrorLeavesTheResponseOut(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"id":42,"value":"supersecret"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	client := &KeycloakClient{
+		baseUrl: server.URL, realm: "master", httpClient: server.Client(), initialLogin: true, accessTokenProvided: true,
+		clientCredentials: &ClientCredentials{AccessToken: "test", TokenType: "Bearer"},
+	}
+
+	_, err := client.GetRealm(t.Context(), "a")
+	if err == nil {
+		t.Fatal("expected a decoding error")
+	}
+	if strings.Contains(err.Error(), "supersecret") {
+		t.Errorf("the response ended up in the error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "/realms/a") {
+		t.Errorf("the error does not name the path: %v", err)
+	}
+}
+
+// A name is claimed by one realm: the reverse index must follow a rename, or a name that is free again would
+// drop the hint of a realm that does not have it.
+func TestRealmCacheIndexFollowsARename(t *testing.T) {
+	var c realmCache
+	c.remember(c.currentGeneration(), "uuid-1", "a")
+	c.remember(c.currentGeneration(), "uuid-1", "b") // uuid-1 was renamed from a to b
+	c.remember(c.currentGeneration(), "uuid-2", "a") // another realm took the old name
+
+	if name, ok := c.nameHint("uuid-1"); !ok || name != "b" {
+		t.Errorf("the hint of the renamed realm = %q, %v", name, ok)
+	}
+	if name, ok := c.nameHint("uuid-2"); !ok || name != "a" {
+		t.Errorf("hint = %q, %v", name, ok)
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.idsByName) != len(c.names) {
+		t.Errorf("the index has %d entries for %d realms", len(c.idsByName), len(c.names))
 	}
 }
 

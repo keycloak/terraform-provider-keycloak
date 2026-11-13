@@ -365,10 +365,18 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 		return keycloakClient.login(ctx)
 	}
 
+	// an error answer can be valid JSON as well, and must not replace a working token
+	if refreshTokenResponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("error refreshing credentials: the token endpoint answered %s; response: %s", refreshTokenResponse.Status, responseSnippet(body))
+	}
+
 	var clientCredentials ClientCredentials
 	err = json.Unmarshal(body, &clientCredentials)
 	if err != nil {
 		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint (%s): %w; response: %s", refreshTokenResponse.Status, err, responseSnippet(body))
+	}
+	if clientCredentials.AccessToken == "" {
+		return fmt.Errorf("error refreshing credentials: the token endpoint (%s) did not return an access token", refreshTokenResponse.Status)
 	}
 
 	keycloakClient.setTokens(&clientCredentials)
@@ -461,6 +469,38 @@ func (keycloakClient *KeycloakClient) setTokens(tokens *ClientCredentials) {
 	keycloakClient.clientCredentials.AccessToken = tokens.AccessToken
 	keycloakClient.clientCredentials.RefreshToken = tokens.RefreshToken
 	keycloakClient.clientCredentials.TokenType = tokens.TokenType
+}
+
+// AccessTokenProvided reports whether the provider was given an access token instead of credentials. Such a token
+// cannot be refreshed.
+func (keycloakClient *KeycloakClient) AccessTokenProvided() bool {
+	return keycloakClient.accessTokenProvided
+}
+
+// canListAllRealms reports whether the list of realms can be taken as complete. Keycloak leaves out the realms an
+// account may not see, without saying so, so the list is only complete for an account with the admin role of the
+// master realm.
+func (keycloakClient *KeycloakClient) canListAllRealms() bool {
+	if keycloakClient.realm != "master" {
+		return false
+	}
+
+	_, accessToken := keycloakClient.tokenTypeAndAccessToken()
+
+	claims := jwt.MapClaims{}
+	if _, _, err := jwt.NewParser().ParseUnverified(accessToken, claims); err != nil {
+		return false
+	}
+
+	realmAccess, _ := claims["realm_access"].(map[string]interface{})
+	roles, _ := realmAccess["roles"].([]interface{})
+	for _, role := range roles {
+		if role == "admin" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (keycloakClient *KeycloakClient) tokenTypeAndAccessToken() (string, string) {
@@ -585,7 +625,8 @@ func (keycloakClient *KeycloakClient) get(ctx context.Context, path string, reso
 	}
 
 	if err := json.Unmarshal(body, resource); err != nil {
-		return fmt.Errorf("error reading the response of GET %s: %w; response: %s", path, err, responseSnippet(body))
+		// the response is left out: it can hold a secret, for example when a client secret is read
+		return fmt.Errorf("error reading the response of GET %s: %w", path, err)
 	}
 
 	return nil

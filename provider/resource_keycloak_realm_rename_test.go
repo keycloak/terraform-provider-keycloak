@@ -492,6 +492,58 @@ resource "keycloak_role_admin_permissions" "role" {
 `, realm)
 }
 
+// The id of an organization admin permission starts with the realm name it was created with. After a rename it must
+// be read, and removed with the realm, under the new name.
+func TestAccKeycloakRealm_renameWithOrganizationAdminPermissions(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_7)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	renamedRealmName := acctest.RandomWithPrefix("tf-acc-renamed")
+
+	config := func(realm string) string {
+		return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm                     = "%s"
+	organizations_enabled     = true
+	admin_permissions_enabled = true
+}
+
+resource "keycloak_organization_admin_permissions" "organization" {
+	realm_internal_id = keycloak_realm.realm.internal_id
+	name              = "organization-permission"
+	scopes            = ["view"]
+}
+`, realm)
+	}
+
+	checkPermission := resource.TestCheckResourceAttrSet("keycloak_organization_admin_permissions.organization", "permission_id")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: config(realmName),
+				Check:  checkPermission,
+			},
+			{
+				Config: config(renamedRealmName),
+				Check:  resource.ComposeTestCheckFunc(testAccRefreshClientToken, checkPermission),
+			},
+			{
+				RefreshState: true,
+				Check: resource.ComposeTestCheckFunc(
+					checkPermission,
+					resource.TestCheckResourceAttr("keycloak_organization_admin_permissions.organization", "realm_id", renamedRealmName),
+				),
+			},
+		},
+	})
+}
+
 // A renamed realm keeps its internal id. For realms created by older provider versions that is the old name, which
 // the first realm gets here through internal_id. The old name can be used again by a realm that Keycloak gives a
 // generated id, but not by one that is given the old name as internal id.
