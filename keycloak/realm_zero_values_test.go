@@ -35,7 +35,10 @@ func TestRealmZeroValueUpdates(t *testing.T) {
 				theme = "keycloak"
 			}
 			realm.LoginTheme, realm.AccountTheme, realm.AdminTheme, realm.EmailTheme = theme, theme, theme, theme
-			realm.OrganizationsEnabled, realm.AdminPermissionsEnabled = tc.enabled, tc.enabled
+			realm.OrganizationsEnabled = tc.enabled
+			if !tc.create && (tc.serverVersion != "26.0.8" || tc.enabled) {
+				realm.AdminPermissionsEnabled = &tc.enabled
+			}
 			before, err := json.Marshal(realm)
 			if err != nil {
 				t.Fatal(err)
@@ -47,7 +50,6 @@ func TestRealmZeroValueUpdates(t *testing.T) {
 			if tc.create {
 				delete(want, "ssoSessionIdleTimeoutRememberMe")
 				delete(want, "ssoSessionMaxLifespanRememberMe")
-				delete(want, "offlineSessionMaxLifespanEnabled")
 			} else {
 				want["ssoSessionIdleTimeoutRememberMe"] = float64(tc.idle)
 				want["ssoSessionMaxLifespanRememberMe"] = float64(tc.maximum)
