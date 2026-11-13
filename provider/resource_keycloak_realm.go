@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -202,7 +203,7 @@ func resourceKeycloakRealm() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmRead,
 		DeleteContext: resourceKeycloakRealmDelete,
 		UpdateContext: resourceKeycloakRealmUpdate,
-		CustomizeDiff: validateRealmSMTPPasswordVersionDiff,
+		CustomizeDiff: customdiff.All(validateRealmRenameDiff, validateRealmSMTPPasswordVersionDiff),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -210,7 +211,6 @@ func resourceKeycloakRealm() *schema.Resource {
 			"realm": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
 			},
 			"internal_id": {
 				Type:     schema.TypeString,
@@ -825,6 +825,21 @@ func resourceKeycloakRealm() *schema.Resource {
 
 const realmSMTPPasswordVersionRequired = "SMTP destination settings changed; change smtp_server.auth.password_wo_version to send the real password and preserve SMTP authentication"
 
+// validateRealmRenameDiff stops renames that Keycloak or the provider itself cannot survive, at plan time.
+func validateRealmRenameDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	// Keycloak refuses this at apply time; fail early, at plan time
+	if diff.Id() == "master" && diff.HasChange("realm") {
+		return fmt.Errorf("the master realm cannot be renamed")
+	}
+
+	// the provider's token URL contains the name of the realm it authenticates against
+	if client, ok := meta.(*keycloak.KeycloakClient); ok && client != nil && diff.Id() != "" && diff.Id() == client.AuthRealm() && diff.HasChange("realm") {
+		return fmt.Errorf("the realm %q cannot be renamed, because the provider authenticates against it", diff.Id())
+	}
+
+	return nil
+}
+
 func validateRealmSMTPPasswordVersionDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
 	const versionPath = "smtp_server.0.auth.0.password_wo_version"
 	if diff.Id() == "" || !diff.NewValueKnown(versionPath) || diff.Get(versionPath).(string) == "" || diff.HasChange(versionPath) {
@@ -974,18 +989,15 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 		defaultLocale = internationalizationSettings["default_locale"].(string)
 	}
 
-	realmId := data.Get("realm")
-	internalId := data.Get("internal_id")
-	if internalId != "" {
-		realmId = internalId
-	}
+	// when internal_id is not set, Keycloak generates the realm's internal id
+	internalId := data.Get("internal_id").(string)
 
 	// Use GetOkExists for string fields to preserve empty strings
 	displayName, displayNameOk := data.GetOkExists("display_name")
 	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
 
 	realm := &keycloak.Realm{
-		Id:                   realmId.(string),
+		Id:                   internalId,
 		Realm:                data.Get("realm").(string),
 		Enabled:              data.Get("enabled").(bool),
 		UserManagedAccess:    data.Get("user_managed_access").(bool),
@@ -1270,7 +1282,7 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
 			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
-			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Id, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
+			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Realm, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
 			if err != nil {
 				return nil, err
 			}
@@ -1562,7 +1574,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.PermanentLockout = false
 	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
-	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Id, 0, keycloakVersion)
+	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Realm, 0, keycloakVersion)
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60
@@ -1575,7 +1587,10 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVers
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
-	data.Set("internal_id", realm.Id)
+	// Keycloak leaves the id out for tokens that cannot see the realm (see GetRealmNameByInternalId); keep what we know
+	if realm.Id != "" {
+		data.Set("internal_id", realm.Id)
+	}
 	data.Set("enabled", realm.Enabled)
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
@@ -1854,7 +1869,7 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
@@ -1889,13 +1904,15 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	currentRealm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
 		// Keycloak only preserves a masked password while the SMTP destination is
 		// unchanged. Check the server too, in case it drifted after planning.
-		currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
-		if err != nil {
-			return diag.FromErr(err)
-		}
 		if !realmSMTPDestinationUnchanged(currentRealm.SmtpServer, realm.SmtpServer) {
 			return diag.Errorf("%s", realmSMTPPasswordVersionRequired)
 		}
@@ -1907,12 +1924,34 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	err = keycloakClient.UpdateRealm(ctx, realm)
+	// if "realm" changed, Keycloak renames the realm in place
+	renamed := currentRealm.Realm != realm.Realm
+	err = keycloakClient.UpdateRealmByName(ctx, currentRealm.Realm, realm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
+	// the realm has been renamed: record that before anything else can fail
 	setRealmData(data, realm, keycloakVersion)
+
+	if renamed {
+		if keycloakClient.AccessTokenProvided() {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but the access_token cannot be refreshed",
+				Detail:   "Some Keycloak versions only show a renamed realm in full to tokens issued after the rename. If looking up resources by realm_internal_id fails from now on, run Terraform again with a newly issued access_token.",
+			}}
+		}
+
+		// the roles in the access token belong to the old name; get one that matches the renamed realm
+		if err := keycloakClient.Refresh(ctx); err != nil {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but a new access token could not be requested",
+				Detail:   err.Error(),
+			}}
+		}
+	}
 
 	return nil
 }
@@ -1923,5 +1962,14 @@ func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData,
 	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	return diag.FromErr(keycloakClient.DeleteRealm(ctx, data.Id()))
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if keycloak.ErrorIs404(err) {
+		return nil
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return diag.FromErr(keycloakClient.DeleteRealm(ctx, realm.Realm))
 }

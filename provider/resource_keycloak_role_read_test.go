@@ -144,6 +144,9 @@ func TestRoleCompositeRemovalDrift(t *testing.T) {
 			w.WriteHeader(204)
 		case r.URL.Path == "/admin/realms/realm/roles-by-id/parent" && r.Method == http.MethodDelete:
 			w.WriteHeader(204)
+		case r.URL.Path == "/admin/realms/realm" && r.Method == http.MethodGet:
+			// every realm-scoped resource also records the internal id of its realm
+			json.NewEncoder(w).Encode(&keycloak.Realm{Id: "realm-id", Realm: "realm"})
 		default:
 			t.Errorf("unexpected HTTP request: %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
