@@ -116,10 +116,15 @@ func (keycloakClient *KeycloakClient) GetAuthenticationFlowFromAlias(ctx context
 }
 
 func (keycloakClient *KeycloakClient) UpdateAuthenticationFlow(ctx context.Context, authenticationFlow *AuthenticationFlow) error {
-	authenticationFlow.TopLevel = true
-	authenticationFlow.BuiltIn = false
-
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s", authenticationFlow.RealmId, authenticationFlow.Id), authenticationFlow)
+	current, err := keycloakClient.GetAuthenticationFlow(ctx, authenticationFlow.RealmId, authenticationFlow.Id)
+	if err != nil {
+		return err
+	}
+	// Metadata updates must retain the server-owned protection/structure flags.
+	updated := *authenticationFlow
+	updated.TopLevel = current.TopLevel
+	updated.BuiltIn = current.BuiltIn
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s", updated.RealmId, updated.Id), &updated)
 }
 
 func (keycloakClient *KeycloakClient) DeleteAuthenticationFlow(ctx context.Context, realmId, id string) error {

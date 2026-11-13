@@ -22,6 +22,8 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 			StateContext: resourceKeycloakAuthenticationFlowImport,
 		},
 		Schema: map[string]*schema.Schema{
+			"built_in":  {Type: schema.TypeBool, Computed: true},
+			"top_level": {Type: schema.TypeBool, Computed: true},
 			"realm_id": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -35,7 +37,7 @@ func resourceKeycloakAuthenticationFlow() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Computed:      true,
-				ValidateFunc:  validation.StringInSlice([]string{"basic-flow", "client-flow"}, false), //it seems toplevel can only one of these and not 'form-flow'
+				ValidateFunc:  validation.StringInSlice([]string{"basic-flow", "client-flow", "form-flow"}, false), // form-flow is valid for imported nested definitions
 				ConflictsWith: []string{"copy_from"},
 			},
 			"description": {
@@ -76,6 +78,8 @@ func mapFromAuthenticationFlowToData(data *schema.ResourceData, authenticationFl
 	data.Set("alias", authenticationFlow.Alias)
 	data.Set("provider_id", authenticationFlow.ProviderId)
 	data.Set("description", authenticationFlow.Description)
+	data.Set("built_in", authenticationFlow.BuiltIn)
+	data.Set("top_level", authenticationFlow.TopLevel)
 }
 
 func mapFromAuthenticationFlowInfoToData(data *schema.ResourceData, authenticationFlow *keycloak.AuthenticationFlow) {
@@ -105,6 +109,10 @@ func resourceKeycloakAuthenticationFlowCreate(ctx context.Context, data *schema.
 	} else {
 		if _, ok := data.GetOkExists("provider_id"); !ok {
 			authenticationFlow.ProviderId = "basic-flow"
+		}
+
+		if authenticationFlow.ProviderId == "form-flow" {
+			return diag.Errorf("form-flow definitions must be imported or created with keycloak_authentication_subflow")
 		}
 
 		err := keycloakClient.NewAuthenticationFlow(ctx, authenticationFlow)
@@ -143,8 +151,7 @@ func resourceKeycloakAuthenticationFlowUpdate(ctx context.Context, data *schema.
 		return diag.FromErr(err)
 	}
 
-	mapFromAuthenticationFlowToData(data, authenticationFlow)
-	return nil
+	return resourceKeycloakAuthenticationFlowRead(ctx, data, meta)
 }
 
 func resourceKeycloakAuthenticationFlowDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
