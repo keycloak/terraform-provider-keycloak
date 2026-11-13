@@ -455,6 +455,19 @@ func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 	}
 }
 
+type redactRequestBodyKey struct{}
+
+// withRedactedRequestBody returns a context for which request bodies are not written to the debug log,
+// for requests that carry secrets.
+func withRedactedRequestBody(ctx context.Context) context.Context {
+	return context.WithValue(ctx, redactRequestBodyKey{}, true)
+}
+
+func redactRequestBody(ctx context.Context) bool {
+	redact, _ := ctx.Value(redactRequestBodyKey{}).(bool)
+	return redact
+}
+
 /*
 *
 Sends an HTTP request and refreshes credentials on 403 or 401 errors
@@ -478,7 +491,11 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 
 	if body != nil {
 		request.Body = io.NopCloser(bytes.NewReader(body))
-		requestLogArgs["body"] = string(body)
+		if redactRequestBody(ctx) {
+			requestLogArgs["body"] = "<redacted>"
+		} else {
+			requestLogArgs["body"] = string(body)
+		}
 	}
 
 	tflog.Debug(ctx, "Sending request", requestLogArgs)
