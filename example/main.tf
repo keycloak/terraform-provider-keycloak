@@ -265,7 +265,7 @@ resource "keycloak_openid_client_scope" "test_optional_client_scope" {
   consent_screen_text = "hello"
 }
 
-resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
+resource "keycloak_client_scope_assignments" "client_scopes" {
   realm_id  = keycloak_realm.test.id
   client_id = keycloak_openid_client.test_client.id
 
@@ -274,14 +274,10 @@ resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
     "email",
     "roles",
     "web-origins",
+    // assigned by Keycloak 26.1+ when service accounts are enabled
+    "service_account",
     keycloak_openid_client_scope.test_default_client_scope.name,
   ]
-}
-
-resource "keycloak_openid_client_optional_scopes" "optional_client_scopes" {
-  realm_id  = keycloak_realm.test.id
-  client_id = keycloak_openid_client.test_client.id
-
   optional_scopes = [
     "address",
     "phone",

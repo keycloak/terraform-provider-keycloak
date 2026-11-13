@@ -10,10 +10,11 @@ import (
 
 func resourceKeycloakRealmOptionalClientScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakRealmOptionalClientScopesReconcile,
-		ReadContext:   resourceKeycloakRealmOptionalClientScopesRead,
-		DeleteContext: resourceKeycloakRealmOptionalClientScopesDelete,
-		UpdateContext: resourceKeycloakRealmOptionalClientScopesReconcile,
+		DeprecationMessage: "please use keycloak_client_scope_assignments instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakRealmOptionalClientScopesReconcile,
+		ReadContext:        resourceKeycloakRealmOptionalClientScopesRead,
+		DeleteContext:      resourceKeycloakRealmOptionalClientScopesDelete,
+		UpdateContext:      resourceKeycloakRealmOptionalClientScopesReconcile,
 		Importer: &schema.ResourceImporter{
 			// Import id is the realm id (the resource id is the realm id too).
 			StateContext: resourceKeycloakRealmOptionalClientScopesImport,
