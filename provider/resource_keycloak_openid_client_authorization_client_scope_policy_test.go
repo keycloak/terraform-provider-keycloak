@@ -110,6 +110,9 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_openid_client" "test" {
+	# Keycloak scope deletion scans client policies. Destroy the client first
+	# so scope cleanup cannot race with deletion of its authorization policies.
+	depends_on = [keycloak_openid_client_scope.test]
 	client_id                = "%s"
 	realm_id                 = keycloak_realm.realm.id
 	access_type              = "CONFIDENTIAL"
@@ -143,10 +146,12 @@ resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
 
 func testResourceKeycloakOpenidClientAuthorizationClientScopePolicy_multipleClientScopes(clientScopeNames []string, clientId string) string {
 	var (
-		clientScopes        strings.Builder
-		clientScopePolicies strings.Builder
+		clientScopes            strings.Builder
+		clientScopePolicies     strings.Builder
+		clientScopeDependencies []string
 	)
 	for i, clientScopeName := range clientScopeNames {
+		clientScopeDependencies = append(clientScopeDependencies, fmt.Sprintf("keycloak_openid_client_scope.scope_%d", i))
 		clientScopes.WriteString(fmt.Sprintf(`
 resource "keycloak_openid_client_scope" "scope_%d" {
 	realm_id    = keycloak_realm.realm.id
@@ -167,6 +172,8 @@ resource "keycloak_realm" "realm" {
 }
 
 resource "keycloak_openid_client" "test" {
+	# Serialize client destruction before scope cleanup (see the basic fixture).
+	depends_on = [%s]
 	client_id                = "%s"
 	realm_id                 = keycloak_realm.realm.id
 	access_type              = "CONFIDENTIAL"
@@ -189,5 +196,5 @@ resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
 %s
 
 }
-	`, clientId+"-realm", clientId, clientScopes.String(), clientScopePolicies.String())
+	`, clientId+"-realm", strings.Join(clientScopeDependencies, ", "), clientId, clientScopes.String(), clientScopePolicies.String())
 }
