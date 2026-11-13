@@ -41,7 +41,7 @@ resource "keycloak_realm_client_registration_policy" "trusted_hosts" {
 - `realm_id` - (Required) The realm this policy exists in.
 - `provider_id` - (Required) The ID of the policy provider (e.g. `trusted-hosts`, `max-clients`). The referenced provider must already be registered in Keycloak.
 - `sub_type` - (Required) Whether this policy applies to `anonymous` or `authenticated` client registration.
-- `config` - (Optional) A map of provider-specific configuration values.
+- `config` - (Optional) A map of provider-specific configuration values. Omit it to retain observed settings. Remove keys to clear them, or set `config = {}` to clear the entire map. Keycloak still validates required policy properties.
 
 #### Multi-value configuration
 
