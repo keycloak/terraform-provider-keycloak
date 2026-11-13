@@ -33,7 +33,7 @@ resource "keycloak_realm_keystore_rsa_generated" "keystore_rsa_generated" {
 - `name` - (Required) Display name of provider when linked in admin console.
 - `realm_id` - (Required) The realm this keystore exists in.
 - `enabled` - (Optional) When `false`, key is not accessible in this realm. Defaults to `true`.
-- `active` - (Optional) When `false`, key in not used for signing. Defaults to `true`.
+- `active` - (Optional) When `false`, key is not used for signing. Defaults to `true`.
 - `priority` - (Optional) Priority for the provider. Defaults to `0`
 - `algorithm` - (Optional) Intended algorithm for the key. Defaults to `RS256`
 - `key_size` - (Optional) Size for the generated keys. Defaults to `2048`.

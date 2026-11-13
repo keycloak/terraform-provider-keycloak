@@ -440,6 +440,8 @@ func (keycloakClient *KeycloakClient) DetachOpenidClientOptionalScopes(ctx conte
 }
 
 func (f *OpenidClientAttributes) UnmarshalJSON(data []byte) error {
+	// Keycloak treats an omitted use.refresh.tokens attribute as true.
+	f.UseRefreshTokens = true
 	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
 }
 
