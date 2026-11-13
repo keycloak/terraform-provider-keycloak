@@ -65,7 +65,7 @@ type Realm struct {
 	SsoSessionMaxLifespanRememberMe     int    `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
 	OfflineSessionIdleTimeout           int    `json:"offlineSessionIdleTimeout,omitempty"`
 	OfflineSessionMaxLifespan           int    `json:"offlineSessionMaxLifespan,omitempty"`
-	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled,omitempty"`
+	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled"`
 	ClientSessionIdleTimeout            int    `json:"clientSessionIdleTimeout,omitempty"`
 	ClientSessionMaxLifespan            int    `json:"clientSessionMaxLifespan,omitempty"`
 	AccessTokenLifespan                 int    `json:"accessTokenLifespan,omitempty"`
@@ -95,7 +95,7 @@ type Realm struct {
 	BruteForceProtected          bool   `json:"bruteForceProtected"`
 	PermanentLockout             bool   `json:"permanentLockout"`
 	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`       // Strategy to increase wait time
-	MaxTemporaryLockouts         int    `json:"maxTemporaryLockouts,omitempty"`     //Max Temporary Lockouts
+	MaxTemporaryLockouts         *int   `json:"maxTemporaryLockouts,omitempty"`     //Max Temporary Lockouts
 	FailureFactor                int    `json:"failureFactor"`                      //Max Login Failures
 	MaxSecondaryAuthFailures     *int   `json:"maxSecondaryAuthFailures,omitempty"` //Max Secondary Auth Failures (requires Keycloak >= 26.6.0)
 	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
@@ -247,13 +247,37 @@ func (keycloakClient *KeycloakClient) UpdateRealm(ctx context.Context, realm *Re
 // UpdateRealmByName updates the realm that is currently called currentName. When realm.Realm
 // differs from currentName, Keycloak renames the realm in place (its internal id stays the same).
 func (keycloakClient *KeycloakClient) UpdateRealmByName(ctx context.Context, currentName string, realm *Realm) error {
+	// These zero, false, and empty values reset existing realm settings. Keep them explicit
+	// on updates while retaining omitted creation values and server defaults.
+	payload := struct {
+		*Realm
+		SsoSessionIdleTimeoutRememberMe  int    `json:"ssoSessionIdleTimeoutRememberMe"`
+		SsoSessionMaxLifespanRememberMe  int    `json:"ssoSessionMaxLifespanRememberMe"`
+		OfflineSessionMaxLifespanEnabled bool   `json:"offlineSessionMaxLifespanEnabled"`
+		LoginTheme                       string `json:"loginTheme"`
+		AccountTheme                     string `json:"accountTheme"`
+		AdminTheme                       string `json:"adminTheme"`
+		EmailTheme                       string `json:"emailTheme"`
+		OrganizationsEnabled             bool   `json:"organizationsEnabled"`
+	}{
+		Realm:                            realm,
+		SsoSessionIdleTimeoutRememberMe:  realm.SsoSessionIdleTimeoutRememberMe,
+		SsoSessionMaxLifespanRememberMe:  realm.SsoSessionMaxLifespanRememberMe,
+		OfflineSessionMaxLifespanEnabled: realm.OfflineSessionMaxLifespanEnabled,
+		LoginTheme:                       realm.LoginTheme,
+		AccountTheme:                     realm.AccountTheme,
+		AdminTheme:                       realm.AdminTheme,
+		EmailTheme:                       realm.EmailTheme,
+		OrganizationsEnabled:             realm.OrganizationsEnabled,
+	}
+
 	if currentName == realm.Realm {
-		return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), realm)
+		return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), payload)
 	}
 
 	// forget before and after: a timeout may hide that the rename happened anyway
 	keycloakClient.realmCache.forget()
-	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), realm)
+	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), payload)
 	generation := keycloakClient.realmCache.currentGeneration()
 	keycloakClient.realmCache.forget()
 	if err == nil {
