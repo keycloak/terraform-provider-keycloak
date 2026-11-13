@@ -32,7 +32,7 @@ resource "keycloak_realm_keystore_aes_generated" "keystore_aes_generated" {
 - `name` - (Required) Display name of provider when linked in admin console.
 - `realm_id` - (Required) The realm this keystore exists in.
 - `enabled` - (Optional) When `false`, key is not accessible in this realm. Defaults to `true`.
-- `active` - (Optional) When `false`, key in not used for signing. Defaults to `true`.
+- `active` - (Optional) When `false`, key is not used for signing. Defaults to `true`.
 - `priority` - (Optional) Priority for the provider. Defaults to `0`
 - `secret_size` - (Optional) Size in bytes for the generated AES Key. Size 16 is for AES-128, Size 24 for AES-192 and Size 32 for AES-256. WARN: Bigger keys then 128 bits are not allowed on some JDK implementations. Defaults to `16`.
 
