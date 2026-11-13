@@ -31,8 +31,8 @@ Arrays are ordered. Server defaults/omissions must match the captured desired
 representation; a clean import does not certify future arbitrary configuration.
 Updates retain old profile targets until policies switch references, then remove
 obsolete profiles. Only changed collections write. The two endpoints are not
-atomic: an error can leave staged profiles; refresh/retry completes from actual
-server state. Deletion is rejected; explicitly clear arrays, or remove Terraform
+atomic: an error can leave staged profiles. Failed updates can resume after
+refresh; failed initial creation requires the state recovery described below. Deletion is rejected; explicitly clear arrays, or remove Terraform
 ownership without destroying the remote singleton.
 
 ## Import
