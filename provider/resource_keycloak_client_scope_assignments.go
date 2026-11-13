@@ -22,12 +22,11 @@ const (
 )
 
 type clientScopeAssignments struct {
-	clientProtocol   string
-	clientBearerOnly bool
-	defaultScopes    []string
-	optionalScopes   []string
-	scopeIDs         map[string]string
-	scopeProtocols   map[string]string
+	clientProtocol string
+	defaultScopes  []string
+	optionalScopes []string
+	scopeIDs       map[string]string
+	scopeProtocols map[string]string
 }
 
 func resourceKeycloakClientScopeAssignments() *schema.Resource {
@@ -161,10 +160,9 @@ func readClientClientScopeAssignments(ctx context.Context, keycloakClient *keycl
 		protocol = keycloakClientScopeProtocolOpenidConnect
 	}
 	assignments := &clientScopeAssignments{
-		clientProtocol:   protocol,
-		clientBearerOnly: client.BearerOnly,
-		scopeIDs:         make(map[string]string),
-		scopeProtocols:   make(map[string]string),
+		clientProtocol: protocol,
+		scopeIDs:       make(map[string]string),
+		scopeProtocols: make(map[string]string),
 	}
 	switch protocol {
 	case keycloakClientScopeProtocolOpenidConnect:
@@ -422,9 +420,6 @@ func resourceKeycloakClientScopeAssignmentsReconcile(ctx context.Context, data *
 	scopeIDs, err := resolveClientScopeAssignmentIDs(ctx, keycloakClient, realmId, clientId, current, desired)
 	if err != nil {
 		return diag.FromErr(err)
-	}
-	if current.clientProtocol == keycloakClientScopeProtocolOpenidConnect && current.clientBearerOnly && (len(changes.addDefaults) > 0 || len(changes.addOptionals) > 0) {
-		return diag.Errorf("validation error: client with id %s uses access type BEARER-ONLY which does not use scopes", clientId)
 	}
 
 	if err := applyClientScopeAssignmentChanges(ctx, keycloakClient, realmId, clientId, "default", changes.removeDefaults, scopeIDs, false); err != nil {
