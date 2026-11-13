@@ -1280,7 +1280,8 @@ func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Versio
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
 			realm.MaxFailureWaitSeconds = bruteForceDetectionSettings["max_failure_wait_seconds"].(int)
 			realm.MaxDeltaTimeSeconds = bruteForceDetectionSettings["failure_reset_time_seconds"].(int)
-			realm.MaxTemporaryLockouts = bruteForceDetectionSettings["max_temporary_lockouts"].(int)
+			maxTemporaryLockouts := bruteForceDetectionSettings["max_temporary_lockouts"].(int)
+			realm.MaxTemporaryLockouts = &maxTemporaryLockouts
 		} else {
 			setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 		}
@@ -1567,7 +1568,7 @@ func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keyclo
 	realm.MinimumQuickLoginWaitSeconds = 60
 	realm.MaxFailureWaitSeconds = 900
 	realm.MaxDeltaTimeSeconds = 43200
-	realm.MaxTemporaryLockouts = 0
+	realm.MaxTemporaryLockouts = nil
 }
 
 func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
@@ -1794,7 +1795,10 @@ func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *vers
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
 	bruteForceDetectionSettings["max_failure_wait_seconds"] = realm.MaxFailureWaitSeconds
 	bruteForceDetectionSettings["failure_reset_time_seconds"] = realm.MaxDeltaTimeSeconds
-	bruteForceDetectionSettings["max_temporary_lockouts"] = realm.MaxTemporaryLockouts
+	bruteForceDetectionSettings["max_temporary_lockouts"] = 0
+	if realm.MaxTemporaryLockouts != nil {
+		bruteForceDetectionSettings["max_temporary_lockouts"] = *realm.MaxTemporaryLockouts
+	}
 	return bruteForceDetectionSettings
 }
 
