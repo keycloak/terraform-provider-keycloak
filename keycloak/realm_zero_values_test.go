@@ -13,18 +13,20 @@ import (
 
 func TestRealmZeroValueUpdates(t *testing.T) {
 	for _, tc := range []struct {
-		name          string
-		serverVersion string
-		create        bool
-		idle, maximum int
-		enabled       bool
+		name                 string
+		serverVersion        string
+		create               bool
+		idle, maximum        int
+		enabled              bool
+		omitAdminPermissions bool
 	}{
 		{name: "creation keeps omitted server defaults", create: true},
 		{name: "update resets zero and false values"},
 		{name: "update retains positive and true values", idle: 123, maximum: 456, enabled: true},
-		{name: "26.0 update omits unsupported false admin permissions", serverVersion: "26.0.8"},
-		{name: "26.0 preserves explicit true validation", serverVersion: "26.0.8", enabled: true},
-		{name: "26.1 update resets admin permissions", serverVersion: "26.1.0"},
+		{name: "26.0 update omits unsupported false admin permissions", serverVersion: "26.0.8", omitAdminPermissions: true},
+		{name: "26.1 update omits unsupported false admin permissions", serverVersion: "26.1.0", omitAdminPermissions: true},
+		{name: "26.2 update resets admin permissions", serverVersion: "26.2.0"},
+		{name: "26.2 update enables admin permissions", serverVersion: "26.2.0", enabled: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			realm := &Realm{Realm: "fixture", Enabled: true, SslRequired: "all", AccessTokenLifespan: 300,
@@ -36,7 +38,9 @@ func TestRealmZeroValueUpdates(t *testing.T) {
 			}
 			realm.LoginTheme, realm.AccountTheme, realm.AdminTheme, realm.EmailTheme = theme, theme, theme, theme
 			realm.OrganizationsEnabled = tc.enabled
-			if !tc.create && (tc.serverVersion != "26.0.8" || tc.enabled) {
+			// Match the provider resolver's input: nil below 26.2, explicit false/true
+			// on supported versions. TestResolveAdminPermissionsEnabled covers that gate.
+			if !tc.create && !tc.omitAdminPermissions {
 				realm.AdminPermissionsEnabled = &tc.enabled
 			}
 			before, err := json.Marshal(realm)
@@ -67,7 +71,7 @@ func TestRealmZeroValueUpdates(t *testing.T) {
 			if serverVersion == "" {
 				serverVersion = "26.8.1"
 			}
-			if serverVersion == "26.0.8" && !tc.enabled {
+			if tc.omitAdminPermissions {
 				delete(want, "adminPermissionsEnabled")
 			}
 			writes := 0
