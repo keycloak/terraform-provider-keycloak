@@ -492,7 +492,6 @@ func TestKeycloakClientScopeAssignmentsValidateBeforeMutation(t *testing.T) {
 		name         string
 		desiredScope string
 		scopeList    string
-		bearerOnly   bool
 		wantMessage  string
 	}{
 		{
@@ -507,13 +506,6 @@ func TestKeycloakClientScopeAssignmentsValidateBeforeMutation(t *testing.T) {
 			scopeList:    `[{"id":"scope-id","name":"wrong-protocol","protocol":"saml"}]`,
 			wantMessage:  `client scope "wrong-protocol" uses protocol "saml"`,
 		},
-		{
-			name:         "bearer-only client",
-			desiredScope: "scope",
-			scopeList:    `[{"id":"scope-id","name":"scope","protocol":"openid-connect"}]`,
-			bearerOnly:   true,
-			wantMessage:  "BEARER-ONLY",
-		},
 	}
 
 	for _, test := range tests {
@@ -525,7 +517,7 @@ func TestKeycloakClientScopeAssignmentsValidateBeforeMutation(t *testing.T) {
 				case "GET /admin/serverinfo":
 					fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
 				case "GET /admin/realms/realm/clients/client":
-					fmt.Fprintf(w, `{"id":"client","protocol":"openid-connect","bearerOnly":%t}`, test.bearerOnly)
+					fmt.Fprint(w, `{"id":"client","protocol":"openid-connect"}`)
 				case "GET /admin/realms/realm/clients/client/default-client-scopes":
 					fmt.Fprint(w, `[{"id":"old-id","name":"old","protocol":"openid-connect"}]`)
 				case "GET /admin/realms/realm/clients/client/optional-client-scopes":
@@ -567,6 +559,61 @@ func TestKeycloakClientScopeAssignmentsValidateBeforeMutation(t *testing.T) {
 				t.Fatalf("validation failure retained an unmodified target: %q", data.Id())
 			}
 		})
+	}
+}
+
+func TestKeycloakClientScopeAssignmentsReconcileBearerOnlyClient(t *testing.T) {
+	defaults := []map[string]string{{"id": "old-id", "name": "old", "protocol": "openid-connect"}}
+	var mutations []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method + " " + r.URL.Path {
+		case "GET /admin/serverinfo":
+			fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
+		case "GET /admin/realms/realm/clients/client":
+			fmt.Fprint(w, `{"id":"client","protocol":"openid-connect","bearerOnly":true}`)
+		case "GET /admin/realms/realm/clients/client/default-client-scopes":
+			if err := json.NewEncoder(w).Encode(defaults); err != nil {
+				t.Error(err)
+			}
+		case "GET /admin/realms/realm/clients/client/optional-client-scopes":
+			fmt.Fprint(w, `[]`)
+		case "GET /admin/realms/realm/client-scopes":
+			fmt.Fprint(w, `[{"id":"old-id","name":"old","protocol":"openid-connect"},{"id":"scope-id","name":"scope","protocol":"openid-connect"}]`)
+		case "DELETE /admin/realms/realm/clients/client/default-client-scopes/old-id":
+			mutations = append(mutations, "DELETE old")
+			defaults = nil
+			w.WriteHeader(http.StatusNoContent)
+		case "PUT /admin/realms/realm/clients/client/default-client-scopes/scope-id":
+			mutations = append(mutations, "PUT scope")
+			defaults = append(defaults, map[string]string{"id": "scope-id", "name": "scope", "protocol": "openid-connect"})
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client, err := keycloak.NewKeycloakClient(context.Background(), server.URL, "", "", "", "", "master", "", "", "test-token", "", "", "", "", false, 10, "", false, "", "", "", false, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := schema.TestResourceDataRaw(t, resourceKeycloakClientScopeAssignments().Schema, map[string]interface{}{
+		"realm_id": "realm", "client_id": "client",
+		"default_scopes":  []interface{}{"scope"},
+		"optional_scopes": []interface{}{},
+	})
+
+	diags := resourceKeycloakClientScopeAssignmentsReconcile(context.Background(), data, client)
+	if diags.HasError() {
+		t.Fatalf("unexpected reconciliation error: %v", diags)
+	}
+	if got, want := scopeNamesFromSet(data.Get("default_scopes")), []string{"scope"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got default scopes %v, want %v", got, want)
+	}
+	if want := []string{"DELETE old", "PUT scope"}; !reflect.DeepEqual(mutations, want) {
+		t.Fatalf("got mutations %v, want %v", mutations, want)
 	}
 }
 
@@ -643,6 +690,15 @@ resource "keycloak_client_scope_assignments" "assignments" {
 }
 
 func TestAccKeycloakClientScopeAssignments_openidDefaultOptionalMove(t *testing.T) {
+	testAccKeycloakClientScopeAssignmentsOpenidDefaultOptionalMove(t, "PUBLIC")
+}
+
+func TestAccKeycloakClientScopeAssignments_bearerOnlyDefaultOptionalMove(t *testing.T) {
+	testAccKeycloakClientScopeAssignmentsOpenidDefaultOptionalMove(t, "BEARER-ONLY")
+}
+
+func testAccKeycloakClientScopeAssignmentsOpenidDefaultOptionalMove(t *testing.T, accessType string) {
+	t.Helper()
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 	customDefault := acctest.RandomWithPrefix("tf-acc")
@@ -658,7 +714,7 @@ data "keycloak_realm" "realm" {
 resource "keycloak_openid_client" "client" {
 	realm_id    = data.keycloak_realm.realm.id
 	client_id   = %q
-	access_type = "PUBLIC"
+	access_type = %q
 }
 
 resource "keycloak_openid_client_scope" "custom_default" {
@@ -678,7 +734,7 @@ resource "keycloak_client_scope_assignments" "assignments" {
 	optional_scopes = %s
 	depends_on      = [keycloak_openid_client_scope.custom_default, keycloak_openid_client_scope.custom_optional]
 }
-`, testAccRealm.Realm, client, customDefault, customOptional, arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
+`, testAccRealm.Realm, client, accessType, customDefault, customOptional, arrayOfStringsForTerraformResource(defaultScopes), arrayOfStringsForTerraformResource(optionalScopes))
 	}
 
 	resource.Test(t, resource.TestCase{
