@@ -390,6 +390,12 @@ func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
 
 func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 	return customdiff.All(
+		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return d.HasChange("service_accounts_enabled")
+		}),
+		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return !d.Get("suppress_client_secret").(bool) && d.HasChange("client_secret_regenerate_when_changed")
+		}),
 		func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 			if !d.Get("suppress_client_secret").(bool) {
 				return nil
@@ -402,14 +408,11 @@ func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 			if secret.IsKnown() && !secret.IsNull() && secret.AsString() != "" {
 				return fmt.Errorf("suppress_client_secret cannot be combined with client_secret; use client_secret_wo for explicit secret updates")
 			}
+			if secret.IsKnown() {
+				return d.SetNew("client_secret", "")
+			}
 			return nil
 		},
-		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
-			return d.HasChange("service_accounts_enabled")
-		}),
-		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
-			return d.HasChange("client_secret_regenerate_when_changed")
-		}),
 	)
 }
 
@@ -520,6 +523,10 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		openidClient.Attributes.ConsentScreenText = consentScreenText.(string)
 	}
 
+	// Suppression must also discard legacy computed secrets when refresh is skipped.
+	if data.Get("suppress_client_secret").(bool) {
+		openidClient.ClientSecret = ""
+	}
 	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
 		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
 		if clientSecretWriteOnlyDiags.HasError() {

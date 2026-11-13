@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
@@ -56,6 +57,37 @@ func TestClientSecretSuppressionClearsUnreadableState(t *testing.T) {
 		}
 		if data.Get("client_secret") != want {
 			t.Fatalf("suppress=%t did not preserve upstream 403 semantics: got %q", suppress, data.Get("client_secret"))
+		}
+	}
+}
+
+func TestSuppressionPlanClearsStaleComputedSecret(t *testing.T) {
+	for _, plaintext := range []interface{}{nil, ""} {
+		config := map[string]interface{}{"realm_id": "fixture", "client_id": "client", "access_type": "CONFIDENTIAL", "suppress_client_secret": true}
+		if plaintext != nil {
+			config["client_secret"] = plaintext
+		}
+		state := &sdkterraform.InstanceState{ID: "client", Attributes: map[string]string{"realm_id": "fixture", "client_id": "client", "access_type": "CONFIDENTIAL", "client_secret": "stale-secret", "suppress_client_secret": "false"}}
+		rawSecret := cty.NullVal(cty.String)
+		if plaintext != nil {
+			rawSecret = cty.StringVal(plaintext.(string))
+		}
+		state.RawConfig = cty.ObjectVal(map[string]cty.Value{"client_secret": rawSecret})
+		diff, err := resourceKeycloakOpenidClient().Diff(context.Background(), state, sdkterraform.NewResourceConfigRaw(config), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		secret := diff.Attributes["client_secret"]
+		if secret == nil || secret.New != "" {
+			t.Fatalf("stale secret retained in plan: %#v", secret)
+		}
+		data := schema.TestResourceDataRaw(t, resourceKeycloakOpenidClient().Schema, map[string]interface{}{"realm_id": "fixture", "client_id": "client", "client_secret": "stale-secret", "suppress_client_secret": true})
+		client, err := getOpenidClientFromData(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if client.ClientSecret != "" {
+			t.Fatal("stale computed secret included in update payload")
 		}
 	}
 }
