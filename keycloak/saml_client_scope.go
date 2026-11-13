@@ -113,7 +113,15 @@ func IncludeSamlClientScopesMatchingNames(scopeNames []string) SamlClientScopeFi
 }
 
 func (f *SamlClientScopeAttributes) UnmarshalJSON(data []byte) error {
-	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
+	if err := unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig); err != nil {
+		return err
+	}
+	attributes, err := rawClientScopeAttributes(data)
+	if err != nil {
+		return err
+	}
+	f.DisplayOnConsentScreen = clientScopeBoolAttribute(attributes, "display.on.consent.screen")
+	return nil
 }
 
 func (f *SamlClientScopeAttributes) MarshalJSON() ([]byte, error) {
