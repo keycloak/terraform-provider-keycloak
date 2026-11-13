@@ -111,6 +111,12 @@ func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 		},
+		"suppress_client_secret": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Do not retrieve or store the computed client secret during resource reads.",
+		},
 		"client_authenticator_type": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -388,8 +394,25 @@ func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
 			return d.HasChange("service_accounts_enabled")
 		}),
 		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
-			return d.HasChange("client_secret_regenerate_when_changed")
+			return !d.Get("suppress_client_secret").(bool) && d.HasChange("client_secret_regenerate_when_changed")
 		}),
+		func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			if !d.Get("suppress_client_secret").(bool) {
+				return nil
+			}
+			config := d.GetRawConfig()
+			if config.IsNull() {
+				return nil
+			}
+			secret := config.GetAttr("client_secret")
+			if secret.IsKnown() && !secret.IsNull() && secret.AsString() != "" {
+				return fmt.Errorf("suppress_client_secret cannot be combined with client_secret; use client_secret_wo for explicit secret updates")
+			}
+			if secret.IsKnown() {
+				return d.SetNew("client_secret", "")
+			}
+			return nil
+		},
 	)
 }
 
@@ -500,6 +523,10 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		openidClient.Attributes.ConsentScreenText = consentScreenText.(string)
 	}
 
+	// Suppression must also discard legacy computed secrets when refresh is skipped.
+	if data.Get("suppress_client_secret").(bool) {
+		openidClient.ClientSecret = ""
+	}
 	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
 		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
 		if clientSecretWriteOnlyDiags.HasError() {
@@ -646,7 +673,14 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 		data.Set("service_account_user_id", "")
 	}
 
-	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+	// Persist the default for legacy resource state; data sources lack this option.
+	suppressClientSecret, hasSuppression := data.Get("suppress_client_secret").(bool)
+	if hasSuppression {
+		data.Set("suppress_client_secret", suppressClientSecret)
+	}
+	if suppressClientSecret {
+		data.Set("client_secret", "")
+	} else if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
 		data.Set("client_secret_wo_version", v.(string))
 	} else if !client.ClientSecretUnreadable {
 		data.Set("client_secret", client.ClientSecret)
@@ -723,7 +757,13 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 	realmId := data.Get("realm_id").(string)
 	id := data.Id()
 
-	client, err := keycloakClient.GetOpenidClient(ctx, realmId, id)
+	var client *keycloak.OpenidClient
+	var err error
+	if data.Get("suppress_client_secret").(bool) {
+		client, err = keycloakClient.GetOpenidClientWithoutSecret(ctx, realmId, id)
+	} else {
+		client, err = keycloakClient.GetOpenidClient(ctx, realmId, id)
+	}
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
