@@ -1977,9 +1977,7 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion, true)
-
-	return nil
+	return resourceKeycloakRealmRead(ctx, data, meta)
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -718,6 +718,9 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 			return diag.FromErr(err)
 		}
 
+		// Only configuration owns these optional fields, including explicit resets.
+		existingClient.SurrogateAuthRequired = nil
+		existingClient.NodeReRegistrationTimeout = nil
 		if err = mergo.Merge(client, existingClient); err != nil {
 			return diag.FromErr(err)
 		}
