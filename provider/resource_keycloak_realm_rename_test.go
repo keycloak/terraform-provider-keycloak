@@ -624,7 +624,7 @@ resource "keycloak_realm" "second" {
 	})
 }
 
-// Keycloak 26.0 does not show a realm to a token that was issued before the realm was created. A realm uuid
+// Keycloak 26.0 does not show a realm to a token that was issued before the realm was created. A realm internal id
 // that cannot be found is retried with a new token.
 func TestAccKeycloakRealm_uuidOfRealmCreatedOutsideTerraform(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")

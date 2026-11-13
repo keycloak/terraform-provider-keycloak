@@ -128,7 +128,7 @@ func resolveRealmIdFromInternalId(ctx context.Context, keycloakClient *keycloak.
 	}
 
 	// The stored name is only a hint to avoid listing the realms. It is never used without checking that it
-	// still belongs to this uuid: after a rename the old name may belong to an unrelated realm.
+	// still belongs to this internal id: after a rename the old name may belong to an unrelated realm.
 	realmName, err := keycloakClient.GetRealmNameByInternalId(ctx, realmInternalId, data.Get(realmField).(string))
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func realmNameOrIdPrefix(data *schema.ResourceData, idPrefix string) string {
 
 // withRealmInternalIdDiff guards the move from realm_id to realm_internal_id on an existing resource. When the
 // state has no realm_internal_id (Keycloak hides realm ids from accounts without the view-realm role), the
-// configured uuid looks like a different realm and would replace the resource. If it resolves to
+// configured internal id looks like a different realm and would replace the resource. If it resolves to
 // the realm the resource is already in, nothing changes; if it cannot be resolved, fail instead of
 // replacing something that may hold data.
 func withRealmInternalIdDiff(realmField string, next schema.CustomizeDiffFunc) schema.CustomizeDiffFunc {

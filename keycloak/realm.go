@@ -366,6 +366,7 @@ func (c *realmCache) forget() {
 // addresses realms by name, so the realms are searched for the id. The names we expect it to have (knownName, the
 // name last seen in state, and what this client remembers) are tried first, but only an id that Keycloak confirms
 // counts: a name can be reused by another realm after a rename. If that fails the realms are listed.
+// A realm missing from the list is only a 404 if the list can be complete (see canListAllRealms), else an error.
 func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Context, uuid string, knownName string) (string, error) {
 	generation := keycloakClient.realmCache.currentGeneration()
 
