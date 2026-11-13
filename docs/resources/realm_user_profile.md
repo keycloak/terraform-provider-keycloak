@@ -129,10 +129,6 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
 ## Import
 
-This resource currently does not support importing.
-
-## Import
-
 Import the existing realm user profile using its realm ID. Import reads the
 profile without changing its attributes, validators, groups or permissions.
 

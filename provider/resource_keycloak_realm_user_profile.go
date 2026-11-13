@@ -555,7 +555,7 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 // The profile is a realm singleton. Import reads it without invoking its PUT-based creation path.
 func resourceKeycloakRealmUserProfileImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	realmId := data.Id()
-	if realmId == "" || strings.Contains(realmId, "/") {
+	if realmId == "" || strings.ContainsAny(realmId, "/?#") {
 		return nil, fmt.Errorf("invalid import format: expected realmId")
 	}
 	if err := data.Set("realm_id", realmId); err != nil {

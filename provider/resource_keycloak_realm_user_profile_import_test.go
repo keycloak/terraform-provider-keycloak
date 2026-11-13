@@ -42,6 +42,8 @@ func TestRealmUserProfileImportReadOnly(t *testing.T) {
 		{"existing", "fixture", 200, true}, {"missing", "fixture", 404, false},
 		{"forbidden", "fixture", 403, false}, {"empty", "", 200, false},
 		{"malformed", "fixture/profile", 200, false},
+		{"query", "fixture?", 200, false},
+		{"fragment", "fixture#", 200, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reads := 0
@@ -78,7 +80,7 @@ func TestRealmUserProfileImportReadOnly(t *testing.T) {
 					t.Fatalf("incomplete import state: %#v", data.State())
 				}
 			}
-			if tc.id == "" || tc.id == "fixture/profile" {
+			if tc.id == "" || tc.id == "fixture/profile" || tc.id == "fixture?" || tc.id == "fixture#" {
 				if reads != 0 {
 					t.Fatal("invalid ID made an HTTP request")
 				}
