@@ -29,7 +29,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_basic(t *testing.T) {
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAlias, configProviderOne),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakAuthenticationExecutionConfigExists("keycloak_authentication_execution_config.config", &config1),
-					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", testAccRealm.Realm),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", flowAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "alias", configAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.%", "1"),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.defaultProvider", configProviderOne),
@@ -39,7 +39,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_basic(t *testing.T) {
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAlias, configProviderTwo),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakAuthenticationExecutionConfigExists("keycloak_authentication_execution_config.config", &config2),
-					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", testAccRealm.Realm),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", flowAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "alias", configAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.%", "1"),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.defaultProvider", configProviderTwo),
@@ -69,7 +69,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_updateForcesNew(t *testing.T) 
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAliasOne, configProvider),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakAuthenticationExecutionConfigExists("keycloak_authentication_execution_config.config", &config1),
-					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", testAccRealm.Realm),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", flowAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "alias", configAliasOne),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.%", "1"),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.defaultProvider", configProvider),
@@ -79,7 +79,7 @@ func TestAccKeycloakAuthenticationExecutionConfig_updateForcesNew(t *testing.T) 
 				Config: testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAliasTwo, configProvider),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakAuthenticationExecutionConfigExists("keycloak_authentication_execution_config.config", &config2),
-					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", testAccRealm.Realm),
+					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "realm_id", flowAlias),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "alias", configAliasTwo),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.%", "1"),
 					resource.TestCheckResourceAttr("keycloak_authentication_execution_config.config", "config.defaultProvider", configProvider),
@@ -184,31 +184,34 @@ func testAccCheckKeycloakAuthenticationExecutionConfigForceNew(old, new *keycloa
 	}
 }
 
+// Use a dedicated realm per test: Keycloak 26.0 config deletion scans all flows
+// in the realm and can fail if a parallel test deletes one during that scan.
 func testAccKeycloakAuthenticationExecutionConfig(flowAlias, configAlias, configProvider string) string {
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
+resource "keycloak_realm" "realm" {
 	realm = "%s"
+	enabled = true
 }
 
 resource "keycloak_authentication_flow" "flow" {
-	realm_id = data.keycloak_realm.realm.id
+	realm_id = keycloak_realm.realm.id
 	alias    = "%s"
 }
 
 resource "keycloak_authentication_execution" "execution" {
-	realm_id          = data.keycloak_realm.realm.id
+	realm_id          = keycloak_realm.realm.id
 	parent_flow_alias = keycloak_authentication_flow.flow.alias
 	authenticator     = "identity-provider-redirector"
 }
 
 resource "keycloak_authentication_execution_config" "config" {
-	realm_id     = data.keycloak_realm.realm.id
+	realm_id     = keycloak_realm.realm.id
 	execution_id = keycloak_authentication_execution.execution.id
 	alias        = "%s"
 	config = {
 		defaultProvider = "%s"
 	}
-}`, testAccRealm.Realm, flowAlias, configAlias, configProvider)
+}`, flowAlias, flowAlias, configAlias, configProvider)
 }
 
 // Keycloak >= 26.6.7 / 26.7.3 returns secret config properties masked as "**********".
@@ -272,17 +275,18 @@ func testAccCheckKeycloakAuthenticationExecutionConfigSecretMasked(resourceName,
 
 func testAccKeycloakAuthenticationExecutionConfig_recaptcha(flowAlias, configAlias, secret string) string {
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
+resource "keycloak_realm" "realm" {
 	realm = "%s"
+	enabled = true
 }
 
 resource "keycloak_authentication_flow" "flow" {
-	realm_id = data.keycloak_realm.realm.id
+	realm_id = keycloak_realm.realm.id
 	alias    = "%s"
 }
 
 resource "keycloak_authentication_subflow" "form" {
-	realm_id          = data.keycloak_realm.realm.id
+	realm_id          = keycloak_realm.realm.id
 	parent_flow_alias = keycloak_authentication_flow.flow.alias
 	alias             = "%s-form"
 	provider_id       = "form-flow"
@@ -291,19 +295,19 @@ resource "keycloak_authentication_subflow" "form" {
 }
 
 resource "keycloak_authentication_execution" "execution" {
-	realm_id          = data.keycloak_realm.realm.id
+	realm_id          = keycloak_realm.realm.id
 	parent_flow_alias = keycloak_authentication_subflow.form.alias
 	authenticator     = "registration-recaptcha-action"
 	requirement       = "REQUIRED"
 }
 
 resource "keycloak_authentication_execution_config" "config" {
-	realm_id     = data.keycloak_realm.realm.id
+	realm_id     = keycloak_realm.realm.id
 	execution_id = keycloak_authentication_execution.execution.id
 	alias        = "%s"
 	config = {
 		"site.key"   = "site-key"
 		"secret.key" = "%s"
 	}
-}`, testAccRealm.Realm, flowAlias, flowAlias, configAlias, secret)
+}`, flowAlias, flowAlias, flowAlias, configAlias, secret)
 }
