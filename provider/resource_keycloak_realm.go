@@ -1869,7 +1869,7 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
@@ -1904,13 +1904,15 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	currentRealm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
 		// Keycloak only preserves a masked password while the SMTP destination is
 		// unchanged. Check the server too, in case it drifted after planning.
-		currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
-		if err != nil {
-			return diag.FromErr(err)
-		}
 		if !realmSMTPDestinationUnchanged(currentRealm.SmtpServer, realm.SmtpServer) {
 			return diag.Errorf("%s", realmSMTPPasswordVersionRequired)
 		}
@@ -1922,9 +1924,9 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	// the resource id is the current realm name; if "realm" changed, Keycloak renames the realm in place
-	renamed := data.Id() != realm.Realm
-	err = keycloakClient.UpdateRealmByName(ctx, data.Id(), realm)
+	// if "realm" changed, Keycloak renames the realm in place
+	renamed := currentRealm.Realm != realm.Realm
+	err = keycloakClient.UpdateRealmByName(ctx, currentRealm.Realm, realm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1960,5 +1962,14 @@ func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData,
 	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	return diag.FromErr(keycloakClient.DeleteRealm(ctx, data.Id()))
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if keycloak.ErrorIs404(err) {
+		return nil
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return diag.FromErr(keycloakClient.DeleteRealm(ctx, realm.Realm))
 }

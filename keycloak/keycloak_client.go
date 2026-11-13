@@ -352,7 +352,10 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 
 	defer refreshTokenResponse.Body.Close()
 
-	body, _ := io.ReadAll(refreshTokenResponse.Body)
+	body, err := io.ReadAll(refreshTokenResponse.Body)
+	if err != nil {
+		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint: %w", err)
+	}
 
 	tflog.Debug(ctx, "Refresh response", map[string]interface{}{
 		"response": string(body),
@@ -375,8 +378,8 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint (%s): %w; response: %s", refreshTokenResponse.Status, err, responseSnippet(body))
 	}
-	if clientCredentials.AccessToken == "" {
-		return fmt.Errorf("error refreshing credentials: the token endpoint (%s) did not return an access token", refreshTokenResponse.Status)
+	if strings.TrimSpace(clientCredentials.AccessToken) == "" || strings.TrimSpace(clientCredentials.TokenType) == "" {
+		return fmt.Errorf("error refreshing credentials: the token endpoint (%s) did not return an access token and token type", refreshTokenResponse.Status)
 	}
 
 	keycloakClient.setTokens(&clientCredentials)
@@ -475,32 +478,6 @@ func (keycloakClient *KeycloakClient) setTokens(tokens *ClientCredentials) {
 // cannot be refreshed.
 func (keycloakClient *KeycloakClient) AccessTokenProvided() bool {
 	return keycloakClient.accessTokenProvided
-}
-
-// canListAllRealms reports whether the list of realms can be taken as complete. Keycloak leaves out the realms an
-// account may not see, without saying so, so the list is only complete for an account with the admin role of the
-// master realm.
-func (keycloakClient *KeycloakClient) canListAllRealms() bool {
-	if keycloakClient.realm != "master" {
-		return false
-	}
-
-	_, accessToken := keycloakClient.tokenTypeAndAccessToken()
-
-	claims := jwt.MapClaims{}
-	if _, _, err := jwt.NewParser().ParseUnverified(accessToken, claims); err != nil {
-		return false
-	}
-
-	realmAccess, _ := claims["realm_access"].(map[string]interface{})
-	roles, _ := realmAccess["roles"].([]interface{})
-	for _, role := range roles {
-		if role == "admin" {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (keycloakClient *KeycloakClient) tokenTypeAndAccessToken() (string, string) {

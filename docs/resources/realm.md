@@ -327,9 +327,6 @@ that role (the `realm-management` client role of the realm) before using `realm_
 Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_internal_id` fail with that error until the
 role is granted again: the provider will not guess a realm from a name that may have been reused.
 
-If a realm is deleted outside Terraform, the provider only recognises that for an account with the `admin` role of the
-`master` realm. Other accounts get an error, because Keycloak leaves out realms they may not see; use `terraform state rm`.
-
 Things to know about renaming:
 
 - A realm keeps its internal id when it is renamed, and the name of a renamed realm can be reused by a new realm. The

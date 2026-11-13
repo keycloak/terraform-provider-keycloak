@@ -1,7 +1,6 @@
 package keycloak
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -85,23 +84,8 @@ type fakeRealms struct {
 	forbidden map[string]bool
 	// when set, the token endpoint fails
 	tokenFails bool
-	// when set, the account does not have the admin role of the master realm, so its realm list may be incomplete
-	notAdmin bool
 
 	requests atomic.Int32
-}
-
-// testAccessToken is an unsigned token with the given realm roles, which is all that is read from it.
-func testAccessToken(roles ...string) string {
-	encode := func(value interface{}) string {
-		encoded, _ := json.Marshal(value)
-
-		return base64.RawURLEncoding.EncodeToString(encoded)
-	}
-
-	return encode(map[string]string{"alg": "HS256", "typ": "JWT"}) + "." +
-		encode(map[string]interface{}{"realm_access": map[string][]string{"roles": roles}}) + "." +
-		base64.RawURLEncoding.EncodeToString([]byte("signature"))
 }
 
 type fakeRealm struct {
@@ -149,15 +133,10 @@ func (f *fakeRealms) client(t *testing.T) *KeycloakClient {
 	}))
 	t.Cleanup(server.Close)
 
-	accessToken := testAccessToken("admin")
-	if f.notAdmin {
-		accessToken = testAccessToken("view-realm")
-	}
-
 	return &KeycloakClient{
 		baseUrl: server.URL, authUrl: server.URL, realm: "master", httpClient: server.Client(), initialLogin: true,
 		accessTokenProvided: !f.tokenFails,
-		clientCredentials:   &ClientCredentials{AccessToken: accessToken, TokenType: "Bearer", GrantType: "client_credentials", ClientId: "c", ClientSecret: "s"},
+		clientCredentials:   &ClientCredentials{AccessToken: "test", TokenType: "Bearer", GrantType: "client_credentials", ClientId: "c", ClientSecret: "s"},
 	}
 }
 
@@ -320,17 +299,42 @@ func TestRefreshExplainsAnUnreadableTokenResponse(t *testing.T) {
 	}
 }
 
-// A realm that is not in the list may have been renamed to a name this account cannot read.
-func TestGetRealmNameByInternalIdDoesNotCallARealmGoneWhenTheListMayBeIncomplete(t *testing.T) {
-	fake := &fakeRealms{realms: []fakeRealm{{Realm: "other", Id: "u2"}}, notAdmin: true}
+// Realm u1 was renamed from a to b, and another realm (u2) took the name a.
+func TestGetRealmByInternalIdFollowsTheRealmWhenItsNameIsReused(t *testing.T) {
+	fake := &fakeRealms{realms: []fakeRealm{{Realm: "a", Id: "u2"}, {Realm: "b", Id: "u1"}}}
 	client := fake.client(t)
 
-	_, err := client.GetRealmNameByInternalId(t.Context(), "u1", "a")
-	if err == nil || ErrorIs404(err) {
-		t.Fatalf("err = %v, want an error that is not a 404", err)
+	realm, err := client.GetRealmByInternalId(t.Context(), "u1", "a")
+	if err != nil || realm.Realm != "b" || realm.Id != "u1" {
+		t.Fatalf("realm = %+v, err = %v", realm, err)
 	}
-	if !strings.Contains(err.Error(), "deleted or renamed") {
-		t.Errorf("the error does not explain itself: %v", err)
+}
+
+func TestGetRealmByInternalIdTakesTheRealmByNameWhenItCannotBeChecked(t *testing.T) {
+	fake := &fakeRealms{realms: []fakeRealm{{Realm: "a", Id: "u1"}, {Realm: "hidden"}}}
+	client := fake.client(t)
+
+	for name, test := range map[string]struct{ internalId, name string }{
+		"no internal id in the state":    {"", "a"},
+		"internal id that matches":       {"u1", "a"},
+		"realm whose id is not shown":    {"u9", "hidden"},
+		"realm whose id is not shown, 2": {"", "hidden"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			realm, err := client.GetRealmByInternalId(t.Context(), test.internalId, test.name)
+			if err != nil || realm.Realm != test.name {
+				t.Fatalf("realm = %+v, err = %v", realm, err)
+			}
+		})
+	}
+}
+
+func TestGetRealmByInternalIdReportsADeletedRealmAsNotFound(t *testing.T) {
+	fake := &fakeRealms{realms: []fakeRealm{{Realm: "other", Id: "u2"}}}
+	client := fake.client(t)
+
+	if _, err := client.GetRealmByInternalId(t.Context(), "u1", "a"); !ErrorIs404(err) {
+		t.Fatalf("err = %v", err)
 	}
 }
 
@@ -343,6 +347,7 @@ func TestRefreshKeepsTheTokenWhenTheTokenEndpointFails(t *testing.T) {
 		"error answer":        {http.StatusServiceUnavailable, `{"error":"temporarily_unavailable"}`},
 		"unauthorized answer": {http.StatusUnauthorized, `{"error":"invalid_client"}`},
 		"no access token":     {http.StatusOK, `{"token_type":"Bearer"}`},
+		"no token type":       {http.StatusOK, `{"access_token":"canary"}`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -387,6 +392,30 @@ func TestGetErrorLeavesTheResponseOut(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "/realms/a") {
 		t.Errorf("the error does not name the path: %v", err)
+	}
+}
+
+func TestClientSecretDecodeErrorDoesNotDiscloseResponseBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/client-secret") {
+			_, _ = w.Write([]byte(`{"type":42,"value":"secret-regression-canary"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"client-id","clientId":"test-client"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	client := &KeycloakClient{
+		baseUrl: server.URL, httpClient: server.Client(), initialLogin: true,
+		clientCredentials: &ClientCredentials{AccessToken: "test", TokenType: "Bearer"},
+	}
+
+	_, err := client.GetOpenidClient(t.Context(), "realm", "client-id")
+	if err == nil || !strings.Contains(err.Error(), "/client-secret") {
+		t.Fatalf("expected a decoding error that names the path, got %v", err)
+	}
+	if strings.Contains(err.Error(), "secret-regression-canary") {
+		t.Fatalf("the response body ended up in the error: %v", err)
 	}
 }
 

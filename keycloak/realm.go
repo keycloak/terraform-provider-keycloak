@@ -218,6 +218,27 @@ func (keycloakClient *KeycloakClient) GetRealm(ctx context.Context, name string)
 	return &realm, nil
 }
 
+// GetRealmByInternalId reads the realm that has the given internal id. knownName is the name the realm had when it
+// was last seen: if another realm has that name now, the realm is searched for by its id. An empty internal id (an
+// import, or old state), or an id that Keycloak does not show to this account, cannot be checked, so the realm is
+// taken by name.
+func (keycloakClient *KeycloakClient) GetRealmByInternalId(ctx context.Context, internalId, knownName string) (*Realm, error) {
+	realm, err := keycloakClient.GetRealm(ctx, knownName)
+	if err == nil && (internalId == "" || realm.Id == "" || realm.Id == internalId) {
+		return realm, nil
+	}
+	if err != nil && !ErrorIs404(err) {
+		return nil, err
+	}
+
+	name, err := keycloakClient.GetRealmNameByInternalId(ctx, internalId, knownName)
+	if err != nil {
+		return nil, err
+	}
+
+	return keycloakClient.GetRealm(ctx, name)
+}
+
 func (keycloakClient *KeycloakClient) GetRealms(ctx context.Context) ([]*Realm, error) {
 	var realms []*Realm
 
@@ -390,7 +411,6 @@ func (c *realmCache) forget() {
 // addresses realms by name, so the realms are searched for the id. The names we expect it to have (knownName, the
 // name last seen in state, and what this client remembers) are tried first, but only an id that Keycloak confirms
 // counts: a name can be reused by another realm after a rename. If that fails the realms are listed.
-// A realm missing from the list is only a 404 if the list can be complete (see canListAllRealms), else an error.
 func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Context, uuid string, knownName string) (string, error) {
 	generation := keycloakClient.realmCache.currentGeneration()
 
@@ -445,12 +465,8 @@ func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Conte
 			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids, or the realm itself, from accounts without the view-realm role, which is needed to use realm_internal_id", uuid)}
 		}
 
-		// Keycloak leaves out the realms an account may not see, so a realm that is not in the list may have been
-		// renamed to a name this account cannot read, which is not the same as deleted.
-		if !keycloakClient.canListAllRealms() {
-			return "", fmt.Errorf("cannot tell whether the realm with internal id %s was deleted or renamed: it is not in the list of realms, but this account may not see every realm, so it is not treated as deleted. If the realm was deleted, remove its resources from the state with terraform state rm. Authenticating in the master realm with an account that has the admin role avoids this", uuid)
-		}
-
+		// Keep Terraform's recovery from an external deletion when no lookup reported a permission problem. A realm
+		// that was renamed and then became invisible cannot be told apart, as a filtered list is not provably complete.
 		return "", &ApiError{Code: http.StatusNotFound, Message: fmt.Sprintf("realm with internal id %s not found", uuid)}
 	}
 }
@@ -458,7 +474,9 @@ func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Conte
 // findRealmNameInList lists the realms, remembers them, and returns the name of the one with the given
 // internal id (empty when it is not there). idsHidden reports realms that Keycloak did not show an id for.
 func (keycloakClient *KeycloakClient) findRealmNameInList(ctx context.Context, generation uint64, uuid string) (name string, idsHidden bool, err error) {
-	realms, err := keycloakClient.GetRealms(ctx)
+	// the brief representation has the id and name, which is all that is needed here
+	var realms []*Realm
+	err = keycloakClient.get(ctx, "/realms", &realms, map[string]string{"briefRepresentation": "true"})
 	if err != nil {
 		return "", false, err
 	}
