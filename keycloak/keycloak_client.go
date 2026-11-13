@@ -44,9 +44,14 @@ type KeycloakClient struct {
 	accessTokenProvided bool
 	keycloakVersion     string
 	Mutex               *mutex.KeyValue
+	scopeClaims         *scopeClaims
+	cache               *serverCache
+}
 
-	// fgapv2Cached memoises the FGAPv2 feature-flag lookup, which is a
-	// server-level setting that does not change during a Terraform run.
+// serverCache holds server-level settings that do not change during a Terraform run. It is kept behind a pointer so
+// that KeycloakClient holds no locks by value and can be copied (see ForNewRun).
+type serverCache struct {
+	// fgapv2Cached memoises the FGAPv2 feature-flag lookup.
 	fgapv2Mu     sync.Mutex
 	fgapv2Cached *bool
 
@@ -60,11 +65,16 @@ type KeycloakClient struct {
 // providers, themes) is server-global and static, so it is safe to reuse across operations
 // instead of hitting /serverinfo on every plan/apply.
 func (keycloakClient *KeycloakClient) GetServerInfoCached(ctx context.Context) (*ServerInfo, error) {
-	keycloakClient.serverInfoOnce.Do(func() {
-		keycloakClient.serverInfo, keycloakClient.serverInfoErr = keycloakClient.GetServerInfo(ctx)
+	c := keycloakClient.cache
+	if c == nil {
+		return keycloakClient.GetServerInfo(ctx)
+	}
+
+	c.serverInfoOnce.Do(func() {
+		c.serverInfo, c.serverInfoErr = keycloakClient.GetServerInfo(ctx)
 	})
 
-	return keycloakClient.serverInfo, keycloakClient.serverInfoErr
+	return c.serverInfo, c.serverInfoErr
 }
 
 type ClientCredentials struct {
@@ -155,6 +165,8 @@ func NewKeycloakClient(ctx context.Context, url, basePath, adminUrl, clientId, c
 		accessTokenProvided: accessToken != "",
 		keycloakVersion:     keycloakVersion,
 		Mutex:               mutex.New(),
+		scopeClaims:         &scopeClaims{},
+		cache:               &serverCache{},
 	}
 
 	if accessToken == "" && keycloakClient.initialLogin {

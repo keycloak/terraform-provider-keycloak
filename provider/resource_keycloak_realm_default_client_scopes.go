@@ -12,6 +12,7 @@ func resourceKeycloakRealmDefaultClientScopes() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmDefaultClientScopesReconcile,
 		ReadContext:   resourceKeycloakRealmDefaultClientScopesRead,
+		CustomizeDiff: claimScopesOnPlan("default", "default_scopes", realmScopeOwnerKeyOnPlan),
 		DeleteContext: resourceKeycloakRealmDefaultClientScopesDelete,
 		UpdateContext: resourceKeycloakRealmDefaultClientScopesReconcile,
 		Importer: &schema.ResourceImporter{
@@ -61,6 +62,12 @@ func resourceKeycloakRealmDefaultClientScopesReconcile(ctx context.Context, data
 	realmId := data.Get("realm_id").(string)
 	tfDefaultClientScopes := data.Get("default_scopes").(*schema.Set)
 
+	defer keycloakClient.LockScopeOwner(keycloak.RealmScopeOwnerKey(realmId))()
+
+	if err := keycloakClient.ClaimScopes(keycloak.RealmScopeOwnerKey(realmId), "default", interfaceSliceToStringSlice(tfDefaultClientScopes.List())); err != nil {
+		return diag.FromErr(err)
+	}
+
 	keycloakDefaultClientScopes, err := keycloakClient.GetRealmDefaultClientScopes(ctx, realmId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -99,6 +106,9 @@ func resourceKeycloakRealmDefaultClientScopesDelete(ctx context.Context, data *s
 
 	realmId := data.Get("realm_id").(string)
 	defaultClientScopes := data.Get("default_scopes").(*schema.Set)
+
+	defer keycloakClient.LockScopeOwner(keycloak.RealmScopeOwnerKey(realmId))()
+	defer keycloakClient.ReleaseScopes(keycloak.RealmScopeOwnerKey(realmId), "default")
 
 	return diag.FromErr(keycloakClient.UnmarkClientScopesAsRealmDefault(ctx, realmId, interfaceSliceToStringSlice(defaultClientScopes.List())))
 }
