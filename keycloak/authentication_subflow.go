@@ -13,7 +13,7 @@ type AuthenticationSubFlow struct {
 	ParentFlowAlias string `json:"-"`
 	ProviderId      string `json:"providerId"` // "basic-flow" or "client-flow" or form-flow see /keycloak/server-spi/src/main/java/org/keycloak/models/AuthenticationFlowModel.java
 	TopLevel        bool   `json:"topLevel"`   // should only be false if this is a subflow
-	BuiltIn         bool   `json:"builtIn"`    // this controls whether this flow can be edited from the console. it can be updated, but this provider will only set it to `true`
+	BuiltIn         bool   `json:"builtIn"`    // this controls whether this flow can be edited from the console. it can be updated, but metadata updates preserve its existing server value
 	Description     string `json:"description"`
 	//execution part
 	Authenticator string `json:"-"` //can be any authenticator see /auth/admin/master/console/#/server-info/providers (not limited to the authenticator spi section) for example could also be part of the form-action spi
@@ -87,10 +87,14 @@ func (keycloakClient *KeycloakClient) getExecutionId(ctx context.Context, authen
 }
 
 func (keycloakClient *KeycloakClient) UpdateAuthenticationSubFlow(ctx context.Context, authenticationSubFlow *AuthenticationSubFlow) error {
-	authenticationSubFlow.TopLevel = false
-	authenticationSubFlow.BuiltIn = false
-
-	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s", authenticationSubFlow.RealmId, authenticationSubFlow.Id), authenticationSubFlow)
+	current, err := keycloakClient.GetAuthenticationFlow(ctx, authenticationSubFlow.RealmId, authenticationSubFlow.Id)
+	if err != nil {
+		return err
+	}
+	updated := *authenticationSubFlow
+	updated.TopLevel = current.TopLevel
+	updated.BuiltIn = current.BuiltIn
+	err = keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/authentication/flows/%s", updated.RealmId, updated.Id), &updated)
 
 	if err != nil {
 		return err
