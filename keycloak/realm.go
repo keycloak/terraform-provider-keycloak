@@ -32,6 +32,11 @@ type Realm struct {
 	UserManagedAccess    bool   `json:"userManagedAccessAllowed"`
 	OrganizationsEnabled bool   `json:"organizationsEnabled"`
 
+	// Optional realm configuration preserves omission for existing callers.
+	RequiredCredentials          *[]string `json:"requiredCredentials,omitempty"`
+	ScimApiEnabled               *bool     `json:"scimApiEnabled,omitempty"`
+	VerifiableCredentialsEnabled *bool     `json:"verifiableCredentialsEnabled,omitempty"`
+
 	// Login Config
 	RegistrationAllowed         bool   `json:"registrationAllowed"`
 	RegistrationEmailAsUsername bool   `json:"registrationEmailAsUsername"`
@@ -285,6 +290,28 @@ func (keycloakClient *KeycloakClient) ValidateRealm(ctx context.Context, realm *
 	serverInfo, err := keycloakClient.GetServerInfo(ctx)
 	if err != nil {
 		return err
+	}
+
+	for _, setting := range []struct {
+		value         *bool
+		name, feature string
+	}{
+		{realm.ScimApiEnabled, "scim_api_enabled", "SCIM_API"},
+		{realm.VerifiableCredentialsEnabled, "verifiable_credentials_enabled", "OID4VC_VCI"},
+	} {
+		if setting.value == nil || !*setting.value {
+			continue
+		}
+		enabled := false
+		for _, feature := range serverInfo.Features {
+			if feature.Name == setting.feature {
+				enabled = feature.Enabled
+				break
+			}
+		}
+		if !enabled {
+			return fmt.Errorf("validation error: %s=true requires enabled server feature %s", setting.name, setting.feature)
+		}
 	}
 
 	if realm.LoginTheme != "" && !serverInfo.ThemeIsInstalled("login", realm.LoginTheme) {
