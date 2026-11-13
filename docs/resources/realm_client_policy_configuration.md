@@ -42,3 +42,26 @@ Import by realm ID. Import calls GET only and includes existing empty collection
 ```sh
 terraform import keycloak_realm_client_policy_configuration.realm gryphon
 ```
+
+## Recovering from a failed initial apply
+
+A failed update can be retried after refresh. A failed initial creation is
+marked **tainted** by Terraform, even when the provider retains the realm ID.
+An ordinary retry then attempts replacement, which this singleton rejects.
+After correcting the cause of the failed request, back up the state and remove
+only this resource's ownership, then reimport the current server collections:
+
+```sh
+terraform state pull > terraform-state-backup.json
+terraform state rm keycloak_realm_client_policy_configuration.realm
+terraform import keycloak_realm_client_policy_configuration.realm gryphon
+terraform plan
+terraform apply
+```
+
+State removal and import do not change Keycloak. Keep the desired profiles and
+policies in configuration; review the plan before applying to complete the
+remaining stages. If the resource is still present in state with the correct
+realm ID, `terraform untaint keycloak_realm_client_policy_configuration.realm`
+is an alternative to removal and reimport; refresh and review the plan before
+retrying. Do not attempt replacement or destroy to recover this singleton.
