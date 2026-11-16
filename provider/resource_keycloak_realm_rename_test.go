@@ -273,6 +273,10 @@ resource "keycloak_realm_events" "events" {
 	{{REF}}
 	events_enabled   = true
 	events_listeners = ["jboss-logging"]
+
+	# Both write to the realm. Created at the same time, the events setting was seen reverted to false on a CI run
+	# (Keycloak 26.3.5), so the realm is written to one at a time.
+	depends_on = [keycloak_authentication_bindings.bindings]
 }
 
 resource "keycloak_authentication_flow" "flow" {
