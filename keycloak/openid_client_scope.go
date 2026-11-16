@@ -2,8 +2,10 @@ package keycloak
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -130,7 +132,37 @@ func IncludeOpenidClientScopesMatchingNames(scopeNames []string) OpenidClientSco
 }
 
 func (f *OpenidClientScopeAttributes) UnmarshalJSON(data []byte) error {
-	return unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig)
+	if err := unmarshalExtraConfig(data, reflect.ValueOf(f).Elem(), &f.ExtraConfig); err != nil {
+		return err
+	}
+	attributes, err := rawClientScopeAttributes(data)
+	if err != nil {
+		return err
+	}
+	f.DisplayOnConsentScreen = clientScopeBoolAttribute(attributes, "display.on.consent.screen")
+	f.IncludeInTokenScope = clientScopeBoolAttribute(attributes, "include.in.token.scope")
+	f.IncludeInOpenidProviderMetadata = clientScopeBoolAttribute(attributes, "include.in.openid.provider.metadata")
+	return nil
+}
+
+func rawClientScopeAttributes(data []byte) (map[string]interface{}, error) {
+	var attributes map[string]interface{}
+	if err := json.Unmarshal(data, &attributes); err != nil {
+		return nil, err
+	}
+	return attributes, nil
+}
+
+// clientScopeBoolAttribute reads a boolean client scope attribute the way
+// Keycloak's ClientScopeModel does: an attribute that is not stored counts as
+// true, and a stored one is true only if it is "true" (Boolean.parseBoolean).
+func clientScopeBoolAttribute(attributes map[string]interface{}, key string) types.KeycloakBoolQuoted {
+	value, ok := attributes[key]
+	if !ok || value == nil {
+		return true
+	}
+	s, _ := value.(string)
+	return types.KeycloakBoolQuoted(strings.EqualFold(s, "true"))
 }
 
 func (f *OpenidClientScopeAttributes) MarshalJSON() ([]byte, error) {
