@@ -299,8 +299,8 @@ Each of these attributes are blocks with the following attributes:
 
 ## Default Client Scopes
 
-- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_default_client_scopes`.
-- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_optional_client_scopes`.
+- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. Alternatively, manage both assignment sets with [`keycloak_client_scope_assignments`](client_scope_assignments.md) and omit both scope-assignment fields from this realm resource.
+- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. Do not configure this field or `default_default_client_scopes` alongside a realm-level `keycloak_client_scope_assignments` resource; they manage the same assignments and will conflict.
 
 ## Import
 
