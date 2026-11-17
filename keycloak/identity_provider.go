@@ -61,6 +61,7 @@ type IdentityProviderConfig struct {
 	BaseUrl                         string                    `json:"baseUrl,omitempty"`
 	GithubJsonFormat                types.KeycloakBoolQuoted  `json:"githubJsonFormat,omitempty"`
 	FetchedFields                   string                    `json:"fetchedFields,omitempty"`
+	AllowAdminRoleMapping           types.KeycloakBoolQuoted  `json:"allowAdminRoleMapping,omitempty"` //since keycloak v26.8
 }
 
 type IdentityProvider struct {

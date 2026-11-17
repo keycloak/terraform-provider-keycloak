@@ -253,12 +253,8 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 	}
 
 	realmTwo := &keycloak.Realm{
-		Realm:        realmOne.Realm,
-		DisplayName:  realmOne.DisplayName,
-		LoginTheme:   "keycloak",
-		AccountTheme: "keycloak.v3",
-		AdminTheme:   "keycloak.v2",
-		EmailTheme:   "keycloak",
+		Realm:       realmOne.Realm,
+		DisplayName: realmOne.DisplayName,
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -272,7 +268,13 @@ func TestAccKeycloakRealm_themes(t *testing.T) {
 			},
 			{
 				Config: testKeycloakRealm_themes(realmTwo),
-				Check:  testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmExists("keycloak_realm.realm"),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "login_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "account_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "admin_theme", ""),
+					resource.TestCheckResourceAttr("keycloak_realm.realm", "email_theme", ""),
+				),
 			},
 		},
 	})
