@@ -120,6 +120,9 @@ func dataSourceKeycloakRealm() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKeycloakRealmRead,
 		Schema: map[string]*schema.Schema{
+			"required_credentials":           {Type: schema.TypeSet, Computed: true, Elem: &schema.Schema{Type: schema.TypeString}},
+			"scim_api_enabled":               {Type: schema.TypeBool, Computed: true},
+			"verifiable_credentials_enabled": {Type: schema.TypeBool, Computed: true},
 			"realm": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -469,6 +472,7 @@ func dataSourceKeycloakRealm() *schema.Resource {
 							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"enabled": {Type: schema.TypeBool, Computed: true},
 									"permanent_lockout": { //Permanent Lockout
 										Type:     schema.TypeBool,
 										Computed: true,
@@ -619,7 +623,7 @@ func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm, keycloakVersion)
+	setRealmData(data, realm, keycloakVersion, false)
 
 	return nil
 }

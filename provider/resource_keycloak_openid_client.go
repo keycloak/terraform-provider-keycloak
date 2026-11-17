@@ -341,6 +341,15 @@ func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
 			Type:     schema.TypeBool,
 			Optional: true,
 		},
+		"surrogate_auth_required": {
+			Type: schema.TypeBool, Optional: true, Computed: true,
+			Description: "Require caller verification in client-role token access. Omit to preserve the server value.",
+		},
+		"node_re_registration_timeout": {
+			Type: schema.TypeInt, Optional: true, Computed: true,
+			ValidateFunc: validation.IntAtLeast(-1),
+			Description:  "Legacy registered-node timeout in seconds. Nonpositive values disable periodic re-registration and timed-out-node removal. Omit to preserve the server value.",
+		},
 		"extra_config": {
 			Type:             schema.TypeMap,
 			Optional:         true,
@@ -560,6 +569,14 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		openidClient.Description = description.(string) // will be "" if user set empty string
 	}
 
+	if configuredPublicField(data, "surrogate_auth_required") {
+		value := data.Get("surrogate_auth_required").(bool)
+		openidClient.SurrogateAuthRequired = &value
+	}
+	if configuredPublicField(data, "node_re_registration_timeout") {
+		value := data.Get("node_re_registration_timeout").(int)
+		openidClient.NodeReRegistrationTimeout = &value
+	}
 	return openidClient, nil
 }
 
@@ -574,6 +591,13 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	}
 	data.SetId(client.Id)
 	data.Set("client_id", client.ClientId)
+	if client.SurrogateAuthRequired != nil {
+		data.Set("surrogate_auth_required", *client.SurrogateAuthRequired)
+	}
+	if client.NodeReRegistrationTimeout != nil {
+		data.Set("node_re_registration_timeout", *client.NodeReRegistrationTimeout)
+	}
+
 	data.Set("realm_id", client.RealmId)
 	data.Set("name", client.Name)
 	data.Set("enabled", client.Enabled)
@@ -694,6 +718,9 @@ func resourceKeycloakOpenidClientCreate(ctx context.Context, data *schema.Resour
 			return diag.FromErr(err)
 		}
 
+		// Only configuration owns these optional fields, including explicit resets.
+		existingClient.SurrogateAuthRequired = nil
+		existingClient.NodeReRegistrationTimeout = nil
 		if err = mergo.Merge(client, existingClient); err != nil {
 			return diag.FromErr(err)
 		}

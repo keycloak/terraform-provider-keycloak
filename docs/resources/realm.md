@@ -104,6 +104,12 @@ If any of these arguments are not specified, they will default to Keycloak's def
 - `duplicate_emails_allowed` - (Optional) When true, multiple users will be allowed to have the same email address. This argument must be set to `false` if `login_with_email_allowed` is set to `true`.
 - `ssl_required` - (Optional) Can be one of following values: 'none, 'external' or 'all'
 
+- `required_credentials` - (Optional, Computed) Required credential type names. Omit to preserve the server configuration; an explicit empty set removes this legacy requirement set. This is separate from user credentials, authentication flows and required actions.
+- `scim_api_enabled` - (Optional, Computed) Realm SCIM switch, supported from Keycloak 26.6. Omit to preserve it. Setting this does not enable the server SCIM feature; true is rejected unless that feature is already enabled.
+- `verifiable_credentials_enabled` - (Optional, Computed) Realm verifiable-credential switch, supported from Keycloak 26.1. Omit to preserve it. Setting this does not enable the server OID4VC feature; true is rejected unless that feature is already enabled.
+
+The two feature switches report **effective** enablement: Keycloak returns false when the corresponding server feature is disabled, masking any latent stored true value. A clean plan with false therefore does not certify the underlying persisted flag. Omitted values are never written from these computed observations. Establishing and checking persisted values requires a separately reviewed recovery/administration procedure; do not enable optional features merely to inspect them.
+
 ### Themes
 
 The following arguments can be used to configure themes for the realm. Custom themes can be specified here.
@@ -227,6 +233,7 @@ The `headers` block supports the following arguments:
 
 The `brute_force_detection` block supports the following arguments:
 
+- `enabled` - (Optional) Whether protection is enabled. Defaults to `true`, preserving the historical meaning of an existing block. Set `false` to own and repair the thresholds while protection stays disabled. Configurations without this block keep their previous default/reset behavior; disabled settings are not synthesized into their state. Importing a configured disabled block can require one update to adopt its measured thresholds. Removing the block restores the historical disabled defaults.
 - `permanent_lockout` - (Optional) When `true`, this will lock the user permanently when the user exceeds the maximum login failures.
 - `max_temporary_lockouts` - (Optional) How many temporary lockouts are permitted before a user is permanently locked out. `permanent_lockout` needs to be `true`. Defaults to `0`
 - `max_login_failures` - (Optional) How many failures before wait is triggered.

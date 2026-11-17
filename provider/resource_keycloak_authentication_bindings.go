@@ -105,6 +105,8 @@ func resourceKeycloakAuthenticationBindingsCreate(ctx context.Context, data *sch
 		return diag.FromErr(err)
 	}
 
+	// Feature observations may be masked false by Keycloak; bindings do not own them.
+	realm.ScimApiEnabled, realm.VerifiableCredentialsEnabled = nil, nil
 	setRealmFlowBindings(data, realm, keycloakVersion)
 
 	err = keycloakClient.ValidateRealm(ctx, realm)
@@ -156,6 +158,7 @@ func resourceKeycloakAuthenticationBindingsDelete(ctx context.Context, data *sch
 		return diag.FromErr(err)
 	}
 
+	realm.ScimApiEnabled, realm.VerifiableCredentialsEnabled = nil, nil
 	resetAuthenticationBindingsForRealm(realm, keycloakVersion)
 
 	err = keycloakClient.UpdateRealm(ctx, realm)
@@ -178,6 +181,8 @@ func resourceKeycloakAuthenticationBindingsUpdate(ctx context.Context, data *sch
 		return diag.FromErr(err)
 	}
 
+	// Feature observations may be masked false by Keycloak; bindings do not own them.
+	realm.ScimApiEnabled, realm.VerifiableCredentialsEnabled = nil, nil
 	setRealmFlowBindings(data, realm, keycloakVersion)
 
 	err = keycloakClient.ValidateRealm(ctx, realm)
