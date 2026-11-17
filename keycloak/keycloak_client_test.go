@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-version"
 	"github.com/keycloak/terraform-provider-keycloak/helper"
 )
@@ -513,10 +514,7 @@ func TestNewHttpClient_rootCaCertificate(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			transport, ok := httpClient.Transport.(*http.Transport)
-			if !ok {
-				t.Fatalf("expected *http.Transport, got %T", httpClient.Transport)
-			}
+			transport := baseTransport(t, httpClient)
 			if tt.caCert == "" && transport.TLSClientConfig.RootCAs != nil {
 				t.Fatalf("expected no custom root CAs when root_ca_certificate is empty")
 			}
@@ -525,4 +523,28 @@ func TestNewHttpClient_rootCaCertificate(t *testing.T) {
 			}
 		})
 	}
+}
+
+// baseTransport returns the *http.Transport that newHttpClient configures,
+// underneath the caller-cookie and retrying round trippers.
+func baseTransport(t *testing.T, httpClient *http.Client) *http.Transport {
+	t.Helper()
+
+	cookies, ok := httpClient.Transport.(*callerCookiesTransport)
+	if !ok {
+		t.Fatalf("expected *callerCookiesTransport, got %T", httpClient.Transport)
+	}
+	retrying, ok := cookies.next.(*retryablehttp.RoundTripper)
+	if !ok {
+		t.Fatalf("expected *retryablehttp.RoundTripper, got %T", cookies.next)
+	}
+	replaced, ok := retrying.Client.HTTPClient.Transport.(*replacedCallerCookiesTransport)
+	if !ok {
+		t.Fatalf("expected *replacedCallerCookiesTransport, got %T", retrying.Client.HTTPClient.Transport)
+	}
+	transport, ok := replaced.next.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected *http.Transport, got %T", replaced.next)
+	}
+	return transport
 }
