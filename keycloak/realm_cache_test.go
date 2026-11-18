@@ -126,7 +126,9 @@ func (f *fakeRealms) client(t *testing.T) *KeycloakClient {
 					return
 				}
 			}
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error":"Realm not found."}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

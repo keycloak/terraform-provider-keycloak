@@ -179,7 +179,8 @@ func TestKeycloakClientScopeAssignmentsDeleteSkipsStaleAssignments(t *testing.T)
 						t.Error(err)
 					}
 				case "DELETE " + defaultPath + "/concurrently-removed":
-					http.NotFound(w, r)
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprint(w, `{"error":"Client scope not found"}`)
 				case "DELETE " + defaultPath + "/owned-default", "DELETE " + optionalPath + "/owned-optional":
 					deletes = append(deletes, r.URL.Path)
 					w.WriteHeader(http.StatusNoContent)
