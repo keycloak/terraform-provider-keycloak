@@ -227,7 +227,7 @@ func (keycloakClient *KeycloakClient) GetRealmByInternalId(ctx context.Context, 
 	if err == nil && (internalId == "" || realm.Id == "" || realm.Id == internalId) {
 		return realm, nil
 	}
-	if err != nil && !ErrorIs404(err) {
+	if err != nil && !ErrorIs404(err) && !(ErrorIs403(err) && internalId != "") {
 		return nil, err
 	}
 
