@@ -303,6 +303,10 @@ Changing `realm` renames the realm in place instead of replacing it, so its data
 its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
 Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
 
+When the parent `keycloak_realm` has an `internal_id` in state, its account must be able to confirm that ID.
+If Keycloak hides it, restore `view-realm` before updating or destroying the realm. This prevents a reused name
+from pointing Terraform at a different realm. Imports and older state without a recorded ID use the stored name.
+
 To prevent that, reference the realm by its internal id, which never changes, using `realm_internal_id` instead of `realm_id`:
 
 ```hcl
