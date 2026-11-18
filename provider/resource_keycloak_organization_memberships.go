@@ -73,13 +73,11 @@ func reconcileOrganizationMemberships(ctx context.Context, realmId, organization
 		currentUserIdsSet[member.Id] = true
 	}
 
-	// 3. Preflight check: verify no undesired members are MANAGED before issuing any delete requests
+	// 3. Find undesired members. MANAGED members are left alone, as Read and Delete do: they belong to
+	// the identity provider, and Keycloak deletes the user account when a managed membership is removed.
 	var usersToRemove []*keycloak.OrganizationMember
 	for currentUserId, member := range currentUsersMap {
-		if !desiredUserIdsSet[currentUserId] {
-			if member.MembershipType == "MANAGED" {
-				return fmt.Errorf("cannot remove managed member %s from organization %s: Keycloak deletes the underlying user account for managed memberships. Please remove the membership through the Identity Provider federation or Keycloak admin console instead", member.Username, organizationId)
-			}
+		if !desiredUserIdsSet[currentUserId] && member.MembershipType != "MANAGED" {
 			usersToRemove = append(usersToRemove, member)
 		}
 	}

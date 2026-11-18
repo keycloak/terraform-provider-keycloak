@@ -51,6 +51,7 @@ resource "keycloak_ldap_msad_user_account_control_mapper" "msad_user_account_con
 - `ldap_user_federation_id` - (Required) The ID of the LDAP user federation provider to attach this mapper to.
 - `name` - (Required) Display name of this mapper when displayed in the console.
 - `ldap_password_policy_hints_enabled` - (Optional) When `true`, advanced password policies, such as password hints and previous password history will be used when writing new passwords to AD. Defaults to `false`.
+- `always_read_enabled_value_from_ldap` - (Optional) When `true`, the enabled/disabled state of the user is always read from the `userAccountControl` attribute in AD, instead of the value stored in Keycloak. Defaults to `false`.
 
 ## Import
 

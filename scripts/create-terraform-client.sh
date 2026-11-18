@@ -97,6 +97,17 @@ serviceAccountAdminRoleMapping=$(jq -n "[{
 post "/realms/master/users/${terraformClientServiceAccountId}/role-mappings/realm" "${serviceAccountAdminRoleMapping}"
 post "/realms/master/users/${terraformClientJWTServiceAccountId}/role-mappings/realm" "${serviceAccountAdminRoleMapping}"
 
+# Since Keycloak 26.8.2 the Admin REST API refuses access tokens that lack its audience (401), which the
+# built-in kc-admin-api client scope adds. Keycloak gives that scope only to admin-cli and
+# security-admin-console, so the terraform clients need it too. Older versions have no such scope and
+# no such check.
+kcAdminApiScopeId=$(get "/realms/master/client-scopes" | jq -r '.[] | select(.name == "kc-admin-api") | .id')
+if [ -n "${kcAdminApiScopeId}" ]; then
+    echo "Adding the kc-admin-api client scope to the terraform clients"
+    put "/realms/master/clients/${KEYCLOAK_CLIENT_ID}/default-client-scopes/${kcAdminApiScopeId}"
+    put "/realms/master/clients/${KEYCLOAK_CLIENT_JWT_ID}/default-client-scopes/${kcAdminApiScopeId}"
+fi
+
 
 echo "Extending access token lifespan (don't do this in production)"
 

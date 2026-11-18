@@ -35,6 +35,22 @@ func TestAccKeycloakUsersAdminPermissions_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakUsersAdminPermissions_resetPassword(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_4)
+	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakUsersAdminPermissions_basic("reset-password"),
+				Check:  testAccCheckKeycloakUsersAdminPermissionsExists("keycloak_users_admin_permissions.test"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakUsersAdminPermissions_withScopes(t *testing.T) {
 	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_2)
 	skipIfFGAPv2NotEnabled(testCtx, t, keycloakClient)

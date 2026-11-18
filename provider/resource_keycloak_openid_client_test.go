@@ -1254,6 +1254,61 @@ func TestAccKeycloakOpenidClient_authorizationImport(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOpenidClient_authorizationUpdate(t *testing.T) {
+	t.Parallel()
+	clientId := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client.client"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOpenidClientDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationSettings(clientId, "ENFORCING", "UNANIMOUS", false),
+				Check:  testAccCheckKeycloakOpenidClientAuthorizationSettings(resourceName, "ENFORCING", "UNANIMOUS", false),
+			},
+			{
+				Config: testKeycloakOpenidClient_withAuthorizationSettings(clientId, "PERMISSIVE", "AFFIRMATIVE", true),
+				Check:  testAccCheckKeycloakOpenidClientAuthorizationSettings(resourceName, "PERMISSIVE", "AFFIRMATIVE", true),
+			},
+			{
+				Config:             testKeycloakOpenidClient_withAuthorizationSettings(clientId, "PERMISSIVE", "AFFIRMATIVE", true),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakOpenidClientAuthorizationSettings(resourceName, policyEnforcementMode, decisionStrategy string, allowRemoteResourceManagement bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := getOpenidClientFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		settings := client.AuthorizationSettings
+		if settings == nil {
+			return fmt.Errorf("expected openid client to have authorization settings, but got none")
+		}
+
+		if settings.PolicyEnforcementMode != policyEnforcementMode {
+			return fmt.Errorf("expected policy enforcement mode %s, but got %s", policyEnforcementMode, settings.PolicyEnforcementMode)
+		}
+
+		if settings.DecisionStrategy != decisionStrategy {
+			return fmt.Errorf("expected decision strategy %s, but got %s", decisionStrategy, settings.DecisionStrategy)
+		}
+
+		if settings.AllowRemoteResourceManagement != allowRemoteResourceManagement {
+			return fmt.Errorf("expected allow remote resource management %t, but got %t", allowRemoteResourceManagement, settings.AllowRemoteResourceManagement)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakOpenidClientExistsWithCorrectProtocol(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := getOpenidClientFromState(s, resourceName)
@@ -1855,6 +1910,27 @@ resource "keycloak_openid_client" "client" {
 	}
 }
 	`, testAccRealm.Realm, clientId)
+}
+
+func testKeycloakOpenidClient_withAuthorizationSettings(clientId, policyEnforcementMode, decisionStrategy string, allowRemoteResourceManagement bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	client_id                = "%s"
+	realm_id                 = data.keycloak_realm.realm.id
+	access_type              = "CONFIDENTIAL"
+	service_accounts_enabled = true
+
+	authorization {
+		policy_enforcement_mode          = "%s"
+		decision_strategy                = "%s"
+		allow_remote_resource_management = %t
+	}
+}
+	`, testAccRealm.Realm, clientId, policyEnforcementMode, decisionStrategy, allowRemoteResourceManagement)
 }
 
 func testKeycloakOpenidClient_basicWithSecretRegenerate(clientId string, regenerateValue string) string {

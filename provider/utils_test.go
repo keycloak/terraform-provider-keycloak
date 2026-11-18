@@ -37,6 +37,17 @@ func randomStringSliceSubset(slice []string) []string {
 	return result
 }
 
+// Like randomStringSliceSubset, but never empty. Use it where an empty list would make Keycloak
+// fall back to its own defaults, so the plan after apply is no longer empty.
+func randomNonEmptyStringSliceSubset(slice []string) []string {
+	result := randomStringSliceSubset(slice)
+	if len(result) == 0 {
+		result = append(result, slice[rand.Intn(len(slice))])
+	}
+
+	return result
+}
+
 // Returns a slice of strings in the format ["foo", "bar"] for
 // use within terraform resource definitions for acceptance tests
 func arrayOfStringsForTerraformResource(parts []string) string {

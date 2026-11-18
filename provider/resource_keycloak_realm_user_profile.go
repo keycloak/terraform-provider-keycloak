@@ -372,13 +372,16 @@ func getRealmUserProfileAttributeData(attr *keycloak.RealmUserProfileAttribute) 
 
 			validator["name"] = name
 
+			// The config schema is a map of strings, but Keycloak can return
+			// other JSON values, such as the numbers in its default profile
+			// ("length": {"min": 3, "max": 255}), so encode those as JSON.
 			c := make(map[string]interface{})
 			for k, v := range config {
-				if _, ok := v.([]interface{}); ok {
+				if s, ok := v.(string); ok {
+					c[k] = s
+				} else {
 					t, _ := json.Marshal(v)
 					c[k] = string(t)
-				} else {
-					c[k] = v
 				}
 			}
 

@@ -32,7 +32,8 @@ resource "keycloak_openid_client_scope" "openid_client_scope" {
 - `realm_id` - (Required) The realm this client scope belongs to.
 - `name` - (Required) The display name of this client scope in the GUI.
 - `description` - (Optional) The description of this client scope in the GUI.
-- `consent_screen_text` - (Optional) When set, a consent screen will be displayed to users authenticating to clients with this scope attached. The consent screen will display the string value of this attribute.
+- `consent_screen_text` - (Optional) The text that is displayed on the consent screen for this client scope. If not set, the consent screen displays the name of the client scope.
+- `display_on_consent_screen` - (Optional) When `true`, this client scope is displayed on the consent screen of clients that require consent. When `false`, it is not displayed, and existing consents remain valid if the scope is added to a client later. If not set, it is `true` when `consent_screen_text` is set and `false` otherwise.
 - `include_in_token_scope` - (Optional) When `true`, the name of this client scope will be added to the access token property 'scope' as well as to the Token Introspection Endpoint response. When `false`, this scope will be omitted from the token and from the Token Introspection Endpoint response. Defaults to `true`.
 - `include_in_openid_provider_metadata` - (Optional) When `true`, this client scope will be listed in the `scopes_supported` field of the realm's OpenID Provider Metadata (the `.well-known/openid-configuration` discovery document). When `false`, it will be omitted. Defaults to `true`.
 - `gui_order` - (Optional) Specify order of the client scope in GUI (such as in Consent page) as integer.

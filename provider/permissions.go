@@ -64,6 +64,7 @@ func scopePermissionsSchema() *schema.Schema {
 				"decision_strategy": {
 					Type:         schema.TypeString,
 					Optional:     true,
+					Default:      "UNANIMOUS",
 					ValidateFunc: validation.StringInSlice(keycloakOpenidClientResourcePermissionDecisionStrategies, false),
 				},
 			},

@@ -107,7 +107,7 @@ Each of these attributes have the following schema:
 
 - `policies` - (Optional) A list of policy IDs
 - `description` - (Optional) A description for the permission scope
-- `decision_strategy` - (Optional) The decision strategy, can be one of `UNANIMOUS`, `AFFIRMATIVE`, or `CONSENSUS`.
+- `decision_strategy` - (Optional) The decision strategy, can be one of `UNANIMOUS`, `AFFIRMATIVE`, or `CONSENSUS`. Defaults to `UNANIMOUS`.
 
 ### Attributes Reference
 

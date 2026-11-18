@@ -101,6 +101,12 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Description: "Keycloak lists ES256, ES384, ES512, RS256, ES384, ES512 at the time of writing",
 			Computed:    true,
 		},
+		"signature_algorithms_ordered": {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "Signature algorithms in preference order.",
+			Computed:    true,
+		},
 		"user_verification_requirement": {
 			Type:        schema.TypeString,
 			Description: "Either required, preferred or discouraged",

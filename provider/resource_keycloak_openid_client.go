@@ -648,9 +648,11 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 
 	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
 		data.Set("client_secret_wo_version", v.(string))
-	} else {
+	} else if !client.ClientSecretUnreadable {
 		data.Set("client_secret", client.ClientSecret)
 	}
+	// An unreadable secret (a read-only caller on Keycloak 26.8+) keeps the
+	// value already in state rather than reading as a change to "".
 
 	// access typess
 	if client.PublicClient {

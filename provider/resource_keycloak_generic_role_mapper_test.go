@@ -192,6 +192,62 @@ func TestAccKeycloakGenericRoleMapper_deleteIndividualMappers(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakGenericRoleMapper_deleteIndividualClientRoleMappersFromClientScope(t *testing.T) {
+	t.Parallel()
+
+	clientName := acctest.RandomWithPrefix("tf-acc")
+	someRoleName := acctest.RandomWithPrefix("tf-acc")
+	someOtherRoleName := acctest.RandomWithPrefix("tf-acc")
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakGenericRoleMapper_clientScopeClientRoles(clientName, someRoleName, someOtherRoleName, clientScopeName, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeHasRoleMapping("keycloak_openid_client_scope.clientscope", "keycloak_role.some-role"),
+					testAccCheckKeycloakClientScopeHasRoleMapping("keycloak_openid_client_scope.clientscope", "keycloak_role.some-other-role"),
+				),
+			},
+			{
+				Config: testKeycloakGenericRoleMapper_clientScopeClientRoles(clientName, someRoleName, someOtherRoleName, clientScopeName, false),
+				Check:  testAccCheckKeycloakClientScopeHasRoleMapping("keycloak_openid_client_scope.clientscope", "keycloak_role.some-other-role"),
+			},
+		},
+	})
+}
+
+func testAccCheckKeycloakClientScopeHasRoleMapping(clientScopeResourceName, roleResourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, ok := s.RootModule().Resources[clientScopeResourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", clientScopeResourceName)
+		}
+		roleState, ok := s.RootModule().Resources[roleResourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", roleResourceName)
+		}
+
+		realmId := roleState.Primary.Attributes["realm_id"]
+		role, err := keycloakClient.GetRole(testCtx, realmId, roleState.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		mappedRole, err := keycloakClient.GetRoleScopeMapping(testCtx, realmId, "", clientScope.Primary.ID, role)
+		if err != nil {
+			return err
+		}
+		if mappedRole == nil {
+			return fmt.Errorf("role %s is not mapped to client scope %s", role.Name, clientScope.Primary.ID)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakGenericRoleMapperExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		_, ok := s.RootModule().Resources[resourceName]
@@ -375,4 +431,51 @@ resource "keycloak_generic_role_mapper" "client-with-some-other-role" {
 	role_id   = keycloak_role.some-other-role.id
 }
 	`, testAccRealm.Realm, clientName, someRoleName, someOtherRoleName)
+}
+
+func testKeycloakGenericRoleMapper_clientScopeClientRoles(clientName, someRoleName, someOtherRoleName, clientScopeName string, withSomeRole bool) string {
+	someRoleMapper := ""
+	if withSomeRole {
+		someRoleMapper = `
+resource "keycloak_generic_role_mapper" "clientscope-with-some-role" {
+	realm_id        = data.keycloak_realm.realm.id
+	client_scope_id = keycloak_openid_client_scope.clientscope.id
+	role_id         = keycloak_role.some-role.id
+}`
+	}
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client" "client" {
+	realm_id    = data.keycloak_realm.realm.id
+	client_id   = "%s"
+	access_type = "PUBLIC"
+}
+
+resource "keycloak_role" "some-role" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = keycloak_openid_client.client.id
+	name      = "%s"
+}
+
+resource "keycloak_role" "some-other-role" {
+	realm_id  = data.keycloak_realm.realm.id
+	client_id = keycloak_openid_client.client.id
+	name      = "%s"
+}
+
+resource "keycloak_openid_client_scope" "clientscope" {
+	realm_id = data.keycloak_realm.realm.id
+	name     = "%s"
+}
+%s
+resource "keycloak_generic_role_mapper" "clientscope-with-some-other-role" {
+	realm_id        = data.keycloak_realm.realm.id
+	client_scope_id = keycloak_openid_client_scope.clientscope.id
+	role_id         = keycloak_role.some-other-role.id
+}
+	`, testAccRealm.Realm, clientName, someRoleName, someOtherRoleName, clientScopeName, someRoleMapper)
 }

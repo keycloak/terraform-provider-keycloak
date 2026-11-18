@@ -10,6 +10,14 @@ Note that this resource attempts to be an **authoritative** source over organiza
 control over an organization's members, users that are manually added to the organization will be removed, and users that
 are manually removed will be re-added upon the next run of `terraform apply`.
 
+Managed members are the exception. A membership is managed (`MANAGED` in Keycloak) when, for example, the user joined
+the organization by signing in through an identity provider linked to it (from Keycloak 26.8, a link with managed
+membership), or when an administrator changed the membership type to managed (Keycloak 26.8 and later). Keycloak
+deletes the user account when a managed membership is removed, so this resource never removes a managed member, listed
+in `members` or not: create, update and destroy leave it in the organization. A managed member is in the resource's
+state only while it is listed in `members`, so unlisted managed members never cause a diff, and removing a managed
+member from `members` removes it from the state, not from the organization.
+
 This resource paginates its data loading on refresh by 50 items.
 
 ## Example Usage
@@ -56,7 +64,7 @@ resource "keycloak_organization_memberships" "org_members" {
 
 - `realm_id` - (Required) The realm the organization belongs to.
 - `organization_id` - (Required) The ID of the organization to manage memberships for.
-- `members` - (Required) A set of usernames to assign as members of the organization.
+- `members` - (Required) A set of usernames to assign as members of the organization. Managed members may be listed, but are never removed.
 
 ## Import
 
