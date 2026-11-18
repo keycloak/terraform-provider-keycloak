@@ -85,7 +85,7 @@ resource "keycloak_realm" "realm" {
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
-- `attributes` - (Optional) A map of custom attributes to add to the realm.
+- `attributes` - (Optional) A map of custom attributes to add to the realm. Only the attributes configured here are managed by this resource: removing a key from this map removes the attribute from the realm, while attributes set outside of Terraform (for example by extensions, scripts or the admin console) are kept when the realm is updated.
 - `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
 - `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 

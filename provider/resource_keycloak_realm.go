@@ -1877,6 +1877,14 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 	return nil
 }
 
+// Keycloak can only replace all attributes of a realm at once. Keeping the attributes that
+// Terraform does not manage therefore means reading the realm, changing it and writing it back.
+// Everything that does this must share one lock per realm; otherwise concurrent updates overwrite
+// each other's changes.
+func realmAttributesMutexKey(realmId string) string {
+	return fmt.Sprintf("realm-attributes:%s", realmId)
+}
+
 func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	keycloakVersion, err := keycloakClient.Version(ctx)
@@ -1889,13 +1897,22 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	keycloakClient.Mutex.Lock(realmAttributesMutexKey(data.Id()))
+	defer keycloakClient.Mutex.Unlock(realmAttributesMutexKey(data.Id()))
+
+	currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Keycloak removes every attribute that is missing from the update, so send the current
+	// attributes as well and change only those that are or were configured here.
+	oldAttributes, newAttributes := data.GetChange("attributes")
+	realm.Attributes = keycloak.MergeRealmAttributes(currentRealm.Attributes, oldAttributes.(map[string]interface{}), newAttributes.(map[string]interface{}))
+
 	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
 		// Keycloak only preserves a masked password while the SMTP destination is
 		// unchanged. Check the server too, in case it drifted after planning.
-		currentRealm, err := keycloakClient.GetRealm(ctx, data.Id())
-		if err != nil {
-			return diag.FromErr(err)
-		}
 		if !realmSMTPDestinationUnchanged(currentRealm.SmtpServer, realm.SmtpServer) {
 			return diag.Errorf("%s", realmSMTPPasswordVersionRequired)
 		}
