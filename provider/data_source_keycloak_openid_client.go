@@ -276,7 +276,7 @@ func dataSourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resour
 	clientId := data.Get("client_id").(string)
 
 	getClient := keycloakClient.GetOpenidClientByClientId
-	if clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm") {
+	if clientId == "realm-management" || clientId == "admin-permissions" || realmId == "master" && strings.HasSuffix(clientId, "-realm") {
 		getClient = keycloakClient.GetOpenidClientByClientIdSkipSecret
 	}
 	client, err := getClient(ctx, realmId, clientId)
