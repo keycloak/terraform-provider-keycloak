@@ -127,7 +127,8 @@ func resourceKeycloakOrganizationAdminPermissionsRead(ctx context.Context, data 
 	if len(parts) != 2 {
 		return diag.Errorf("invalid resource id %q, expected realmId/permissionId", data.Id())
 	}
-	realmId, permId := parts[0], parts[1]
+	// the id keeps the realm name from when the permission was created, realm_id follows a rename
+	realmId, permId := realmNameOrIdPrefix(data, parts[0]), parts[1]
 
 	apClientId, err := kc.GetAdminPermissionsClientId(ctx, realmId)
 	if err != nil {
@@ -170,7 +171,7 @@ func resourceKeycloakOrganizationAdminPermissionsDelete(ctx context.Context, dat
 	if len(parts) != 2 {
 		return nil
 	}
-	realmId, permId := parts[0], parts[1]
+	realmId, permId := realmNameOrIdPrefix(data, parts[0]), parts[1]
 
 	apClientId, err := kc.GetAdminPermissionsClientId(ctx, realmId)
 	if err != nil {

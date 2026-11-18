@@ -34,6 +34,7 @@ type KeycloakClient struct {
 	authUrl             string
 	realm               string
 	clientCredentials   *ClientCredentials
+	tokenMu             sync.RWMutex // guards the tokens in clientCredentials
 	httpClient          *http.Client
 	initialLogin        bool
 	userAgent           string
@@ -49,6 +50,9 @@ type KeycloakClient struct {
 	// server-level setting that does not change during a Terraform run.
 	fgapv2Mu     sync.Mutex
 	fgapv2Cached *bool
+
+	// realmCache remembers realm ids and names for a short while, see GetRealmNameByInternalId.
+	realmCache realmCache
 
 	serverInfo     *ServerInfo
 	serverInfoErr  error
@@ -219,12 +223,11 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 			return err
 		}
 
-		keycloakClient.clientCredentials.AccessToken = clientCredentials.AccessToken
-		keycloakClient.clientCredentials.RefreshToken = clientCredentials.RefreshToken
-		keycloakClient.clientCredentials.TokenType = clientCredentials.TokenType
+		keycloakClient.setTokens(&clientCredentials)
 	} else {
+		_, accessToken := keycloakClient.tokenTypeAndAccessToken()
 		tflog.Debug(ctx, "Using provided access_token", map[string]interface{}{
-			"access_token": keycloakClient.clientCredentials.AccessToken,
+			"access_token": accessToken,
 		})
 	}
 
@@ -349,7 +352,10 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 
 	defer refreshTokenResponse.Body.Close()
 
-	body, _ := io.ReadAll(refreshTokenResponse.Body)
+	body, err := io.ReadAll(refreshTokenResponse.Body)
+	if err != nil {
+		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint: %w", err)
+	}
 
 	tflog.Debug(ctx, "Refresh response", map[string]interface{}{
 		"response": string(body),
@@ -362,17 +368,38 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 		return keycloakClient.login(ctx)
 	}
 
+	// an error answer can be valid JSON as well, and must not replace a working token
+	if refreshTokenResponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("error refreshing credentials: the token endpoint answered %s; response: %s", refreshTokenResponse.Status, responseSnippet(body))
+	}
+
 	var clientCredentials ClientCredentials
 	err = json.Unmarshal(body, &clientCredentials)
 	if err != nil {
-		return err
+		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint (%s): %w; response: %s", refreshTokenResponse.Status, err, responseSnippet(body))
+	}
+	if strings.TrimSpace(clientCredentials.AccessToken) == "" || strings.TrimSpace(clientCredentials.TokenType) == "" {
+		return fmt.Errorf("error refreshing credentials: the token endpoint (%s) did not return an access token and token type", refreshTokenResponse.Status)
 	}
 
-	keycloakClient.clientCredentials.AccessToken = clientCredentials.AccessToken
-	keycloakClient.clientCredentials.RefreshToken = clientCredentials.RefreshToken
-	keycloakClient.clientCredentials.TokenType = clientCredentials.TokenType
+	keycloakClient.setTokens(&clientCredentials)
 
 	return nil
+}
+
+// responseSnippet is the start of a response body, for error messages. A body that mentions a token is left out.
+func responseSnippet(body []byte) string {
+	const limit = 120
+
+	text := strings.TrimSpace(string(body))
+	if strings.Contains(text, "token") {
+		return "(left out, it mentions a token)"
+	}
+	if len(text) > limit {
+		text = text[:limit] + "..."
+	}
+
+	return text
 }
 
 func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Context, kc_url string) (url.Values, error) {
@@ -437,9 +464,31 @@ func (keycloakClient *KeycloakClient) applyAdditionalHeaders(request *http.Reque
 	}
 }
 
+// setTokens stores a new set of tokens. Requests are built on other goroutines while a token is refreshed.
+func (keycloakClient *KeycloakClient) setTokens(tokens *ClientCredentials) {
+	keycloakClient.tokenMu.Lock()
+	defer keycloakClient.tokenMu.Unlock()
+
+	keycloakClient.clientCredentials.AccessToken = tokens.AccessToken
+	keycloakClient.clientCredentials.RefreshToken = tokens.RefreshToken
+	keycloakClient.clientCredentials.TokenType = tokens.TokenType
+}
+
+// AccessTokenProvided reports whether the provider was given an access token instead of credentials. Such a token
+// cannot be refreshed.
+func (keycloakClient *KeycloakClient) AccessTokenProvided() bool {
+	return keycloakClient.accessTokenProvided
+}
+
+func (keycloakClient *KeycloakClient) tokenTypeAndAccessToken() (string, string) {
+	keycloakClient.tokenMu.RLock()
+	defer keycloakClient.tokenMu.RUnlock()
+
+	return keycloakClient.clientCredentials.TokenType, keycloakClient.clientCredentials.AccessToken
+}
+
 func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
-	tokenType := keycloakClient.clientCredentials.TokenType
-	accessToken := keycloakClient.clientCredentials.AccessToken
+	tokenType, accessToken := keycloakClient.tokenTypeAndAccessToken()
 
 	keycloakClient.applyAdditionalHeaders(request)
 
@@ -551,7 +600,13 @@ func (keycloakClient *KeycloakClient) get(ctx context.Context, path string, reso
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(body, resource)
+
+	if err := json.Unmarshal(body, resource); err != nil {
+		// the response is left out: it can hold a secret, for example when a client secret is read
+		return fmt.Errorf("error reading the response of GET %s: %w", path, err)
+	}
+
+	return nil
 }
 
 func (keycloakClient *KeycloakClient) getRaw(ctx context.Context, path string, params map[string]string) ([]byte, error) {
