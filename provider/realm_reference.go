@@ -22,6 +22,7 @@ const (
 var resourceRealmIDFormats = map[string]realmIDFormat{
 	"keycloak_authentication_bindings":                           realmNameID,
 	"keycloak_default_groups":                                    realmPrefixedID,
+	"keycloak_generic_client_role_mapper":                        realmPrefixedID,
 	"keycloak_generic_role_mapper":                               realmPrefixedID,
 	"keycloak_group_admin_permissions":                           realmPrefixedID,
 	"keycloak_group_memberships":                                 realmPrefixedID,
