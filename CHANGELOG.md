@@ -1,5 +1,15 @@
 ## What's Changed
 
+## Unreleased
+
+FEATURES:
+
+* Add `keycloak_client_scope_assignments` resource by @EliSauder in https://github.com/keycloak/terraform-provider-keycloak/pull/1801
+
+DEPRECATIONS:
+
+* Deprecate the split client-scope assignment resources in favor of `keycloak_client_scope_assignments` by @EliSauder in https://github.com/keycloak/terraform-provider-keycloak/pull/1801
+
 ## 5.10.0 (October 5, 2026)
 
 FEATURES:
