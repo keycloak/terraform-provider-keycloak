@@ -948,6 +948,7 @@ func TestAccKeycloakRealm_attributesKeepUnmanaged(t *testing.T) {
 	t.Parallel()
 
 	realmName := acctest.RandomWithPrefix("tf-acc")
+	renamedRealmName := realmName + "-renamed"
 	resourceName := "keycloak_realm.realm"
 	frontendUrl := "https://" + realmName + ".example.com"
 
@@ -990,6 +991,17 @@ func TestAccKeycloakRealm_attributesKeepUnmanaged(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakRealmDisplayName(resourceName, "removed"),
 					testAccCheckKeycloakRealmAttributeAbsent(resourceName, "managed"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "unmanaged", "x"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "frontendUrl", frontendUrl),
+				),
+			},
+			{
+				// renaming the realm in the same apply keeps the attributes as well
+				Config: testKeycloakRealm_withManagedAttribute(renamedRealmName, "renamed", "c"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "realm", renamedRealmName),
+					testAccCheckKeycloakRealmDisplayName(resourceName, "renamed"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "managed", "c"),
 					testAccCheckKeycloakRealmCustomAttribute(resourceName, "unmanaged", "x"),
 					testAccCheckKeycloakRealmCustomAttribute(resourceName, "frontendUrl", frontendUrl),
 				),
