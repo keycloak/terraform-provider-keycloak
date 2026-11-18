@@ -185,7 +185,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		}
 
 		tflog.Debug(ctx, "Login request", map[string]interface{}{
-			"request": accessTokenData.Encode(),
+			"request": redactFormData(accessTokenData),
 		})
 
 		accessTokenRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, accessTokenUrl, strings.NewReader(accessTokenData.Encode()))
@@ -216,7 +216,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		}
 
 		tflog.Debug(ctx, "Login response", map[string]interface{}{
-			"response": string(body),
+			"response": redactedLogBody(body, false),
 		})
 
 		credentials, err := decodeTokenResponse(body)
@@ -225,10 +225,7 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		}
 		keycloakClient.setTokens(credentials)
 	} else {
-		_, accessToken := keycloakClient.tokenTypeAndAccessToken()
-		tflog.Debug(ctx, "Using provided access_token", map[string]interface{}{
-			"access_token": accessToken,
-		})
+		tflog.Debug(ctx, "Using provided access_token")
 	}
 
 	info, err := keycloakClient.GetServerInfo(ctx)
@@ -329,7 +326,7 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	}
 
 	tflog.Debug(ctx, "Refresh request", map[string]interface{}{
-		"request": refreshTokenData.Encode(),
+		"request": redactFormData(refreshTokenData),
 	})
 
 	refreshTokenRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, refreshTokenUrl, strings.NewReader(refreshTokenData.Encode()))
@@ -358,7 +355,7 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 	}
 
 	tflog.Debug(ctx, "Refresh response", map[string]interface{}{
-		"response": string(body),
+		"response": redactedLogBody(body, false),
 	})
 
 	// Handle 401 "User or client no longer has role permissions for client key" until I better understand why that happens in the first place
@@ -517,7 +514,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 
 	if body != nil {
 		request.Body = io.NopCloser(bytes.NewReader(body))
-		requestLogArgs["body"] = string(body)
+		requestLogArgs["body"] = redactedLogBody(body, keycloakClient.debug)
 	}
 
 	tflog.Debug(ctx, "Sending request", requestLogArgs)
@@ -564,7 +561,7 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	}
 
 	if len(responseBody) != 0 && request.URL.Path != "/auth/admin/serverinfo" {
-		responseLogArgs["body"] = string(responseBody)
+		responseLogArgs["body"] = redactedLogBody(responseBody, false)
 	}
 
 	tflog.Debug(ctx, "Received response", responseLogArgs)
