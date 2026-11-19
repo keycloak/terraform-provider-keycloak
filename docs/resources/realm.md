@@ -79,14 +79,14 @@ resource "keycloak_realm" "realm" {
 
 ## Argument Reference
 
-- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak.
+- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak. Changing it renames the realm in place; see [Renaming a realm](#renaming-a-realm). The `master` realm cannot be renamed.
 - `enabled` - (Optional) When `false`, users and clients will not be able to access this realm. Defaults to `true`.
 - `display_name` - (Optional) The display name for the realm that is shown when logging in to the admin console.
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
 - `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm.
-- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
+- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, Keycloak generates a UUID. Realms created by earlier versions of this provider may still have the realm's name as internal ID.
 - `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 
 ### Login Settings
@@ -284,7 +284,8 @@ Each of these attributes are blocks with the following attributes:
 
 - `relying_party_entity_name` - (Optional) A human-readable server name for the WebAuthn Relying Party. Defaults to `keycloak`.
 - `relying_party_id` - (Optional) The WebAuthn relying party ID.
-- `signature_algorithms` - (Optional) A set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
+- `signature_algorithms_ordered` - (Optional) A list of signature algorithms in [WebAuthn preference order](https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialcreationoptions-pubkeycredparams). Use this instead of `signature_algorithms` when order matters; the two arguments cannot be configured together. Keycloak preserves this order, and Terraform detects changes to it. When omitted, this field only reports the server order in state. Legacy `signature_algorithms` writes remain unordered and can reorder algorithms during other realm updates. To adopt an existing order, replace `signature_algorithms` with this argument using the exact order returned by Keycloak. Available in both WebAuthn policy blocks.
+- `signature_algorithms` - (Optional) An unordered set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
 - `attestation_conveyance_preference` - (Optional) The preference of how to generate a WebAuthn attestation statement. Valid options are `not specified`, `none`, `indirect`, `direct`, or `enterprise`. Defaults to `not specified`.
 - `authenticator_attachment` - (Optional) The acceptable attachment pattern for the WebAuthn authenticator. Valid options are `not specified`, `platform`, or `cross-platform`. Defaults to `not specified`.
 - `require_resident_key` - (Optional) **Deprecated** Specifies whether a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`. Deprecated by Keycloak in favor of `discoverable_credential` — this attribute is only used when `discoverable_credential` is left as `not specified`.
@@ -296,10 +297,59 @@ Each of these attributes are blocks with the following attributes:
 - `extra_origins` - (Optional) A set of extra origins for non-web applications.
 - `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. This attribute is only valid inside a `web_authn_passwordless_policy` block and requires a Keycloak version that supports passwordless passkeys. Defaults to `false`.
 
+## Renaming a realm
+
+Changing `realm` renames the realm in place instead of replacing it, so its data is kept. Keycloak addresses a realm by
+its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
+Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
+
+To prevent that, reference the realm by its internal id, which never changes, using `realm_internal_id` instead of `realm_id`:
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm = "my-realm"
+}
+
+resource "keycloak_group" "group" {
+  realm_internal_id = keycloak_realm.realm.internal_id
+  name       = "group"
+}
+```
+
+`realm_internal_id` is available on every resource and data source that has a `realm_id` (or `realm`) argument, which then
+holds the current realm name as a read-only value. Set exactly one of them. Data sources should use it too: they are
+read while planning, when a renamed realm does not exist under its new name yet.
+
+Looking up a realm by its internal id requires that the provider's account can see the realm's id. Keycloak hides it
+from accounts that have no `view-realm` role on that realm (for example one that only has `manage-clients`), so grant
+that role (the `realm-management` client role of the realm) before using `realm_internal_id`. Configurations that keep using
+`realm_id` are not affected. If the id is hidden, using `realm_internal_id` fails with an error instead of replacing resources.
+Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_internal_id` fail with that error until the
+role is granted again: the provider will not guess a realm from a name that may have been reused.
+
+Things to know about renaming:
+
+- A realm keeps its internal id when it is renamed, and the name of a renamed realm can be reused by a new realm. The
+  exception is a realm whose internal id is its old name: realms created by earlier versions of this provider got the
+  realm name as internal id. After renaming such a realm from `a` to `b` its id `a` stays taken, so creating a new realm
+  called `a` with `internal_id = "a"` fails. Leave `internal_id` unset so that Keycloak generates a UUID.
+- Resources whose id contains the realm name (for example `keycloak_default_groups`) get the new name in their id on
+  the next refresh.
+- A resource that still uses `realm_id` (the realm name) depends on where the name comes from. If it comes from
+  `keycloak_realm.x.realm`, the plan of the rename already shows the new name, so the resource is replaced in that
+  apply. If it comes from `keycloak_realm.x.id`, the plan of the rename still shows the old name, because the id only
+  changes while the realm is updated. The next refresh then brings the resource up to date, so it is not replaced, but
+  adding or changing such a resource in the same apply as the rename fails with `Provider produced inconsistent final
+  plan`, after the realm has already been renamed. Use `realm_internal_id` for all resources of a realm that you want to rename.
+
+To migrate an existing configuration, first upgrade the provider and run `terraform apply`, or `terraform apply -refresh-only`;
+`realm_internal_id` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
+`realm_internal_id = keycloak_realm.realm.internal_id`, which shows no changes. After that, `realm` can be changed safely.
+
 ## Default Client Scopes
 
-- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_default_client_scopes`.
-- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. For an alternative, please refer to the dedicated resource `keycloak_realm_optional_client_scopes`.
+- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. Alternatively, manage both assignment sets with [`keycloak_client_scope_assignments`](client_scope_assignments.md) and omit both scope-assignment fields from this realm resource.
+- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. Do not configure this field or `default_default_client_scopes` alongside a realm-level `keycloak_client_scope_assignments` resource; they manage the same assignments and will conflict.
 
 ## Import
 

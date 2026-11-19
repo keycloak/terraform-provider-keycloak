@@ -12,10 +12,11 @@ import (
 
 func resourceKeycloakOpenidClientDefaultScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakOpenidClientDefaultScopesReconcile,
-		ReadContext:   resourceKeycloakOpenidClientDefaultScopesRead,
-		DeleteContext: resourceKeycloakOpenidClientDefaultScopesDelete,
-		UpdateContext: resourceKeycloakOpenidClientDefaultScopesReconcile,
+		DeprecationMessage: "please use keycloak_client_scope_assignments instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakOpenidClientDefaultScopesReconcile,
+		ReadContext:        resourceKeycloakOpenidClientDefaultScopesRead,
+		DeleteContext:      resourceKeycloakOpenidClientDefaultScopesDelete,
+		UpdateContext:      resourceKeycloakOpenidClientDefaultScopesReconcile,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOpenidClientDefaultScopesImport,
 		},

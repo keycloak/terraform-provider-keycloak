@@ -124,7 +124,7 @@ func TestAccKeycloakOpenidClientDefaultScopes_validateClientDoesNotExist(t *test
 	})
 }
 
-func TestAccKeycloakOpenidClientDefaultScopes_validateClientAccessType(t *testing.T) {
+func TestAccKeycloakOpenidClientDefaultScopes_bearerOnly(t *testing.T) {
 	t.Parallel()
 	client := acctest.RandomWithPrefix("tf-acc")
 	clientScope := acctest.RandomWithPrefix("tf-acc")
@@ -134,8 +134,8 @@ func TestAccKeycloakOpenidClientDefaultScopes_validateClientAccessType(t *testin
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeycloakOpenidClientDefaultScopes_validationBearerOnlyClient(client, clientScope),
-				ExpectError: regexp.MustCompile("validation error: client with id .+ uses access type BEARER-ONLY which does not use scopes"),
+				Config: testKeycloakOpenidClientDefaultScopes_validationBearerOnlyClient(client, clientScope),
+				Check:  testAccCheckKeycloakOpenidClientHasDefaultScopes("keycloak_openid_client_default_scopes.default_scopes", []string{"profile", "email", "roles", "web-origins", clientScope}),
 			},
 		},
 	})

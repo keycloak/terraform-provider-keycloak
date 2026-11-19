@@ -45,6 +45,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_realm_client_policy_profile_policy":                resourceKeycloakRealmClientPolicyProfilePolicy(),
 			"keycloak_realm_client_registration_policy":                  resourceKeycloakRealmClientRegistrationPolicy(),
 			"keycloak_realm_keystore_aes_generated":                      resourceKeycloakRealmKeystoreAesGenerated(),
+			"keycloak_realm_keystore_ecdh_generated":                     resourceKeycloakRealmKeystoreEcdhGenerated(),
 			"keycloak_realm_keystore_custom":                             resourceKeycloakRealmKeystoreCustom(),
 			"keycloak_realm_keystore_ecdsa_generated":                    resourceKeycloakRealmKeystoreEcdsaGenerated(),
 			"keycloak_realm_keystore_hmac_generated":                     resourceKeycloakRealmKeystoreHmacGenerated(),
@@ -63,6 +64,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_user":                                              resourceKeycloakUser(),
 			"keycloak_user_roles":                                        resourceKeycloakUserRoles(),
 			"keycloak_openid_client":                                     resourceKeycloakOpenidClient(),
+			"keycloak_client_scope_assignments":                          resourceKeycloakClientScopeAssignments(),
 			"keycloak_openid_client_scope":                               resourceKeycloakOpenidClientScope(),
 			"keycloak_ldap_user_federation":                              resourceKeycloakLdapUserFederation(),
 			"keycloak_ldap_user_attribute_mapper":                        resourceKeycloakLdapUserAttributeMapper(),
@@ -282,6 +284,26 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Description: "The Keycloak version to assume when the server does not report it via the /admin/serverinfo endpoint. Useful on Keycloak 26.4+ when the service account lacks the view-system (or, since 26.5.4, manage-realms) role. Example: \"26.4.7\".",
 			},
 		},
+	}
+
+	for name, dataSource := range provider.DataSourcesMap {
+		if name != "keycloak_realm" {
+			withRealmInternalIdDataSource(dataSource)
+		}
+	}
+
+	// resources that are identified by their realm: their id is the realm name
+	identifiedByRealm := map[string]bool{
+		"keycloak_authentication_bindings":      true,
+		"keycloak_realm_default_client_scopes":  true,
+		"keycloak_realm_events":                 true,
+		"keycloak_realm_optional_client_scopes": true,
+		"keycloak_realm_user_profile":           true,
+	}
+	for name, resource := range provider.ResourcesMap {
+		if name != "keycloak_realm" {
+			withRealmInternalId(resource, identifiedByRealm[name])
+		}
 	}
 
 	provider.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
