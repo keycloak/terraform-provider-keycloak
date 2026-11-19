@@ -40,6 +40,7 @@ func TestNotFoundFromKeycloakIs404(t *testing.T) {
 		{"missing realm", "application/json", `{"error":"Realm not found."}`},
 		{"with charset", "application/json;charset=UTF-8", `{"error":"Could not find client"}`},
 		{"problem json", "application/problem+json", `{"status":404}`},
+		{"empty authorization scope answer", "", ""},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +63,6 @@ func TestNotFoundFromProxyIsNot404(t *testing.T) {
 	}{
 		{"traefik without routes", "text/plain; charset=utf-8", "404 page not found"},
 		{"html error page", "text/html", "<html><body><h1>404 Not Found</h1></body></html>"},
-		{"no content type", "", ""},
 	}
 
 	for _, tt := range tests {

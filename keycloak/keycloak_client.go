@@ -584,9 +584,9 @@ func (keycloakClient *KeycloakClient) sendRequest(ctx context.Context, request *
 	if response.StatusCode >= 400 {
 		errorMessage := fmt.Sprintf("error sending %s request to %s: %s.", request.Method, request.URL.Path, response.Status)
 
-		// Callers remove a resource from the state on a 404, so only Keycloak's own JSON answer may count as one:
-		// a reverse proxy that has not loaded its routes yet answers 404 with text or HTML.
-		notFromKeycloak := response.StatusCode == http.StatusNotFound && !isJsonResponse(response)
+		// Callers remove a resource from the state on a 404, so only Keycloak's own answer may count as one: JSON, or
+		// empty as from the authorization scope endpoints. A reverse proxy without its routes answers with text or HTML.
+		notFromKeycloak := response.StatusCode == http.StatusNotFound && len(responseBody) != 0 && !isJsonResponse(response)
 		if notFromKeycloak {
 			errorMessage = fmt.Sprintf("%s The response is not JSON from Keycloak (Content-Type %q), so the resource is not treated as deleted.", errorMessage, response.Header.Get("Content-Type"))
 		}
