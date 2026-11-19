@@ -205,25 +205,25 @@ func (keycloakClient *KeycloakClient) login(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		defer accessTokenResponse.Body.Close()
 		if accessTokenResponse.StatusCode != http.StatusOK {
 			return fmt.Errorf("error sending POST request to %s: %s", accessTokenUrl, accessTokenResponse.Status)
 		}
 
-		defer accessTokenResponse.Body.Close()
-
-		body, _ := io.ReadAll(accessTokenResponse.Body)
+		body, err := io.ReadAll(accessTokenResponse.Body)
+		if err != nil {
+			return fmt.Errorf("cannot read token endpoint response: %w", err)
+		}
 
 		tflog.Debug(ctx, "Login response", map[string]interface{}{
 			"response": string(body),
 		})
 
-		var clientCredentials ClientCredentials
-		err = json.Unmarshal(body, &clientCredentials)
+		credentials, err := decodeTokenResponse(body)
 		if err != nil {
 			return err
 		}
-
-		keycloakClient.setTokens(&clientCredentials)
+		keycloakClient.setTokens(credentials)
 	} else {
 		_, accessToken := keycloakClient.tokenTypeAndAccessToken()
 		tflog.Debug(ctx, "Using provided access_token", map[string]interface{}{
@@ -370,36 +370,26 @@ func (keycloakClient *KeycloakClient) Refresh(ctx context.Context) error {
 
 	// an error answer can be valid JSON as well, and must not replace a working token
 	if refreshTokenResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("error refreshing credentials: the token endpoint answered %s; response: %s", refreshTokenResponse.Status, responseSnippet(body))
+		return fmt.Errorf("error refreshing credentials: the token endpoint answered %s", refreshTokenResponse.Status)
 	}
 
-	var clientCredentials ClientCredentials
-	err = json.Unmarshal(body, &clientCredentials)
+	credentials, err := decodeTokenResponse(body)
 	if err != nil {
-		return fmt.Errorf("error refreshing credentials: cannot read the response of the token endpoint (%s): %w; response: %s", refreshTokenResponse.Status, err, responseSnippet(body))
+		return fmt.Errorf("error refreshing credentials: %w", err)
 	}
-	if strings.TrimSpace(clientCredentials.AccessToken) == "" || strings.TrimSpace(clientCredentials.TokenType) == "" {
-		return fmt.Errorf("error refreshing credentials: the token endpoint (%s) did not return an access token and token type", refreshTokenResponse.Status)
-	}
-
-	keycloakClient.setTokens(&clientCredentials)
-
+	keycloakClient.setTokens(credentials)
 	return nil
 }
 
-// responseSnippet is the start of a response body, for error messages. A body that mentions a token is left out.
-func responseSnippet(body []byte) string {
-	const limit = 120
-
-	text := strings.TrimSpace(string(body))
-	if strings.Contains(text, "token") {
-		return "(left out, it mentions a token)"
+func decodeTokenResponse(body []byte) (*ClientCredentials, error) {
+	var credentials ClientCredentials
+	if err := json.Unmarshal(body, &credentials); err != nil {
+		return nil, fmt.Errorf("cannot decode token endpoint response: %w", err)
 	}
-	if len(text) > limit {
-		text = text[:limit] + "..."
+	if strings.TrimSpace(credentials.AccessToken) == "" || strings.TrimSpace(credentials.TokenType) == "" {
+		return nil, fmt.Errorf("token endpoint response is missing access_token or token_type")
 	}
-
-	return text
+	return &credentials, nil
 }
 
 func (keycloakClient *KeycloakClient) getAuthenticationFormData(ctx context.Context, kc_url string) (url.Values, error) {

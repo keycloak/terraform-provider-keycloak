@@ -9,6 +9,48 @@ import (
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
+// Only resource types whose ID format explicitly includes the realm name may have their
+// ID rewritten. Other composite IDs can start with a user or service-account ID.
+type realmIDFormat int
+
+const (
+	opaqueID realmIDFormat = iota
+	realmNameID
+	realmPrefixedID
+)
+
+var resourceRealmIDFormats = map[string]realmIDFormat{
+	"keycloak_authentication_bindings":                           realmNameID,
+	"keycloak_default_groups":                                    realmPrefixedID,
+	"keycloak_generic_client_role_mapper":                        realmPrefixedID,
+	"keycloak_generic_role_mapper":                               realmPrefixedID,
+	"keycloak_group_admin_permissions":                           realmPrefixedID,
+	"keycloak_group_memberships":                                 realmPrefixedID,
+	"keycloak_group_permissions":                                 realmPrefixedID,
+	"keycloak_group_roles":                                       realmPrefixedID,
+	"keycloak_identity_provider_token_exchange_scope_permission": realmPrefixedID,
+	"keycloak_openid_client_admin_permissions":                   realmPrefixedID,
+	"keycloak_openid_client_default_scopes":                      realmPrefixedID,
+	"keycloak_openid_client_optional_scopes":                     realmPrefixedID,
+	"keycloak_openid_client_permissions":                         realmPrefixedID,
+	"keycloak_organization_admin_permissions":                    realmPrefixedID,
+	"keycloak_organization_memberships":                          realmPrefixedID,
+	"keycloak_realm_client_policy_profile":                       realmPrefixedID,
+	"keycloak_realm_client_policy_profile_policy":                realmPrefixedID,
+	"keycloak_realm_default_client_scopes":                       realmNameID,
+	"keycloak_realm_events":                                      realmNameID,
+	"keycloak_realm_localization":                                realmPrefixedID,
+	"keycloak_realm_optional_client_scopes":                      realmNameID,
+	"keycloak_realm_user_profile":                                realmNameID,
+	"keycloak_required_action":                                   realmPrefixedID,
+	"keycloak_role_admin_permissions":                            realmPrefixedID,
+	"keycloak_saml_client_default_scopes":                        realmPrefixedID,
+	"keycloak_user_groups":                                       realmPrefixedID,
+	"keycloak_user_roles":                                        realmPrefixedID,
+	"keycloak_users_admin_permissions":                           realmPrefixedID,
+	"keycloak_users_permissions":                                 realmNameID,
+}
+
 // Resources that live inside a realm identify it with realm_id (a few use "realm"), which is the realm's name. A
 // realm can be renamed, but its internal id never changes. withRealmInternalId adds an optional
 // realm_internal_id attribute (typically keycloak_realm.x.internal_id) to such resources. Keycloak's admin
@@ -17,21 +59,18 @@ import (
 // its realm is renamed.
 //
 // The wrapper is applied to the whole resources map, so individual resources need no changes.
-//
-// idIsRealmName is for resources that are identified by their realm, so that their id is the realm name and
-// follows a rename. It is not a general rule: the id of other resources can equal a realm name by chance.
-func withRealmInternalId(resource *schema.Resource, idIsRealmName bool) {
-	addRealmInternalId(resource, true, idIsRealmName)
+func withRealmInternalId(resource *schema.Resource, format realmIDFormat) {
+	addRealmInternalId(resource, true, format)
 }
 
 // withRealmInternalIdDataSource does the same for data sources. They are read at plan time, so after
 // renaming a realm a data source that is still configured with the new name fails to find it
 // until the rename has been applied; with realm_internal_id it resolves the realm that exists now.
 func withRealmInternalIdDataSource(dataSource *schema.Resource) {
-	addRealmInternalId(dataSource, false, false)
+	addRealmInternalId(dataSource, false, opaqueID)
 }
 
-func addRealmInternalId(resource *schema.Resource, writable bool, idIsRealmName bool) {
+func addRealmInternalId(resource *schema.Resource, writable bool, format realmIDFormat) {
 	realmField := ""
 	for _, field := range []string{"realm_id", "realm"} {
 		if s, ok := resource.Schema[field]; ok && s.Type == schema.TypeString && s.Required {
@@ -68,13 +107,13 @@ func addRealmInternalId(resource *schema.Resource, writable bool, idIsRealmName 
 	}
 
 	if resource.CreateContext != nil {
-		resource.CreateContext = withRealmReference(realmField, resource.CreateContext, false, idIsRealmName)
+		resource.CreateContext = withRealmReference(realmField, resource.CreateContext, false, format)
 	}
 	if resource.ReadContext != nil {
-		resource.ReadContext = withRealmReference(realmField, resource.ReadContext, writable, idIsRealmName)
+		resource.ReadContext = withRealmReference(realmField, resource.ReadContext, writable, format)
 	}
 	if resource.UpdateContext != nil {
-		resource.UpdateContext = withRealmReference(realmField, resource.UpdateContext, false, idIsRealmName)
+		resource.UpdateContext = withRealmReference(realmField, resource.UpdateContext, false, format)
 	}
 	if resource.DeleteContext != nil {
 		deleteContext := resource.DeleteContext
@@ -91,7 +130,7 @@ func addRealmInternalId(resource *schema.Resource, writable bool, idIsRealmName 
 	}
 }
 
-func withRealmReference(realmField string, next func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics, removeIfRealmGone bool, idIsRealmName bool) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
+func withRealmReference(realmField string, next func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics, removeIfRealmGone bool, format realmIDFormat) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
 	return func(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		keycloakClient := meta.(*keycloak.KeycloakClient)
 		previousName := data.Get(realmField).(string)
@@ -113,7 +152,7 @@ func withRealmReference(realmField string, next func(context.Context, *schema.Re
 			return append(diags, diag.FromErr(err)...)
 		}
 
-		renameRealmInId(data, previousName, data.Get(realmField).(string), idIsRealmName)
+		renameRealmInId(data, previousName, data.Get(realmField).(string), format)
 
 		return diags
 	}
@@ -195,18 +234,18 @@ func withRealmInternalIdDiff(realmField string, next schema.CustomizeDiffFunc) s
 }
 
 // renameRealmInId keeps an id like "<realm>/<something>" in line with the realm after it was renamed.
-func renameRealmInId(data *schema.ResourceData, previousName string, currentName string, idIsRealmName bool) {
+func renameRealmInId(data *schema.ResourceData, previousName string, currentName string, format realmIDFormat) {
 	if previousName == "" || currentName == "" || previousName == currentName {
 		return
 	}
 
-	if idIsRealmName && data.Id() == previousName {
+	if format == realmNameID && data.Id() == previousName {
 		data.SetId(currentName)
 
 		return
 	}
 
-	if id := data.Id(); strings.HasPrefix(id, previousName+"/") {
+	if id := data.Id(); format == realmPrefixedID && strings.HasPrefix(id, previousName+"/") {
 		data.SetId(currentName + strings.TrimPrefix(id, previousName))
 	}
 }

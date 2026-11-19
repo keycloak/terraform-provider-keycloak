@@ -192,10 +192,13 @@ renames working in a new resource:
 - Use `data.Get("realm_id")` (or `realm`) to get the realm in create, read, update and delete. It always holds the current
   realm name. Do not take the realm from `data.Id()`, and do not split it out of a composite id: such an id keeps the name the
   realm had when the resource was created. Parsing the id in an import function is fine.
-- If the id of the resource is the realm name (as for `keycloak_realm_events`), add the resource to `identifiedByRealm` in
-  `provider/provider.go`, so that its id follows a rename.
-- If the id contains the realm name as its first part (`<realm>/<something>`), take the realm from `realm_id` and only the
-  other parts from the id. The id is updated after a rename.
+- If the id of the resource is the realm name (as for `keycloak_realm_events`), register the resource in
+  `resourceRealmIDFormats` in `provider/realm_reference.go` with `realmNameID`, so that its id follows a rename.
+- If the id contains the realm name as its first part (`<realm>/<something>`), register the resource in
+  `resourceRealmIDFormats` with `realmPrefixedID`, take the realm from `realm_id` and only the other parts from the id.
+  The id is then updated after a rename.
+- A resource that is not registered there is treated as `opaqueID`: its id is never rewritten, so a realm name in it
+  would keep the old name after a rename.
 - Add the resource to `TestAccKeycloakRealm_renameWithMixedChildren` in
   `provider/resource_keycloak_realm_rename_test.go`, using `realm_internal_id`, and check that it is not replaced by a rename.
 - `TestRealmInternalIdIsOnEveryRealmScopedResource` fails for a resource without a realm argument. If the resource is not

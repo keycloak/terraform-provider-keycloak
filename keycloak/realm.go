@@ -218,16 +218,17 @@ func (keycloakClient *KeycloakClient) GetRealm(ctx context.Context, name string)
 	return &realm, nil
 }
 
-// GetRealmByInternalId reads the realm that has the given internal id. knownName is the name the realm had when it
-// was last seen: if another realm has that name now, the realm is searched for by its id. An empty internal id (an
-// import, or old state), or an id that Keycloak does not show to this account, cannot be checked, so the realm is
-// taken by name.
+// GetRealmByInternalId reads the realm bound to this resource. Imports and older state
+// without an internal ID use the stored name until a refresh discovers the ID.
 func (keycloakClient *KeycloakClient) GetRealmByInternalId(ctx context.Context, internalId, knownName string) (*Realm, error) {
+	if internalId == "" {
+		return keycloakClient.GetRealm(ctx, knownName)
+	}
 	realm, err := keycloakClient.GetRealm(ctx, knownName)
-	if err == nil && (internalId == "" || realm.Id == "" || realm.Id == internalId) {
+	if err == nil && realm.Id == internalId {
 		return realm, nil
 	}
-	if err != nil && !ErrorIs404(err) && !(ErrorIs403(err) && internalId != "") {
+	if err != nil && !ErrorIs404(err) && !ErrorIs403(err) {
 		return nil, err
 	}
 
@@ -235,8 +236,18 @@ func (keycloakClient *KeycloakClient) GetRealmByInternalId(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-
-	return keycloakClient.GetRealm(ctx, name)
+	realm, err = keycloakClient.GetRealm(ctx, name)
+	if ErrorIs404(err) {
+		// The list just contained this ID. A concurrent rename can invalidate the name.
+		return nil, fmt.Errorf("realm %q disappeared during lookup of internal id %q; retry the lookup", name, internalId)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if realm.Id != internalId {
+		return nil, fmt.Errorf("cannot confirm that realm %q still has internal id %q; retry the lookup", name, internalId)
+	}
+	return realm, nil
 }
 
 func (keycloakClient *KeycloakClient) GetRealms(ctx context.Context) ([]*Realm, error) {
@@ -430,8 +441,10 @@ func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Conte
 			keycloakClient.realmCache.remember(generation, uuid, name)
 
 			return name, nil
+		case err == nil && realm.Id == "":
+			forbidden = true
 		case err == nil:
-			// another realm has this name now, or Keycloak does not show the id: look further
+			// Another realm has this name now.
 		case ErrorIs403(err):
 			forbidden = true
 		case ErrorIs404(err):
@@ -443,6 +456,10 @@ func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Conte
 
 	for attempt := 0; ; attempt++ {
 		found, idsHidden, err := keycloakClient.findRealmNameInList(ctx, generation, uuid)
+		if ErrorIs404(err) {
+			// A missing collection endpoint does not establish that this realm is gone.
+			return "", fmt.Errorf("cannot list realms when resolving internal id %q: %v", uuid, err)
+		}
 		if err != nil {
 			return "", err
 		}
