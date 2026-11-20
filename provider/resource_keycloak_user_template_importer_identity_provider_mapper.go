@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakUserTemplateImporterIdentityProviderMapper() *schema.Resource {
@@ -33,7 +33,7 @@ func getUserTemplateImporterIdentityProviderMapperFromData(ctx context.Context, 
 		return nil, err
 	}
 
-	if identityProvider.ProviderId == "facebook" || identityProvider.ProviderId == "google" {
+	if identityProvider.ProviderId == "facebook" || identityProvider.ProviderId == "google" || identityProvider.ProviderId == "keycloak-oidc" {
 		rec.IdentityProviderMapper = "oidc-username-idp-mapper"
 	} else {
 		rec.IdentityProviderMapper = fmt.Sprintf("%s-username-idp-mapper", identityProvider.ProviderId)

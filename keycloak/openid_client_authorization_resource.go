@@ -45,11 +45,15 @@ func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationResource(ctx c
 }
 
 func (keycloakClient *KeycloakClient) GetOpenidClientAuthorizationResourceByName(ctx context.Context, realmId, resourceServerId, name string) (*OpenidClientAuthorizationResource, error) {
-	resources := []OpenidClientAuthorizationResource{}
+	var resources []OpenidClientAuthorizationResource
 	params := map[string]string{"name": name}
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/resource", realmId, resourceServerId), &resources, params)
 	if err != nil {
 		return nil, err
+	}
+	// Keycloak 26.5+ no longer creates default resources automatically
+	if len(resources) == 0 {
+		return nil, nil
 	}
 	resource := resources[0]
 	resource.RealmId = realmId

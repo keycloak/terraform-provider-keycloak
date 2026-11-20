@@ -94,22 +94,22 @@ func convertFromLdapGroupMapperToComponent(ldapGroupMapper *LdapGroupMapper) *co
 }
 
 func convertFromComponentToLdapGroupMapper(component *component, realmId string) (*LdapGroupMapper, error) {
-	groupObjectClasses := strings.Split(component.getConfigFirstOrDefault("group.object.classes"), ",")
+	groupObjectClasses := strings.Split(component.getConfig("group.object.classes"), ",")
 	for i, v := range groupObjectClasses {
 		groupObjectClasses[i] = strings.TrimSpace(v)
 	}
 
-	preserveGroupInheritance, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("preserve.group.inheritance"))
+	preserveGroupInheritance, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("preserve.group.inheritance"))
 	if err != nil {
 		return nil, err
 	}
 
-	ignoreMissingGroups, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("ignore.missing.groups"))
+	ignoreMissingGroups, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("ignore.missing.groups"))
 	if err != nil {
 		return nil, err
 	}
 
-	dropNonExistingGroupsDuringSync, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("drop.non.existing.groups.during.sync"))
+	dropNonExistingGroupsDuringSync, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("drop.non.existing.groups.during.sync"))
 	if err != nil {
 		return nil, err
 	}
@@ -120,26 +120,26 @@ func convertFromComponentToLdapGroupMapper(component *component, realmId string)
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		LdapGroupsDn:                    component.getConfigFirstOrDefault("groups.dn"),
-		GroupNameLdapAttribute:          component.getConfigFirstOrDefault("group.name.ldap.attribute"),
+		LdapGroupsDn:                    component.getConfig("groups.dn"),
+		GroupNameLdapAttribute:          component.getConfig("group.name.ldap.attribute"),
 		GroupObjectClasses:              groupObjectClasses,
 		PreserveGroupInheritance:        preserveGroupInheritance,
 		IgnoreMissingGroups:             ignoreMissingGroups,
-		MembershipLdapAttribute:         component.getConfigFirstOrDefault("membership.ldap.attribute"),
-		MembershipAttributeType:         component.getConfigFirstOrDefault("membership.attribute.type"),
-		MembershipUserLdapAttribute:     component.getConfigFirstOrDefault("membership.user.ldap.attribute"),
-		Mode:                            component.getConfigFirstOrDefault("mode"),
-		UserRolesRetrieveStrategy:       component.getConfigFirstOrDefault("user.roles.retrieve.strategy"),
-		MemberofLdapAttribute:           component.getConfigFirstOrDefault("memberof.ldap.attribute"),
+		MembershipLdapAttribute:         component.getConfig("membership.ldap.attribute"),
+		MembershipAttributeType:         component.getConfig("membership.attribute.type"),
+		MembershipUserLdapAttribute:     component.getConfig("membership.user.ldap.attribute"),
+		Mode:                            component.getConfig("mode"),
+		UserRolesRetrieveStrategy:       component.getConfig("user.roles.retrieve.strategy"),
+		MemberofLdapAttribute:           component.getConfig("memberof.ldap.attribute"),
 		DropNonExistingGroupsDuringSync: dropNonExistingGroupsDuringSync,
-		GroupsPath:                      component.getConfigFirstOrDefault("groups.path"),
+		GroupsPath:                      component.getConfig("groups.path"),
 	}
 
-	if groupsLdapFilter := component.getConfigFirstOrDefault("groups.ldap.filter"); groupsLdapFilter != "" {
+	if groupsLdapFilter := component.getConfig("groups.ldap.filter"); groupsLdapFilter != "" {
 		ldapGroupMapper.GroupsLdapFilter = groupsLdapFilter
 	}
 
-	if mappedGroupAttributesString := component.getConfigFirstOrDefault("mapped.group.attributes"); mappedGroupAttributesString != "" {
+	if mappedGroupAttributesString := component.getConfig("mapped.group.attributes"); mappedGroupAttributesString != "" {
 		mappedGroupAttributes := strings.Split(mappedGroupAttributesString, ",")
 		for i, v := range mappedGroupAttributes {
 			mappedGroupAttributes[i] = strings.TrimSpace(v)

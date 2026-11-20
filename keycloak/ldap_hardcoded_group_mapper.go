@@ -36,7 +36,7 @@ func convertFromComponentToLdapHardcodedGroupMapper(component *component, realmI
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		Group: component.getConfigFirstOrDefault("group"),
+		Group: component.getConfig("group"),
 	}
 }
 

@@ -1,21 +1,26 @@
 package provider
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakGroupPermission_basic(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	groupName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakGroupPermission_basic(groupName),
@@ -60,7 +65,7 @@ func testAccCheckKeycloakGroupPermissionExists(resourceName string) resource.Tes
 		manageMembersScopeDescription := rs.Primary.Attributes["manage_members_scope.0.description"]
 		manageMembersScopeDecisionStrategy := rs.Primary.Attributes["manage_members_scope.0.decision_strategy"]
 
-		authzClientManageMembersScope, err := keycloakClient.GetOpenidClientAuthorizationPermission(testCtx, permissions.RealmId, realmManagementId, permissions.ScopePermissions["manage-members"].(string))
+		authzClientManageMembersScope, err := keycloakClient.GetOpenidClientAuthorizationPermission(testCtx, permissions.RealmId, realmManagementId, permissions.ScopePermissions["manage-members"])
 		if err != nil {
 			return err
 		}
@@ -89,8 +94,6 @@ func testAccCheckKeycloakGroupPermissionExists(resourceName string) resource.Tes
 }
 
 func getGroupPermissionsFromState(s *terraform.State, resourceName string) (*keycloak.GroupPermissions, error) {
-	keycloakClient := testAccProvider.Meta().(*keycloak.KeycloakClient)
-
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, fmt.Errorf("resource not found: %s", resourceName)
@@ -113,14 +116,19 @@ data "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
+data "keycloak_openid_client" "account" {
+  realm_id  = data.keycloak_realm.realm.id
+  client_id = "account"
+}
+
 data "keycloak_openid_client" "realm_management" {
   realm_id  = data.keycloak_realm.realm.id
   client_id = "realm-management"
 }
 
-resource "keycloak_openid_client_permissions" "realm-management_permission" {
+resource "keycloak_openid_client_permissions" "account_permission" {
 	realm_id   = data.keycloak_realm.realm.id
-	client_id  = data.keycloak_openid_client.realm_management.id
+	client_id  = data.keycloak_openid_client.account.id
 }
 
 resource "keycloak_group" "group" {
@@ -140,7 +148,7 @@ resource "keycloak_openid_client_group_policy" "test" {
 	logic             = "POSITIVE"
 	decision_strategy = "UNANIMOUS"
 	depends_on = [
-		keycloak_openid_client_permissions.realm-management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 
@@ -157,4 +165,80 @@ resource "keycloak_group_permissions" "test" {
 
 }
 	`, testAccRealm.Realm, groupName)
+}
+
+func TestAccKeycloakGroupPermission_organizationIdNotSupported(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PlanOnly: true,
+				Config: `resource "keycloak_group_permissions" "test" {
+  realm_id = "test-realm"
+  organization_id = "test-organization"
+  group_id = "test-group"
+}`,
+				ExpectError: regexp.MustCompile(`organization_id is not supported by the keycloak_group_permissions resource`),
+			},
+		},
+	})
+}
+
+// Calling the handlers directly bypasses schema validation, as happens when an
+// organization ID is unknown during planning and resolves before apply.
+func TestKeycloakGroupPermissionsRejectResolvedOrganizationId(t *testing.T) {
+	for name, handler := range map[string]func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics{
+		"create": resourceKeycloakGroupPermissionsCreate,
+		"update": resourceKeycloakGroupPermissionsUpdate,
+	} {
+		t.Run(name, func(t *testing.T) {
+			data := schema.TestResourceDataRaw(t, resourceKeycloakGroupPermissions().Schema, map[string]interface{}{
+				"realm_id":        "realm",
+				"group_id":        "group",
+				"organization_id": "resolved-organization",
+			})
+			// No client is provided: rejection must precede any client access.
+			diagnostics := handler(context.Background(), data, nil)
+			if !diagnostics.HasError() || !regexp.MustCompile(`organization_id is not supported.*keycloak_group_admin_permissions`).MatchString(diagnostics[0].Summary) {
+				t.Fatalf("unexpected diagnostics: %v", diagnostics)
+			}
+		})
+	}
+}
+
+func TestAccKeycloakGroupPermission_computedOrganizationIdNotSupported(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_6)
+	t.Parallel()
+	name := acctest.RandomWithPrefix("tf-acc")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+    realm = "%s"
+}
+resource "keycloak_organization" "organization" {
+    realm = data.keycloak_realm.realm.id
+    name = "%s"
+    domain { name = "%s.example.com" }
+}
+resource "keycloak_group" "group" {
+    realm_id = data.keycloak_realm.realm.id
+    name = "%s"
+}
+resource "keycloak_group_permissions" "test" {
+    realm_id = data.keycloak_realm.realm.id
+    group_id = keycloak_group.group.id
+    organization_id = keycloak_organization.organization.id
+}
+`, testAccRealm.Realm, name, name, name),
+				ExpectError: regexp.MustCompile(`organization_id is not supported by the keycloak_group_permissions resource`),
+			},
+		},
+	})
 }

@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // this is only used when creating an execution on a flow.
-// other fields can be provided to the API but they are ignored
+// other fields can be provided to the API, but they are ignored
 // POST /realms/${realmId}/authentication/flows/${flowAlias}/executions/execution
 type authenticationExecutionCreate struct {
 	Provider string `json:"provider"` //authenticator of the execution
@@ -18,9 +21,10 @@ type authenticationExecutionRequirementUpdate struct {
 	ParentFlowAlias string `json:"-"`
 	Id              string `json:"id"`
 	Requirement     string `json:"requirement"`
+	Priority        int    `json:"priority,omitempty"`
 }
 
-// this type is returned by GET /realms/${realmId}/authentication/flows/${flowAlias}/executions
+// AuthenticationExecution is returned by GET /realms/${realmId}/authentication/flows/${flowAlias}/executions
 type AuthenticationExecution struct {
 	Id                   string `json:"id"`
 	RealmId              string `json:"-"`
@@ -34,7 +38,7 @@ type AuthenticationExecution struct {
 	Requirement          string `json:"requirement"`
 }
 
-// another model is used for GET /realms/${realmId}/authentication/executions/${executionId}, but I am going to try to avoid using this API
+// AuthenticationExecutionInfo is used for GET /realms/${realmId}/authentication/executions/${executionId}, but I am going to try to avoid using this API
 type AuthenticationExecutionInfo struct {
 	Id                   string `json:"id"`
 	RealmId              string `json:"-"`
@@ -48,6 +52,7 @@ type AuthenticationExecutionInfo struct {
 	Level                int    `json:"level"`
 	ProviderId           string `json:"providerId"`
 	Requirement          string `json:"requirement"`
+	Priority             int    `json:"priority"`
 }
 
 type AuthenticationExecutionList []*AuthenticationExecutionInfo
@@ -154,6 +159,7 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationExecution(ctx context.
 		ParentFlowAlias: execution.ParentFlowAlias,
 		Id:              execution.Id,
 		Requirement:     execution.Requirement,
+		Priority:        execution.Priority,
 	}
 	return keycloakClient.UpdateAuthenticationExecutionRequirement(ctx, authenticationExecutionUpdateRequirement)
 }
@@ -163,10 +169,23 @@ func (keycloakClient *KeycloakClient) UpdateAuthenticationExecutionRequirement(c
 }
 
 func (keycloakClient *KeycloakClient) DeleteAuthenticationExecution(ctx context.Context, realmId, id string) error {
-	err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s", realmId, id), nil)
-	if err != nil {
-		// For whatever reason, this fails sometimes with a 500 during acceptance tests. try again
-		return keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s", realmId, id), nil)
+	path := fmt.Sprintf("/realms/%s/authentication/executions/%s", realmId, id)
+
+	err := keycloakClient.delete(ctx, path, nil)
+	if err == nil || !ErrorIs5xx(err) {
+		return err
+	}
+
+	// For whatever reason, this fails sometimes with a 500 during acceptance tests. try again,
+	// but only for server errors: client errors (e.g. removing an execution from a built in flow) are permanent
+	tflog.Warn(ctx, "Retrying authentication execution delete after server error", map[string]interface{}{
+		"realm_id":     realmId,
+		"execution_id": id,
+		"error":        err.Error(),
+	})
+
+	if retryErr := keycloakClient.delete(ctx, path, nil); retryErr != nil {
+		return errwrap.Wrapf(fmt.Sprintf("{{err}} (first attempt failed: %s)", err), retryErr)
 	}
 
 	return nil

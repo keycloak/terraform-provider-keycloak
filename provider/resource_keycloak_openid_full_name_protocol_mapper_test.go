@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClient(t *testing.T) {
@@ -17,9 +18,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClient(t *testing.T) {
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_basic_client(clientId, mapperName),
@@ -37,9 +38,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_basicClientScope(t *testing.T) 
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -59,9 +60,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -81,6 +82,18 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: getGenericProtocolMapperIdForClientScope(clientScopeResourceName),
+			},
+			{
+				ResourceName:      clientResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClient(clientResourceName),
+			},
+			{
+				ResourceName:      clientScopeResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClientScope(clientScopeResourceName),
 			},
 		},
 	})
@@ -107,9 +120,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_update(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_fromInterface(mapperOne),
@@ -133,9 +146,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_createAfterManualDestroy(t *tes
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_basic_client(clientId, mapperName),
@@ -164,9 +177,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_updateMapperNameForceNew(t *tes
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_basic_client(clientId, mapperNameOne),
@@ -188,9 +201,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_updateClientIdForceNew(t *testi
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_updateClientForceNew(clientIdOne, clientIdTwo, "openid_client_one"),
@@ -212,9 +225,9 @@ func TestAccKeycloakOpenIdFullNameProtocolMapper_updateClientScopeForceNew(t *te
 	resourceName := "keycloak_openid_full_name_protocol_mapper.full_name_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdFullNameProtocolMapper_updateClientScopeForceNew(clientScopeOne, clientScopeTwo, "client_scope_one"),
@@ -286,36 +299,6 @@ func getFullNameMapperUsingState(state *terraform.State, resourceName string) (*
 	clientScopeId := rs.Primary.Attributes["client_scope_id"]
 
 	return keycloakClient.GetOpenIdFullNameProtocolMapper(testCtx, realm, clientId, clientScopeId, id)
-}
-
-func getGenericProtocolMapperIdForClient(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		id := rs.Primary.ID
-		realmId := rs.Primary.Attributes["realm_id"]
-		clientId := rs.Primary.Attributes["client_id"]
-
-		return fmt.Sprintf("%s/client/%s/%s", realmId, clientId, id), nil
-	}
-}
-
-func getGenericProtocolMapperIdForClientScope(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		id := rs.Primary.ID
-		realmId := rs.Primary.Attributes["realm_id"]
-		clientScopeId := rs.Primary.Attributes["client_scope_id"]
-
-		return fmt.Sprintf("%s/client-scope/%s/%s", realmId, clientScopeId, id), nil
-	}
 }
 
 func testKeycloakOpenIdFullNameProtocolMapper_basic_client(clientId, mapperName string) string {

@@ -28,6 +28,7 @@ resource "keycloak_authentication_subflow" "subflow" {
   parent_flow_alias = keycloak_authentication_flow.flow.alias
   provider_id       = "basic-flow"
   requirement       = "ALTERNATIVE"
+  priority			= 10
 }
 ```
 
@@ -43,6 +44,7 @@ and `client-flow`. Defaults to `basic-flow`.
 authenticators. In general this will remain empty.
 - `requirement`- (Optional) The requirement setting, which can be one of `REQUIRED`, `ALTERNATIVE`, `OPTIONAL`, `CONDITIONAL`,
 or `DISABLED`. Defaults to `DISABLED`.
+- `priority`- (Optional) The authenticator priority. Lower values will be executed prior higher values (Only supported by Keycloak >= 25).
 
 ## Import
 

@@ -14,6 +14,12 @@ configuring a custom identity provider mapper via Terraform.
 
 ## Example Usage
 
+The following example provisions a user attribute importer mapper through `extra_config`. The key names can be verified in the Keycloak source code:
+* [user.attribute](https://github.com/keycloak/keycloak/blob/44956e10d00b79b0000583ed964130712abe5353/services/src/main/java/org/keycloak/broker/oidc/mappers/UserAttributeMapper.java#L52)
+* [claim](https://github.com/keycloak/keycloak/blob/44956e10d00b79b0000583ed964130712abe5353/services/src/main/java/org/keycloak/broker/oidc/mappers/AbstractClaimMapper.java#L41)
+
+For a strongly typed alternative, use [`keycloak_attribute_importer_identity_provider_mapper`](attribute_importer_identity_provider_mapper.md), which exposes `claim_name` and `user_attribute` directly.
+
 ```hcl
 resource "keycloak_realm" "realm" {
   realm   = "my-realm"
@@ -39,8 +45,28 @@ resource "keycloak_custom_identity_provider_mapper" "oidc" {
   # extra_config with syncMode is required in Keycloak 10+
   extra_config = {
     syncMode      = "INHERIT"
-    Claim         = "my-email-claim"
-    UserAttribute = "email"
+    claim         = "my-email-claim"
+    "user.attribute" = "email"
+  }
+}
+```
+
+```hcl
+resource "keycloak_custom_identity_provider_mapper" "groups" {
+  realm                    = keycloak_realm.realm.id
+  name                     = "group-mapper
+  identity_provider_alias  = keycloak_oidc_identity_provider.oidc.alias
+  identity_provider_mapper = "oidc-advanced-group-idp-mapper"
+
+  extra_config = {
+    "are.claim.values.regex" = true
+    syncMode                 = "FORCE"
+    group                    = "/DevOps"
+    claims = jsonencode(
+      [{
+        key = "groups", value = "DevOps"
+      }]
+    )
   }
 }
 ```

@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreHmacGenerated struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active     bool
 	Enabled    bool
@@ -37,10 +38,10 @@ func convertFromRealmKeystoreHmacGeneratedToComponent(realmKey *RealmKeystoreHma
 		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
 		ProviderId:   "hmac-generated",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -48,41 +49,42 @@ func convertFromRealmKeystoreHmacGeneratedToComponent(realmKey *RealmKeystoreHma
 }
 
 func convertFromComponentToRealmKeystoreHmacGenerated(component *component, realmId string) (*RealmKeystoreHmacGenerated, error) {
-	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("active"))
+	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("active"))
 	if err != nil {
 		return nil, err
 	}
 
-	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("enabled"))
+	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
 	}
 
 	priority := 0 // Default priority
-	if component.getConfigFirstOrDefault("priority") != "" {
-		priority, err = strconv.Atoi(component.getConfigFirstOrDefault("priority"))
+	if component.getConfig("priority") != "" {
+		priority, err = strconv.Atoi(component.getConfig("priority"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	secretSize := 64 // Default key size for hmac key
-	if component.getConfigFirstOrDefault("secretSize") != "" {
-		secretSize, err = strconv.Atoi(component.getConfigFirstOrDefault("secretSize"))
+	if component.getConfig("secretSize") != "" {
+		secretSize, err = strconv.Atoi(component.getConfig("secretSize"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	realmKey := &RealmKeystoreHmacGenerated{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:     active,
 		Enabled:    enabled,
 		Priority:   priority,
-		Algorithm:  component.getConfigFirstOrDefault("algorithm"),
+		Algorithm:  component.getConfig("algorithm"),
 		SecretSize: secretSize,
 	}
 

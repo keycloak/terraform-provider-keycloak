@@ -4,7 +4,7 @@ page_title: "keycloak_default_roles Resource"
 
 # keycloak\_default\_roles Resource
 
-Allows managing default realm roles within Keycloak.
+Allows managing default roles within Keycloak.
 
 Note: This feature was added in Keycloak v13, so this resource will not work on older versions of Keycloak.
 
@@ -22,10 +22,24 @@ resource "keycloak_default_roles" "default_roles" {
 }
 ```
 
+## Example Usage (Client roles)
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
+resource "keycloak_default_roles" "default_roles" {
+  realm_id      = keycloak_realm.realm.id
+  default_roles = ["account/manage-account", "account/view-groups"]
+}
+```
+
 ## Argument Reference
 
 - `realm_id` - (Required) The realm this role exists within.
-- `default_roles` - (Required) Realm level roles assigned to new users by default.
+- `default_roles` - (Required) Roles assigned to new users by default.
 
 ## Import
 

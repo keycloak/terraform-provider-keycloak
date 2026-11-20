@@ -6,9 +6,11 @@ page_title: "keycloak_group_permissions Resource"
 
 Allows you to manage all group Scope Based Permissions https://www.keycloak.org/docs/latest/server_admin/#group.
 
+This resource requires Fine-Grained Admin Permissions **v1** (`admin-fine-grained-authz:v1`). It is **not compatible** with v2 (`admin-fine-grained-authz:v2`, enabled by default in Keycloak 26.2+), which uses a different API and resource server. If your Keycloak instance has v2 enabled, use [`keycloak_group_admin_permissions`](group_admin_permissions.md) instead.
+
 This is part of a preview Keycloak feature: `admin_fine_grained_authz` (see https://www.keycloak.org/docs/latest/server_admin/#_fine_grain_permissions).
 This feature can be enabled with the Keycloak option `-Dkeycloak.profile.feature.admin_fine_grained_authz=enabled`. See the
-example [`docker-compose.yml`](https://github.com/mrparkers/terraform-provider-keycloak/blob/898094df6b3e01c3404981ce7ca268142d6ff0e5/docker-compose.yml#L21) file for an example.
+example [`docker-compose.yml`](https://github.com/keycloak/terraform-provider-keycloak/blob/898094df6b3e01c3404981ce7ca268142d6ff0e5/docker-compose.yml#L21) file for an example.
 
 When enabling Roles Permissions, Keycloak does several things automatically:
 1. Enable Authorization on built-in `realm-management` client (if not already enabled).
@@ -74,6 +76,7 @@ resource "keycloak_group_permissions" "test" {
 The following arguments are supported:
 
 - `realm_id` - (Required) The realm in which to manage fine-grained role permissions.
+- `organization_id` - (Optional) Not supported by this resource. This is the Fine-Grained Admin Permissions v1 resource, whose REST API is realm-scoped and cannot manage organization groups; setting a non-empty value returns an error. To manage an organization group's fine-grained permissions, use [`keycloak_group_admin_permissions`](group_admin_permissions.md) (FGA v2).
 - `group_id` - (Required) The id of the group.
 
 
@@ -89,7 +92,7 @@ The configuration block for each of these scopes supports the following argument
 
 - `policies` - (Optional) Assigned policies to the permission. Each element within this list should be a policy ID.
 - `description` - (Optional) Description of the permission.
-- `decision_strategy` - (Optional) Decision strategy of the permission.
+- `decision_strategy` - (Optional) Decision strategy of the permission. Defaults to `UNANIMOUS`.
 
 ### Attributes Reference
 
@@ -97,3 +100,13 @@ In addition to the arguments listed above, the following computed attributes are
 
 - `enabled` - When true, this indicates that fine-grained role permissions are enabled. This will always be `true`.
 - `authorization_resource_server_id` - Resource server id representing the realm management client on which these permissions are managed.
+
+### Import
+
+This resource can be imported using the format `{{realm_id}}/{{group_id}}`.
+
+Example:
+
+```bash
+$ terraform import keycloak_group_permissions.test my-realm/18cc6b87-2ce7-4e59-bdc8-b9d49ec98a94
+```

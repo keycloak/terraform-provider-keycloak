@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakSamlUserPropertyProtocolMapper() *schema.Resource {
@@ -32,16 +33,16 @@ func resourceKeycloakSamlUserPropertyProtocolMapper() *schema.Resource {
 				ForceNew: true,
 			},
 			"client_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"client_scope_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"client_scope_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"client_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"user_property": {
 				Type:     schema.TypeString,

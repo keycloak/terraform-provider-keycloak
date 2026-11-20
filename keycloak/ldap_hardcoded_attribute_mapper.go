@@ -40,8 +40,8 @@ func convertFromComponentToLdapHardcodedAttributeMapper(component *component, re
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		AttributeName:  component.getConfigFirstOrDefault("ldap.attribute.name"),
-		AttributeValue: component.getConfigFirstOrDefault("ldap.attribute.value"),
+		AttributeName:  component.getConfig("ldap.attribute.name"),
+		AttributeValue: component.getConfig("ldap.attribute.value"),
 	}
 }
 

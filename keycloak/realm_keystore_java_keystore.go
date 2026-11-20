@@ -7,14 +7,16 @@ import (
 )
 
 type RealmKeystoreJavaKeystore struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
 	Priority  int
 	Algorithm string
+	KeyUse    string
 
 	Keystore         string
 	KeystorePassword string
@@ -48,12 +50,15 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 		"keyPassword": {
 			realmKey.KeyPassword,
 		},
+		"keyUse": {
+			realmKey.KeyUse,
+		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
 		ProviderId:   "java-keystore",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -61,37 +66,39 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 }
 
 func convertFromComponentToRealmKeystoreJavaKeystore(component *component, realmId string) (*RealmKeystoreJavaKeystore, error) {
-	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("active"))
+	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("active"))
 	if err != nil {
 		return nil, err
 	}
 
-	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("enabled"))
+	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
 	}
 
 	priority := 0 // Default priority
-	if component.getConfigFirstOrDefault("priority") != "" {
-		priority, err = strconv.Atoi(component.getConfigFirstOrDefault("priority"))
+	if component.getConfig("priority") != "" {
+		priority, err = strconv.Atoi(component.getConfig("priority"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	realmKey := &RealmKeystoreJavaKeystore{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:           active,
 		Enabled:          enabled,
 		Priority:         priority,
-		Algorithm:        component.getConfigFirstOrDefault("algorithm"),
-		Keystore:         component.getConfigFirstOrDefault("keystore"),
-		KeystorePassword: component.getConfigFirstOrDefault("keystorePassword"),
-		KeyAlias:         component.getConfigFirstOrDefault("keyAlias"),
-		KeyPassword:      component.getConfigFirstOrDefault("keyPassword"),
+		Algorithm:        component.getConfig("algorithm"),
+		KeyUse:           component.getConfig("keyUse"),
+		Keystore:         component.getConfig("keystore"),
+		KeystorePassword: component.getConfig("keystorePassword"),
+		KeyAlias:         component.getConfig("keyAlias"),
+		KeyPassword:      component.getConfig("keyPassword"),
 	}
 
 	return realmKey, nil

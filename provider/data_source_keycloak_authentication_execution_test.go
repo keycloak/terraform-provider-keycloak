@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
@@ -16,12 +16,12 @@ func TestAccKeycloakDataSourceAuthenticationExecution_basic(t *testing.T) {
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias),
+				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias, nil),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
 					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "id", "data.keycloak_authentication_execution.execution", "id"),
@@ -40,9 +40,9 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorNoExecutions(t *testi
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSourceKeycloakAuthenticationExecution_errorNoExecutions(parentFlowAlias),
@@ -57,13 +57,51 @@ func TestAccKeycloakDataSourceAuthenticationExecution_errorWrongProviderId(t *te
 	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSourceKeycloakAuthenticationExecution_errorWrongProviderId(parentFlowAlias, acctest.RandString(10)),
 				ExpectError: regexp.MustCompile("no authentication execution under parent flow alias .* with provider id .* found"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakDataSourceAuthenticationExecution_basicWithPriority(t *testing.T) {
+	t.Parallel()
+
+	parentFlowAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakAuthenticationExecutionConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias, nil),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "id", "data.keycloak_authentication_execution.execution", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "realm_id", "data.keycloak_authentication_execution.execution", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "priority", "data.keycloak_authentication_execution.execution", "priority"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "parent_flow_alias", "data.keycloak_authentication_execution.execution", "parent_flow_alias"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "authenticator", "data.keycloak_authentication_execution.execution", "provider_id"),
+					testAccCheckDataKeycloakAuthenticationExecution("data.keycloak_authentication_execution.execution"),
+				),
+			},
+			{
+				Config: testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias, intPointer(10)),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakAuthenticationExecutionExists("keycloak_authentication_execution.execution"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "id", "data.keycloak_authentication_execution.execution", "id"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "realm_id", "data.keycloak_authentication_execution.execution", "realm_id"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "priority", "data.keycloak_authentication_execution.execution", "priority"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "parent_flow_alias", "data.keycloak_authentication_execution.execution", "parent_flow_alias"),
+					resource.TestCheckResourceAttrPair("keycloak_authentication_execution.execution", "authenticator", "data.keycloak_authentication_execution.execution", "provider_id"),
+					testAccCheckDataKeycloakAuthenticationExecution("data.keycloak_authentication_execution.execution"),
+				),
 			},
 		},
 	})
@@ -94,7 +132,12 @@ func testAccCheckDataKeycloakAuthenticationExecution(resourceName string) resour
 	}
 }
 
-func testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias string) string {
+func testDataSourceKeycloakAuthenticationExecution_basic(parentFlowAlias string, priority *int) string {
+	priorityAttr := ""
+	if priority != nil {
+		priorityAttr = fmt.Sprintf(`priority = %d`, *priority)
+	}
+
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -110,6 +153,7 @@ resource "keycloak_authentication_execution" "execution" {
 	parent_flow_alias = keycloak_authentication_flow.flow.alias
 	authenticator     = "identity-provider-redirector"
 	requirement       = "REQUIRED"
+    %s
 }
 
 data "keycloak_authentication_execution" "execution" {
@@ -121,7 +165,7 @@ data "keycloak_authentication_execution" "execution" {
 		keycloak_authentication_execution.execution,
 	]
 }
-	`, testAccRealm.Realm, parentFlowAlias)
+	`, testAccRealm.Realm, parentFlowAlias, priorityAttr)
 }
 
 func testDataSourceKeycloakAuthenticationExecution_errorNoExecutions(parentFlowAlias string) string {

@@ -14,6 +14,7 @@ type GenericClient struct {
 
 	Enabled     bool   `json:"enabled"`
 	Description string `json:"description"`
+	BearerOnly  bool   `json:"bearerOnly"`
 }
 
 func (keycloakClient *KeycloakClient) listGenericClients(ctx context.Context, realmId string) ([]*GenericClient, error) {

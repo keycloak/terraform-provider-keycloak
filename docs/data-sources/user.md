@@ -41,4 +41,4 @@ output "keycloak_user_id" {
 - `federated_identity` - (Computed) The user's federated identities, if applicable. This block has the following schema:
   - `identity_provider` - (Computed) The name of the identity provider
   - `user_id` - (Computed) The ID of the user defined in the identity provider
-  - `user_name` - (Computed) The user name of the user defined in the identity provider
+  - `user_name` - (Computed) The username of the user defined in the identity provider

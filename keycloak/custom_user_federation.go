@@ -3,7 +3,6 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 )
 
@@ -33,18 +32,8 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 	componentConfig := make(map[string][]string)
 
 	if custom.Config != nil {
-		for key, configValuesArray := range custom.Config {
-			configValues := make([]string, 0)
-			for i := range configValuesArray {
-				if configValuesArray[i] != "" {
-					configValues = append(configValues, configValuesArray[i])
-				}
-			}
-
-			// Keep Values sorted on our own Keycloak API
-			// does not preserve order on it's own
-			sort.Strings(configValues)
-			componentConfig[key] = configValues
+		for k, j := range custom.Config {
+			componentConfig[k] = j
 		}
 	}
 	componentConfig["cachePolicy"] = append(componentConfig["cachePolicy"], custom.CachePolicy)
@@ -52,36 +41,35 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 	componentConfig["priority"] = append(componentConfig["priority"], strconv.Itoa(custom.Priority))
 	componentConfig["fullSyncPeriod"] = append(componentConfig["fullSyncPeriod"], strconv.Itoa(custom.FullSyncPeriod))
 	componentConfig["changedSyncPeriod"] = append(componentConfig["changedSyncPeriod"], strconv.Itoa(custom.ChangedSyncPeriod))
-	parentId := custom.RealmId
-	if custom.ParentId != "" {
-		parentId = custom.ParentId
-	}
+
+	// ParentId is only sent when explicitly set (deprecated parent_id attribute), otherwise Keycloak
+	// defaults to the realm's internal id
 	return &component{
 		Id:           custom.Id,
 		Name:         custom.Name,
 		ProviderId:   custom.ProviderId,
 		ProviderType: userStorageProviderType,
-		ParentId:     parentId,
+		ParentId:     custom.ParentId,
 		Config:       componentConfig,
 	}
 }
 
 func convertFromComponentToCustomUserFederation(component *component, realmName string) (*CustomUserFederation, error) {
-	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("enabled"))
+	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
 	}
 
-	priority, err := atoiAndTreatEmptyStringAsZero(component.getConfigFirstOrDefault("priority"))
+	priority, err := atoiAndTreatEmptyStringAsZero(component.getConfig("priority"))
 	if err != nil {
 		return nil, err
 	}
 
-	fullSyncPeriod, err := atoiAndTreatEmptyStringAsZero(component.getConfigFirstOrDefault("fullSyncPeriod"))
+	fullSyncPeriod, err := atoiAndTreatEmptyStringAsZero(component.getConfig("fullSyncPeriod"))
 	if err != nil {
 		return nil, err
 	}
-	changedSyncPeriod, err := atoiAndTreatEmptyStringAsZero(component.getConfigFirstOrDefault("changedSyncPeriod"))
+	changedSyncPeriod, err := atoiAndTreatEmptyStringAsZero(component.getConfig("changedSyncPeriod"))
 	if err != nil {
 		return nil, err
 	}
@@ -94,18 +82,9 @@ func convertFromComponentToCustomUserFederation(component *component, realmName 
 		"changedSyncPeriod": true,
 	}
 	config := make(map[string][]string)
-	for key := range component.Config {
-		if found := configsToIgnore[key]; !found {
-			configValues := make([]string, 0)
-
-			for i := range component.getConfig(key) {
-				configValues = append(configValues, component.getConfig(key)[i])
-			}
-
-			// Keep Values sorted on our own Keycloak API
-			// does not preserve order on it's own
-			sort.Strings(configValues)
-			config[key] = configValues
+	for k, v := range component.Config {
+		if found := configsToIgnore[k]; !found {
+			config[k] = v
 		}
 	}
 
@@ -119,7 +98,7 @@ func convertFromComponentToCustomUserFederation(component *component, realmName 
 		Enabled:  enabled,
 		Priority: priority,
 
-		CachePolicy: component.getConfigFirstOrDefault("cachePolicy"),
+		CachePolicy: component.getConfig("cachePolicy"),
 
 		FullSyncPeriod:    fullSyncPeriod,
 		ChangedSyncPeriod: changedSyncPeriod,

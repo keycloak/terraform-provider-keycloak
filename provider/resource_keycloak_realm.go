@@ -2,17 +2,28 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"maps"
+
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
 	keycloakRealmValidOTPTypes      = []string{"totp", "hotp"}
 	keycloakRealmValidOTPAlgorithms = []string{"HmacSHA1", "HmacSHA256", "HmacSHA512"}
 )
+
+const minKeycloakPasskeysVersion = "26.3.5"
+const minKeycloakDiscoverableCredentialVersion = "26.7.0"
+const minKeycloakMaxSecondaryAuthFailuresVersion = "26.6.0"
+const minKeycloakAdminPermissionsVersion = "26.2.0"
 
 func resourceKeycloakRealm() *schema.Resource {
 
@@ -63,10 +74,22 @@ func resourceKeycloakRealm() *schema.Resource {
 			Default:  30,
 			Optional: true,
 		},
+		"code_reusable": {
+			Type:     schema.TypeBool,
+			Default:  false,
+			Optional: true,
+		},
 	}
 
 	webAuthnSchema := map[string]*schema.Schema{
 		"acceptable_aaguids": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional: true,
+		},
+		"extra_origins": {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -113,6 +136,14 @@ func resourceKeycloakRealm() *schema.Resource {
 			Optional:     true,
 			Default:      "not specified",
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "Yes", "No"}, false),
+			Deprecated:   "Deprecated by Keycloak in favor of discoverable_credential. This attribute is only used when discoverable_credential is left as \"not specified\" and is planned to be removed in a future Keycloak version.",
+		},
+		"discoverable_credential": {
+			Type:         schema.TypeString,
+			Description:  "Either required, preferred or discouraged. Replaces and takes precedence over the deprecated require_resident_key attribute. Requires Keycloak 26.7 or higher.",
+			Optional:     true,
+			Default:      "not specified",
+			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 		"relying_party_entity_name": {
 			Type:     schema.TypeString,
@@ -141,11 +172,38 @@ func resourceKeycloakRealm() *schema.Resource {
 			ValidateFunc: validation.StringInSlice([]string{"not specified", "required", "preferred", "discouraged"}, false),
 		},
 	}
+
+	webAuthnPasswordlessSchema := make(map[string]*schema.Schema)
+	maps.Copy(webAuthnPasswordlessSchema, webAuthnSchema)
+	for block, policySchema := range map[string]map[string]*schema.Schema{
+		"web_authn_policy":              webAuthnSchema,
+		"web_authn_passwordless_policy": webAuthnPasswordlessSchema,
+	} {
+		legacy := *policySchema["signature_algorithms"]
+		legacy.ConflictsWith = []string{block + ".0.signature_algorithms_ordered"}
+		policySchema["signature_algorithms"] = &legacy
+		policySchema["signature_algorithms_ordered"] = &schema.Schema{
+			Type:          schema.TypeList,
+			Elem:          &schema.Schema{Type: schema.TypeString},
+			Optional:      true,
+			Computed:      true,
+			Description:   "Signature algorithms in preference order. Conflicts with signature_algorithms.",
+			ConflictsWith: []string{block + ".0.signature_algorithms"},
+		}
+	}
+
+	webAuthnPasswordlessSchema["passwordless_passkeys_enabled"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "Enable passkeys for passwordless WebAuthn authentication",
+		Optional:    true,
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceKeycloakRealmCreate,
 		ReadContext:   resourceKeycloakRealmRead,
 		DeleteContext: resourceKeycloakRealmDelete,
 		UpdateContext: resourceKeycloakRealmUpdate,
+		CustomizeDiff: customdiff.All(validateRealmRenameDiff, validateRealmSMTPPasswordVersionDiff),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -153,7 +211,6 @@ func resourceKeycloakRealm() *schema.Resource {
 			"realm": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
 			},
 			"internal_id": {
 				Type:     schema.TypeString,
@@ -167,14 +224,26 @@ func resourceKeycloakRealm() *schema.Resource {
 				Default:  true,
 			},
 			"display_name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name"),
 			},
 			"display_name_html": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("display_name_html"),
 			},
 			"user_managed_access": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"organizations_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"terraform_deletion_protection": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -271,10 +340,15 @@ func resourceKeycloakRealm() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
-						"auth": {
-							Type:     schema.TypeList,
+						"allow_utf8": {
+							Type:     schema.TypeBool,
 							Optional: true,
-							MaxItems: 1,
+						},
+						"auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							ConflictsWith: []string{"smtp_server.0.token_auth"},
+							MaxItems:      1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -282,12 +356,71 @@ func resourceKeycloakRealm() *schema.Resource {
 										Required: true,
 									},
 									"password": {
+										Type:          schema.TypeString,
+										Optional:      true,
+										Sensitive:     true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password_wo", "smtp_server.0.auth.0.password_wo_version"},
+										ExactlyOneOf:  []string{"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo"},
+										DiffSuppressFunc: func(_, smtpServerPassword, _ string, data *schema.ResourceData) bool {
+											oldVersion, newVersion := data.GetChange("smtp_server.0.auth.0.password_wo_version")
+											if oldVersion != "" || newVersion != "" {
+												return false
+											}
+											return smtpServerPassword == "**********"
+										},
+									},
+									"password_wo": {
+										Type:          schema.TypeString,
+										Optional:      true,
+										Sensitive:     true,
+										WriteOnly:     true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password"},
+										ExactlyOneOf:  []string{"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo"},
+										RequiredWith:  []string{"smtp_server.0.auth.0.password_wo_version"},
+										ValidateFunc:  validation.StringIsNotEmpty,
+										Description:   "The SMTP server password as a write-only argument",
+									},
+									"password_wo_version": {
+										Type:          schema.TypeString,
+										Optional:      true,
+										ConflictsWith: []string{"smtp_server.0.auth.0.password"},
+										RequiredWith:  []string{"smtp_server.0.auth.0.password_wo"},
+										ValidateFunc:  validation.StringIsNotEmpty,
+										Description:   "Change this value to update the SMTP server write-only password",
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							ConflictsWith: []string{"smtp_server.0.auth"},
+							MaxItems:      1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"client_id": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"client_secret": {
 										Type:      schema.TypeString,
 										Required:  true,
 										Sensitive: true,
-										DiffSuppressFunc: func(_, smtpServerPassword, _ string, _ *schema.ResourceData) bool {
-											return smtpServerPassword == "**********"
+										DiffSuppressFunc: func(_, authTokenClientSecret, _ string, _ *schema.ResourceData) bool {
+											return authTokenClientSecret == "**********"
 										},
+									},
+									"scope": {
+										Type:     schema.TypeString,
+										Required: true,
 									},
 								},
 							},
@@ -505,6 +638,11 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  "max-age=31536000; includeSubDomains",
 									},
+									"referrer_policy": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "no-referrer",
+									},
 								},
 							},
 						},
@@ -519,10 +657,25 @@ func resourceKeycloakRealm() *schema.Resource {
 										Optional: true,
 										Default:  false,
 									},
+									"brute_force_strategy": { //Strategy to increase wait time
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "MULTIPLE",
+									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
 									"max_login_failures": { //failureFactor
 										Type:     schema.TypeInt,
 										Optional: true,
 										Default:  30,
+									},
+									"max_secondary_auth_failures": { //Max Secondary Auth Failures
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
 									},
 									"wait_increment_seconds": { //Wait Increment
 										Type:     schema.TypeInt,
@@ -600,10 +753,21 @@ func resourceKeycloakRealm() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Optional:    true,
+				Computed:    true,
+			},
 
 			// misc attributes
 			"attributes": {
 				Type:     schema.TypeMap,
+				Optional: true,
+			},
+
+			"admin_permissions_enabled": {
+				Type:     schema.TypeBool,
 				Optional: true,
 			},
 
@@ -652,17 +816,75 @@ func resourceKeycloakRealm() *schema.Resource {
 				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: webAuthnSchema,
+					Schema: webAuthnPasswordlessSchema,
 				},
 			},
 		},
 	}
 }
 
+const realmSMTPPasswordVersionRequired = "SMTP destination settings changed; change smtp_server.auth.password_wo_version to send the real password and preserve SMTP authentication"
+
+// validateRealmRenameDiff stops renames that Keycloak or the provider itself cannot survive, at plan time.
+func validateRealmRenameDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	// Keycloak refuses this at apply time; fail early, at plan time
+	if diff.Id() == "master" && diff.HasChange("realm") {
+		return fmt.Errorf("the master realm cannot be renamed")
+	}
+
+	// the provider's token URL contains the name of the realm it authenticates against
+	if client, ok := meta.(*keycloak.KeycloakClient); ok && client != nil && diff.Id() != "" && diff.Id() == client.AuthRealm() && diff.HasChange("realm") {
+		return fmt.Errorf("the realm %q cannot be renamed, because the provider authenticates against it", diff.Id())
+	}
+
+	return nil
+}
+
+func validateRealmSMTPPasswordVersionDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	const versionPath = "smtp_server.0.auth.0.password_wo_version"
+	if diff.Id() == "" || !diff.NewValueKnown(versionPath) || diff.Get(versionPath).(string) == "" || diff.HasChange(versionPath) {
+		return nil
+	}
+
+	for _, path := range []string{
+		"smtp_server.0.host", "smtp_server.0.port", "smtp_server.0.ssl",
+		"smtp_server.0.starttls", "smtp_server.0.from", "smtp_server.0.auth.0.username",
+	} {
+		if diff.NewValueKnown(path) && diff.HasChange(path) {
+			return fmt.Errorf("%s (%s)", realmSMTPPasswordVersionRequired, path)
+		}
+	}
+	return nil
+}
+
+// Match Keycloak's destination comparison before reusing a masked SMTP password.
+// Empty ports are omitted from the API payload and therefore default to 25.
+func realmSMTPDestinationUnchanged(current, next keycloak.SmtpServer) bool {
+	port := func(value string) string {
+		if value == "" {
+			return "25"
+		}
+		return value
+	}
+	return current.Host == next.Host && port(current.Port) == port(next.Port) &&
+		current.Ssl == next.Ssl && current.StartTls == next.StartTls &&
+		current.From == next.From && current.User == next.User &&
+		current.AuthTokenUrl == next.AuthTokenUrl &&
+		current.AuthTokenClientId == next.AuthTokenClientId &&
+		current.AuthTokenScope == next.AuthTokenScope
+}
+
 func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
+	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok {
+		return "", false
+	}
+
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
-		authConfig := smtpSettings["auth"].([]interface{})
+		authConfig, ok := smtpSettings["auth"].([]interface{})
+		if !ok {
+			return "", false
+		}
 
 		if len(authConfig) == 1 {
 			return authConfig[0].(map[string]interface{})["password"].(string), true
@@ -674,7 +896,22 @@ func getRealmSMTPPasswordFromData(data *schema.ResourceData) (string, bool) {
 	return "", false
 }
 
-func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm) {
+func getRealmSMTPClientSecretFromData(data *schema.ResourceData) (string, bool) {
+	if v, ok := data.GetOk("smtp_server"); ok {
+		smtpSettings := v.([]interface{})[0].(map[string]interface{})
+		tokenConfig := smtpSettings["token_auth"].([]interface{})
+
+		if len(tokenConfig) == 1 {
+			return tokenConfig[0].(map[string]interface{})["client_secret"].(string), true
+		}
+
+		return "", false
+	}
+
+	return "", false
+}
+
+func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
 	if flow, ok := data.GetOk("browser_flow"); ok {
 		realm.BrowserFlow = stringPointer(flow.(string))
 	} else {
@@ -710,9 +947,34 @@ func setRealmFlowBindings(data *schema.ResourceData, realm *keycloak.Realm) {
 	} else {
 		realm.DockerAuthenticationFlow = stringPointer("docker auth")
 	}
+
+	if flow, ok := data.GetOk("first_broker_login_flow"); ok {
+		realm.FirstBrokerLoginFlow = stringPointer(flow.(string))
+	} else {
+		realm.FirstBrokerLoginFlow = stringPointer("first broker login")
+	}
 }
 
-func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
+// Select the ordered input only when configured. Both representations are computed
+// on read, so preferring a populated list would change existing set configurations.
+func getRealmSignatureAlgorithms(data *schema.ResourceData, block string, policy map[string]interface{}) ([]string, error) {
+	if rawConfig := data.GetRawConfig(); !rawConfig.IsNull() && rawConfig.IsKnown() {
+		rawPolicy := rawConfig.GetAttr(block)
+		if rawPolicy.IsNull() || !rawPolicy.IsKnown() || rawPolicy.LengthInt() == 0 {
+			return interfaceSliceToStringSlice(policy["signature_algorithms"].(*schema.Set).List()), nil
+		}
+		ordered, diags := data.GetRawConfigAt(cty.GetAttrPath(block).IndexInt(0).GetAttr("signature_algorithms_ordered"))
+		if diags.HasError() {
+			return nil, fmt.Errorf("error reading %s.signature_algorithms_ordered", block)
+		}
+		if ordered.IsKnown() && !ordered.IsNull() {
+			return interfaceSliceToStringSlice(policy["signature_algorithms_ordered"].([]interface{})), nil
+		}
+	}
+	return interfaceSliceToStringSlice(policy["signature_algorithms"].(*schema.Set).List()), nil
+}
+
+func getRealmFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.Realm, error) {
 	internationalizationEnabled := false
 	supportLocales := make([]string, 0)
 	defaultLocale := ""
@@ -727,19 +989,19 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		defaultLocale = internationalizationSettings["default_locale"].(string)
 	}
 
-	realmId := data.Get("realm")
-	internalId := data.Get("internal_id")
-	if internalId != "" {
-		realmId = internalId
-	}
+	// when internal_id is not set, Keycloak generates the realm's internal id
+	internalId := data.Get("internal_id").(string)
+
+	// Use GetOkExists for string fields to preserve empty strings
+	displayName, displayNameOk := data.GetOkExists("display_name")
+	displayNameHtml, displayNameHtmlOk := data.GetOkExists("display_name_html")
 
 	realm := &keycloak.Realm{
-		Id:                realmId.(string),
-		Realm:             data.Get("realm").(string),
-		Enabled:           data.Get("enabled").(bool),
-		DisplayName:       data.Get("display_name").(string),
-		DisplayNameHtml:   data.Get("display_name_html").(string),
-		UserManagedAccess: data.Get("user_managed_access").(bool),
+		Id:                   internalId,
+		Realm:                data.Get("realm").(string),
+		Enabled:              data.Get("enabled").(bool),
+		UserManagedAccess:    data.Get("user_managed_access").(bool),
+		OrganizationsEnabled: data.Get("organizations_enabled").(bool),
 
 		// Login Config
 		RegistrationAllowed:         data.Get("registration_allowed").(bool),
@@ -758,6 +1020,14 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		DefaultLocale:               defaultLocale,
 	}
 
+	// Set string fields only if explicitly provided, preserving empty strings
+	if displayNameOk {
+		realm.DisplayName = displayName.(string)
+	}
+	if displayNameHtmlOk {
+		realm.DisplayNameHtml = displayNameHtml.(string)
+	}
+
 	//smtp
 	if v, ok := data.GetOk("smtp_server"); ok {
 		smtpSettings := v.([]interface{})[0].(map[string]interface{})
@@ -772,15 +1042,42 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			FromDisplayName:    smtpSettings["from_display_name"].(string),
 			EnvelopeFrom:       smtpSettings["envelope_from"].(string),
 			Ssl:                types.KeycloakBoolQuoted(smtpSettings["ssl"].(bool)),
+			AllowUtf8:          types.KeycloakBoolQuoted(smtpSettings["allow_utf8"].(bool)),
 		}
 
 		authConfig := smtpSettings["auth"].([]interface{})
+		tokenAuthConfig := smtpSettings["token_auth"].([]interface{})
+
 		if len(authConfig) == 1 {
 			auth := authConfig[0].(map[string]interface{})
 
 			smtpServer.Auth = true
+			smtpServer.AuthType = "basic"
 			smtpServer.User = auth["username"].(string)
 			smtpServer.Password = auth["password"].(string)
+			if auth["password_wo_version"].(string) != "" {
+				smtpServer.Password = ""
+				if data.Id() == "" || data.HasChange("smtp_server.0.auth.0.password_wo_version") {
+					password, diags := data.GetRawConfigAt(cty.GetAttrPath("smtp_server").IndexInt(0).GetAttr("auth").IndexInt(0).GetAttr("password_wo"))
+					if diags.HasError() {
+						return nil, fmt.Errorf("error reading 'smtp_server.auth.password_wo' argument")
+					}
+					if !password.IsKnown() || password.IsNull() || !password.Type().Equals(cty.String) {
+						return nil, fmt.Errorf("'smtp_server.auth.password_wo' must be a known, non-null string")
+					}
+					smtpServer.Password = password.AsString()
+				}
+			}
+		} else if len(tokenAuthConfig) == 1 {
+			tokenAuth := tokenAuthConfig[0].(map[string]interface{})
+
+			smtpServer.Auth = true
+			smtpServer.AuthType = "token"
+			smtpServer.User = tokenAuth["username"].(string)
+			smtpServer.AuthTokenUrl = tokenAuth["url"].(string)
+			smtpServer.AuthTokenClientId = tokenAuth["client_id"].(string)
+			smtpServer.AuthTokenClientSecret = tokenAuth["client_secret"].(string)
+			smtpServer.AuthTokenScope = tokenAuth["scope"].(string)
 		} else {
 			smtpServer.Auth = false
 		}
@@ -972,6 +1269,7 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 				XFrameOptions:                   headerSettings["x_frame_options"].(string),
 				XRobotsTag:                      headerSettings["x_robots_tag"].(string),
 				XXSSProtection:                  headerSettings["x_xss_protection"].(string),
+				ReferrerPolicy:                  headerSettings["referrer_policy"].(string),
 			}
 		} else {
 			setDefaultSecuritySettingHeaders(realm)
@@ -982,25 +1280,33 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			bruteForceDetectionSettings := bruteForceDetectionConfig[0].(map[string]interface{})
 			realm.BruteForceProtected = true
 			realm.PermanentLockout = bruteForceDetectionSettings["permanent_lockout"].(bool)
+			realm.BruteForceStrategy = bruteForceDetectionSettings["brute_force_strategy"].(string)
 			realm.FailureFactor = bruteForceDetectionSettings["max_login_failures"].(int)
+			maxSecondaryAuthFailures, err := resolveMaxSecondaryAuthFailures(realm.Realm, bruteForceDetectionSettings["max_secondary_auth_failures"].(int), keycloakVersion)
+			if err != nil {
+				return nil, err
+			}
+			realm.MaxSecondaryAuthFailures = maxSecondaryAuthFailures
 			realm.WaitIncrementSeconds = bruteForceDetectionSettings["wait_increment_seconds"].(int)
 			realm.QuickLoginCheckMilliSeconds = bruteForceDetectionSettings["quick_login_check_milli_seconds"].(int)
 			realm.MinimumQuickLoginWaitSeconds = bruteForceDetectionSettings["minimum_quick_login_wait_seconds"].(int)
 			realm.MaxFailureWaitSeconds = bruteForceDetectionSettings["max_failure_wait_seconds"].(int)
 			realm.MaxDeltaTimeSeconds = bruteForceDetectionSettings["failure_reset_time_seconds"].(int)
+			maxTemporaryLockouts := bruteForceDetectionSettings["max_temporary_lockouts"].(int)
+			realm.MaxTemporaryLockouts = &maxTemporaryLockouts
 		} else {
-			setDefaultSecuritySettingsBruteForceDetection(realm)
+			setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 		}
 	} else {
 		setDefaultSecuritySettingHeaders(realm)
-		setDefaultSecuritySettingsBruteForceDetection(realm)
+		setDefaultSecuritySettingsBruteForceDetection(realm, keycloakVersion)
 	}
 
 	if passwordPolicy, ok := data.GetOk("password_policy"); ok {
 		realm.PasswordPolicy = passwordPolicy.(string)
 	}
 
-	setRealmFlowBindings(data, realm)
+	setRealmFlowBindings(data, realm, keycloakVersion)
 
 	attributes := map[string]interface{}{}
 	if v, ok := data.GetOk("attributes"); ok {
@@ -1026,6 +1332,12 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 	}
 	realm.DefaultOptionalClientScopes = defaultOptionalClientScopes
 
+	adminPermissionsEnabled, err := resolveAdminPermissionsEnabled(realm.Realm, data.Get("admin_permissions_enabled").(bool), keycloakVersion)
+	if err != nil {
+		return nil, err
+	}
+	realm.AdminPermissionsEnabled = adminPermissionsEnabled
+
 	//OTPPolicy
 	if v, ok := data.GetOk("otp_policy"); ok {
 		otpPolicy := v.([]interface{})[0].(map[string]interface{})
@@ -1050,6 +1362,10 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			realm.OTPPolicyPeriod = otpPolicyPeriod.(int)
 		}
 
+		if otpPolicyCodeReusable, ok := otpPolicy["code_reusable"]; ok {
+			realm.OTPPolicyCodeReusable = otpPolicyCodeReusable.(bool)
+		}
+
 		if otpPolicyType, ok := otpPolicy["type"]; ok {
 			realm.OTPPolicyType = otpPolicyType.(string)
 		}
@@ -1060,6 +1376,7 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		webAuthnPolicy := v.([]interface{})[0].(map[string]interface{})
 
 		realm.WebAuthnPolicyAcceptableAaguids = interfaceSliceToStringSlice(webAuthnPolicy["acceptable_aaguids"].(*schema.Set).List())
+		realm.WebAuthnPolicyExtraOrigins = interfaceSliceToStringSlice(webAuthnPolicy["extra_origins"].(*schema.Set).List())
 
 		if webAuthnPolicyAttestationConveyancePreference, ok := webAuthnPolicy["attestation_conveyance_preference"]; ok {
 			realm.WebAuthnPolicyAttestationConveyancePreference = webAuthnPolicyAttestationConveyancePreference.(string)
@@ -1081,6 +1398,15 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			realm.WebAuthnPolicyRequireResidentKey = webAuthnPolicyRequireResidentKey.(string)
 		}
 
+		if webAuthnPolicyDiscoverableCredential, ok := webAuthnPolicy["discoverable_credential"]; ok {
+			discoverableCredential := webAuthnPolicyDiscoverableCredential.(string)
+			if supportsDiscoverableCredential(keycloakVersion) {
+				realm.WebAuthnPolicyDiscoverableCredential = discoverableCredential
+			} else if discoverableCredential != "" && discoverableCredential != "not specified" {
+				return nil, fmt.Errorf("discoverable_credential in web_authn_policy for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realm.Id, minKeycloakDiscoverableCredentialVersion)
+			}
+		}
+
 		if webAuthnPolicyRpEntityName, ok := webAuthnPolicy["relying_party_entity_name"]; ok {
 			realm.WebAuthnPolicyRpEntityName = webAuthnPolicyRpEntityName.(string)
 		}
@@ -1089,7 +1415,11 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			realm.WebAuthnPolicyRpId = webAuthnPolicyRpId.(string)
 		}
 
-		realm.WebAuthnPolicySignatureAlgorithms = interfaceSliceToStringSlice(webAuthnPolicy["signature_algorithms"].(*schema.Set).List())
+		signatureAlgorithms, err := getRealmSignatureAlgorithms(data, "web_authn_policy", webAuthnPolicy)
+		if err != nil {
+			return nil, err
+		}
+		realm.WebAuthnPolicySignatureAlgorithms = signatureAlgorithms
 
 		if webAuthnPolicyUserVerificationRequirement, ok := webAuthnPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyUserVerificationRequirement = webAuthnPolicyUserVerificationRequirement.(string)
@@ -1101,6 +1431,7 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 		webAuthnPasswordlessPolicy := v.([]interface{})[0].(map[string]interface{})
 
 		realm.WebAuthnPolicyPasswordlessAcceptableAaguids = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["acceptable_aaguids"].(*schema.Set).List())
+		realm.WebAuthnPolicyPasswordlessExtraOrigins = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["extra_origins"].(*schema.Set).List())
 
 		if webAuthnPolicyPasswordlessAttestationConveyancePreference, ok := webAuthnPasswordlessPolicy["attestation_conveyance_preference"]; ok {
 			realm.WebAuthnPolicyPasswordlessAttestationConveyancePreference = webAuthnPolicyPasswordlessAttestationConveyancePreference.(string)
@@ -1108,6 +1439,25 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 
 		if webAuthnPolicyPasswordlessAuthenticatorAttachment, ok := webAuthnPasswordlessPolicy["authenticator_attachment"]; ok {
 			realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment = webAuthnPolicyPasswordlessAuthenticatorAttachment.(string)
+		}
+
+		supportsPasskeys := true
+		if minSupportedVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+			if keycloakVersion.LessThan(minSupportedVersion) {
+				supportsPasskeys = false
+			}
+		}
+
+		if supportsPasskeys {
+			if webAuthnPolicyPasswordlessPasskeysEnabled, ok := webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"]; ok {
+				passkeysEnabled := webAuthnPolicyPasswordlessPasskeysEnabled.(bool)
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			} else {
+				passkeysEnabled := false
+				realm.WebAuthnPolicyPasswordlessPasskeysEnabled = &passkeysEnabled
+			}
+		} else if _, ok := data.GetOk("web_authn_passwordless_policy.0.passwordless_passkeys_enabled"); ok {
+			return nil, fmt.Errorf("passwordless_passkeys_enabled in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= 26.3.5)", realm.Id)
 		}
 
 		if webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister, ok := webAuthnPasswordlessPolicy["avoid_same_authenticator_register"]; ok {
@@ -1122,6 +1472,15 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			realm.WebAuthnPolicyPasswordlessRequireResidentKey = webAuthnPolicyPasswordlessRequireResidentKey.(string)
 		}
 
+		if webAuthnPolicyPasswordlessDiscoverableCredential, ok := webAuthnPasswordlessPolicy["discoverable_credential"]; ok {
+			discoverableCredential := webAuthnPolicyPasswordlessDiscoverableCredential.(string)
+			if supportsDiscoverableCredential(keycloakVersion) {
+				realm.WebAuthnPolicyPasswordlessDiscoverableCredential = discoverableCredential
+			} else if discoverableCredential != "" && discoverableCredential != "not specified" {
+				return nil, fmt.Errorf("discoverable_credential in web_authn_passwordless_policy for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realm.Id, minKeycloakDiscoverableCredentialVersion)
+			}
+		}
+
 		if webAuthnPolicyPasswordlessRpEntityName, ok := webAuthnPasswordlessPolicy["relying_party_entity_name"]; ok {
 			realm.WebAuthnPolicyPasswordlessRpEntityName = webAuthnPolicyPasswordlessRpEntityName.(string)
 		}
@@ -1130,7 +1489,11 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 			realm.WebAuthnPolicyPasswordlessRpId = webAuthnPolicyPasswordlessRpId.(string)
 		}
 
-		realm.WebAuthnPolicyPasswordlessSignatureAlgorithms = interfaceSliceToStringSlice(webAuthnPasswordlessPolicy["signature_algorithms"].(*schema.Set).List())
+		signatureAlgorithms, err := getRealmSignatureAlgorithms(data, "web_authn_passwordless_policy", webAuthnPasswordlessPolicy)
+		if err != nil {
+			return nil, err
+		}
+		realm.WebAuthnPolicyPasswordlessSignatureAlgorithms = signatureAlgorithms
 
 		if webAuthnPolicyPasswordlessUserVerificationRequirement, ok := webAuthnPasswordlessPolicy["user_verification_requirement"]; ok {
 			realm.WebAuthnPolicyPasswordlessUserVerificationRequirement = webAuthnPolicyPasswordlessUserVerificationRequirement.(string)
@@ -1138,6 +1501,59 @@ func getRealmFromData(data *schema.ResourceData) (*keycloak.Realm, error) {
 	}
 
 	return realm, nil
+}
+
+func supportsDiscoverableCredential(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakDiscoverableCredentialVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+func supportsMaxSecondaryAuthFailures(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakMaxSecondaryAuthFailuresVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+func supportsAdminPermissions(keycloakVersion *version.Version) bool {
+	minVersion, err := version.NewVersion(minKeycloakAdminPermissionsVersion)
+	return err == nil && keycloakVersion.GreaterThanOrEqual(minVersion)
+}
+
+// resolveAdminPermissionsEnabled decides what to send for admin_permissions_enabled given the target
+// Keycloak version: on supported versions the value is always sent (even when false, so disabling
+// admin permissions reaches Keycloak instead of being silently omitted); on unsupported versions it's
+// omitted (nil) unless the user enabled it, in which case this returns an explicit error rather than
+// letting Keycloak reject the request with a raw 400.
+func resolveAdminPermissionsEnabled(realmId string, adminPermissionsEnabled bool, keycloakVersion *version.Version) (*bool, error) {
+	if supportsAdminPermissions(keycloakVersion) {
+		return &adminPermissionsEnabled, nil
+	}
+	if adminPermissionsEnabled {
+		return nil, fmt.Errorf("admin_permissions_enabled for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realmId, minKeycloakAdminPermissionsVersion)
+	}
+	return nil, nil
+}
+
+// resolveMaxSecondaryAuthFailures decides what to do with a configured max_secondary_auth_failures
+// value given the target Keycloak version: on supported versions it's always returned (even when 0,
+// so resetting the field back to its default reaches Keycloak instead of being silently omitted); on
+// unsupported versions it's omitted (nil) unless the user configured a non-default value, in which case
+// this returns an explicit error rather than letting Keycloak reject the request with a raw 400.
+func resolveMaxSecondaryAuthFailures(realmId string, maxSecondaryAuthFailures int, keycloakVersion *version.Version) (*int, error) {
+	if supportsMaxSecondaryAuthFailures(keycloakVersion) {
+		return &maxSecondaryAuthFailures, nil
+	}
+	if maxSecondaryAuthFailures != 0 {
+		return nil, fmt.Errorf("max_secondary_auth_failures in brute_force_detection for realm \"%s\" is not supported by your Keycloak version (requires >= %s)", realmId, minKeycloakMaxSecondaryAuthFailuresVersion)
+	}
+	return nil, nil
+}
+
+func flattenDiscoverableCredential(residentKey string, keycloakVersion *version.Version) string {
+	if !supportsDiscoverableCredential(keycloakVersion) || residentKey == "" {
+		return "not specified"
+	}
+
+	return residentKey
 }
 
 func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
@@ -1149,29 +1565,38 @@ func setDefaultSecuritySettingHeaders(realm *keycloak.Realm) {
 		XFrameOptions:                   "SAMEORIGIN",
 		XRobotsTag:                      "none",
 		XXSSProtection:                  "1; mode=block",
+		ReferrerPolicy:                  "no-referrer",
 	}
 }
 
-func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm) {
+func setDefaultSecuritySettingsBruteForceDetection(realm *keycloak.Realm, keycloakVersion *version.Version) {
 	realm.BruteForceProtected = false
 	realm.PermanentLockout = false
+	realm.BruteForceStrategy = "MULTIPLE"
 	realm.FailureFactor = 30
+	realm.MaxSecondaryAuthFailures, _ = resolveMaxSecondaryAuthFailures(realm.Realm, 0, keycloakVersion)
 	realm.WaitIncrementSeconds = 60
 	realm.QuickLoginCheckMilliSeconds = 1000
 	realm.MinimumQuickLoginWaitSeconds = 60
 	realm.MaxFailureWaitSeconds = 900
 	realm.MaxDeltaTimeSeconds = 43200
+	realm.MaxTemporaryLockouts = nil
 }
 
-func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
+func setRealmData(data *schema.ResourceData, realm *keycloak.Realm, keycloakVersion *version.Version) {
 	data.SetId(realm.Realm)
 
 	data.Set("realm", realm.Realm)
-	data.Set("internal_id", realm.Id)
+	// Keycloak leaves the id out for tokens that cannot see the realm (see GetRealmNameByInternalId); keep what we know
+	if realm.Id != "" {
+		data.Set("internal_id", realm.Id)
+	}
 	data.Set("enabled", realm.Enabled)
 	data.Set("display_name", realm.DisplayName)
 	data.Set("display_name_html", realm.DisplayNameHtml)
 	data.Set("user_managed_access", realm.UserManagedAccess)
+	data.Set("organizations_enabled", realm.OrganizationsEnabled)
+	data.Set("admin_permissions_enabled", realm.AdminPermissionsEnabled != nil && *realm.AdminPermissionsEnabled)
 
 	// Login Config
 	data.Set("registration_allowed", realm.RegistrationAllowed)
@@ -1191,7 +1616,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	} else {
 		smtpSettings := make(map[string]interface{})
 
-		smtpSettings["starttls"] = realm.SmtpServer.StartTls
+		smtpSettings["starttls"] = bool(realm.SmtpServer.StartTls)
 		smtpSettings["port"] = realm.SmtpServer.Port
 		smtpSettings["host"] = realm.SmtpServer.Host
 		smtpSettings["reply_to"] = realm.SmtpServer.ReplyTo
@@ -1199,15 +1624,32 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 		smtpSettings["from"] = realm.SmtpServer.From
 		smtpSettings["from_display_name"] = realm.SmtpServer.FromDisplayName
 		smtpSettings["envelope_from"] = realm.SmtpServer.EnvelopeFrom
-		smtpSettings["ssl"] = realm.SmtpServer.Ssl
+		smtpSettings["ssl"] = bool(realm.SmtpServer.Ssl)
+		smtpSettings["allow_utf8"] = bool(realm.SmtpServer.AllowUtf8)
 
 		if realm.SmtpServer.Auth {
-			auth := make(map[string]interface{})
+			if realm.SmtpServer.AuthType == "token" {
+				token_auth := make(map[string]interface{})
 
-			auth["username"] = realm.SmtpServer.User
-			auth["password"] = realm.SmtpServer.Password
+				token_auth["username"] = realm.SmtpServer.User
+				token_auth["url"] = realm.SmtpServer.AuthTokenUrl
+				token_auth["client_id"] = realm.SmtpServer.AuthTokenClientId
+				token_auth["client_secret"] = realm.SmtpServer.AuthTokenClientSecret
+				token_auth["scope"] = realm.SmtpServer.AuthTokenScope
 
-			smtpSettings["auth"] = []interface{}{auth}
+				smtpSettings["token_auth"] = []interface{}{token_auth}
+			} else {
+				auth := make(map[string]interface{})
+
+				auth["username"] = realm.SmtpServer.User
+				if passwordVersion, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok {
+					auth["password_wo_version"] = passwordVersion.(string)
+				} else {
+					auth["password"] = realm.SmtpServer.Password
+				}
+
+				smtpSettings["auth"] = []interface{}{auth}
+			}
 		}
 
 		data.Set("smtp_server", []interface{}{smtpSettings})
@@ -1259,7 +1701,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 		} else if len(oldHeadersConfig) == 1 && realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
 			securityDefensesSettings["headers"] = []interface{}{getHeaderSettings(realm)}
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if len(oldHeadersConfig) == 1 {
 			securityDefensesSettings := make(map[string]interface{})
@@ -1267,7 +1709,7 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		} else if realm.BruteForceProtected {
 			securityDefensesSettings := make(map[string]interface{})
-			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm)}
+			securityDefensesSettings["brute_force_detection"] = []interface{}{getBruteForceDetectionSettings(realm, keycloakVersion)}
 			data.Set("security_defenses", []interface{}{securityDefensesSettings})
 		}
 	}
@@ -1281,18 +1723,22 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("reset_credentials_flow", realm.ResetCredentialsFlow)
 	data.Set("client_authentication_flow", realm.ClientAuthenticationFlow)
 	data.Set("docker_authentication_flow", realm.DockerAuthenticationFlow)
+	data.Set("first_broker_login_flow", realm.FirstBrokerLoginFlow)
 
 	//WebAuthn
 	webAuthnPolicy := make(map[string]interface{})
 	webAuthnPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyAcceptableAaguids
+	webAuthnPolicy["extra_origins"] = realm.WebAuthnPolicyExtraOrigins
 	webAuthnPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyAttestationConveyancePreference
 	webAuthnPolicy["authenticator_attachment"] = realm.WebAuthnPolicyAuthenticatorAttachment
 	webAuthnPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyAvoidSameAuthenticatorRegister
 	webAuthnPolicy["create_timeout"] = realm.WebAuthnPolicyCreateTimeout
 	webAuthnPolicy["require_resident_key"] = realm.WebAuthnPolicyRequireResidentKey
+	webAuthnPolicy["discoverable_credential"] = flattenDiscoverableCredential(realm.WebAuthnPolicyDiscoverableCredential, keycloakVersion)
 	webAuthnPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyRpEntityName
 	webAuthnPolicy["relying_party_id"] = realm.WebAuthnPolicyRpId
 	webAuthnPolicy["signature_algorithms"] = realm.WebAuthnPolicySignatureAlgorithms
+	webAuthnPolicy["signature_algorithms_ordered"] = realm.WebAuthnPolicySignatureAlgorithms
 	webAuthnPolicy["user_verification_requirement"] = realm.WebAuthnPolicyUserVerificationRequirement
 	data.Set("web_authn_policy", []interface{}{webAuthnPolicy})
 
@@ -1304,20 +1750,35 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	otpPolicy["initial_counter"] = realm.OTPPolicyInitialCounter
 	otpPolicy["look_ahead_window"] = realm.OTPPolicyLookAheadWindow
 	otpPolicy["period"] = realm.OTPPolicyPeriod
+	otpPolicy["code_reusable"] = realm.OTPPolicyCodeReusable
 	data.Set("otp_policy", []interface{}{otpPolicy})
 
 	//WebAuthn Passwordless
 	webAuthnPasswordlessPolicy := make(map[string]interface{})
 	webAuthnPasswordlessPolicy["acceptable_aaguids"] = realm.WebAuthnPolicyPasswordlessAcceptableAaguids
+	webAuthnPasswordlessPolicy["extra_origins"] = realm.WebAuthnPolicyPasswordlessExtraOrigins
 	webAuthnPasswordlessPolicy["attestation_conveyance_preference"] = realm.WebAuthnPolicyPasswordlessAttestationConveyancePreference
 	webAuthnPasswordlessPolicy["authenticator_attachment"] = realm.WebAuthnPolicyPasswordlessAuthenticatorAttachment
 	webAuthnPasswordlessPolicy["avoid_same_authenticator_register"] = realm.WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister
 	webAuthnPasswordlessPolicy["create_timeout"] = realm.WebAuthnPolicyPasswordlessCreateTimeout
 	webAuthnPasswordlessPolicy["require_resident_key"] = realm.WebAuthnPolicyPasswordlessRequireResidentKey
+	webAuthnPasswordlessPolicy["discoverable_credential"] = flattenDiscoverableCredential(realm.WebAuthnPolicyPasswordlessDiscoverableCredential, keycloakVersion)
 	webAuthnPasswordlessPolicy["relying_party_entity_name"] = realm.WebAuthnPolicyPasswordlessRpEntityName
 	webAuthnPasswordlessPolicy["relying_party_id"] = realm.WebAuthnPolicyPasswordlessRpId
 	webAuthnPasswordlessPolicy["signature_algorithms"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
+	webAuthnPasswordlessPolicy["signature_algorithms_ordered"] = realm.WebAuthnPolicyPasswordlessSignatureAlgorithms
 	webAuthnPasswordlessPolicy["user_verification_requirement"] = realm.WebAuthnPolicyPasswordlessUserVerificationRequirement
+
+	if minVersion, err := version.NewVersion(minKeycloakPasskeysVersion); err == nil {
+		if keycloakVersion.GreaterThanOrEqual(minVersion) {
+			if realm.WebAuthnPolicyPasswordlessPasskeysEnabled != nil {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = *realm.WebAuthnPolicyPasswordlessPasskeysEnabled
+			} else {
+				webAuthnPasswordlessPolicy["passwordless_passkeys_enabled"] = false
+			}
+		}
+	}
+
 	data.Set("web_authn_passwordless_policy", []interface{}{webAuthnPasswordlessPolicy})
 
 	attributes := map[string]interface{}{}
@@ -1334,15 +1795,25 @@ func setRealmData(data *schema.ResourceData, realm *keycloak.Realm) {
 	data.Set("default_optional_client_scopes", realm.DefaultOptionalClientScopes)
 }
 
-func getBruteForceDetectionSettings(realm *keycloak.Realm) map[string]interface{} {
+func getBruteForceDetectionSettings(realm *keycloak.Realm, keycloakVersion *version.Version) map[string]interface{} {
 	bruteForceDetectionSettings := make(map[string]interface{})
 	bruteForceDetectionSettings["permanent_lockout"] = realm.PermanentLockout
+	bruteForceDetectionSettings["brute_force_strategy"] = realm.BruteForceStrategy
 	bruteForceDetectionSettings["max_login_failures"] = realm.FailureFactor
+	if realm.MaxSecondaryAuthFailures != nil {
+		bruteForceDetectionSettings["max_secondary_auth_failures"] = *realm.MaxSecondaryAuthFailures
+	} else {
+		bruteForceDetectionSettings["max_secondary_auth_failures"] = 0
+	}
 	bruteForceDetectionSettings["wait_increment_seconds"] = realm.WaitIncrementSeconds
 	bruteForceDetectionSettings["quick_login_check_milli_seconds"] = realm.QuickLoginCheckMilliSeconds
 	bruteForceDetectionSettings["minimum_quick_login_wait_seconds"] = realm.MinimumQuickLoginWaitSeconds
 	bruteForceDetectionSettings["max_failure_wait_seconds"] = realm.MaxFailureWaitSeconds
 	bruteForceDetectionSettings["failure_reset_time_seconds"] = realm.MaxDeltaTimeSeconds
+	bruteForceDetectionSettings["max_temporary_lockouts"] = 0
+	if realm.MaxTemporaryLockouts != nil {
+		bruteForceDetectionSettings["max_temporary_lockouts"] = *realm.MaxTemporaryLockouts
+	}
 	return bruteForceDetectionSettings
 }
 
@@ -1355,13 +1826,18 @@ func getHeaderSettings(realm *keycloak.Realm) map[string]interface{} {
 	headersSettings["x_frame_options"] = realm.BrowserSecurityHeaders.XFrameOptions
 	headersSettings["x_robots_tag"] = realm.BrowserSecurityHeaders.XRobotsTag
 	headersSettings["x_xss_protection"] = realm.BrowserSecurityHeaders.XXSSProtection
+	headersSettings["referrer_policy"] = realm.BrowserSecurityHeaders.ReferrerPolicy
 	return headersSettings
 }
 
 func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	realm, err := getRealmFromData(data)
+	realm, err := getRealmFromData(data, keycloakVersion)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -1376,35 +1852,71 @@ func resourceKeycloakRealmCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	err = meta.(*keycloak.KeycloakClient).Refresh(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	setRealmData(data, realm, keycloakVersion)
 
 	return resourceKeycloakRealmRead(ctx, data, meta)
 }
 
 func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	realm, err := keycloakClient.GetRealm(ctx, data.Id())
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	// we can't trust the API to set this field correctly since it just responds with "**********" this implies a 'password only' change will not detected
+	// we can't trust the API to set these fields correctly since it just responds with "**********" this implies a 'password/client secret only' change will not be detected
 	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok {
 		realm.SmtpServer.Password = smtpPassword
 	}
 
-	setRealmData(data, realm)
+	if smtpClientSecret, ok := getRealmSMTPClientSecretFromData(data); ok {
+		realm.SmtpServer.AuthTokenClientSecret = smtpClientSecret
+	}
+
+	if _, ok := data.GetOk("terraform_deletion_protection"); !ok {
+		data.Set("terraform_deletion_protection", false)
+	}
+
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }
 
 func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
-
-	realm, err := getRealmFromData(data)
+	keycloakVersion, err := keycloakClient.Version(ctx)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	realm, err := getRealmFromData(data, keycloakVersion)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	currentRealm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
+		// Keycloak only preserves a masked password while the SMTP destination is
+		// unchanged. Check the server too, in case it drifted after planning.
+		if !realmSMTPDestinationUnchanged(currentRealm.SmtpServer, realm.SmtpServer) {
+			return diag.Errorf("%s", realmSMTPPasswordVersionRequired)
+		}
+		realm.SmtpServer.Password = currentRealm.SmtpServer.Password
 	}
 
 	err = keycloakClient.ValidateRealm(ctx, realm)
@@ -1412,18 +1924,52 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	err = keycloakClient.UpdateRealm(ctx, realm)
+	// if "realm" changed, Keycloak renames the realm in place
+	renamed := currentRealm.Realm != realm.Realm
+	err = keycloakClient.UpdateRealmByName(ctx, currentRealm.Realm, realm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	// the realm has been renamed: record that before anything else can fail
+	setRealmData(data, realm, keycloakVersion)
+
+	if renamed {
+		if keycloakClient.AccessTokenProvided() {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but the access_token cannot be refreshed",
+				Detail:   "Some Keycloak versions only show a renamed realm in full to tokens issued after the rename. If looking up resources by realm_internal_id fails from now on, run Terraform again with a newly issued access_token.",
+			}}
+		}
+
+		// the roles in the access token belong to the old name; get one that matches the renamed realm
+		if err := keycloakClient.Refresh(ctx); err != nil {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "the realm was renamed, but a new access token could not be requested",
+				Detail:   err.Error(),
+			}}
+		}
+	}
 
 	return nil
 }
 
 func resourceKeycloakRealmDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if data.Get("terraform_deletion_protection").(bool) {
+		return diag.Errorf("Deletion protection is enabled for keycloak_realm resource with realm %s (ID: %s). To delete this resource, first set `terraform_deletion_protection` to `false`.", data.Id(), data.Get("internal_id").(string))
+	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	return diag.FromErr(keycloakClient.DeleteRealm(ctx, data.Id()))
+	// the old name may belong to another realm by now, so the realm is found by its internal id
+	realm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	if keycloak.ErrorIs404(err) {
+		return nil
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return diag.FromErr(keycloakClient.DeleteRealm(ctx, realm.Realm))
 }

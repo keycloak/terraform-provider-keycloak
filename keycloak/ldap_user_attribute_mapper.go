@@ -17,6 +17,7 @@ type LdapUserAttributeMapper struct {
 	ReadOnly                bool
 	AlwaysReadValueFromLdap bool
 	UserModelAttribute      string
+	ForceDefaultValue       bool
 	AttributeDefaultValue   string
 	IsBinaryAttribute       bool
 }
@@ -44,6 +45,9 @@ func convertFromLdapUserAttributeMapperToComponent(ldapUserAttributeMapper *Ldap
 			"user.model.attribute": {
 				ldapUserAttributeMapper.UserModelAttribute,
 			},
+			"attribute.force.default": {
+				strconv.FormatBool(ldapUserAttributeMapper.ForceDefaultValue),
+			},
 			"attribute.default.value": {
 				ldapUserAttributeMapper.AttributeDefaultValue,
 			},
@@ -55,22 +59,27 @@ func convertFromLdapUserAttributeMapperToComponent(ldapUserAttributeMapper *Ldap
 }
 
 func convertFromComponentToLdapUserAttributeMapper(component *component, realmId string) (*LdapUserAttributeMapper, error) {
-	isMandatoryInLdap, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("is.mandatory.in.ldap"))
+	isMandatoryInLdap, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("is.mandatory.in.ldap"))
 	if err != nil {
 		return nil, err
 	}
 
-	readOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("read.only"))
+	readOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("read.only"))
 	if err != nil {
 		return nil, err
 	}
 
-	alwaysReadValueFromLdap, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("always.read.value.from.ldap"))
+	alwaysReadValueFromLdap, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("always.read.value.from.ldap"))
 	if err != nil {
 		return nil, err
 	}
 
-	isBinaryAttribute, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("is.binary.attribute"))
+	forceDefaultValue, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("attribute.force.default"))
+	if err != nil {
+		return nil, err
+	}
+
+	isBinaryAttribute, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("is.binary.attribute"))
 	if err != nil {
 		return nil, err
 	}
@@ -81,12 +90,13 @@ func convertFromComponentToLdapUserAttributeMapper(component *component, realmId
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		LdapAttribute:           component.getConfigFirstOrDefault("ldap.attribute"),
+		LdapAttribute:           component.getConfig("ldap.attribute"),
 		IsMandatoryInLdap:       isMandatoryInLdap,
 		ReadOnly:                readOnly,
 		AlwaysReadValueFromLdap: alwaysReadValueFromLdap,
-		UserModelAttribute:      component.getConfigFirstOrDefault("user.model.attribute"),
-		AttributeDefaultValue:   component.getConfigFirstOrDefault("attribute.default.value"),
+		UserModelAttribute:      component.getConfig("user.model.attribute"),
+		ForceDefaultValue:       forceDefaultValue,
+		AttributeDefaultValue:   component.getConfig("attribute.default.value"),
 		IsBinaryAttribute:       isBinaryAttribute,
 	}, nil
 }

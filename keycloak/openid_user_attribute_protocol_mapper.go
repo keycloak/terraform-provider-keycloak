@@ -13,9 +13,10 @@ type OpenIdUserAttributeProtocolMapper struct {
 	ClientId      string
 	ClientScopeId string
 
-	AddToIdToken     bool
-	AddToAccessToken bool
-	AddToUserInfo    bool
+	AddToIdToken            bool
+	AddToAccessToken        bool
+	AddToUserInfo           bool
+	AddToTokenIntrospection bool
 
 	UserAttribute  string
 	ClaimName      string
@@ -35,6 +36,7 @@ func (mapper *OpenIdUserAttributeProtocolMapper) convertToGenericProtocolMapper(
 			addToIdTokenField:             strconv.FormatBool(mapper.AddToIdToken),
 			addToAccessTokenField:         strconv.FormatBool(mapper.AddToAccessToken),
 			addToUserInfoField:            strconv.FormatBool(mapper.AddToUserInfo),
+			addToTokenIntrospectionField:  strconv.FormatBool(mapper.AddToTokenIntrospection),
 			userAttributeField:            mapper.UserAttribute,
 			claimNameField:                mapper.ClaimName,
 			claimValueTypeField:           mapper.ClaimValueType,
@@ -60,6 +62,11 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserAttributeProtocolMapper
 		return nil, err
 	}
 
+	addToTokenIntrospection, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[addToTokenIntrospectionField])
+	if err != nil {
+		return nil, err
+	}
+
 	// multivalued's default is "", this is an issue when importing an existing mapper
 	multivalued, err := parseBoolAndTreatEmptyStringAsFalse(protocolMapper.Config[multivaluedField])
 	if err != nil {
@@ -78,9 +85,10 @@ func (protocolMapper *protocolMapper) convertToOpenIdUserAttributeProtocolMapper
 		ClientId:      clientId,
 		ClientScopeId: clientScopeId,
 
-		AddToIdToken:     addToIdToken,
-		AddToAccessToken: addToAccessToken,
-		AddToUserInfo:    addToUserInfo,
+		AddToIdToken:            addToIdToken,
+		AddToAccessToken:        addToAccessToken,
+		AddToUserInfo:           addToUserInfo,
+		AddToTokenIntrospection: addToTokenIntrospection,
 
 		UserAttribute:            protocolMapper.Config[userAttributeField],
 		ClaimName:                protocolMapper.Config[claimNameField],
@@ -125,19 +133,13 @@ func (keycloakClient *KeycloakClient) UpdateOpenIdUserAttributeProtocolMapper(ct
 }
 
 func (keycloakClient *KeycloakClient) ValidateOpenIdUserAttributeProtocolMapper(ctx context.Context, mapper *OpenIdUserAttributeProtocolMapper) error {
-	if mapper.ClientId == "" && mapper.ClientScopeId == "" {
-		return fmt.Errorf("validation error: one of ClientId or ClientScopeId must be set")
-	}
-
-	protocolMappers, err := keycloakClient.listGenericProtocolMappers(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId)
+	existingMapper, err := keycloakClient.getProtocolMapperByName(ctx, mapper.RealmId, mapper.ClientId, mapper.ClientScopeId, mapper.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, protocolMapper := range protocolMappers {
-		if protocolMapper.Name == mapper.Name && protocolMapper.Id != mapper.Id {
-			return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client", mapper.Name)
-		}
+	if existingMapper != nil && existingMapper.Id != mapper.Id {
+		return fmt.Errorf("validation error: a protocol mapper with name %s already exists for this client or client scope", mapper.Name)
 	}
 
 	return nil

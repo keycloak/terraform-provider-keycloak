@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakOpenIdUserRealmRoleProtocolMapper() *schema.Resource {
@@ -34,18 +35,18 @@ func resourceKeycloakOpenIdUserRealmRoleProtocolMapper() *schema.Resource {
 				Description: "The realm id where the associated client or client scope exists.",
 			},
 			"client_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
-				ConflictsWith: []string{"client_scope_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"client_scope_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client scope. Cannot be used at the same time as client_id.",
-				ConflictsWith: []string{"client_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client scope. Cannot be used at the same time as client_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"add_to_id_token": {
 				Type:        schema.TypeBool,
@@ -64,6 +65,12 @@ func resourceKeycloakOpenIdUserRealmRoleProtocolMapper() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 				Description: "Indicates if the attribute should appear in the userinfo response body.",
+			},
+			"add_to_token_introspection": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Indicates if the attribute should be a claim in the token introspection response body.",
 			},
 			"claim_name": {
 				Type:     schema.TypeString,
@@ -93,14 +100,15 @@ func resourceKeycloakOpenIdUserRealmRoleProtocolMapper() *schema.Resource {
 
 func mapFromDataToOpenIdUserRealmRoleProtocolMapper(data *schema.ResourceData) *keycloak.OpenIdUserRealmRoleProtocolMapper {
 	return &keycloak.OpenIdUserRealmRoleProtocolMapper{
-		Id:               data.Id(),
-		Name:             data.Get("name").(string),
-		RealmId:          data.Get("realm_id").(string),
-		ClientId:         data.Get("client_id").(string),
-		ClientScopeId:    data.Get("client_scope_id").(string),
-		AddToIdToken:     data.Get("add_to_id_token").(bool),
-		AddToAccessToken: data.Get("add_to_access_token").(bool),
-		AddToUserInfo:    data.Get("add_to_userinfo").(bool),
+		Id:                      data.Id(),
+		Name:                    data.Get("name").(string),
+		RealmId:                 data.Get("realm_id").(string),
+		ClientId:                data.Get("client_id").(string),
+		ClientScopeId:           data.Get("client_scope_id").(string),
+		AddToIdToken:            data.Get("add_to_id_token").(bool),
+		AddToAccessToken:        data.Get("add_to_access_token").(bool),
+		AddToUserInfo:           data.Get("add_to_userinfo").(bool),
+		AddToTokenIntrospection: data.Get("add_to_token_introspection").(bool),
 
 		ClaimName:       data.Get("claim_name").(string),
 		ClaimValueType:  data.Get("claim_value_type").(string),
@@ -123,6 +131,7 @@ func mapFromOpenIdUserRealmRoleMapperToData(mapper *keycloak.OpenIdUserRealmRole
 	data.Set("add_to_id_token", mapper.AddToIdToken)
 	data.Set("add_to_access_token", mapper.AddToAccessToken)
 	data.Set("add_to_userinfo", mapper.AddToUserInfo)
+	data.Set("add_to_token_introspection", mapper.AddToTokenIntrospection)
 	data.Set("claim_name", mapper.ClaimName)
 	data.Set("claim_value_type", mapper.ClaimValueType)
 	data.Set("realm_role_prefix", mapper.RealmRolePrefix)

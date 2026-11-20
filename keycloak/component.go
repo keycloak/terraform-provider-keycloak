@@ -12,19 +12,12 @@ type component struct {
 	Name         string              `json:"name"`
 	ProviderId   string              `json:"providerId"`
 	ProviderType string              `json:"providerType"`
-	ParentId     string              `json:"parentId"`
+	ParentId     string              `json:"parentId,omitempty"`
+	SubType      string              `json:"subType,omitempty"`
 	Config       map[string][]string `json:"config"`
 }
 
-func (component *component) getConfig(val string) []string {
-	if len(component.Config[val]) == 0 {
-		return make([]string, 0)
-	}
-
-	return component.Config[val]
-}
-
-func (component *component) getConfigFirstOrDefault(val string) string {
+func (component *component) getConfig(val string) string {
 	if len(component.Config[val]) == 0 {
 		return ""
 	}
@@ -34,11 +27,7 @@ func (component *component) getConfigFirstOrDefault(val string) string {
 
 func (component *component) getConfigOk(val string) (string, bool) {
 	if v, ok := component.Config[val]; ok {
-		if len(v) > 0 {
-			return v[0], true
-		} else {
-			return "", false
-		}
+		return v[0], true
 	}
 
 	return "", false

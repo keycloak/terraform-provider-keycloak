@@ -1,23 +1,26 @@
 package provider
 
 import (
+	"dario.cat/mergo"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 	oidcGoogleSchema := map[string]*schema.Schema{
 		"alias": {
 			Type:        schema.TypeString,
+			Optional:    true,
 			Computed:    true,
 			Description: "The alias uniquely identifies an identity provider and it is also used to build the redirect uri. In case of google this is computed and always google",
 		},
 		"display_name": {
 			Type:        schema.TypeString,
+			Optional:    true,
 			Computed:    true,
-			Description: "Not used by this provider, Will be implicitly Google",
+			Description: "The human-friendly name of the identity provider, used in the log in form.",
 		},
 		"provider_id": {
 			Type:        schema.TypeString,
@@ -65,6 +68,11 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 			Default:     false,
 			Description: "This is just used together with Identity Provider Authenticator or when kc_idp_hint points to this identity provider. In case that client sends a request with prompt=none and user is not yet authenticated, the error will not be directly returned to client, but the request with prompt=none will be forwarded to this identity provider.",
 		},
+		"login_hint": { //loginHint
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Pass login_hint to identity provider. Set to \"true\" to forward the login_hint client note (the underlying loginHint config attribute is a boolean string).",
+		},
 		"disable_user_info": { //disableUserInfo
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -86,20 +94,26 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 	return oidcResource
 }
 
-func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData) (*keycloak.IdentityProvider, error) {
-	rec, defaultConfig := getIdentityProviderFromData(data)
+func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
+	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	rec.ProviderId = data.Get("provider_id").(string)
-	rec.Alias = "google"
+
+	aliasRaw, ok := data.GetOk("alias")
+	if ok {
+		rec.Alias = aliasRaw.(string)
+	} else {
+		rec.Alias = "google"
+	}
 
 	googleOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
 		ClientSecret:                data.Get("client_secret").(string),
-		HideOnLoginPage:             types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 		HostedDomain:                data.Get("hosted_domain").(string),
 		UserIp:                      types.KeycloakBoolQuoted(data.Get("use_user_ip_param").(bool)),
 		OfflineAccess:               types.KeycloakBoolQuoted(data.Get("request_refresh_token").(bool)),
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
+		LoginHint:                   data.Get("login_hint").(string),
 		UseJwksUrl:                  true,
 		DisableUserInfo:             types.KeycloakBoolQuoted(data.Get("disable_user_info").(bool)),
 	}
@@ -113,16 +127,17 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData) (*keycloak
 	return rec, nil
 }
 
-func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider) error {
-	setIdentityProviderData(data, identityProvider)
+func setOidcGoogleIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
+	setIdentityProviderData(data, identityProvider, keycloakVersion)
 	data.Set("provider_id", identityProvider.ProviderId)
 	data.Set("client_id", identityProvider.Config.ClientId)
-	data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
 	data.Set("hosted_domain", identityProvider.Config.HostedDomain)
 	data.Set("use_user_ip_param", identityProvider.Config.UserIp)
 	data.Set("request_refresh_token", identityProvider.Config.OfflineAccess)
 	data.Set("default_scopes", identityProvider.Config.DefaultScope)
 	data.Set("accepts_prompt_none_forward_from_client", identityProvider.Config.AcceptsPromptNoneForwFrmClt)
+	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
+
 	return nil
 }

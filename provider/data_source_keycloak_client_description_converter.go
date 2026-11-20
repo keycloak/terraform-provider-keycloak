@@ -2,9 +2,10 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakClientDescriptionConverter() *schema.Resource {
@@ -17,8 +18,9 @@ func dataSourceKeycloakClientDescriptionConverter() *schema.Resource {
 				Required: true,
 			},
 			"body": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
+				Sensitive: true,
 			},
 			"access": {
 				Type:     schema.TypeMap,
@@ -161,16 +163,18 @@ func dataSourceKeycloakClientDescriptionConverter() *schema.Resource {
 				Computed: true,
 			},
 			"registration_access_token": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:      schema.TypeString,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"root_url": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"secret": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:      schema.TypeString,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"service_accounts_enabled": {
 				Type:     schema.TypeBool,
@@ -187,6 +191,10 @@ func dataSourceKeycloakClientDescriptionConverter() *schema.Resource {
 			"web_origins": {
 				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
+				Computed: true,
+			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
 				Computed: true,
 			},
 		},
@@ -231,6 +239,7 @@ func setClientDescriptionConverterData(data *schema.ResourceData, description *k
 	data.Set("standard_flow_enabled", description.StandardFlowEnabled)
 	data.Set("surrogate_auth_required", description.SurrogateAuthRequired)
 	data.Set("web_origins", description.WebOrigins)
+	data.Set("always_display_in_console", description.AlwaysDisplayInConsole)
 }
 
 func dataSourceKeycloakClientDescriptionConverterRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

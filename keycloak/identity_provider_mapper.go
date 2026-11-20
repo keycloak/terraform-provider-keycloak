@@ -17,6 +17,7 @@ type IdentityProviderMapperConfig struct {
 	AttributeFriendlyName string                 `json:"attribute.friendly.name,omitempty"`
 	Template              string                 `json:"template,omitempty"`
 	Role                  string                 `json:"role,omitempty"`
+	Group                 string                 `json:"group,omitempty"`
 	JsonField             string                 `json:"jsonField,omitEmpty"`
 	ExtraConfig           map[string]interface{} `json:"-"`
 }

@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreRsa struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
@@ -18,6 +19,8 @@ type RealmKeystoreRsa struct {
 
 	PrivateKey  string
 	Certificate string
+	ProviderId  string
+	ExtraConfig map[string]interface{}
 }
 
 func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *component {
@@ -42,47 +45,71 @@ func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *compone
 		},
 	}
 
+	// merge extra config
+	if realmKey.ExtraConfig != nil {
+		for k, v := range realmKey.ExtraConfig {
+			componentConfig[k] = []string{fmt.Sprint(v)}
+		}
+	}
+
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
-		ProviderId:   "rsa",
+		ProviderId:   realmKey.ProviderId,
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
 	}
 }
 
 func convertFromComponentToRealmKeystoreRsa(component *component, realmId string) (*RealmKeystoreRsa, error) {
-	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("active"))
+	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("active"))
 	if err != nil {
 		return nil, err
 	}
 
-	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("enabled"))
+	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
 	}
 
 	priority := 0 // Default priority
-	if component.getConfigFirstOrDefault("priority") != "" {
-		priority, err = strconv.Atoi(component.getConfigFirstOrDefault("priority"))
+	if component.getConfig("priority") != "" {
+		priority, err = strconv.Atoi(component.getConfig("priority"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	realmKey := &RealmKeystoreRsa{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:      active,
 		Enabled:     enabled,
 		Priority:    priority,
-		Algorithm:   component.getConfigFirstOrDefault("algorithm"),
-		PrivateKey:  component.getConfigFirstOrDefault("privateKey"),
-		Certificate: component.getConfigFirstOrDefault("certificate"),
+		Algorithm:   component.getConfig("algorithm"),
+		PrivateKey:  component.getConfig("privateKey"),
+		Certificate: component.getConfig("certificate"),
+		ProviderId:  component.ProviderId,
 	}
+
+	// capture extra config (anything not in the known keys)
+	known := map[string]struct{}{
+		"active": {}, "enabled": {}, "priority": {}, "algorithm": {}, "privateKey": {}, "certificate": {},
+	}
+	extra := map[string]interface{}{}
+	for k, vals := range component.Config {
+		if _, ok := known[k]; ok {
+			continue
+		}
+		if len(vals) > 0 {
+			extra[k] = vals[0]
+		}
+	}
+	realmKey.ExtraConfig = extra
 
 	return realmKey, nil
 }

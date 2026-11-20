@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"strings"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakUserRoles() *schema.Resource {
@@ -196,6 +197,9 @@ func resourceKeycloakUserRolesDelete(ctx context.Context, data *schema.ResourceD
 	userId := data.Get("user_id").(string)
 
 	user, err := keycloakClient.GetUser(ctx, realmId, userId)
+	if err != nil {
+		return handleNotFoundError(ctx, err, data)
+	}
 
 	roleIds := interfaceSliceToStringSlice(data.Get("role_ids").(*schema.Set).List())
 	rolesToRemove, err := getExtendedRoleMapping(ctx, keycloakClient, realmId, roleIds)
@@ -205,7 +209,7 @@ func resourceKeycloakUserRolesDelete(ctx context.Context, data *schema.ResourceD
 
 	err = removeRolesFromUser(ctx, keycloakClient, rolesToRemove.clientRoles, rolesToRemove.realmRoles, user)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleNotFoundError(ctx, err, data)
 	}
 
 	return nil

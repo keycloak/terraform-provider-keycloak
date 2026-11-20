@@ -2,12 +2,15 @@ package provider
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"slices"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func keys(data map[string]string) []string {
@@ -26,6 +29,15 @@ func mapKeyFromValue(m map[string]string, value string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func reverseStringMap(m map[string]string) map[string]string {
+	reversed := make(map[string]string, len(m))
+	for k, v := range m {
+		reversed[v] = k
+	}
+
+	return reversed
 }
 
 func mergeSchemas(a map[string]*schema.Schema, b map[string]*schema.Schema) map[string]*schema.Schema {
@@ -111,4 +123,36 @@ func stringSliceContains(s []string, e string) bool {
 
 func stringPointer(s string) *string {
 	return &s
+}
+
+// suppressDiffForMultivalueAttributeOrder returns a DiffSuppressFunc that
+// suppresses diffs when the order of multiple attribute values changed.
+func suppressDiffForMultivalueAttributeOrder() schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		oldParts := strings.Split(old, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		newParts := strings.Split(new, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+		slices.Sort(oldParts)
+		slices.Sort(newParts)
+		return strings.Join(oldParts, MULTIVALUE_ATTRIBUTE_SEPARATOR) == strings.Join(newParts, MULTIVALUE_ATTRIBUTE_SEPARATOR)
+	}
+}
+
+// suppressDiffWhenNotInConfig returns a DiffSuppressFunc that suppresses diffs
+// when the specified attribute is not present in the config (null).
+// This allows:
+// - Clearing a field with an empty string (field = "")
+// - Keeping the server value when the field is not in the config
+func suppressDiffWhenNotInConfig(attrName string) schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		rawConfig := d.GetRawConfig()
+		if rawConfig.IsNull() || !rawConfig.IsKnown() {
+			return true
+		}
+		configValue := rawConfig.GetAttr(attrName)
+		return configValue.IsNull()
+	}
+}
+
+func intPointer(i int) *int {
+	return &i
 }

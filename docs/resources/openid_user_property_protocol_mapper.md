@@ -70,7 +70,7 @@ resource "keycloak_openid_user_property_protocol_mapper" "user_property_mapper" 
 
 - `realm_id` - (Required) The realm this protocol mapper exists within.
 - `name` - (Required) The display name of this protocol mapper in the GUI.
-- `user_property` - (Required) The built in user property (such as email) to map a claim for.
+- `user_property` - (Required) The built-in user property (such as email) to map a claim for.
 - `claim_name` - (Required) The name of the claim to insert into a token.
 - `client_id` - (Optional) The client this protocol mapper should be attached to. Conflicts with `client_scope_id`. One of `client_id` or `client_scope_id` must be specified.
 - `client_scope_id` - (Optional) The client scope this protocol mapper should be attached to. Conflicts with `client_id`. One of `client_id` or `client_scope_id` must be specified. `client_scope_id` - (Required if `client_id` is not specified) The client scope this protocol mapper is attached to.
@@ -85,9 +85,21 @@ Protocol mappers can be imported using one of the following formats:
 - Client: `{{realm_id}}/client/{{client_keycloak_id}}/{{protocol_mapper_id}}`
 - Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/{{protocol_mapper_id}}`
 
+As an alternative to importing by Keycloak protocol mapper ID, you can import by protocol mapper name.
+
+When using name-based import:
+- Use the literal `name` segment in the import path.
+- URL-encode the mapper name using path encoding (for example, `my protocol mapper` becomes `my%20protocol%20mapper`).
+
+Supported name-based formats:
+- Client: `{{realm_id}}/client/{{client_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+- Client Scope: `{{realm_id}}/client-scope/{{client_scope_keycloak_id}}/name/{{url_encoded_protocol_mapper_name}}`
+
 Example:
 
 ```bash
 $ terraform import keycloak_openid_user_property_protocol_mapper.user_property_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/71602afa-f7d1-4788-8c49-ef8fd00af0f4
 $ terraform import keycloak_openid_user_property_protocol_mapper.user_property_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/71602afa-f7d1-4788-8c49-ef8fd00af0f4
+$ terraform import keycloak_openid_user_property_protocol_mapper.user_property_mapper my-realm/client/a7202154-8793-4656-b655-1dd18c181e14/name/my%20protocol%20mapper
+$ terraform import keycloak_openid_user_property_protocol_mapper.user_property_mapper my-realm/client-scope/b799ea7e-73ee-4a73-990a-1eafebe8e20a/name/my%20protocol%20mapper
 ```

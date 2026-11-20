@@ -2,13 +2,14 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakRealmKeystoreRsaGenerated_basic(t *testing.T) {
@@ -17,9 +18,9 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_basic(t *testing.T) {
 	rsaName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basic(rsaName),
@@ -43,9 +44,9 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_createAfterManualDestroy(t *testin
 	fullNameKeystoreName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basic(fullNameKeystoreName),
@@ -71,9 +72,9 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_keySizeValidation(t *testing.T) {
 	rsaName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basicWithAttrValidation(rsaName, "key_size",
@@ -94,9 +95,9 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_algorithmValidation(t *testing.T) 
 	algorithm := randomStringInSlice(keycloakRealmKeystoreRsaAlgorithm)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basicWithAttrValidation(algorithm, "algorithm",
@@ -138,9 +139,9 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_updateRsaKeystoreGenerated(t *test
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basicFromInterface(groupKeystoreOne),
@@ -149,6 +150,53 @@ func TestAccKeycloakRealmKeystoreRsaGenerated_updateRsaKeystoreGenerated(t *test
 			{
 				Config: testKeycloakRealmKeystoreRsaGenerated_basicFromInterface(groupKeystoreTwo),
 				Check:  testAccCheckRealmKeystoreRsaGeneratedExists("keycloak_realm_keystore_rsa_generated.realm_rsa"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakRealmKeystoreRsaGenerated_parentIdDifferentFromRealmName(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	internalId := acctest.RandomWithPrefix("tf-acc")
+	rsaName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckRealmKeystoreRsaGeneratedDestroy(),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					err := keycloakClient.NewRealm(testCtx, &keycloak.Realm{
+						Realm: realmName,
+						Id:    internalId,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					t.Cleanup(func() {
+						if err := keycloakClient.DeleteRealm(testCtx, realmName); err != nil {
+							t.Logf("failed to clean up realm %s: %s", realmName, err)
+						}
+					})
+				},
+				// create: keycloak must default the omitted parentId to the realm's internal id
+				Config: testKeycloakRealmKeystoreRsaGenerated_parentId(realmName, rsaName, "100"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaGeneratedExists("keycloak_realm_keystore_rsa_generated.realm_rsa"),
+					testAccCheckRealmKeystoreRsaGeneratedParentId("keycloak_realm_keystore_rsa_generated.realm_rsa", internalId),
+				),
+			},
+			{
+				// update: the omitted parentId must leave the stored parent untouched
+				Config: testKeycloakRealmKeystoreRsaGenerated_parentId(realmName, rsaName, "200"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRealmKeystoreRsaGeneratedExists("keycloak_realm_keystore_rsa_generated.realm_rsa"),
+					testAccCheckRealmKeystoreRsaGeneratedParentId("keycloak_realm_keystore_rsa_generated.realm_rsa", internalId),
+				),
 			},
 		},
 	})
@@ -174,6 +222,21 @@ func testAccCheckRealmKeystoreRsaGeneratedFetch(resourceName string, keystore *k
 
 		keystore.Id = fetchedKeystore.Id
 		keystore.RealmId = fetchedKeystore.RealmId
+
+		return nil
+	}
+}
+
+func testAccCheckRealmKeystoreRsaGeneratedParentId(resourceName, expectedParentId string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		keystore, err := getKeycloakRealmKeystoreRsaGeneratedFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if keystore.ParentId != expectedParentId {
+			return fmt.Errorf("expected rsa generated keystore %s to have parent id %s, but got %s", keystore.Id, expectedParentId, keystore.ParentId)
+		}
 
 		return nil
 	}
@@ -232,6 +295,18 @@ resource "keycloak_realm_keystore_rsa_generated" "realm_rsa" {
     algorithm = "RS384"
 }
 	`, testAccRealmUserFederation.Realm, rsaName)
+}
+
+func testKeycloakRealmKeystoreRsaGenerated_parentId(realmName, rsaName, priority string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm_keystore_rsa_generated" "realm_rsa" {
+	name      = "%s"
+	realm_id  = "%s"
+
+    priority  = %s
+    algorithm = "RS384"
+}
+	`, rsaName, realmName, priority)
 }
 
 func testKeycloakRealmKeystoreRsaGenerated_basicWithAttrValidation(rsaName, attr, val string) string {

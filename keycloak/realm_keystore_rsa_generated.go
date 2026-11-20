@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreRsaGenerated struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
@@ -40,10 +41,10 @@ func convertFromRealmKeystoreRsaGeneratedToComponent(realmKey *RealmKeystoreRsaG
 		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
 		ProviderId:   "rsa-generated",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -51,44 +52,45 @@ func convertFromRealmKeystoreRsaGeneratedToComponent(realmKey *RealmKeystoreRsaG
 }
 
 func convertFromComponentToRealmKeystoreRsaGenerated(component *component, realmId string) (*RealmKeystoreRsaGenerated, error) {
-	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("active"))
+	active, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("active"))
 	if err != nil {
 		return nil, err
 	}
 
-	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("enabled"))
+	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
 	}
 
 	priority := 0 // Default priority
-	if component.getConfigFirstOrDefault("priority") != "" {
-		priority, err = strconv.Atoi(component.getConfigFirstOrDefault("priority"))
+	if component.getConfig("priority") != "" {
+		priority, err = strconv.Atoi(component.getConfig("priority"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	keySize := 2048 // Default key size for rsa key
-	if component.getConfigFirstOrDefault("keySize") != "" {
-		keySize, err = strconv.Atoi(component.getConfigFirstOrDefault("keySize"))
+	if component.getConfig("keySize") != "" {
+		keySize, err = strconv.Atoi(component.getConfig("keySize"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	realmKey := &RealmKeystoreRsaGenerated{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:      active,
 		Enabled:     enabled,
 		Priority:    priority,
-		Algorithm:   component.getConfigFirstOrDefault("algorithm"),
+		Algorithm:   component.getConfig("algorithm"),
 		KeySize:     keySize,
-		PrivateKey:  component.getConfigFirstOrDefault("privateKey"),
-		Certificate: component.getConfigFirstOrDefault("certificate"),
+		PrivateKey:  component.getConfig("privateKey"),
+		Certificate: component.getConfig("certificate"),
 	}
 
 	return realmKey, nil

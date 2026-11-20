@@ -36,7 +36,7 @@ func convertFromComponentToLdapHardcodedRoleMapper(component *component, realmId
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		Role: component.getConfigFirstOrDefault("role"),
+		Role: component.getConfig("role"),
 	}
 }
 

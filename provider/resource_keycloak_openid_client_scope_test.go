@@ -2,14 +2,15 @@ package provider
 
 import (
 	"fmt"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
 	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func TestAccKeycloakClientScope_basic(t *testing.T) {
@@ -17,9 +18,9 @@ func TestAccKeycloakClientScope_basic(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -42,9 +43,9 @@ func TestAccKeycloakClientScope_createAfterManualDestroy(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -72,9 +73,9 @@ func TestAccKeycloakClientScope_updateRealm(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_updateRealmBefore(clientScopeName),
@@ -99,9 +100,9 @@ func TestAccKeycloakClientScope_consentScreenText(t *testing.T) {
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -119,15 +120,168 @@ func TestAccKeycloakClientScope_consentScreenText(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakClientScope_displayOnConsentScreen(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	consentText := acctest.RandString(10)
+	resourceName := "keycloak_openid_client_scope.client_scope"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			// consent screen text is kept, but the scope is not displayed on the consent screen
+			{
+				Config: testKeycloakClientScope_withDisplayOnConsentScreen(clientScopeName, consentText, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, false, consentText),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "false"),
+					resource.TestCheckResourceAttr(resourceName, "consent_screen_text", consentText),
+				),
+			},
+			// not set: derived from consent_screen_text
+			{
+				Config: testKeycloakClientScope_withConsentText(clientScopeName, consentText),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, true, consentText),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "true"),
+				),
+			},
+			// displayed on the consent screen without consent screen text
+			{
+				Config: testKeycloakClientScope_withDisplayOnConsentScreen(clientScopeName, "", true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, true, ""),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "true"),
+				),
+			},
+			// not set and no consent screen text: derived from consent_screen_text
+			{
+				Config: testKeycloakClientScope_basic(clientScopeName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, false, ""),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_displayOnConsentScreenDrift(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	consentText := acctest.RandString(10)
+	resourceName := "keycloak_openid_client_scope.client_scope"
+	clientScope := &keycloak.OpenidClientScope{}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_withConsentText(clientScopeName, consentText),
+				Check:  testAccCheckKeycloakClientScopeFetch(resourceName, clientScope),
+			},
+			// a change of "display on consent screen" outside of terraform is shown in the plan
+			{
+				PreConfig: func() {
+					scope, err := keycloakClient.GetOpenidClientScope(testCtx, clientScope.RealmId, clientScope.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					scope.Attributes.DisplayOnConsentScreen = false
+					if err := keycloakClient.UpdateOpenidClientScope(testCtx, scope); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config:             testKeycloakClientScope_withConsentText(clientScopeName, consentText),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testKeycloakClientScope_withConsentText(clientScopeName, consentText),
+				Check:  testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, true, consentText),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_displayOnConsentScreenIgnoreChanges(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	consentText := acctest.RandString(10)
+	resourceName := "keycloak_openid_client_scope.client_scope"
+	clientScope := &keycloak.OpenidClientScope{}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "first description"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeFetch(resourceName, clientScope),
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, true, consentText),
+				),
+			},
+			// "display on consent screen" is switched off outside of terraform and ignored by lifecycle.ignore_changes:
+			// an unrelated update must keep it
+			{
+				PreConfig: func() {
+					scope, err := keycloakClient.GetOpenidClientScope(testCtx, clientScope.RealmId, clientScope.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					scope.Attributes.DisplayOnConsentScreen = false
+					if err := keycloakClient.UpdateOpenidClientScope(testCtx, scope); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, "second description"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "second description"),
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "false"),
+					testAccCheckKeycloakClientScopeHasConsentScreen(resourceName, false, consentText),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_displayOnConsentScreenUnknownConsentText(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	resourceName := "keycloak_openid_client_scope.client_scope"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			// consent_screen_text is unknown during plan: display_on_consent_screen is derived during apply
+			{
+				Config: testKeycloakClientScope_withUnknownConsentText(clientScopeName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "display_on_consent_screen", "true"),
+					resource.TestCheckResourceAttrPair(resourceName, "consent_screen_text", "keycloak_openid_client_scope.other", "id"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakClientScope_includeInTokenScope(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
 	includeInTokenScope := false
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -148,15 +302,46 @@ func TestAccKeycloakClientScope_includeInTokenScope(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakClientScope_includeInOpenidProviderMetadata(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+	includeInOpenidProviderMetadata := false
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_basic(clientScopeName),
+				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+			{
+				Config: testKeycloakClientScope_withIncludeInOpenidProviderMetadata(clientScopeName, includeInOpenidProviderMetadata),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInOpenidProviderMetadata("keycloak_openid_client_scope.client_scope", includeInOpenidProviderMetadata),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_basic(clientScopeName),
+				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 	t.Parallel()
 	clientScopeName := acctest.RandomWithPrefix("tf-acc")
-	guiOrder := acctest.RandIntRange(0, 1000)
+	// gui_order is a plain Optional int, so a zero is indistinguishable from
+	// unset: the resource would not send it and gui.order would stay empty
+	guiOrder := acctest.RandIntRange(1, 1000)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakClientScopeDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
@@ -172,6 +357,40 @@ func TestAccKeycloakClientScope_guiOrder(t *testing.T) {
 			{
 				Config: testKeycloakClientScope_basic(clientScopeName),
 				Check:  testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakClientScope_extraConfig(t *testing.T) {
+	t.Parallel()
+	clientScopeName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakClientScopeDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key1", "value1"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key2", "value2"),
+				),
+			},
+			{
+				Config: testKeycloakClientScope_withExtraConfigMap(clientScopeName, map[string]string{
+					"key2": "value2",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakClientScopeExistsWithCorrectProtocol("keycloak_openid_client_scope.client_scope"),
+					testAccCheckKeycloakClientScopeExtraConfigHasValue("keycloak_openid_client_scope.client_scope", "key2", "value2"),
+					testAccCheckKeycloakClientScopeExtraConfigMissing("keycloak_openid_client_scope.client_scope", "key1"),
+				),
 			},
 		},
 	})
@@ -207,6 +426,21 @@ func testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInTokenScope(resourc
 	}
 }
 
+func testAccCheckKeycloakClientScopeExistsWithCorrectIncludeInOpenidProviderMetadata(resourceName string, includeInOpenidProviderMetadata bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if clientScope.Attributes.IncludeInOpenidProviderMetadata != types.KeycloakBoolQuoted(includeInOpenidProviderMetadata) {
+			return fmt.Errorf("expected openid client scope includeInOpenidProviderMetadata to have %t, but got %t", includeInOpenidProviderMetadata, clientScope.Attributes.IncludeInOpenidProviderMetadata)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakClientScopeExistsWithCorrectGuiOrder(resourceName string, guiOrder int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		clientScope, err := getClientScopeFromState(s, resourceName)
@@ -216,6 +450,25 @@ func testAccCheckKeycloakClientScopeExistsWithCorrectGuiOrder(resourceName strin
 
 		if clientScope.Attributes.GuiOrder != strconv.Itoa(guiOrder) {
 			return fmt.Errorf("expected saml client guiOrder to have %d, but got %s", guiOrder, clientScope.Attributes.GuiOrder)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakClientScopeHasConsentScreen(resourceName string, displayOnConsentScreen bool, consentScreenText string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if bool(clientScope.Attributes.DisplayOnConsentScreen) != displayOnConsentScreen {
+			return fmt.Errorf("expected openid client scope displayOnConsentScreen to be %t, but got %t", displayOnConsentScreen, clientScope.Attributes.DisplayOnConsentScreen)
+		}
+
+		if clientScope.Attributes.ConsentScreenText != consentScreenText {
+			return fmt.Errorf("expected openid client scope consentScreenText to be %q, but got %q", consentScreenText, clientScope.Attributes.ConsentScreenText)
 		}
 
 		return nil
@@ -272,8 +525,6 @@ func testAccCheckKeycloakClientScopeDestroy() resource.TestCheckFunc {
 }
 
 func getClientScopeFromState(s *terraform.State, resourceName string) (*keycloak.OpenidClientScope, error) {
-	keycloakClientScope := testAccProvider.Meta().(*keycloak.KeycloakClient)
-
 	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
 		return nil, fmt.Errorf("resource not found: %s", resourceName)
@@ -282,7 +533,7 @@ func getClientScopeFromState(s *terraform.State, resourceName string) (*keycloak
 	id := rs.Primary.ID
 	realm := rs.Primary.Attributes["realm_id"]
 
-	clientScope, err := keycloakClientScope.GetOpenidClientScope(testCtx, realm, id)
+	clientScope, err := keycloakClient.GetOpenidClientScope(testCtx, realm, id)
 	if err != nil {
 		return nil, fmt.Errorf("error getting openid client scope %s: %s", id, err)
 	}
@@ -322,6 +573,65 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	`, testAccRealm.Realm, clientScopeName, consentText)
 }
 
+func testKeycloakClientScope_withDisplayOnConsentScreen(clientScopeName, consentText string, displayOnConsentScreen bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                      = "%s"
+	realm_id                  = data.keycloak_realm.realm.id
+
+	description               = "test description"
+
+	consent_screen_text       = "%s"
+	display_on_consent_screen = %t
+}
+	`, testAccRealm.Realm, clientScopeName, consentText, displayOnConsentScreen)
+}
+
+func testKeycloakClientScope_withConsentTextIgnoreDisplayOnConsentScreen(clientScopeName, consentText, description string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	description         = "%s"
+
+	consent_screen_text = "%s"
+
+	lifecycle {
+		ignore_changes = [display_on_consent_screen]
+	}
+}
+	`, testAccRealm.Realm, clientScopeName, description, consentText)
+}
+
+func testKeycloakClientScope_withUnknownConsentText(clientScopeName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "other" {
+	name     = "%s-other"
+	realm_id = data.keycloak_realm.realm.id
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	consent_screen_text = keycloak_openid_client_scope.other.id
+}
+	`, testAccRealm.Realm, clientScopeName, clientScopeName)
+}
+
 func testKeycloakClientScope_withIncludeInTokenScope(clientScopeName string, includeInTokenScope bool) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
@@ -337,6 +647,23 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	include_in_token_scope = %t
 }
 	`, testAccRealm.Realm, clientScopeName, includeInTokenScope)
+}
+
+func testKeycloakClientScope_withIncludeInOpenidProviderMetadata(clientScopeName string, includeInOpenidProviderMetadata bool) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name                = "%s"
+	realm_id            = data.keycloak_realm.realm.id
+
+	description         = "test description"
+
+	include_in_openid_provider_metadata = %t
+}
+	`, testAccRealm.Realm, clientScopeName, includeInOpenidProviderMetadata)
 }
 
 func testKeycloakClientScope_withGuiOrder(clientScopeName string, guiOrder int) string {
@@ -388,4 +715,68 @@ resource "keycloak_openid_client_scope" "client_scope" {
 	realm_id  = data.keycloak_realm.realm_2.id
 }
 	`, testAccRealm.Realm, testAccRealmTwo.Realm, clientScopeName)
+}
+
+// check that a particular extra config key is missing
+func testAccCheckKeycloakClientScopeExtraConfigMissing(resourceName string, key string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if val, ok := clientScope.Attributes.ExtraConfig[key]; ok {
+			// an empty string value is treated as removed (see setExtraConfigData)
+			if val == "" {
+				return nil
+			}
+
+			return fmt.Errorf("expected openid client scope to not have attribute %v, but got %v", key, val)
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKeycloakClientScopeExtraConfigHasValue(resourceName, key, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		clientScope, err := getClientScopeFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		value, ok := clientScope.Attributes.ExtraConfig[key]
+		if !ok {
+			return fmt.Errorf("expected extra_config to contain key %q, but it was not found", key)
+		}
+
+		if value != expectedValue {
+			return fmt.Errorf("expected extra_config key %q to have value %q, but got %q", key, expectedValue, value)
+		}
+
+		return nil
+	}
+}
+
+func testKeycloakClientScope_withExtraConfigMap(clientScopeName string, extraConfig map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("{\n")
+	for k, v := range extraConfig {
+		sb.WriteString(fmt.Sprintf("\t\t\"%s\" = \"%s\"\n", k, v))
+	}
+	sb.WriteString("\t}")
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+	name        = "%s"
+	realm_id    = data.keycloak_realm.realm.id
+	description = "test description"
+
+	extra_config = %s
+}
+	`, testAccRealm.Realm, clientScopeName, sb.String())
 }

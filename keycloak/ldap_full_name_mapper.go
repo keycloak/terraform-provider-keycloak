@@ -39,12 +39,12 @@ func convertFromLdapFullNameMapperToComponent(ldapFullNameMapper *LdapFullNameMa
 }
 
 func convertFromComponentToLdapFullNameMapper(component *component, realmId string) (*LdapFullNameMapper, error) {
-	readOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("read.only"))
+	readOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("read.only"))
 	if err != nil {
 		return nil, err
 	}
 
-	writeOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("write.only"))
+	writeOnly, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("write.only"))
 	if err != nil {
 		return nil, err
 	}
@@ -55,19 +55,19 @@ func convertFromComponentToLdapFullNameMapper(component *component, realmId stri
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		LdapFullNameAttribute: component.getConfigFirstOrDefault("ldap.full.name.attribute"),
+		LdapFullNameAttribute: component.getConfig("ldap.full.name.attribute"),
 		ReadOnly:              readOnly,
 		WriteOnly:             writeOnly,
 	}, nil
 }
 
-// the keycloak api client is passed in order to fetch the ldap provider for writable validation
+// ValidateLdapFullNameMapper the keycloak api client is passed in order to fetch the ldap provider for writable validation
 func (keycloakClient *KeycloakClient) ValidateLdapFullNameMapper(ctx context.Context, mapper *LdapFullNameMapper) error {
 	if mapper.ReadOnly && mapper.WriteOnly {
 		return fmt.Errorf("validation error: ldap full name mapper cannot be both read only and write only")
 	}
 
-	// the mapper can't be write only if the ldap provider is not writable
+	// the mapper can't be write-only if the ldap provider is not writable
 	if mapper.WriteOnly {
 		ldapUserFederation, err := keycloakClient.GetLdapUserFederation(ctx, mapper.RealmId, mapper.LdapUserFederationId)
 		if err != nil {

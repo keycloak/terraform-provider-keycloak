@@ -80,12 +80,12 @@ func convertFromLdapRoleMapperToComponent(ldapRoleMapper *LdapRoleMapper) *compo
 }
 
 func convertFromComponentToLdapRoleMapper(component *component, realmId string) (*LdapRoleMapper, error) {
-	roleObjectClasses := strings.Split(component.getConfigFirstOrDefault("role.object.classes"), ",")
+	roleObjectClasses := strings.Split(component.getConfig("role.object.classes"), ",")
 	for i, v := range roleObjectClasses {
 		roleObjectClasses[i] = strings.TrimSpace(v)
 	}
 
-	useRealmRolesMapping, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfigFirstOrDefault("use.realm.roles.mapping"))
+	useRealmRolesMapping, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("use.realm.roles.mapping"))
 	if err != nil {
 		return nil, err
 	}
@@ -96,23 +96,23 @@ func convertFromComponentToLdapRoleMapper(component *component, realmId string) 
 		RealmId:              realmId,
 		LdapUserFederationId: component.ParentId,
 
-		LdapRolesDn:                 component.getConfigFirstOrDefault("roles.dn"),
-		RoleNameLdapAttribute:       component.getConfigFirstOrDefault("role.name.ldap.attribute"),
+		LdapRolesDn:                 component.getConfig("roles.dn"),
+		RoleNameLdapAttribute:       component.getConfig("role.name.ldap.attribute"),
 		RoleObjectClasses:           roleObjectClasses,
-		MembershipLdapAttribute:     component.getConfigFirstOrDefault("membership.ldap.attribute"),
-		MembershipAttributeType:     component.getConfigFirstOrDefault("membership.attribute.type"),
-		MembershipUserLdapAttribute: component.getConfigFirstOrDefault("membership.user.ldap.attribute"),
-		Mode:                        component.getConfigFirstOrDefault("mode"),
-		UserRolesRetrieveStrategy:   component.getConfigFirstOrDefault("user.roles.retrieve.strategy"),
-		MemberofLdapAttribute:       component.getConfigFirstOrDefault("memberof.ldap.attribute"),
+		MembershipLdapAttribute:     component.getConfig("membership.ldap.attribute"),
+		MembershipAttributeType:     component.getConfig("membership.attribute.type"),
+		MembershipUserLdapAttribute: component.getConfig("membership.user.ldap.attribute"),
+		Mode:                        component.getConfig("mode"),
+		UserRolesRetrieveStrategy:   component.getConfig("user.roles.retrieve.strategy"),
+		MemberofLdapAttribute:       component.getConfig("memberof.ldap.attribute"),
 		UseRealmRolesMapping:        useRealmRolesMapping,
 	}
 
-	if rolesLdapFilter := component.getConfigFirstOrDefault("roles.ldap.filter"); rolesLdapFilter != "" {
+	if rolesLdapFilter := component.getConfig("roles.ldap.filter"); rolesLdapFilter != "" {
 		ldapRoleMapper.RolesLdapFilter = rolesLdapFilter
 	}
 
-	if clientId := component.getConfigFirstOrDefault("client.id"); clientId != "" {
+	if clientId := component.getConfig("client.id"); clientId != "" {
 		ldapRoleMapper.ClientId = clientId
 	}
 

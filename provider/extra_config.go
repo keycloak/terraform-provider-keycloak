@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"reflect"
-	"strings"
 )
 
 func getExtraConfigFromData(data *schema.ResourceData) map[string]interface{} {
@@ -15,18 +16,20 @@ func getExtraConfigFromData(data *schema.ResourceData) map[string]interface{} {
 		for key, value := range v.(map[string]interface{}) {
 			extraConfig[key] = value
 		}
+	}
 
-		// check if extra config attribute has been deleted.
-		// it's not enough to simply unset the attribute - we have to explicitly set
-		// it to empty string in order to remove this on the Keycloak side
-		if data.HasChange("extra_config") && !data.IsNewResource() {
-			oldConfig, newConfig := data.GetChange("extra_config")
-			newConfigMap := newConfig.(map[string]interface{})
+	// check if extra config attribute has been deleted.
+	// it's not enough to simply unset the attribute - we have to explicitly set
+	// it to empty string in order to remove this on the Keycloak side.
+	// this must run outside the GetOk block above, because GetOk returns false
+	// when all keys have been removed (empty map), which would skip deletion detection.
+	if data.HasChange("extra_config") && !data.IsNewResource() {
+		oldConfig, newConfig := data.GetChange("extra_config")
+		newConfigMap := newConfig.(map[string]interface{})
 
-			for oldKey := range oldConfig.(map[string]interface{}) {
-				if _, ok := newConfigMap[oldKey]; !ok {
-					extraConfig[oldKey] = ""
-				}
+		for oldKey := range oldConfig.(map[string]interface{}) {
+			if _, ok := newConfigMap[oldKey]; !ok {
+				extraConfig[oldKey] = ""
 			}
 		}
 	}
@@ -55,7 +58,7 @@ func setExtraConfigData(data *schema.ResourceData, extraConfig map[string]interf
 	data.Set("extra_config", newExtraConfig)
 }
 
-// validateExtraConfig takes a reflect value type to check its JSON schema in order to validate that extra_config
+// validateExtraConfig takes a reflect.Value type to check its JSON schema in order to validate that extra_config
 // doesn't contain any attributes that could have been specified within the official schema
 func validateExtraConfig(reflectValue reflect.Value) schema.SchemaValidateDiagFunc {
 	return func(v interface{}, path cty.Path) diag.Diagnostics {

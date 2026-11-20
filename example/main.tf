@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     keycloak = {
-      source  = "terraform.local/mrparkers/keycloak"
-      version = ">= 4.0.0"
+      source  = "terraform.local/keycloak/keycloak"
+      version = ">= 5.0.0"
     }
   }
 }
@@ -39,7 +39,7 @@ resource "keycloak_realm" "test" {
     }
   }
 
-  account_theme        = "base"
+  account_theme        = "keycloak.v3"
   access_code_lifespan = "30m"
 
   internationalization {
@@ -101,12 +101,32 @@ resource "keycloak_realm" "test" {
   }
 }
 
+resource "keycloak_realm_localization" "test_translation" {
+  realm_id = keycloak_realm.test.id
+  locale   = "en"
+  texts = {
+    "test" : "translation"
+  }
+}
+
 resource "keycloak_required_action" "custom-terms-and-conditions" {
   realm_id       = keycloak_realm.test.realm
-  alias          = "terms_and_conditions"
+  alias          = "TERMS_AND_CONDITIONS"
   default_action = true
   enabled        = true
   name           = "Custom Terms and Conditions"
+}
+
+resource "keycloak_required_action" "update-password" {
+  realm_id       = keycloak_realm.test.realm
+  alias          = "UPDATE_PASSWORD"
+  default_action = true
+  enabled        = true
+  name           = "Update Password"
+
+  config = {
+    max_auth_age = "600"
+  }
 }
 
 resource "keycloak_required_action" "custom-configured_totp" {
@@ -133,7 +153,7 @@ resource "keycloak_group" "foo" {
 resource "keycloak_group" "nested_foo" {
   realm_id  = keycloak_realm.test.id
   parent_id = keycloak_group.foo.id
-  name      = "nested-foo"
+  name      = "nested/\\-foo"
 }
 
 resource "keycloak_group" "bar" {
@@ -245,7 +265,7 @@ resource "keycloak_openid_client_scope" "test_optional_client_scope" {
   consent_screen_text = "hello"
 }
 
-resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
+resource "keycloak_client_scope_assignments" "client_scopes" {
   realm_id  = keycloak_realm.test.id
   client_id = keycloak_openid_client.test_client.id
 
@@ -254,14 +274,10 @@ resource "keycloak_openid_client_default_scopes" "default_client_scopes" {
     "email",
     "roles",
     "web-origins",
+    // assigned by Keycloak 26.1+ when service accounts are enabled
+    "service_account",
     keycloak_openid_client_scope.test_default_client_scope.name,
   ]
-}
-
-resource "keycloak_openid_client_optional_scopes" "optional_client_scopes" {
-  realm_id  = keycloak_realm.test.id
-  client_id = keycloak_openid_client.test_client.id
-
   optional_scopes = [
     "address",
     "phone",
@@ -290,7 +306,7 @@ resource "keycloak_ldap_user_federation" "openldap" {
   connection_url  = "ldap://openldap"
   users_dn        = "dc=example,dc=org"
   bind_dn         = "cn=admin,dc=example,dc=org"
-  bind_credential = "admin"
+  bind_credential = "adminpassword"
 
   connection_timeout = "5s"
   read_timeout       = "10s"
@@ -327,7 +343,7 @@ resource "keycloak_ldap_user_federation" "openldap_no_default_mappers" {
   connection_url  = "ldap://openldap"
   users_dn        = "dc=example,dc=org"
   bind_dn         = "cn=admin,dc=example,dc=org"
-  bind_credential = "admin"
+  bind_credential = "adminpassword"
 
   connection_timeout = "5s"
   read_timeout       = "10s"
@@ -425,6 +441,29 @@ resource "keycloak_ldap_full_name_mapper" "full_name_mapper" {
   ldap_full_name_attribute = "cn"
   read_only                = true
 }
+
+resource "keycloak_ldap_custom_mapper" "custom_mapper" {
+  name                    = "custom-mapper"
+  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+
+  provider_id   = "msad-user-account-control-mapper"
+  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+}
+
+resource "keycloak_ldap_custom_mapper" "custom_mapper_with_config" {
+  name                    = "custom-mapper-with-config"
+  realm_id                = keycloak_ldap_user_federation.openldap.realm_id
+  ldap_user_federation_id = keycloak_ldap_user_federation.openldap.id
+
+  provider_id   = "user-attribute-ldap-mapper"
+  provider_type = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+  config = {
+    "user.model.attribute" = "username"
+    "ldap.attribute"       = "cn"
+  }
+}
+
 
 resource "keycloak_custom_user_federation" "custom" {
   name        = "custom1"
@@ -634,8 +673,8 @@ resource "keycloak_saml_client" "saml_client" {
   sign_assertions         = true
   include_authn_statement = true
 
-  signing_certificate = file("../provider/misc/saml-cert.pem")
-  signing_private_key = file("../provider/misc/saml-key.pem")
+  signing_certificate = file("../provider/testdata/saml-cert.pem")
+  signing_private_key = file("../provider/testdata/saml-key.pem")
 }
 
 resource "keycloak_saml_user_attribute_protocol_mapper" "saml_user_attribute_mapper" {
@@ -669,6 +708,17 @@ resource "keycloak_oidc_identity_provider" "oidc" {
   default_scopes    = "openid random profile"
   sync_mode         = "FORCE"
   gui_order         = 1
+}
+
+resource "keycloak_oidc_facebook_identity_provider" "facebook" {
+  realm                                   = keycloak_realm.test.id
+  client_id                               = "myclientid.apps.facebookusercontent.com"
+  client_secret                           = "myclientsecret"
+  fetched_fields                          = "picture"
+  default_scopes                          = "openid random profile"
+  accepts_prompt_none_forward_from_client = false
+  sync_mode                               = "FORCE"
+  gui_order                               = 2
 }
 
 resource "keycloak_oidc_google_identity_provider" "google" {
@@ -750,6 +800,18 @@ resource "keycloak_hardcoded_role_identity_provider_mapper" "oidc" {
   }
 }
 
+resource "keycloak_hardcoded_group_identity_provider_mapper" "oidc" {
+  realm                   = keycloak_realm.test.id
+  name                    = "hardcodedGroup"
+  identity_provider_alias = keycloak_oidc_identity_provider.oidc.alias
+  group                   = "testgroup"
+
+  #KC10 support
+  extra_config = {
+    syncMode = "INHERIT"
+  }
+}
+
 resource "keycloak_hardcoded_attribute_identity_provider_mapper" "oidc" {
   realm                   = keycloak_realm.test.id
   name                    = "hardcodedUserSessionAttribute"
@@ -824,6 +886,18 @@ resource "keycloak_hardcoded_role_identity_provider_mapper" "saml" {
   }
 }
 
+resource "keycloak_hardcoded_group_identity_provider_mapper" "saml" {
+  realm                   = keycloak_realm.test.id
+  name                    = "hardcodedGroup"
+  identity_provider_alias = keycloak_saml_identity_provider.saml.alias
+  group                   = "testgroup"
+
+  #KC10 support
+  extra_config = {
+    syncMode = "INHERIT"
+  }
+}
+
 resource "keycloak_hardcoded_attribute_identity_provider_mapper" "saml" {
   realm                   = keycloak_realm.test.id
   name                    = "hardcodedAttribute"
@@ -854,12 +928,6 @@ resource "keycloak_saml_identity_provider" "saml_custom" {
 data "keycloak_openid_client" "broker" {
   realm_id  = keycloak_realm.test.id
   client_id = "broker"
-}
-
-data "keycloak_openid_client_authorization_policy" "default" {
-  realm_id           = keycloak_realm.test.id
-  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
-  name               = "default"
 }
 
 resource "keycloak_openid_client" "test_client_auth" {
@@ -918,6 +986,14 @@ resource "keycloak_openid_client" "test_open_id_client_with_consent_text" {
   consent_screen_text       = "some consent screen text"
 }
 
+resource "keycloak_openid_client_client_policy" "testpolicy" {
+  realm_id           = keycloak_realm.test.id
+  resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
+  name               = "test-policy"
+  logic = "POSITIVE"
+  decision_strategy = "AFFIRMATIVE"
+  clients = ["${keycloak_openid_client.test_client_auth.resource_server_id}"]
+}
 
 resource "keycloak_openid_client_authorization_permission" "resource" {
   resource_server_id = keycloak_openid_client.test_client_auth.resource_server_id
@@ -925,7 +1001,7 @@ resource "keycloak_openid_client_authorization_permission" "resource" {
   name               = "test"
 
   policies = [
-    data.keycloak_openid_client_authorization_policy.default.id,
+    keycloak_openid_client_client_policy.testpolicy.id,
   ]
 
   resources = [
@@ -997,9 +1073,7 @@ resource "keycloak_authentication_execution" "browser-copy-cookie" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "auth-cookie"
   requirement       = "ALTERNATIVE"
-  depends_on = [
-    keycloak_authentication_execution.browser-copy-kerberos
-  ]
+  priority          = 20
 }
 
 resource "keycloak_authentication_execution" "browser-copy-kerberos" {
@@ -1007,6 +1081,7 @@ resource "keycloak_authentication_execution" "browser-copy-kerberos" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "auth-spnego"
   requirement       = "DISABLED"
+  priority          = 10
 }
 
 resource "keycloak_authentication_execution" "browser-copy-idp-redirect" {
@@ -1014,9 +1089,7 @@ resource "keycloak_authentication_execution" "browser-copy-idp-redirect" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   authenticator     = "identity-provider-redirector"
   requirement       = "ALTERNATIVE"
-  depends_on = [
-    keycloak_authentication_execution.browser-copy-cookie
-  ]
+  priority          = 30
 }
 
 resource "keycloak_authentication_subflow" "browser-copy-flow-forms" {
@@ -1024,9 +1097,7 @@ resource "keycloak_authentication_subflow" "browser-copy-flow-forms" {
   parent_flow_alias = keycloak_authentication_flow.browser-copy-flow.alias
   alias             = "browser-copy-flow-forms"
   requirement       = "ALTERNATIVE"
-  depends_on = [
-    keycloak_authentication_execution.browser-copy-idp-redirect
-  ]
+  priority          = 40
 }
 
 resource "keycloak_authentication_execution" "browser-copy-auth-username-password-form" {
@@ -1034,6 +1105,7 @@ resource "keycloak_authentication_execution" "browser-copy-auth-username-passwor
   parent_flow_alias = keycloak_authentication_subflow.browser-copy-flow-forms.alias
   authenticator     = "auth-username-password-form"
   requirement       = "REQUIRED"
+  priority          = 50
 }
 
 resource "keycloak_authentication_execution" "browser-copy-otp" {
@@ -1041,9 +1113,7 @@ resource "keycloak_authentication_execution" "browser-copy-otp" {
   parent_flow_alias = keycloak_authentication_subflow.browser-copy-flow-forms.alias
   authenticator     = "auth-otp-form"
   requirement       = "REQUIRED"
-  depends_on = [
-    keycloak_authentication_execution.browser-copy-auth-username-password-form
-  ]
+  priority          = 60
 }
 
 resource "keycloak_authentication_execution_config" "config" {
@@ -1073,8 +1143,17 @@ resource "keycloak_realm_user_profile" "userprofile" {
   realm_id = keycloak_realm.test.id
 
   attribute {
+    name = "username"
+  }
+
+  attribute {
+    name = "email"
+  }
+
+  attribute {
     name         = "field1"
     display_name = "Field 1"
+    default_value = "default field1 value"
     group        = "group1"
 
     enabled_when_scope = ["offline_access"]
@@ -1094,8 +1173,8 @@ resource "keycloak_realm_user_profile" "userprofile" {
     validator {
       name = "pattern"
       config = {
-        pattern       = "^[a-z]+$"
-        error_message = "Nope"
+        pattern       = "^[a-z0-9 ]+$"
+        error-message = "Nope"
       }
     }
 
@@ -1120,5 +1199,81 @@ resource "keycloak_realm_user_profile" "userprofile" {
 
   group {
     name = "group2"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile" "profile" {
+  name     = "my-profile"
+  realm_id = keycloak_realm.test.id
+  executor {
+    name = "intent-client-bind-checker"
+    configuration = {
+      auto-configure = true
+    }
+  }
+  executor {
+    name = "secure-session"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "policy" {
+  name        = "my-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.profile.name
+  ]
+
+  condition {
+    name = "client-type"
+    configuration = {
+      "protocol" = "openid-connect"
+    }
+  }
+
+  condition {
+    name = "client-attributes"
+    configuration = {
+      "is-negative-logic" = false
+      "attributes"        = jsonencode([{ "key" : "something", "value" : "other3" }])
+    }
+  }
+}
+
+resource "keycloak_realm_client_policy_profile" "additional_profile" {
+  name     = "additional-profile"
+  realm_id = keycloak_realm.test.id
+  executor {
+    name = "intent-client-bind-checker"
+    configuration = {
+      auto-configure = true
+    }
+  }
+  executor {
+    name = "secure-session"
+  }
+}
+
+resource "keycloak_realm_client_policy_profile_policy" "additional_policy" {
+  name        = "additional-profile-policy"
+  realm_id    = keycloak_realm.test.id
+  description = "Some additional desc"
+  profiles = [
+    keycloak_realm_client_policy_profile.additional_profile.name
+  ]
+
+  condition {
+    name = "client-type"
+    configuration = {
+      "protocol" = "openid-connect"
+    }
+  }
+
+  condition {
+    name = "client-roles"
+    configuration = {
+      "is-negative-logic" = false
+      "roles"        = jsonencode(["Role_A"])
+    }
   }
 }

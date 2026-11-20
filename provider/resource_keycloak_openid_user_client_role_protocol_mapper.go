@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakOpenIdUserClientRoleProtocolMapper() *schema.Resource {
@@ -34,18 +35,18 @@ func resourceKeycloakOpenIdUserClientRoleProtocolMapper() *schema.Resource {
 				Description: "The realm id where the associated client or client scope exists.",
 			},
 			"client_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
-				ConflictsWith: []string{"client_scope_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client. Cannot be used at the same time as client_scope_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"client_scope_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The mapper's associated client scope. Cannot be used at the same time as client_id.",
-				ConflictsWith: []string{"client_id"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The mapper's associated client scope. Cannot be used at the same time as client_id.",
+				ExactlyOneOf: []string{"client_id", "client_scope_id"},
 			},
 			"add_to_id_token": {
 				Type:        schema.TypeBool,

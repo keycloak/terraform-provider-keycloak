@@ -3,18 +3,24 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakSamlClientDefaultScopesCreate,
-		ReadContext:   resourceKeycloakSamlClientDefaultScopesRead,
-		DeleteContext: resourceKeycloakSamlClientDefaultScopesDelete,
-		UpdateContext: resourceKeycloakSamlClientDefaultScopesUpdate,
+		DeprecationMessage: "please use keycloak_client_scope_assignments instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakSamldClientDefaultScopesReconcile,
+		ReadContext:        resourceKeycloakSamlClientDefaultScopesRead,
+		DeleteContext:      resourceKeycloakSamlClientDefaultScopesDelete,
+		UpdateContext:      resourceKeycloakSamldClientDefaultScopesReconcile,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakSamlClientDefaultScopesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -34,22 +40,6 @@ func resourceKeycloakSamlClientDefaultScopes() *schema.Resource {
 			},
 		},
 	}
-}
-
-func resourceKeycloakSamlClientDefaultScopesCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	keycloakClient := meta.(*keycloak.KeycloakClient)
-	realmId := data.Get("realm_id").(string)
-	clientId := data.Get("client_id").(string)
-	defaultScopes := data.Get("default_scopes").(*schema.Set)
-
-	err := keycloakClient.AttachSamlClientDefaultScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(defaultScopes.List()))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	data.SetId(samlClientDefaultScopesId(realmId, clientId))
-
-	return resourceKeycloakSamlClientDefaultScopesRead(ctx, data, meta)
 }
 
 func samlClientDefaultScopesId(realmId string, clientId string) string {
@@ -78,7 +68,7 @@ func resourceKeycloakSamlClientDefaultScopesRead(ctx context.Context, data *sche
 	return nil
 }
 
-func resourceKeycloakSamlClientDefaultScopesUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKeycloakSamldClientDefaultScopesReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	realmId := data.Get("realm_id").(string)
@@ -87,6 +77,9 @@ func resourceKeycloakSamlClientDefaultScopesUpdate(ctx context.Context, data *sc
 
 	keycloakSamlClientDefaultScopes, err := keycloakClient.GetSamlClientDefaultScopes(ctx, realmId, clientId)
 	if err != nil {
+		if keycloak.ErrorIs404(err) {
+			return diag.FromErr(fmt.Errorf("validation error: client with id %s does not exist", clientId))
+		}
 		return diag.FromErr(err)
 	}
 
@@ -127,4 +120,26 @@ func resourceKeycloakSamlClientDefaultScopesDelete(ctx context.Context, data *sc
 	defaultScopes := data.Get("default_scopes").(*schema.Set)
 
 	return diag.FromErr(keycloakClient.DetachSamlClientDefaultScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(defaultScopes.List())))
+}
+
+func resourceKeycloakSamlClientDefaultScopesImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	parts := strings.Split(d.Id(), "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}/{{clientId}}.")
+	}
+
+	realmId := parts[0]
+	clientId := parts[1]
+
+	if _, err := keycloakClient.GetSamlClientDefaultScopes(ctx, realmId, clientId); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.Set("client_id", clientId)
+	d.SetId(samlClientDefaultScopesId(realmId, clientId))
+
+	return []*schema.ResourceData{d}, nil
 }

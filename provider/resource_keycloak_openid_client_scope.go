@@ -3,13 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakOpenidClientScope() *schema.Resource {
@@ -22,6 +23,7 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOpenidClientScopeImport,
 		},
+		CustomizeDiff: customizeDiffClientScopeDisplayOnConsentScreen,
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -33,14 +35,25 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"display_on_consent_screen": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"include_in_token_scope": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
+			"include_in_openid_provider_metadata": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
@@ -49,33 +62,49 @@ func resourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"extra_config": {
+				Type:             schema.TypeMap,
+				Optional:         true,
+				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.OpenidClientScopeAttributes{}).Elem()),
+			},
 		},
 	}
 }
 
-func getOpenidClientScopeFromData(data *schema.ResourceData) *keycloak.OpenidClientScope {
+func getOpenidClientScopeFromData(data *schema.ResourceData) (*keycloak.OpenidClientScope, error) {
+
+	description, descriptionOk := data.GetOkExists("description")
+
 	clientScope := &keycloak.OpenidClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:      data.Id(),
+		RealmId: data.Get("realm_id").(string),
+		Name:    data.Get("name").(string),
 	}
 
-	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
-		clientScope.Attributes.ConsentScreenText = consentScreenText.(string)
-		clientScope.Attributes.DisplayOnConsentScreen = true
-	} else {
-		clientScope.Attributes.DisplayOnConsentScreen = false
+	if descriptionOk {
+		clientScope.Description = description.(string)
 	}
+
+	clientScope.Attributes.ConsentScreenText = data.Get("consent_screen_text").(string)
+
+	displayOnConsentScreen, err := getClientScopeDisplayOnConsentScreen(data)
+	if err != nil {
+		return nil, err
+	}
+	clientScope.Attributes.DisplayOnConsentScreen = types.KeycloakBoolQuoted(displayOnConsentScreen)
 
 	clientScope.Attributes.IncludeInTokenScope = types.KeycloakBoolQuoted(data.Get("include_in_token_scope").(bool))
+
+	clientScope.Attributes.IncludeInOpenidProviderMetadata = types.KeycloakBoolQuoted(data.Get("include_in_openid_provider_metadata").(bool))
 
 	// Treat 0 as an empty string for the purpose of omitting the attribute to reset the order
 	if guiOrder := data.Get("gui_order").(int); guiOrder != 0 {
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
 	}
 
-	return clientScope
+	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
+
+	return clientScope, nil
 }
 
 func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.OpenidClientScope) {
@@ -84,23 +113,27 @@ func setOpenidClientScopeData(data *schema.ResourceData, clientScope *keycloak.O
 	data.Set("realm_id", clientScope.RealmId)
 	data.Set("name", clientScope.Name)
 	data.Set("description", clientScope.Description)
-
-	if clientScope.Attributes.DisplayOnConsentScreen {
-		data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
-	}
+	data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
+	data.Set("display_on_consent_screen", bool(clientScope.Attributes.DisplayOnConsentScreen))
 
 	data.Set("include_in_token_scope", clientScope.Attributes.IncludeInTokenScope)
+	data.Set("include_in_openid_provider_metadata", clientScope.Attributes.IncludeInOpenidProviderMetadata)
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	setExtraConfigData(data, clientScope.Attributes.ExtraConfig)
 }
 
 func resourceKeycloakOpenidClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getOpenidClientScopeFromData(data)
+	clientScope, err := getOpenidClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.NewOpenidClientScope(ctx, clientScope)
+	err = keycloakClient.NewOpenidClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -129,9 +162,12 @@ func resourceKeycloakOpenidClientScopeRead(ctx context.Context, data *schema.Res
 func resourceKeycloakOpenidClientScopeUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getOpenidClientScopeFromData(data)
+	clientScope, err := getOpenidClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.UpdateOpenidClientScope(ctx, clientScope)
+	err = keycloakClient.UpdateOpenidClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}

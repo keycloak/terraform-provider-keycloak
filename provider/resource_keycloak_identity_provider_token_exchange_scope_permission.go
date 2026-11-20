@@ -2,16 +2,17 @@ package provider
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"math/rand"
-	"strings"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 var (
@@ -82,7 +83,7 @@ func setIdentityProviderTokenExchangeScopePermissionClientPolicy(ctx context.Con
 		return err
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return err
 	}
@@ -150,7 +151,7 @@ func unsetIdentityProviderTokenExchangeScopePermissionPolicy(ctx context.Context
 		return err
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return err
 	}
@@ -187,6 +188,10 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionCreate(ctx cont
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
+	}
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 	policyType := data.Get("policy_type").(string)
@@ -215,6 +220,11 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionUpdate(ctx cont
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 
@@ -234,7 +244,7 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx contex
 	data.Set("realm_id", identityProviderPermissions.RealmId)
 	data.Set("provider_alias", identityProviderPermissions.ProviderAlias)
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -278,6 +288,10 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionRead(ctx contex
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	providerAlias := data.Get("provider_alias").(string)
 	policyId := data.Get("policy_id").(string)
@@ -291,6 +305,10 @@ func resourceKeycloakIdentityProviderTokenExchangeScopePermissionDelete(ctx cont
 
 func resourceKeycloakIdentityProviderTokenExchangeScopePermissionImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_identity_provider_token_exchange_scope_permission", ""); err != nil {
+		return nil, err
+	}
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {

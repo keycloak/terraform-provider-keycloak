@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 type OpenidClientAuthorizationJSPolicy struct {
@@ -20,13 +19,10 @@ type OpenidClientAuthorizationJSPolicy struct {
 }
 
 func (keycloakClient *KeycloakClient) NewOpenidClientAuthorizationJSPolicy(ctx context.Context, policy *OpenidClientAuthorizationJSPolicy) error {
-	var body []byte
-	var err error
-	if strings.HasSuffix(policy.Code, ".js") {
-		body, _, err = keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/policy/%s", policy.RealmId, policy.ResourceServerId, policy.Code), policy)
-	} else {
-		body, _, err = keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/policy/js", policy.RealmId, policy.ResourceServerId), policy)
-	}
+	// Only deployed script policies are supported: "code" is the deployed provider id (the
+	// "script-<fileName>" Keycloak assigns to a script deployed via a JAR). Inline JavaScript
+	// upload was removed in Keycloak 18, which is no longer supported by this provider.
+	body, _, err := keycloakClient.post(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/policy/%s", policy.RealmId, policy.ResourceServerId, policy.Code), policy)
 	if err != nil {
 		return err
 	}

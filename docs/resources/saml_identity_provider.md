@@ -43,7 +43,7 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `store_token` - (Optional) When `true`, tokens will be stored after authenticating users. Defaults to `true`.
 - `add_read_token_role_on_create` - (Optional) When `true`, new users will be able to read stored tokens. This will automatically assign the `broker.read-token` role. Defaults to `false`.
 - `trust_email` - (Optional) When `true`, email addresses for users in this provider will automatically be verified regardless of the realm's email verification policy. Defaults to `false`.
-- `link_only` - (Optional) When `true`, users cannot login using this provider, but their existing accounts will be linked when possible. Defaults to `false`.
+- `link_only` - (Optional) When `true`, users cannot log in using this provider, but their existing accounts will be linked when possible. Defaults to `false`.
 - `hide_on_login_page` - (Optional) If hidden, then login with this provider is possible only if requested explicitly, e.g. using the 'kc_idp_hint' parameter.
 - `first_broker_login_flow_alias` - (Optional) Alias of authentication flow, which is triggered after first login with this identity provider. Term 'First Login' means that there is not yet existing Keycloak account linked with the authenticated identity provider account. Defaults to `first broker login`.
 - `post_broker_login_flow_alias` - (Optional) Alias of authentication flow, which is triggered after each login with this identity provider. Useful if you want additional verification of each user authenticated with this identity provider (for example OTP). Leave this empty if you don't want any additional authenticators to be triggered after login with this identity provider. Also note, that authenticator implementations must assume that user is already set in ClientSession as identity provider already set it. Defaults to empty.
@@ -54,11 +54,12 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `backchannel_supported` - (Optional) Does the external IDP support backchannel logout?. Defaults to `false`.
 - `provider_id` - (Optional) The ID of the identity provider to use. Defaults to `saml`, which should be used unless you have extended Keycloak and provided your own implementation.
 - `name_id_policy_format` - (Optional) Specifies the URI reference corresponding to a name identifier format. Defaults to empty.
-- `post_binding_response` - (Optional) Indicates whether to respond to requests using HTTP-POST binding. If false, HTTP-REDIRECT binding will be used..
+- `post_binding_response` - (Optional) Indicates whether to respond to requests using HTTP-POST binding. If false, HTTP-REDIRECT binding will be used.
 - `post_binding_authn_request` - (Optional) Indicates whether the AuthnRequest must be sent using HTTP-POST binding. If false, HTTP-REDIRECT binding will be used.
 - `post_binding_logout` - (Optional) Indicates whether to respond to requests using HTTP-POST binding. If false, HTTP-REDIRECT binding will be used.
 - `want_assertions_signed` - (Optional) Indicates whether this service provider expects a signed Assertion.
 - `want_assertions_encrypted` - (Optional) Indicates whether this service provider expects an encrypted Assertion.
+- `want_authn_requests_signed` - (Optional) Indicates whether this service provider expects authentication requests to be signed (defaults to `true` if `signature_algorithm` is set and this isn't).
 - `force_authn` - (Optional) Indicates whether the identity provider must authenticate the presenter directly rather than rely on a previous security context.
 - `validate_signature` - (Optional) Enable/disable signature validation of SAML responses.
 - `signing_certificate` - (Optional) Signing Certificate.
@@ -71,6 +72,10 @@ resource "keycloak_saml_identity_provider" "realm_saml_identity_provider" {
 - `authn_context_class_refs` - (Optional) Ordered list of requested AuthnContext ClassRefs.
 - `authn_context_decl_refs` - (Optional) Ordered list of requested AuthnContext DeclRefs.
 - `authn_context_comparison_type` - (Optional) Specifies the comparison method used to evaluate the requested context classes or statements.
+- `organization_id` - (Optional) The ID of the organization to link this identity provider to.
+- `org_domain` - (Optional) The organization domain to associate this identity provider with. It is used to map users to an organization based on their email domain and to authenticate them accordingly in the scope of the organization.
+- `allow_admin_role_mapping` - (Optional) When `true`, mappers of this identity provider may grant administrative roles, either directly or through membership of groups that carry administrative roles. Defaults to `false`. Requires Keycloak 26.8 or later, where mappers that grant admin roles are rejected unless this is enabled. Enabling it requires the `manage-realm` permission.
+- `org_redirect_mode_email_matches` - (Optional) Indicates whether to automatically redirect users to this identity provider when email domain matches domain.
 - `extra_config` - (Optional) A map of key/value pairs to add extra configuration to this identity provider. This can be used for custom oidc provider implementations, or to add configuration that is not yet supported by this Terraform provider. Use this attribute at your own risk, as custom attributes may conflict with top-level configuration attributes in future provider updates.
 
 ## Import
