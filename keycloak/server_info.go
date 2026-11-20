@@ -7,7 +7,19 @@ type SystemInfo struct {
 }
 
 type ComponentType struct {
-	Id string `json:"id"`
+	Id         string                  `json:"id"`
+	Properties []ComponentTypeProperty `json:"properties"`
+}
+
+type ComponentTypeProperty struct {
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Secret bool   `json:"secret"`
+}
+
+// IsMultiValued reports whether Keycloak models the property as multi-valued (an array of individual values).
+func (p ComponentTypeProperty) IsMultiValued() bool {
+	return p.Type == "MultivaluedString" || p.Type == "MultivaluedList"
 }
 
 type ProviderType struct {
@@ -23,11 +35,17 @@ type Theme struct {
 	Locales []string `json:"locales,omitempty"`
 }
 
+type FeatureRepresentation struct {
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
+}
+
 type ServerInfo struct {
 	SystemInfo     SystemInfo                 `json:"systemInfo"`
 	ComponentTypes map[string][]ComponentType `json:"componentTypes"`
 	ProviderTypes  map[string]ProviderType    `json:"providers"`
 	Themes         map[string][]Theme         `json:"themes"`
+	Features       []FeatureRepresentation    `json:"features"`
 }
 
 func (serverInfo *ServerInfo) ThemeIsInstalled(t, themeName string) bool {
@@ -40,6 +58,47 @@ func (serverInfo *ServerInfo) ThemeIsInstalled(t, themeName string) bool {
 	}
 
 	return false
+}
+
+// MultiValuedConfigKeys returns the set of config keys that Keycloak models as multi-valued
+// (an array of individual values) for the given component type and provider id. Keycloak
+// reports these as properties with a "type" of "MultivaluedString" or "MultivaluedList" in
+// the server info component-type metadata.
+func (serverInfo *ServerInfo) MultiValuedConfigKeys(componentType, providerId string) map[string]bool {
+	keys := map[string]bool{}
+
+	for _, ct := range serverInfo.ComponentTypes[componentType] {
+		if ct.Id != providerId {
+			continue
+		}
+
+		for _, p := range ct.Properties {
+			if p.IsMultiValued() {
+				keys[p.Name] = true
+			}
+		}
+	}
+
+	return keys
+}
+
+// ConfigProperties returns the config properties that the given component type and provider id
+// declare, keyed by name. Keycloak only returns and updates config keys that are declared here, and
+// masks the values of properties flagged as secret.
+func (serverInfo *ServerInfo) ConfigProperties(componentType, providerId string) map[string]ComponentTypeProperty {
+	properties := map[string]ComponentTypeProperty{}
+
+	for _, ct := range serverInfo.ComponentTypes[componentType] {
+		if ct.Id != providerId {
+			continue
+		}
+
+		for _, p := range ct.Properties {
+			properties[p.Name] = p
+		}
+	}
+
+	return properties
 }
 
 func (serverInfo *ServerInfo) ComponentTypeIsInstalled(componentType, componentTypeId string) bool {
@@ -71,6 +130,37 @@ func (serverInfo *ServerInfo) providerInstalled(providerType, providerName strin
 		}
 	}
 	return false
+}
+
+// FGAPv2IsEnabled reports whether the ADMIN_FINE_GRAINED_AUTHZ_V2 feature is
+// enabled on the server. The result is memoised on the client because the
+// feature flag is a server-level setting that does not change during a
+// Terraform run; this avoids a /serverinfo round-trip on every guarded
+// resource operation. Only successful lookups are cached, so a transient
+// error does not poison the cache.
+func (keycloakClient *KeycloakClient) FGAPv2IsEnabled(ctx context.Context) (bool, error) {
+	keycloakClient.fgapv2Mu.Lock()
+	defer keycloakClient.fgapv2Mu.Unlock()
+
+	if keycloakClient.fgapv2Cached != nil {
+		return *keycloakClient.fgapv2Cached, nil
+	}
+
+	serverInfo, err := keycloakClient.GetServerInfo(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	enabled := false
+	for _, f := range serverInfo.Features {
+		if f.Name == "ADMIN_FINE_GRAINED_AUTHZ_V2" {
+			enabled = f.Enabled
+			break
+		}
+	}
+
+	keycloakClient.fgapv2Cached = &enabled
+	return enabled, nil
 }
 
 func (keycloakClient *KeycloakClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {

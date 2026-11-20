@@ -2,10 +2,11 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccKeycloakDataSourceOpenidClientServiceAccountUser_basic(t *testing.T) {
@@ -14,8 +15,8 @@ func TestAccKeycloakDataSourceOpenidClientServiceAccountUser_basic(t *testing.T)
 	dataSourceName := "data.keycloak_openid_client_service_account_user.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKeycloakOpenidClientServiceAccountUserConfig(clientId),

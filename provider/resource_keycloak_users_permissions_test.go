@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakUsersPermission_basic(t *testing.T) {
+	skipIfFGAPv2Enabled(testCtx, t, keycloakClient)
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	username := acctest.RandomWithPrefix("tf-acc")
 	email := acctest.RandomWithPrefix("tf-acc") + "@fakedomain.com"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakUsersPermission_basic(realmName, username, email),
@@ -151,14 +152,19 @@ resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
+data "keycloak_openid_client" "account" {
+  realm_id  = keycloak_realm.realm.id
+  client_id = "account"
+}
+
 data "keycloak_openid_client" "realm_management" {
 	realm_id  = keycloak_realm.realm.id
 	client_id = "realm-management"
 }
 
-resource "keycloak_openid_client_permissions" "realm_management_permission" {
+resource "keycloak_openid_client_permissions" "account_permission" {
 	realm_id   = keycloak_realm.realm.id
-	client_id  = data.keycloak_openid_client.realm_management.id
+	client_id  = data.keycloak_openid_client.account.id
 }
 
 resource "keycloak_user" "test" {
@@ -182,7 +188,7 @@ resource "keycloak_openid_client_user_policy" "test" {
 	decision_strategy = "UNANIMOUS"
 
 	depends_on = [
-		keycloak_openid_client_permissions.realm_management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 resource "keycloak_openid_client_user_policy" "test2" {
@@ -197,7 +203,7 @@ resource "keycloak_openid_client_user_policy" "test2" {
 	decision_strategy = "UNANIMOUS"
 
 	depends_on = [
-		keycloak_openid_client_permissions.realm_management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 
@@ -230,14 +236,19 @@ resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
+data "keycloak_openid_client" "account" {
+  realm_id  = keycloak_realm.realm.id
+  client_id = "account"
+}
+
 data "keycloak_openid_client" "realm_management" {
 	realm_id  = keycloak_realm.realm.id
 	client_id = "realm-management"
 }
 
-resource "keycloak_openid_client_permissions" "realm_management_permission" {
+resource "keycloak_openid_client_permissions" "account_permission" {
 	realm_id   = keycloak_realm.realm.id
-	client_id  = data.keycloak_openid_client.realm_management.id
+	client_id  = data.keycloak_openid_client.account.id
 }
 
 resource "keycloak_user" "test" {
@@ -261,7 +272,7 @@ resource "keycloak_openid_client_user_policy" "test" {
 	decision_strategy = "UNANIMOUS"
 
 	depends_on = [
-		keycloak_openid_client_permissions.realm_management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 resource "keycloak_openid_client_user_policy" "test2" {
@@ -276,7 +287,7 @@ resource "keycloak_openid_client_user_policy" "test2" {
 	decision_strategy = "UNANIMOUS"
 
 	depends_on = [
-		keycloak_openid_client_permissions.realm_management_permission,
+		keycloak_openid_client_permissions.account_permission,
 	]
 }
 	`, realmId, username, email)

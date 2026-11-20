@@ -3,8 +3,12 @@ package keycloak
 import (
 	"context"
 	"fmt"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 type Key struct {
@@ -23,12 +27,13 @@ type Keys struct {
 }
 
 type Realm struct {
-	Id                string `json:"id,omitempty"`
-	Realm             string `json:"realm"`
-	Enabled           bool   `json:"enabled"`
-	DisplayName       string `json:"displayName"`
-	DisplayNameHtml   string `json:"displayNameHtml"`
-	UserManagedAccess bool   `json:"userManagedAccessAllowed"`
+	Id                   string `json:"id,omitempty"`
+	Realm                string `json:"realm"`
+	Enabled              bool   `json:"enabled"`
+	DisplayName          string `json:"displayName"`
+	DisplayNameHtml      string `json:"displayNameHtml"`
+	UserManagedAccess    bool   `json:"userManagedAccessAllowed"`
+	OrganizationsEnabled bool   `json:"organizationsEnabled"`
 
 	// Login Config
 	RegistrationAllowed         bool   `json:"registrationAllowed"`
@@ -60,7 +65,7 @@ type Realm struct {
 	SsoSessionMaxLifespanRememberMe     int    `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
 	OfflineSessionIdleTimeout           int    `json:"offlineSessionIdleTimeout,omitempty"`
 	OfflineSessionMaxLifespan           int    `json:"offlineSessionMaxLifespan,omitempty"`
-	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled,omitempty"`
+	OfflineSessionMaxLifespanEnabled    bool   `json:"offlineSessionMaxLifespanEnabled"`
 	ClientSessionIdleTimeout            int    `json:"clientSessionIdleTimeout,omitempty"`
 	ClientSessionMaxLifespan            int    `json:"clientSessionMaxLifespan,omitempty"`
 	AccessTokenLifespan                 int    `json:"accessTokenLifespan,omitempty"`
@@ -87,14 +92,22 @@ type Realm struct {
 
 	BrowserSecurityHeaders BrowserSecurityHeaders `json:"browserSecurityHeaders"`
 
-	BruteForceProtected          bool `json:"bruteForceProtected"`
-	PermanentLockout             bool `json:"permanentLockout"`
-	FailureFactor                int  `json:"failureFactor"` //Max Login Failures
-	WaitIncrementSeconds         int  `json:"waitIncrementSeconds"`
-	QuickLoginCheckMilliSeconds  int  `json:"quickLoginCheckMilliSeconds"`
-	MinimumQuickLoginWaitSeconds int  `json:"minimumQuickLoginWaitSeconds"`
-	MaxFailureWaitSeconds        int  `json:"maxFailureWaitSeconds"` //Max Wait
-	MaxDeltaTimeSeconds          int  `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+	BruteForceProtected          bool   `json:"bruteForceProtected"`
+	PermanentLockout             bool   `json:"permanentLockout"`
+	BruteForceStrategy           string `json:"bruteForceStrategy,omitempty"`       // Strategy to increase wait time
+	MaxTemporaryLockouts         *int   `json:"maxTemporaryLockouts,omitempty"`     //Max Temporary Lockouts
+	FailureFactor                int    `json:"failureFactor"`                      //Max Login Failures
+	MaxSecondaryAuthFailures     *int   `json:"maxSecondaryAuthFailures,omitempty"` //Max Secondary Auth Failures (requires Keycloak >= 26.6.0)
+	WaitIncrementSeconds         int    `json:"waitIncrementSeconds"`
+	QuickLoginCheckMilliSeconds  int    `json:"quickLoginCheckMilliSeconds"`
+	MinimumQuickLoginWaitSeconds int    `json:"minimumQuickLoginWaitSeconds"`
+	MaxFailureWaitSeconds        int    `json:"maxFailureWaitSeconds"` //Max Wait
+	MaxDeltaTimeSeconds          int    `json:"maxDeltaTimeSeconds"`   //Failure Reset Time
+
+	AdminPermissionsEnabled *bool `json:"adminPermissionsEnabled,omitempty"`
+	AdminPermissionsClient  *struct {
+		Id string `json:"id"`
+	} `json:"adminPermissionsClient,omitempty"`
 
 	PasswordPolicy string `json:"passwordPolicy"`
 
@@ -105,6 +118,7 @@ type Realm struct {
 	ResetCredentialsFlow     *string `json:"resetCredentialsFlow,omitempty"`
 	ClientAuthenticationFlow *string `json:"clientAuthenticationFlow,omitempty"`
 	DockerAuthenticationFlow *string `json:"dockerAuthenticationFlow,omitempty"`
+	FirstBrokerLoginFlow     *string `json:"firstBrokerLoginFlow,omitempty"`
 
 	// OTP Policy
 	OTPPolicyAlgorithm       string `json:"otpPolicyAlgorithm,omitempty"`
@@ -112,31 +126,39 @@ type Realm struct {
 	OTPPolicyInitialCounter  int    `json:"otpPolicyInitialCounter,omitempty"`
 	OTPPolicyLookAheadWindow int    `json:"otpPolicyLookAheadWindow,omitempty"`
 	OTPPolicyPeriod          int    `json:"otpPolicyPeriod,omitempty"`
+	OTPPolicyCodeReusable    bool   `json:"otpPolicyCodeReusable"`
 	OTPPolicyType            string `json:"otpPolicyType,omitempty"`
 
 	// WebAuthn
 	WebAuthnPolicyAcceptableAaguids               []string `json:"webAuthnPolicyAcceptableAaguids"`
+	WebAuthnPolicyExtraOrigins                    []string `json:"webAuthnPolicyExtraOrigins,omitempty"`
 	WebAuthnPolicyAttestationConveyancePreference string   `json:"webAuthnPolicyAttestationConveyancePreference"`
 	WebAuthnPolicyAuthenticatorAttachment         string   `json:"webAuthnPolicyAuthenticatorAttachment"`
 	WebAuthnPolicyAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyCreateTimeout                   int      `json:"webAuthnPolicyCreateTimeout"`
-	WebAuthnPolicyRequireResidentKey              string   `json:"webAuthnPolicyRequireResidentKey"`
-	WebAuthnPolicyRpEntityName                    string   `json:"webAuthnPolicyRpEntityName"`
-	WebAuthnPolicyRpId                            string   `json:"webAuthnPolicyRpId"`
-	WebAuthnPolicySignatureAlgorithms             []string `json:"webAuthnPolicySignatureAlgorithms"`
-	WebAuthnPolicyUserVerificationRequirement     string   `json:"webAuthnPolicyUserVerificationRequirement"`
+	// Deprecated: use WebAuthnPolicyDiscoverableCredential instead.
+	WebAuthnPolicyRequireResidentKey          string   `json:"webAuthnPolicyRequireResidentKey"`
+	WebAuthnPolicyDiscoverableCredential      string   `json:"webAuthnPolicyResidentKey,omitempty"`
+	WebAuthnPolicyRpEntityName                string   `json:"webAuthnPolicyRpEntityName"`
+	WebAuthnPolicyRpId                        string   `json:"webAuthnPolicyRpId"`
+	WebAuthnPolicySignatureAlgorithms         []string `json:"webAuthnPolicySignatureAlgorithms"`
+	WebAuthnPolicyUserVerificationRequirement string   `json:"webAuthnPolicyUserVerificationRequirement"`
 
 	// WebAuthn Passwordless
 	WebAuthnPolicyPasswordlessAcceptableAaguids               []string `json:"webAuthnPolicyPasswordlessAcceptableAaguids"`
+	WebAuthnPolicyPasswordlessExtraOrigins                    []string `json:"webAuthnPolicyPasswordlessExtraOrigins,omitempty"`
 	WebAuthnPolicyPasswordlessAttestationConveyancePreference string   `json:"webAuthnPolicyPasswordlessAttestationConveyancePreference"`
 	WebAuthnPolicyPasswordlessAuthenticatorAttachment         string   `json:"webAuthnPolicyPasswordlessAuthenticatorAttachment"`
 	WebAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister  bool     `json:"webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister"`
 	WebAuthnPolicyPasswordlessCreateTimeout                   int      `json:"webAuthnPolicyPasswordlessCreateTimeout"`
-	WebAuthnPolicyPasswordlessRequireResidentKey              string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
-	WebAuthnPolicyPasswordlessRpEntityName                    string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
-	WebAuthnPolicyPasswordlessRpId                            string   `json:"webAuthnPolicyPasswordlessRpId"`
-	WebAuthnPolicyPasswordlessSignatureAlgorithms             []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
-	WebAuthnPolicyPasswordlessUserVerificationRequirement     string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
+	// Deprecated: use WebAuthnPolicyPasswordlessDiscoverableCredential instead.
+	WebAuthnPolicyPasswordlessRequireResidentKey          string   `json:"webAuthnPolicyPasswordlessRequireResidentKey"`
+	WebAuthnPolicyPasswordlessDiscoverableCredential      string   `json:"webAuthnPolicyPasswordlessResidentKey,omitempty"`
+	WebAuthnPolicyPasswordlessRpEntityName                string   `json:"webAuthnPolicyPasswordlessRpEntityName"`
+	WebAuthnPolicyPasswordlessRpId                        string   `json:"webAuthnPolicyPasswordlessRpId"`
+	WebAuthnPolicyPasswordlessSignatureAlgorithms         []string `json:"webAuthnPolicyPasswordlessSignatureAlgorithms"`
+	WebAuthnPolicyPasswordlessUserVerificationRequirement string   `json:"webAuthnPolicyPasswordlessUserVerificationRequirement"`
+	WebAuthnPolicyPasswordlessPasskeysEnabled             *bool    `json:"webAuthnPolicyPasswordlessPasskeysEnabled,omitempty"`
 
 	// Roles
 	DefaultRole *Role `json:"defaultRole,omitempty"`
@@ -150,25 +172,38 @@ type BrowserSecurityHeaders struct {
 	XFrameOptions                   string `json:"xFrameOptions"`
 	XRobotsTag                      string `json:"xRobotsTag"`
 	XXSSProtection                  string `json:"xXSSProtection"`
+	ReferrerPolicy                  string `json:"referrerPolicy"`
 }
 
 type SmtpServer struct {
-	StartTls           types.KeycloakBoolQuoted `json:"starttls,omitempty"`
-	Auth               types.KeycloakBoolQuoted `json:"auth,omitempty"`
-	Port               string                   `json:"port,omitempty"`
-	Host               string                   `json:"host,omitempty"`
-	ReplyTo            string                   `json:"replyTo,omitempty"`
-	ReplyToDisplayName string                   `json:"replyToDisplayName,omitempty"`
-	From               string                   `json:"from,omitempty"`
-	FromDisplayName    string                   `json:"fromDisplayName,omitempty"`
-	EnvelopeFrom       string                   `json:"envelopeFrom,omitempty"`
-	Ssl                types.KeycloakBoolQuoted `json:"ssl,omitempty"`
-	User               string                   `json:"user,omitempty"`
-	Password           string                   `json:"password,omitempty"`
+	StartTls              types.KeycloakBoolQuoted `json:"starttls,omitempty"`
+	Auth                  types.KeycloakBoolQuoted `json:"auth,omitempty"`
+	Port                  string                   `json:"port,omitempty"`
+	Host                  string                   `json:"host,omitempty"`
+	ReplyTo               string                   `json:"replyTo,omitempty"`
+	ReplyToDisplayName    string                   `json:"replyToDisplayName,omitempty"`
+	From                  string                   `json:"from,omitempty"`
+	FromDisplayName       string                   `json:"fromDisplayName,omitempty"`
+	EnvelopeFrom          string                   `json:"envelopeFrom,omitempty"`
+	Ssl                   types.KeycloakBoolQuoted `json:"ssl,omitempty"`
+	AllowUtf8             types.KeycloakBoolQuoted `json:"allowutf8,omitempty"`
+	User                  string                   `json:"user,omitempty"`
+	Password              string                   `json:"password,omitempty"`
+	AuthType              string                   `json:"authType,omitempty"`
+	AuthTokenUrl          string                   `json:"authTokenUrl,omitempty"`
+	AuthTokenClientId     string                   `json:"authTokenClientId,omitempty"`
+	AuthTokenClientSecret string                   `json:"authTokenClientSecret,omitempty"`
+	AuthTokenScope        string                   `json:"authTokenScope,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) NewRealm(ctx context.Context, realm *Realm) error {
+	generation := keycloakClient.realmCache.currentGeneration()
 	_, _, err := keycloakClient.post(ctx, "/realms", realm)
+	if err == nil && realm.Id != "" {
+		// Keycloak 26.0 hides a new realm's id from tokens issued before it existed, so remember it.
+		// Without an id in the request Keycloak picks one, which is only known once the realm is read.
+		keycloakClient.realmCache.remember(generation, realm.Id, realm.Realm)
+	}
 
 	return err
 }
@@ -181,6 +216,38 @@ func (keycloakClient *KeycloakClient) GetRealm(ctx context.Context, name string)
 		return nil, err
 	}
 	return &realm, nil
+}
+
+// GetRealmByInternalId reads the realm bound to this resource. Imports and older state
+// without an internal ID use the stored name until a refresh discovers the ID.
+func (keycloakClient *KeycloakClient) GetRealmByInternalId(ctx context.Context, internalId, knownName string) (*Realm, error) {
+	if internalId == "" {
+		return keycloakClient.GetRealm(ctx, knownName)
+	}
+	realm, err := keycloakClient.GetRealm(ctx, knownName)
+	if err == nil && realm.Id == internalId {
+		return realm, nil
+	}
+	if err != nil && !ErrorIs404(err) && !ErrorIs403(err) {
+		return nil, err
+	}
+
+	name, err := keycloakClient.GetRealmNameByInternalId(ctx, internalId, knownName)
+	if err != nil {
+		return nil, err
+	}
+	realm, err = keycloakClient.GetRealm(ctx, name)
+	if ErrorIs404(err) {
+		// The list just contained this ID. A concurrent rename can invalidate the name.
+		return nil, fmt.Errorf("realm %q disappeared during lookup of internal id %q; retry the lookup", name, internalId)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if realm.Id != internalId {
+		return nil, fmt.Errorf("cannot confirm that realm %q still has internal id %q; retry the lookup", name, internalId)
+	}
+	return realm, nil
 }
 
 func (keycloakClient *KeycloakClient) GetRealms(ctx context.Context) ([]*Realm, error) {
@@ -206,10 +273,286 @@ func (keycloakClient *KeycloakClient) GetRealmKeys(ctx context.Context, name str
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealm(ctx context.Context, realm *Realm) error {
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", realm.Realm), realm)
+	return keycloakClient.UpdateRealmByName(ctx, realm.Realm, realm)
+}
+
+// UpdateRealmByName updates the realm that is currently called currentName. When realm.Realm
+// differs from currentName, Keycloak renames the realm in place (its internal id stays the same).
+func (keycloakClient *KeycloakClient) UpdateRealmByName(ctx context.Context, currentName string, realm *Realm) error {
+	// These zero, false, and empty values reset existing realm settings. Keep them explicit
+	// on updates while retaining omitted creation values and server defaults.
+	payload := struct {
+		*Realm
+		SsoSessionIdleTimeoutRememberMe  int    `json:"ssoSessionIdleTimeoutRememberMe"`
+		SsoSessionMaxLifespanRememberMe  int    `json:"ssoSessionMaxLifespanRememberMe"`
+		OfflineSessionMaxLifespanEnabled bool   `json:"offlineSessionMaxLifespanEnabled"`
+		LoginTheme                       string `json:"loginTheme"`
+		AccountTheme                     string `json:"accountTheme"`
+		AdminTheme                       string `json:"adminTheme"`
+		EmailTheme                       string `json:"emailTheme"`
+		OrganizationsEnabled             bool   `json:"organizationsEnabled"`
+	}{
+		Realm:                            realm,
+		SsoSessionIdleTimeoutRememberMe:  realm.SsoSessionIdleTimeoutRememberMe,
+		SsoSessionMaxLifespanRememberMe:  realm.SsoSessionMaxLifespanRememberMe,
+		OfflineSessionMaxLifespanEnabled: realm.OfflineSessionMaxLifespanEnabled,
+		LoginTheme:                       realm.LoginTheme,
+		AccountTheme:                     realm.AccountTheme,
+		AdminTheme:                       realm.AdminTheme,
+		EmailTheme:                       realm.EmailTheme,
+		OrganizationsEnabled:             realm.OrganizationsEnabled,
+	}
+
+	if currentName == realm.Realm {
+		return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), payload)
+	}
+
+	// forget before and after: a timeout may hide that the rename happened anyway
+	keycloakClient.realmCache.forget()
+	err := keycloakClient.put(ctx, fmt.Sprintf("/realms/%s", currentName), payload)
+	generation := keycloakClient.realmCache.currentGeneration()
+	keycloakClient.realmCache.forget()
+	if err == nil {
+		keycloakClient.realmCache.remember(generation+1, realm.Id, realm.Realm)
+	}
+
+	return err
+}
+
+// realmCacheTTL bounds how long what we learned about a realm is kept. A realm can be renamed outside
+// this client, so nothing in the cache is trusted without asking Keycloak again.
+const realmCacheTTL = 30 * time.Second
+
+type realmCacheEntry struct {
+	name string
+	at   time.Time
+}
+
+// realmCache keeps two things about realms. Neither is ever returned as an answer:
+//   - names: the name a realm had when we last saw it, by internal id. This is only a hint for where to look first,
+//     and Keycloak has to confirm that the realm under that name still has the internal id.
+//   - unreadable: names of realms for which Keycloak did not show an id to this account, so that the lookup is
+//     not repeated for every resource.
+//
+// forget bumps the generation, so that a lookup that started before a rename cannot store what it saw afterwards.
+type realmCache struct {
+	mu         sync.Mutex
+	generation uint64
+	names      map[string]realmCacheEntry // internal id -> name
+	idsByName  map[string]string          // name -> internal id, so that a name is claimed by one realm without a scan
+	unreadable map[string]time.Time       // name -> when
+}
+
+func (c *realmCache) nameHint(uuid string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	entry, ok := c.names[uuid]
+	if !ok || time.Since(entry.at) > realmCacheTTL {
+		return "", false
+	}
+
+	return entry.name, true
+}
+
+func (c *realmCache) isUnreadable(name string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	at, ok := c.unreadable[name]
+
+	return ok && time.Since(at) <= realmCacheTTL
+}
+
+func (c *realmCache) currentGeneration() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.generation
+}
+
+// remember stores the name of a realm as a hint unless the cache was cleared since generation was read. A name
+// belongs to one realm only, so any other id that was remembered under it is dropped.
+func (c *realmCache) remember(generation uint64, uuid string, name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if generation != c.generation || uuid == "" || name == "" {
+		return
+	}
+	if c.names == nil {
+		c.names = map[string]realmCacheEntry{}
+		c.idsByName = map[string]string{}
+	}
+
+	if otherUuid, ok := c.idsByName[name]; ok && otherUuid != uuid {
+		delete(c.names, otherUuid)
+	}
+	if previous, ok := c.names[uuid]; ok && previous.name != name && c.idsByName[previous.name] == uuid {
+		delete(c.idsByName, previous.name)
+	}
+	delete(c.unreadable, name)
+	c.names[uuid] = realmCacheEntry{name: name, at: time.Now()}
+	c.idsByName[name] = uuid
+}
+
+func (c *realmCache) markUnreadable(generation uint64, name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if generation != c.generation || name == "" {
+		return
+	}
+	if c.unreadable == nil {
+		c.unreadable = map[string]time.Time{}
+	}
+
+	c.unreadable[name] = time.Now()
+}
+
+func (c *realmCache) forget() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.generation++
+	c.names, c.idsByName, c.unreadable = nil, nil, nil
+}
+
+// GetRealmNameByInternalId returns the current name of the realm with the given internal id. Keycloak's admin API only
+// addresses realms by name, so the realms are searched for the id. The names we expect it to have (knownName, the
+// name last seen in state, and what this client remembers) are tried first, but only an id that Keycloak confirms
+// counts: a name can be reused by another realm after a rename. If that fails the realms are listed.
+func (keycloakClient *KeycloakClient) GetRealmNameByInternalId(ctx context.Context, uuid string, knownName string) (string, error) {
+	generation := keycloakClient.realmCache.currentGeneration()
+
+	candidates := []string{}
+	if knownName != "" {
+		candidates = append(candidates, knownName)
+	}
+	if hint, ok := keycloakClient.realmCache.nameHint(uuid); ok && hint != knownName {
+		candidates = append(candidates, hint)
+	}
+
+	forbidden := false
+	for _, name := range candidates {
+		realm, err := keycloakClient.GetRealm(ctx, name)
+		switch {
+		case err == nil && realm.Id == uuid:
+			keycloakClient.realmCache.remember(generation, uuid, name)
+
+			return name, nil
+		case err == nil && realm.Id == "":
+			forbidden = true
+		case err == nil:
+			// Another realm has this name now.
+		case ErrorIs403(err):
+			forbidden = true
+		case ErrorIs404(err):
+			// renamed or deleted: look further
+		default:
+			return "", err
+		}
+	}
+
+	for attempt := 0; ; attempt++ {
+		found, idsHidden, err := keycloakClient.findRealmNameInList(ctx, generation, uuid)
+		if ErrorIs404(err) {
+			// A missing collection endpoint does not establish that this realm is gone.
+			return "", fmt.Errorf("cannot list realms when resolving internal id %q: %v", uuid, err)
+		}
+		if err != nil {
+			return "", err
+		}
+		if found != "" {
+			return found, nil
+		}
+
+		// a token issued before the realm was created (or renamed) may not show it; try once with a new one
+		if attempt == 0 {
+			if err := keycloakClient.Refresh(ctx); err != nil {
+				// a failed refresh says nothing about the realm: do not report it as missing
+				return "", err
+			}
+
+			continue
+		}
+
+		// A realm we may not read is not a realm that does not exist: callers treat "not found" as "gone".
+		if idsHidden || forbidden {
+			return "", &ApiError{Code: http.StatusForbidden, Message: fmt.Sprintf("cannot look up the realm with internal id %s: Keycloak hides realm ids, or the realm itself, from accounts without the view-realm role, which is needed to use realm_internal_id", uuid)}
+		}
+
+		// Keep Terraform's recovery from an external deletion when no lookup reported a permission problem. A realm
+		// that was renamed and then became invisible cannot be told apart, as a filtered list is not provably complete.
+		return "", &ApiError{Code: http.StatusNotFound, Message: fmt.Sprintf("realm with internal id %s not found", uuid)}
+	}
+}
+
+// findRealmNameInList lists the realms, remembers them, and returns the name of the one with the given
+// internal id (empty when it is not there). idsHidden reports realms that Keycloak did not show an id for.
+func (keycloakClient *KeycloakClient) findRealmNameInList(ctx context.Context, generation uint64, uuid string) (name string, idsHidden bool, err error) {
+	// the brief representation has the id and name, which is all that is needed here
+	var realms []*Realm
+	err = keycloakClient.get(ctx, "/realms", &realms, map[string]string{"briefRepresentation": "true"})
+	if err != nil {
+		return "", false, err
+	}
+
+	for _, realm := range realms {
+		if realm.Id == "" {
+			keycloakClient.realmCache.markUnreadable(generation, realm.Realm)
+			idsHidden = true
+
+			continue
+		}
+
+		keycloakClient.realmCache.remember(generation, realm.Id, realm.Realm)
+		if realm.Id == uuid {
+			name = realm.Realm
+		}
+	}
+
+	return name, idsHidden, nil
+}
+
+// GetRealmInternalId returns the internal id of the realm with the given name, or an empty string when Keycloak does not
+// show it to this account. The id is always asked for again, because the name may belong to another realm than it
+// did a moment ago; only the fact that an account cannot see it is remembered, for a short while.
+func (keycloakClient *KeycloakClient) GetRealmInternalId(ctx context.Context, name string) (string, error) {
+	if keycloakClient.realmCache.isUnreadable(name) {
+		return "", nil
+	}
+
+	generation := keycloakClient.realmCache.currentGeneration()
+
+	realm, err := keycloakClient.GetRealm(ctx, name)
+	if err != nil {
+		if ErrorIs403(err) {
+			keycloakClient.realmCache.markUnreadable(generation, name)
+		}
+
+		return "", err
+	}
+
+	if realm.Id == "" {
+		keycloakClient.realmCache.markUnreadable(generation, name)
+
+		return "", nil
+	}
+
+	keycloakClient.realmCache.remember(generation, realm.Id, name)
+
+	return realm.Id, nil
+}
+
+// AuthRealm is the realm the provider authenticates against.
+func (keycloakClient *KeycloakClient) AuthRealm() string {
+	return keycloakClient.realm
 }
 
 func (keycloakClient *KeycloakClient) DeleteRealm(ctx context.Context, name string) error {
+	keycloakClient.realmCache.forget()
+
 	err := keycloakClient.delete(ctx, fmt.Sprintf("/realms/%s", name), nil)
 	if err != nil {
 		// For whatever reason, this fails sometimes with a 500 during acceptance tests. try again

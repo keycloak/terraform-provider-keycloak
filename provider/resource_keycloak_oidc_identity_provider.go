@@ -1,19 +1,50 @@
 package provider
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
+	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakOidcIdentityProvider() *schema.Resource {
+	oidcResource := resourceKeycloakIdentityProvider()
+	oidcResource.Schema = resourceKeycloakOidcIdentityProviderSchema()
+	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
+	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
+	oidcResource.CustomizeDiff = customizeDiffOidcIdentityProviderRequiredUrls
+	oidcResource.SchemaVersion = 1
+	oidcResource.StateUpgraders = []schema.StateUpgrader{
+		{
+			Version: 0,
+			Type:    resourceKeycloakOidcIdentityProviderV0().CoreConfigSchema().ImpliedType(),
+			Upgrade: resourceKeycloakOidcIdentityProviderStateUpgradeV0,
+		},
+	}
+	return oidcResource
+}
+
+func resourceKeycloakOidcIdentityProviderSchema() map[string]*schema.Schema {
 	oidcSchema := map[string]*schema.Schema{
 		"provider_id": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    true,
 			Default:     "oidc",
 			Description: "provider id, is always oidc, unless you have a custom implementation",
+		},
+		"display_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The human-friendly name of the identity provider, used in the log in form.",
 		},
 		"backchannel_supported": {
 			Type:        schema.TypeBool,
@@ -29,8 +60,8 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 		},
 		"authorization_url": {
 			Type:        schema.TypeString,
-			Required:    true,
-			Description: "OIDC authorization URL.",
+			Optional:    true,
+			Description: "OIDC authorization URL. Required for the provider ids oidc and keycloak-oidc.",
 		},
 		"client_id": {
 			Type:        schema.TypeString,
@@ -38,10 +69,29 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Description: "Client ID.",
 		},
 		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			Description:   "Client Secret.",
+			ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version"},
+			AtLeastOneOf:  []string{"client_secret", "client_secret_wo"},
+		},
+		"client_secret_wo": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{"client_secret"},
+			RequiredWith:  []string{"client_secret_wo_version"},
+			AtLeastOneOf:  []string{"client_secret", "client_secret_wo"},
+			Description:   "Client Secret as write-only argument",
+		},
+		"client_secret_wo_version": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			ConflictsWith: []string{"client_secret"},
+			RequiredWith:  []string{"client_secret_wo"},
+			Description:   "Version of the Client secret write-only argument",
 		},
 		"user_info_url": {
 			Type:        schema.TypeString,
@@ -61,8 +111,8 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 		},
 		"token_url": {
 			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Token URL.",
+			Optional:    true,
+			Description: "Token URL. Required for the provider ids oidc and keycloak-oidc.",
 		},
 		"logout_url": {
 			Type:        schema.TypeString,
@@ -103,17 +153,56 @@ func resourceKeycloakOidcIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "The issuer identifier for the issuer of the response. If not provided, no validation will be performed.",
 		},
+		"disable_type_claim_check": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Disables the validation of the `typ` claim of tokens received from the Identity Provider. If this is `off` the type claim is validated (default).",
+		},
 	}
-	oidcResource := resourceKeycloakIdentityProvider()
-	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcSchema)
-	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
-	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcIdentityProviderData)
-	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcIdentityProviderFromData, setOidcIdentityProviderData)
-	return oidcResource
+	return mergeSchemas(resourceKeycloakIdentityProvider().Schema, oidcSchema)
 }
 
-func getOidcIdentityProviderFromData(data *schema.ResourceData) (*keycloak.IdentityProvider, error) {
-	rec, defaultConfig := getIdentityProviderFromData(data)
+// oidcIdentityProviderIdsWithRequiredUrls are the built-in provider ids that send the user to the
+// authorization_url and exchange the code at the token_url. Other provider ids, such as social
+// providers (github, google, microsoft) or identity providers from extensions, may determine
+// their endpoints on their own.
+var oidcIdentityProviderIdsWithRequiredUrls = map[string]bool{
+	"oidc":          true,
+	"keycloak-oidc": true,
+}
+
+// customizeDiffOidcIdentityProviderRequiredUrls requires authorization_url and token_url for the
+// provider ids in oidcIdentityProviderIdsWithRequiredUrls.
+func customizeDiffOidcIdentityProviderRequiredUrls(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	return validateOidcIdentityProviderRequiredUrls(d.Get("provider_id").(string), d.NewValueKnown("provider_id"), d.GetRawConfig())
+}
+
+// validateOidcIdentityProviderRequiredUrls skips unknown values, because they may only be known
+// during apply. Only a missing url counts as missing: an empty string was accepted while the urls
+// were required, and it is not sent to Keycloak.
+func validateOidcIdentityProviderRequiredUrls(providerId string, providerIdKnown bool, rawConfig cty.Value) error {
+	if !providerIdKnown || !oidcIdentityProviderIdsWithRequiredUrls[providerId] {
+		return nil
+	}
+
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return nil
+	}
+
+	var errs []error
+	for _, attribute := range []string{"authorization_url", "token_url"} {
+		// An unknown value is not null.
+		if rawConfig.GetAttr(attribute).IsNull() {
+			errs = append(errs, fmt.Errorf("%q is required when provider_id is %q", attribute, providerId))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func getOidcIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
+	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	rec.ProviderId = data.Get("provider_id").(string)
 	_, useJwksUrl := data.GetOk("jwks_url")
 
@@ -123,7 +212,6 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		AuthorizationUrl:            data.Get("authorization_url").(string),
 		ClientId:                    data.Get("client_id").(string),
 		ClientSecret:                data.Get("client_secret").(string),
-		HideOnLoginPage:             types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 		TokenUrl:                    data.Get("token_url").(string),
 		LogoutUrl:                   data.Get("logout_url").(string),
 		UILocales:                   types.KeycloakBoolQuoted(data.Get("ui_locales").(bool)),
@@ -135,6 +223,16 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),
 		Issuer:                      data.Get("issuer").(string),
+		DisableTypeClaimCheck:       types.KeycloakBoolQuoted(data.Get("disable_type_claim_check").(bool)),
+	}
+
+	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
+		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
+		if clientSecretWriteOnlyDiags.HasError() {
+			return nil, errors.New("error reading 'client_secret_wo' argument")
+		}
+
+		oidcIdentityProviderConfig.ClientSecret = clientSecretWriteOnly.AsString()
 	}
 
 	if err := mergo.Merge(oidcIdentityProviderConfig, defaultConfig); err != nil {
@@ -146,8 +244,8 @@ func getOidcIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 	return rec, nil
 }
 
-func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider) error {
-	setIdentityProviderData(data, identityProvider)
+func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
+	setIdentityProviderData(data, identityProvider, keycloakVersion)
 	data.Set("backchannel_supported", identityProvider.Config.BackchannelSupported)
 	data.Set("jwks_url", identityProvider.Config.JwksUrl)
 	data.Set("logout_url", identityProvider.Config.LogoutUrl)
@@ -156,10 +254,43 @@ func setOidcIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("client_id", identityProvider.Config.ClientId)
 	data.Set("disable_user_info", identityProvider.Config.DisableUserInfo)
 	data.Set("user_info_url", identityProvider.Config.UserInfoUrl)
-	data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
 	data.Set("token_url", identityProvider.Config.TokenUrl)
 	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("ui_locales", identityProvider.Config.UILocales)
 	data.Set("issuer", identityProvider.Config.Issuer)
+	data.Set("disable_type_claim_check", identityProvider.Config.DisableTypeClaimCheck)
+
+	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+		data.Set("client_secret_wo_version", v.(string))
+	}
 	return nil
+}
+
+// resourceKeycloakOidcIdentityProviderV0 returns the v0 schema, where client_secret_wo_version was TypeInt.
+func resourceKeycloakOidcIdentityProviderV0() *schema.Resource {
+	s := resourceKeycloakOidcIdentityProviderSchema()
+	s["client_secret_wo_version"] = &schema.Schema{
+		Type:          schema.TypeInt,
+		Optional:      true,
+		ConflictsWith: []string{"client_secret"},
+		RequiredWith:  []string{"client_secret_wo"},
+		Description:   "Version of the Client secret write-only argument",
+	}
+	return &schema.Resource{Schema: s}
+}
+
+// resourceKeycloakOidcIdentityProviderStateUpgradeV0 migrates client_secret_wo_version from int to string.
+func resourceKeycloakOidcIdentityProviderStateUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	if rawState == nil {
+		return nil, fmt.Errorf("cannot migrate nil state")
+	}
+	if v, ok := rawState["client_secret_wo_version"]; ok {
+		switch val := v.(type) {
+		case int:
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", val)
+		case float64: // JSON-decoded state uses float64 for numbers
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", int(val))
+		}
+	}
+	return rawState, nil
 }

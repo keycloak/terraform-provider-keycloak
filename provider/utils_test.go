@@ -1,0 +1,173 @@
+package provider
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+)
+
+func randomBool() bool {
+	return rand.Intn(2) == 0
+}
+
+func randomStringInSlice(slice []string) string {
+	return slice[acctest.RandIntRange(0, len(slice)-1)]
+}
+
+func randomStringSliceSubset(slice []string) []string {
+	var result []string
+
+	for _, s := range slice {
+		if randomBool() {
+			result = append(result, s)
+		}
+	}
+
+	return result
+}
+
+// Like randomStringSliceSubset, but never empty. Use it where an empty list would make Keycloak
+// fall back to its own defaults, so the plan after apply is no longer empty.
+func randomNonEmptyStringSliceSubset(slice []string) []string {
+	result := randomStringSliceSubset(slice)
+	if len(result) == 0 {
+		result = append(result, slice[rand.Intn(len(slice))])
+	}
+
+	return result
+}
+
+// Returns a slice of strings in the format ["foo", "bar"] for
+// use within terraform resource definitions for acceptance tests
+func arrayOfStringsForTerraformResource(parts []string) string {
+	var tfStrings []string
+
+	for _, part := range parts {
+		tfStrings = append(tfStrings, fmt.Sprintf(`"%s"`, part))
+	}
+
+	return "[" + strings.Join(tfStrings, ", ") + "]"
+}
+
+func randomDurationString() string {
+	return (time.Duration(acctest.RandIntRange(1, 604800)) * time.Second).String()
+}
+
+func durationString(seconds int) string {
+	return (time.Duration(seconds) * time.Second).String()
+}
+
+func skipIfEnvSet(t *testing.T, envs ...string) {
+	for _, k := range envs {
+		if os.Getenv(k) != "" {
+			t.Skipf("Environment variable %s is set, skipping...", k)
+		}
+	}
+}
+
+func skipIfEnvNotSet(t *testing.T, envs ...string) {
+	for _, k := range envs {
+		if os.Getenv(k) == "" {
+			t.Skipf("Environment variable %s is not set, skipping...", k)
+		}
+	}
+}
+
+// Skips the test if the keycloak server matches a specific major version
+func skipIfVersionIsLessThanOrEqualTo(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
+	ok, err := keycloakClient.VersionIsLessThanOrEqualTo(ctx, version)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
+	if ok {
+		t.Skipf("keycloak server version is less than or equal to %s, skipping...", version)
+	}
+}
+
+func skipIfVersionIsLessThan(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
+	ok, err := keycloakClient.VersionIsLessThan(ctx, version)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
+	if ok {
+		t.Skipf("keycloak server version is less than %s, skipping...", version)
+	}
+}
+
+func skipIfVersionIsGreaterThanOrEqualTo(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient, version keycloak.Version) {
+	ok, err := keycloakClient.VersionIsGreaterThanOrEqualTo(ctx, version)
+	if err != nil {
+		t.Errorf("error checking keycloak version: %v", err)
+	}
+
+	if ok {
+		t.Skipf("keycloak server version is greater than or equal to %s, skipping...", version)
+	}
+}
+
+func skipIfFGAPv2NotEnabled(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient) {
+	t.Helper()
+	ok, err := keycloakClient.FGAPv2IsEnabled(ctx)
+	if err != nil {
+		t.Errorf("error checking FGAP v2 feature flag: %v", err)
+	}
+	if !ok {
+		t.Skip("skipping: Fine-Grained Admin Permissions v2 (ADMIN_FINE_GRAINED_AUTHZ_V2) is not enabled on this Keycloak instance")
+	}
+}
+
+func skipIfFGAPv2Enabled(ctx context.Context, t *testing.T, keycloakClient *keycloak.KeycloakClient) {
+	t.Helper()
+	ok, err := keycloakClient.FGAPv2IsEnabled(ctx)
+	if err != nil {
+		t.Errorf("error checking FGAP v2 feature flag: %v", err)
+	}
+	if ok {
+		t.Skip("skipping: Fine-Grained Admin Permissions v2 (ADMIN_FINE_GRAINED_AUTHZ_V2) is enabled; this resource requires v1")
+	}
+}
+
+func CheckResourceAttrNot(name, key, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		err := resource.TestCheckResourceAttr(name, key, value)(s)
+		if err == nil {
+			return fmt.Errorf("%s: Attribute '%s' expected to not equal %#v", name, key, value)
+		}
+
+		return nil
+	}
+}
+
+func equalsIgnoreType(want, got interface{}) bool {
+	if reflect.DeepEqual(want, got) {
+		return true
+	}
+
+	// TODO this should be replaced with an actual comparison the json == json is a quick fix.
+	wantJSON, _ := json.Marshal(want)
+	gotJSON, _ := json.Marshal(got)
+
+	if string(wantJSON) == string(gotJSON) {
+		return true
+	}
+
+	// compare as strings (this handles "false" == false and "0" == 0)
+	if fmt.Sprintf("%v", want) == fmt.Sprintf("%v", got) {
+		return true
+	}
+
+	return false
+}

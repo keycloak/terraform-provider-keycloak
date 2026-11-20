@@ -7,7 +7,7 @@ page_title: "keycloak_custom_user_federation Resource"
 Allows for creating and managing custom user federation providers within Keycloak.
 
 A custom user federation provider is an implementation of Keycloak's [User Storage SPI](https://www.keycloak.org/docs/4.2/server_development/index.html#_user-storage-spi).
-An example of this implementation can be found [here](https://github.com/mrparkers/terraform-provider-keycloak/tree/master/custom-user-federation-example).
+An example of this implementation can be found [here](https://github.com/keycloak/terraform-provider-keycloak/tree/master/custom-user-federation-example).
 
 ## Example Usage
 
@@ -27,6 +27,7 @@ resource "keycloak_custom_user_federation" "custom_user_federation" {
   config = {
     dummyString = "foobar"
     dummyBool   = true
+    multivalue  = "value1##value2"
   }
 }
 ```
@@ -39,10 +40,10 @@ resource "keycloak_custom_user_federation" "custom_user_federation" {
 - `enabled` - (Optional) When `false`, this provider will not be used when performing queries for users. Defaults to `true`.
 - `priority` - (Optional) Priority of this provider when looking up users. Lower values are first. Defaults to `0`.
 - `cache_policy` - (Optional) Can be one of `DEFAULT`, `EVICT_DAILY`, `EVICT_WEEKLY`, `MAX_LIFESPAN`, or `NO_CACHE`. Defaults to `DEFAULT`.
-- `parent_id` - (Optional) Must be set to the realms' `internal_id`  when it differs from the realm. This can happen when existing resources are imported into the state.
+- `parent_id` - (Optional) **Deprecated** The internal id of the realm this component is attached to. This is now resolved automatically, so it no longer needs to be set, even when the realm's `internal_id` differs from its name. This attribute will be removed in a future release.
 - `full_sync_period` - (Optional) How frequently Keycloak should sync all users, in seconds. Omit this property to disable periodic full sync.
 - `changed_sync_period` - (Optional) How frequently Keycloak should sync changed users, in seconds. Omit this property to disable periodic changed users sync.
-- `config` - (Optional) The provider configuration handed over to your custom user federation provider. 
+- `config` - (Optional) The provider configuration handed over to your custom user federation provider. To give a setting more than one value, join the values with `##`; each value is stored separately in Keycloak.
 
 ## Import
 

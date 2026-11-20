@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreRsa struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
@@ -18,6 +19,8 @@ type RealmKeystoreRsa struct {
 
 	PrivateKey  string
 	Certificate string
+	ProviderId  string
+	ExtraConfig map[string]interface{}
 }
 
 func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *component {
@@ -42,11 +45,18 @@ func convertFromRealmKeystoreRsaToComponent(realmKey *RealmKeystoreRsa) *compone
 		},
 	}
 
+	// merge extra config
+	if realmKey.ExtraConfig != nil {
+		for k, v := range realmKey.ExtraConfig {
+			componentConfig[k] = []string{fmt.Sprint(v)}
+		}
+	}
+
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
-		ProviderId:   "rsa",
+		ProviderId:   realmKey.ProviderId,
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
 	}
@@ -72,9 +82,10 @@ func convertFromComponentToRealmKeystoreRsa(component *component, realmId string
 	}
 
 	realmKey := &RealmKeystoreRsa{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:      active,
 		Enabled:     enabled,
@@ -82,7 +93,23 @@ func convertFromComponentToRealmKeystoreRsa(component *component, realmId string
 		Algorithm:   component.getConfig("algorithm"),
 		PrivateKey:  component.getConfig("privateKey"),
 		Certificate: component.getConfig("certificate"),
+		ProviderId:  component.ProviderId,
 	}
+
+	// capture extra config (anything not in the known keys)
+	known := map[string]struct{}{
+		"active": {}, "enabled": {}, "priority": {}, "algorithm": {}, "privateKey": {}, "certificate": {},
+	}
+	extra := map[string]interface{}{}
+	for k, vals := range component.Config {
+		if _, ok := known[k]; ok {
+			continue
+		}
+		if len(vals) > 0 {
+			extra[k] = vals[0]
+		}
+	}
+	realmKey.ExtraConfig = extra
 
 	return realmKey, nil
 }

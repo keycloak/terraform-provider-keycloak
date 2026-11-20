@@ -23,14 +23,16 @@ type RealmUserProfileSelector struct {
 type RealmUserProfileValidationConfig map[string]interface{}
 
 type RealmUserProfileAttribute struct {
-	Annotations map[string]interface{}                      `json:"annotations,omitempty"`
-	DisplayName string                                      `json:"displayName,omitempty"`
-	Group       string                                      `json:"group,omitempty"`
-	Name        string                                      `json:"name"`
-	Permissions *RealmUserProfilePermissions                `json:"permissions,omitempty"`
-	Required    *RealmUserProfileRequired                   `json:"required,omitempty"`
-	Selector    *RealmUserProfileSelector                   `json:"selector,omitempty"`
-	Validations map[string]RealmUserProfileValidationConfig `json:"validations,omitempty"`
+	Annotations  map[string]interface{}                      `json:"annotations,omitempty"`
+	DefaultValue string                                      `json:"defaultValue,omitempty"`
+	DisplayName  string                                      `json:"displayName,omitempty"`
+	Group        string                                      `json:"group,omitempty"`
+	Name         string                                      `json:"name"`
+	MultiValued  bool                                        `json:"multivalued,omitempty"`
+	Permissions  *RealmUserProfilePermissions                `json:"permissions,omitempty"`
+	Required     *RealmUserProfileRequired                   `json:"required,omitempty"`
+	Selector     *RealmUserProfileSelector                   `json:"selector,omitempty"`
+	Validations  map[string]RealmUserProfileValidationConfig `json:"validations,omitempty"`
 }
 
 type RealmUserProfileGroup struct {
@@ -41,8 +43,9 @@ type RealmUserProfileGroup struct {
 }
 
 type RealmUserProfile struct {
-	Attributes []*RealmUserProfileAttribute `json:"attributes"`
-	Groups     []*RealmUserProfileGroup     `json:"groups,omitempty"`
+	Attributes               []*RealmUserProfileAttribute `json:"attributes"`
+	Groups                   []*RealmUserProfileGroup     `json:"groups,omitempty"`
+	UnmanagedAttributePolicy *string                      `json:"unmanagedAttributePolicy,omitempty"`
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealmUserProfile(ctx context.Context, realmId string, realmUserProfile *RealmUserProfile) error {

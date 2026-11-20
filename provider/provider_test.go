@@ -3,39 +3,53 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"log"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/keycloak/terraform-provider-keycloak/helper"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-var testAccProviderFactories map[string]func() (*schema.Provider, error)
+var testAccProtoV5ProviderFactories map[string]func() (tfprotov5.ProviderServer, error)
 var testAccProvider *schema.Provider
 var keycloakClient *keycloak.KeycloakClient
 var testAccRealm *keycloak.Realm
 var testAccRealmTwo *keycloak.Realm
 var testAccRealmUserFederation *keycloak.Realm
+var testAccRealmKeystore *keycloak.Realm
+var testAccRealmFGAPv2 *keycloak.Realm
 var testCtx context.Context
-
-var requiredEnvironmentVariables = []string{
-	"KEYCLOAK_CLIENT_ID",
-	"KEYCLOAK_CLIENT_SECRET",
-	"KEYCLOAK_REALM",
-	"KEYCLOAK_URL",
-}
 
 func init() {
 	testCtx = context.Background()
 	userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", schema.Provider{}.TerraformVersion, meta.SDKVersionString())
-	keycloakClient, _ = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), "", "", true, 5, "", false, userAgent, false, map[string]string{
+	var err error
+	// Load environment variables from a json file if it exists
+	// This is useful for running tests locally
+
+	helper.UpdateEnvFromTestEnvIfPresent()
+
+	initialLogin := os.Getenv("KEYCLOAK_ACCESS_TOKEN") == ""
+	keycloakClient, err = keycloak.NewKeycloakClient(testCtx, os.Getenv("KEYCLOAK_URL"), "", os.Getenv("KEYCLOAK_ADMIN_URL"), os.Getenv("KEYCLOAK_CLIENT_ID"), os.Getenv("KEYCLOAK_CLIENT_SECRET"), os.Getenv("KEYCLOAK_REALM"), os.Getenv("KEYCLOAK_USER"), os.Getenv("KEYCLOAK_PASSWORD"), os.Getenv("KEYCLOAK_ACCESS_TOKEN"), "", "", os.Getenv("KEYCLOAK_JWT_TOKEN"), "", initialLogin, 120, os.Getenv("KEYCLOAK_TLS_CA_CERT"), false, os.Getenv("KEYCLOAK_TLS_CLIENT_CERT"), os.Getenv("KEYCLOAK_TLS_CLIENT_KEY"), userAgent, false, map[string]string{
 		"foo": "bar",
-	})
+	}, os.Getenv("KEYCLOAK_VERSION"))
+	if err != nil {
+		panic(err)
+	}
 	testAccProvider = KeycloakProvider(keycloakClient)
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
-		"keycloak": func() (*schema.Provider, error) {
-			return testAccProvider, nil
+	testAccProtoV5ProviderFactories = protoV5ProviderFactories(testAccProvider)
+}
+
+func protoV5ProviderFactories(provider *schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		"keycloak": func() (tfprotov5.ProviderServer, error) {
+			return provider.GRPCProvider(), nil
 		},
 	}
 }
@@ -44,40 +58,84 @@ func TestMain(m *testing.M) {
 	testAccRealm = createTestRealm(testCtx)
 	testAccRealmTwo = createTestRealm(testCtx)
 	testAccRealmUserFederation = createTestRealm(testCtx)
+	testAccRealmFGAPv2 = createFGAPv2TestRealm(testCtx)
+	testAccRealmKeystore = createRealmWithId(testCtx, "tf-acc-keystore", acctest.RandomWithPrefix("tf-acc-ks"))
 
 	code := m.Run()
 
+	// Clean up of tests is not fatal if it fails
 	err := keycloakClient.DeleteRealm(testCtx, testAccRealm.Realm)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Unable to delete realm %s: %s", testAccRealm.Realm, err)
 	}
 
 	err = keycloakClient.DeleteRealm(testCtx, testAccRealmTwo.Realm)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Unable to delete realm %s: %s", testAccRealmTwo.Realm, err)
 	}
 
 	err = keycloakClient.DeleteRealm(testCtx, testAccRealmUserFederation.Realm)
 	if err != nil {
-		os.Exit(1)
+		log.Printf("Unable to delete realm %s: %s", testAccRealmUserFederation.Realm, err)
+	}
+
+	err = keycloakClient.DeleteRealm(testCtx, testAccRealmFGAPv2.Realm)
+	if err != nil {
+		log.Printf("Unable to delete realm %s: %s", testAccRealmFGAPv2.Realm, err)
+	}
+
+	err = keycloakClient.DeleteRealm(testCtx, testAccRealmKeystore.Realm)
+	if err != nil {
+		log.Printf("Unable to delete realm %s: %s", testAccRealmKeystore.Realm, err)
 	}
 
 	os.Exit(code)
 }
 
 func createTestRealm(testCtx context.Context) *keycloak.Realm {
-	name := acctest.RandomWithPrefix("tf-acc")
+	return createRealm(testCtx, acctest.RandomWithPrefix("tf-acc"))
+}
+
+func createRealm(testCtx context.Context, name string) *keycloak.Realm {
+	return createRealmWithId(testCtx, name, name)
+}
+
+func createRealmWithId(testCtx context.Context, name, id string) *keycloak.Realm {
 	r := &keycloak.Realm{
-		Id:      name,
+		Id:      id,
 		Realm:   name,
 		Enabled: true,
 	}
 
-	err := keycloakClient.NewRealm(testCtx, r)
+	var err error
+
+	r.OrganizationsEnabled = true
+
+	for range 3 { // on CI this sometimes fails and keycloak can't be reached
+		err = keycloakClient.NewRealm(testCtx, r)
+		if err != nil {
+			log.Printf("Unable to create new realm: %s - retrying in 5s", err)
+			time.Sleep(5 * time.Second) // 24.0.5 on CI seems to have issues creating a realm when locking the table
+		} else {
+			break
+		}
+	}
 	if err != nil {
-		os.Exit(1)
+		log.Fatalf("Unable to create new realm: %s", err)
 	}
 
+	return r
+}
+
+func createFGAPv2TestRealm(testCtx context.Context) *keycloak.Realm {
+	r := createTestRealm(testCtx)
+	if fgapv2, err := keycloakClient.FGAPv2IsEnabled(testCtx); err == nil && fgapv2 {
+		adminPermissionsEnabled := true
+		r.AdminPermissionsEnabled = &adminPermissionsEnabled
+		if err := keycloakClient.UpdateRealm(testCtx, r); err != nil {
+			log.Fatalf("Unable to enable admin permissions on FGAPv2 test realm %s: %s", r.Realm, err)
+		}
+	}
 	return r
 }
 
@@ -90,9 +148,5 @@ func TestProvider(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	for _, requiredEnvironmentVariable := range requiredEnvironmentVariables {
-		if value := os.Getenv(requiredEnvironmentVariable); value == "" {
-			t.Fatalf("%s must be set before running acceptance tests.", requiredEnvironmentVariable)
-		}
-	}
+	helper.CheckRequiredEnvironmentVariables(t)
 }

@@ -33,7 +33,7 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 
 	if custom.Config != nil {
 		for k, j := range custom.Config {
-			componentConfig[k] = append(componentConfig[k], j[0])
+			componentConfig[k] = j
 		}
 	}
 	componentConfig["cachePolicy"] = append(componentConfig["cachePolicy"], custom.CachePolicy)
@@ -41,16 +41,15 @@ func convertFromCustomUserFederationToComponent(custom *CustomUserFederation) *c
 	componentConfig["priority"] = append(componentConfig["priority"], strconv.Itoa(custom.Priority))
 	componentConfig["fullSyncPeriod"] = append(componentConfig["fullSyncPeriod"], strconv.Itoa(custom.FullSyncPeriod))
 	componentConfig["changedSyncPeriod"] = append(componentConfig["changedSyncPeriod"], strconv.Itoa(custom.ChangedSyncPeriod))
-	parentId := custom.RealmId
-	if custom.ParentId != "" {
-		parentId = custom.ParentId
-	}
+
+	// ParentId is only sent when explicitly set (deprecated parent_id attribute), otherwise Keycloak
+	// defaults to the realm's internal id
 	return &component{
 		Id:           custom.Id,
 		Name:         custom.Name,
 		ProviderId:   custom.ProviderId,
 		ProviderType: userStorageProviderType,
-		ParentId:     parentId,
+		ParentId:     custom.ParentId,
 		Config:       componentConfig,
 	}
 }
@@ -83,9 +82,9 @@ func convertFromComponentToCustomUserFederation(component *component, realmName 
 		"changedSyncPeriod": true,
 	}
 	config := make(map[string][]string)
-	for k := range component.Config {
+	for k, v := range component.Config {
 		if found := configsToIgnore[k]; !found {
-			config[k] = append(config[k], component.getConfig(k))
+			config[k] = v
 		}
 	}
 

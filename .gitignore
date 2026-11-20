@@ -14,16 +14,24 @@ terraform-provider-keycloak_*
 *.out
 
 .idea/
+.vscode/
 .terraform/
 terraform.d/
 .terraform.lock.hcl
 terraform.tfstate*
 
+# local experiments or reproducers
+scratch/
+
 .gradle/
 
 # custom user federation example
+custom-user-federation-example/bin
 custom-user-federation-example/build
 !custom-user-federation-example/build/libs
+
+# custom authz policy example
+custom-authz-policy-example/build
 
 # docs
 site/
@@ -31,4 +39,19 @@ site/
 # releases
 *.zip
 
+# Keycloak access token
+keycloak_access_token
+
 .DS_Store
+
+# Custom test_env overrides
+test_env*.json
+
+# Custom provider_installation mappings
+dev.tfrc
+
+# KCADM config folder
+.keycloak/
+
+# Locally started Keycloak data
+kcdata/

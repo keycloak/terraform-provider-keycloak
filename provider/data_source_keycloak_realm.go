@@ -2,9 +2,10 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakRealm() *schema.Resource {
@@ -34,10 +35,21 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Type:     schema.TypeInt,
 			Computed: true,
 		},
+		"code_reusable": {
+			Type:     schema.TypeBool,
+			Computed: true,
+		},
 	}
 
 	webAuthnSchema := map[string]*schema.Schema{
 		"acceptable_aaguids": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"extra_origins": {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -66,6 +78,12 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Type:        schema.TypeString,
 			Description: "Either Yes or No",
 			Computed:    true,
+			Deprecated:  "Deprecated by Keycloak in favor of discoverable_credential. This attribute is only used when discoverable_credential is left as \"not specified\" and is planned to be removed in a future Keycloak version.",
+		},
+		"discoverable_credential": {
+			Type:        schema.TypeString,
+			Description: "Either required, preferred or discouraged. Replaces and takes precedence over the deprecated require_resident_key attribute. Requires Keycloak 26.7 or higher.",
+			Computed:    true,
 		},
 		"relying_party_entity_name": {
 			Type:     schema.TypeString,
@@ -83,10 +101,20 @@ func dataSourceKeycloakRealm() *schema.Resource {
 			Description: "Keycloak lists ES256, ES384, ES512, RS256, ES384, ES512 at the time of writing",
 			Computed:    true,
 		},
+		"signature_algorithms_ordered": {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "Signature algorithms in preference order.",
+			Computed:    true,
+		},
 		"user_verification_requirement": {
 			Type:        schema.TypeString,
 			Description: "Either required, preferred or discouraged",
 			Computed:    true,
+		},
+		"passwordless_passkeys_enabled": {
+			Type:     schema.TypeBool,
+			Computed: true,
 		},
 	}
 	return &schema.Resource{
@@ -113,6 +141,14 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Optional: true,
 			},
 			"user_managed_access": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"organizations_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"admin_permissions_enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
@@ -214,6 +250,36 @@ func dataSourceKeycloakRealm() *schema.Resource {
 										Type:      schema.TypeString,
 										Computed:  true,
 										Sensitive: true,
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"client_id": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"client_secret": {
+										Type:      schema.TypeString,
+										Computed:  true,
+										Sensitive: true,
+									},
+									"scope": {
+										Type:     schema.TypeString,
+										Computed: true,
 									},
 								},
 							},
@@ -390,6 +456,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
+									"referrer_policy": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
 								},
 							},
 						},
@@ -401,6 +471,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 								Schema: map[string]*schema.Schema{
 									"permanent_lockout": { //Permanent Lockout
 										Type:     schema.TypeBool,
+										Computed: true,
+									},
+									"max_temporary_lockouts": { //Max Temporary Lockouts
+										Type:     schema.TypeInt,
 										Computed: true,
 									},
 									"max_login_failures": { //failureFactor
@@ -470,6 +544,11 @@ func dataSourceKeycloakRealm() *schema.Resource {
 				Description: "Which flow should be used for DockerAuthenticationFlow",
 				Computed:    true,
 			},
+			"first_broker_login_flow": {
+				Type:        schema.TypeString,
+				Description: "Which flow should be used for FirstBrokerLoginFlow",
+				Computed:    true,
+			},
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -528,6 +607,10 @@ func dataSourceKeycloakRealm() *schema.Resource {
 
 func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+	keycloakVersion, err := keycloakClient.Version(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	realmName := data.Get("realm").(string)
 
@@ -536,7 +619,7 @@ func dataSourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	setRealmData(data, realm)
+	setRealmData(data, realm, keycloakVersion)
 
 	return nil
 }

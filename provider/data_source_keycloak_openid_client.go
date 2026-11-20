@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakOpenidClient() *schema.Resource {
@@ -104,6 +105,10 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"require_dpop_bound_tokens": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"access_token_lifespan": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -125,6 +130,10 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Computed: true,
 			},
 			"exclude_session_state_from_auth_response": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"exclude_issuer_from_auth_response": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
@@ -200,6 +209,14 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"standard_token_exchange_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"allow_refresh_token_in_standard_token_exchange": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"backchannel_logout_url": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -234,6 +251,20 @@ func dataSourceKeycloakOpenidClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"oauth2_jwt_authorization_grant_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"oauth2_jwt_authorization_grant_idp": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -244,12 +275,21 @@ func dataSourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resour
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
-	client, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, clientId)
+	getClient := keycloakClient.GetOpenidClientByClientId
+	if clientId == "realm-management" || realmId == "master" && strings.HasSuffix(clientId, "-realm") {
+		getClient = keycloakClient.GetOpenidClientByClientIdSkipSecret
+	}
+	client, err := getClient(ctx, realmId, clientId)
+
 	if err != nil {
 		return handleNotFoundError(ctx, err, data)
 	}
 
 	err = setOpenidClientData(ctx, keycloakClient, data, client)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	data.Set("extra_config", client.Attributes.ExtraConfig)
 
-	return diag.FromErr(err)
+	return nil
 }

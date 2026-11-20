@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakOpenidClientScope() *schema.Resource {
@@ -29,12 +29,25 @@ func dataSourceKeycloakOpenidClientScope() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"display_on_consent_screen": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"include_in_token_scope": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"include_in_openid_provider_metadata": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
 			"gui_order": {
 				Type:     schema.TypeInt,
+				Computed: true,
+			},
+			"extra_config": {
+				Type:     schema.TypeMap,
+				Optional: true,
 				Computed: true,
 			},
 		},

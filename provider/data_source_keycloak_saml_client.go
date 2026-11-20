@@ -2,9 +2,10 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func dataSourceKeycloakSamlClient() *schema.Resource {
@@ -48,6 +49,22 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"encryption_algorithm": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"encryption_key_algorithm": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"encryption_digest_method": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"encryption_mask_generation_function": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"client_signature_required": {
 				Type:     schema.TypeBool,
 				Computed: true,
@@ -57,6 +74,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"force_post_binding": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"consent_required": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
@@ -111,8 +132,9 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Computed: true,
 			},
 			"signing_private_key": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:      schema.TypeString,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"encryption_certificate_sha1": {
 				Type:     schema.TypeString,
@@ -178,6 +200,10 @@ func dataSourceKeycloakSamlClient() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"always_display_in_console": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -197,6 +223,7 @@ func dataSourceKeycloakSamlClientRead(ctx context.Context, data *schema.Resource
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	data.Set("extra_config", client.Attributes.ExtraConfig)
 
 	return nil
 }

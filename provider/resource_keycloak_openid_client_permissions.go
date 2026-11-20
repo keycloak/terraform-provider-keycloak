@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakOpenidClientPermissions() *schema.Resource {
@@ -59,6 +59,10 @@ func clientPermissionsId(realmId, clientId string) string {
 func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
@@ -73,7 +77,7 @@ func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data 
 		return diag.FromErr(err)
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -126,6 +130,11 @@ func resourceKeycloakOpenidClientPermissionsReconcile(ctx context.Context, data 
 
 func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
@@ -142,7 +151,7 @@ func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *sche
 		return nil
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -165,26 +174,26 @@ func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *sche
 		return diag.FromErr(err)
 	}
 
-	if mapRolesScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["configure"]); err == nil && mapRolesScope != nil {
-		data.Set("configure_scope", []interface{}{mapRolesScope})
+	if configureScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["configure"]); err == nil && configureScope != nil {
+		data.Set("configure_scope", []interface{}{configureScope})
 	} else if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if manageGroupMembershipScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles"]); err == nil && manageGroupMembershipScope != nil {
-		data.Set("map_roles_scope", []interface{}{manageGroupMembershipScope})
+	if mapRolesScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles"]); err == nil && mapRolesScope != nil {
+		data.Set("map_roles_scope", []interface{}{mapRolesScope})
 	} else if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if impersonateScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles-client-scope"]); err == nil && impersonateScope != nil {
-		data.Set("map_roles_client_scope_scope", []interface{}{impersonateScope})
+	if mapRolesClientScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles-client-scope"]); err == nil && mapRolesClientScope != nil {
+		data.Set("map_roles_client_scope_scope", []interface{}{mapRolesClientScope})
 	} else if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if userImpersonatedScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles-composite"]); err == nil && userImpersonatedScope != nil {
-		data.Set("map_roles_composite_scope", []interface{}{userImpersonatedScope})
+	if mapRolesCompositeScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, openidClientPermissions.ScopePermissions["map-roles-composite"]); err == nil && mapRolesCompositeScope != nil {
+		data.Set("map_roles_composite_scope", []interface{}{mapRolesCompositeScope})
 	} else if err != nil {
 		return diag.FromErr(err)
 	}
@@ -201,13 +210,23 @@ func resourceKeycloakOpenidClientPermissionsRead(ctx context.Context, data *sche
 func resourceKeycloakOpenidClientPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	clientId := data.Get("client_id").(string)
 
 	return diag.FromErr(keycloakClient.DisableOpenidClientPermissions(ctx, realmId, clientId))
 }
 
-func resourceKeycloakOpenidClientPermissionsImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+func resourceKeycloakOpenidClientPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_openid_client_permissions", "keycloak_openid_client_admin_permissions"); err != nil {
+		return nil, err
+	}
+
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("Invalid import. Supported import formats: {{realmId}}/{{openidClientId}}")

@@ -1,11 +1,15 @@
 package provider
 
 import (
+	"fmt"
+
+	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var nameIdPolicyFormats = map[string]string{
@@ -21,7 +25,9 @@ var nameIdPolicyFormats = map[string]string{
 var signatureAlgorithms = []string{
 	"RSA_SHA1",
 	"RSA_SHA256",
+	"RSA_SHA256_MGF1",
 	"RSA_SHA512",
+	"RSA_SHA512_MGF1",
 	"DSA_SHA1",
 }
 
@@ -128,6 +134,11 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "Require Force Authn.",
 		},
+		"login_hint": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Login Hint.",
+		},
 		"want_assertions_signed": {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -137,6 +148,12 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Description: "Want Assertions Encrypted.",
+		},
+		"want_authn_requests_signed": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Want Authn Requests Signed.",
 		},
 		"principal_type": {
 			Type:         schema.TypeString,
@@ -178,8 +195,8 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 	return samlResource
 }
 
-func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.IdentityProvider, error) {
-	rec, defaultConfig := getIdentityProviderFromData(data)
+func getSamlIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
+	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
 	rec.ProviderId = data.Get("provider_id").(string)
 
 	var authnContextClassRefs types.KeycloakSliceQuoted
@@ -194,7 +211,6 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 
 	samlIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ValidateSignature:               types.KeycloakBoolQuoted(data.Get("validate_signature").(bool)),
-		HideOnLoginPage:                 types.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 		BackchannelSupported:            types.KeycloakBoolQuoted(data.Get("backchannel_supported").(bool)),
 		NameIDPolicyFormat:              nameIdPolicyFormats[data.Get("name_id_policy_format").(string)],
 		EntityId:                        data.Get("entity_id").(string),
@@ -209,6 +225,8 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		ForceAuthn:                      types.KeycloakBoolQuoted(data.Get("force_authn").(bool)),
 		WantAssertionsSigned:            types.KeycloakBoolQuoted(data.Get("want_assertions_signed").(bool)),
 		WantAssertionsEncrypted:         types.KeycloakBoolQuoted(data.Get("want_assertions_encrypted").(bool)),
+		WantAuthnRequestsSigned:         types.KeycloakBoolQuoted(data.Get("want_authn_requests_signed").(bool)),
+		LoginHint:                       data.Get("login_hint").(string),
 		PrincipalType:                   data.Get("principal_type").(string),
 		PrincipalAttribute:              data.Get("principal_attribute").(string),
 		AuthnContextClassRefs:           authnContextClassRefs,
@@ -216,8 +234,16 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		AuthnContextDeclRefs:            authnContextDeclRefs,
 	}
 
-	if _, ok := data.GetOk("signature_algorithm"); ok {
-		samlIdentityProviderConfig.WantAuthnRequestsSigned = true
+	rawWantAuthnRequestsSigned, diags := data.GetRawConfigAt(cty.GetAttrPath("want_authn_requests_signed"))
+	if diags.HasError() {
+		return nil, fmt.Errorf("Error reading want_auth_requests_signed: %s", diags[0].Summary)
+	}
+	if rawWantAuthnRequestsSigned.IsNull() {
+		if _, ok := data.GetOk("signature_algorithm"); ok {
+			samlIdentityProviderConfig.WantAuthnRequestsSigned = true
+		} else {
+			samlIdentityProviderConfig.WantAuthnRequestsSigned = false
+		}
 	}
 
 	if err := mergo.Merge(samlIdentityProviderConfig, defaultConfig); err != nil {
@@ -229,8 +255,8 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 	return rec, nil
 }
 
-func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider) error {
-	setIdentityProviderData(data, identityProvider)
+func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, keycloakVersion *version.Version) error {
+	setIdentityProviderData(data, identityProvider, keycloakVersion)
 
 	var nameIDPolicyFormat string
 	for k, v := range nameIdPolicyFormats {
@@ -242,7 +268,6 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 
 	data.Set("backchannel_supported", identityProvider.Config.BackchannelSupported)
 	data.Set("validate_signature", identityProvider.Config.ValidateSignature)
-	data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
 	data.Set("name_id_policy_format", nameIDPolicyFormat)
 	data.Set("entity_id", identityProvider.Config.EntityId)
 	data.Set("single_logout_service_url", identityProvider.Config.SingleLogoutServiceUrl)
@@ -256,6 +281,8 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("force_authn", identityProvider.Config.ForceAuthn)
 	data.Set("want_assertions_signed", identityProvider.Config.WantAssertionsSigned)
 	data.Set("want_assertions_encrypted", identityProvider.Config.WantAssertionsEncrypted)
+	data.Set("want_authn_requests_signed", identityProvider.Config.WantAuthnRequestsSigned)
+	data.Set("login_hint", identityProvider.Config.LoginHint)
 	data.Set("principal_type", identityProvider.Config.PrincipalType)
 	data.Set("principal_attribute", identityProvider.Config.PrincipalAttribute)
 	data.Set("authn_context_class_refs", identityProvider.Config.AuthnContextClassRefs)

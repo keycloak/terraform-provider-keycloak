@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/imdario/mergo"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak/types"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 var (
@@ -22,7 +23,6 @@ var (
 	keycloakOpenidClientAuthorizationPolicyEnforcementMode   = []string{"ENFORCING", "PERMISSIVE", "DISABLED"}
 	keycloakOpenidClientResourcePermissionDecisionStrategies = []string{"UNANIMOUS", "AFFIRMATIVE", "CONSENSUS"}
 	keycloakOpenidClientPkceCodeChallengeMethod              = []string{"", "plain", "S256"}
-	keycloakOpenidClientAuthenticatorTypes                   = []string{"client-secret", "client-jwt", "client-x509", "client-secret-jwt"}
 )
 
 func resourceKeycloakOpenidClient() *schema.Resource {
@@ -35,279 +35,362 @@ func resourceKeycloakOpenidClient() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOpenidClientImport,
 		},
-		Schema: map[string]*schema.Schema{
-			"client_id": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"realm_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"access_type": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.StringInSlice(keycloakOpenidClientAccessTypes, false),
-			},
-			"client_secret": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Computed:  true,
-				Sensitive: true,
-			},
-			"client_authenticator_type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice(keycloakOpenidClientAuthenticatorTypes, false),
-				Default:      "client-secret",
-			},
-			"standard_flow_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"implicit_flow_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"direct_access_grants_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"service_accounts_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"frontchannel_logout_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"valid_redirect_uris": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-				Optional: true,
-				Computed: true,
-			},
-			"valid_post_logout_redirect_uris": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-				Optional: true,
-				Computed: true,
-			},
-			"web_origins": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-				Optional: true,
-				Computed: true,
-			},
-			"root_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"admin_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"base_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"service_account_user_id": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"pkce_code_challenge_method": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice(keycloakOpenidClientPkceCodeChallengeMethod, false),
-			},
-			"access_token_lifespan": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"client_offline_session_idle_timeout": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"client_offline_session_max_lifespan": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"client_session_idle_timeout": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"client_session_max_lifespan": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"exclude_session_state_from_auth_response": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"resource_server_id": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"authorization": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"policy_enforcement_mode": {
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringInSlice(keycloakOpenidClientAuthorizationPolicyEnforcementMode, false),
-						},
-						"decision_strategy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							ValidateFunc: validation.StringInSlice(keycloakOpenidClientResourcePermissionDecisionStrategies, false),
-							Default:      "UNANIMOUS",
-						},
-						"allow_remote_resource_management": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-						},
-						"keep_defaults": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-						},
-					},
-				},
-			},
-			"full_scope_allowed": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"consent_required": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"display_on_consent_screen": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-			},
-			"consent_screen_text": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"authentication_flow_binding_overrides": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"browser_id": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"direct_grant_id": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"login_theme": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"use_refresh_tokens": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"use_refresh_tokens_client_credentials": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"frontchannel_logout_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"backchannel_logout_url": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"backchannel_logout_session_required": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"backchannel_logout_revoke_offline_sessions": {
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			"extra_config": {
-				Type:             schema.TypeMap,
-				Optional:         true,
-				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.OpenidClientAttributes{}).Elem()),
-			},
-			"oauth2_device_authorization_grant_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"oauth2_device_code_lifespan": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"oauth2_device_polling_interval": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"import": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-				ForceNew: true,
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKeycloakOpenidClientV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKeycloakOpenidClientStateUpgradeV0,
 			},
 		},
-		CustomizeDiff: customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+		Schema:        resourceKeycloakOpenidClientSchema(),
+		CustomizeDiff: resourceKeycloakOpenidClientDiff(),
+	}
+}
+
+func resourceKeycloakOpenidClientSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"client_id": {
+			Type:     schema.TypeString,
+			Required: true,
+		},
+		"realm_id": {
+			Type:     schema.TypeString,
+			Required: true,
+			ForceNew: true,
+		},
+		"name": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("name"),
+		},
+		"enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
+		},
+		"description": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
+		},
+		"access_type": {
+			Type:         schema.TypeString,
+			Required:     true,
+			ValidateFunc: validation.StringInSlice(keycloakOpenidClientAccessTypes, false),
+		},
+		"client_secret": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Computed:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{"client_secret_wo", "client_secret_wo_version", "client_secret_regenerate_when_changed"},
+		},
+		"client_secret_wo": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+			RequiredWith:  []string{"client_secret_wo_version"},
+			Description:   "Client Secret as write-only argument",
+		},
+		"client_secret_wo_version": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+			RequiredWith:  []string{"client_secret_wo"},
+			Description:   "Version of the Client secret write-only argument",
+		},
+		"client_secret_regenerate_when_changed": {
+			Type:          schema.TypeMap,
+			Description:   "Arbitrary map of values that, when changed, will trigger rotation of the secret",
+			Optional:      true,
+			ConflictsWith: []string{"client_secret", "client_secret_wo", "client_secret_wo_version"},
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"client_authenticator_type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			// No validation is performed since Keycloak plugins can register custom client authenticators
+			Default: "client-secret",
+		},
+		"standard_flow_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"implicit_flow_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"direct_access_grants_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"service_accounts_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"frontchannel_logout_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"valid_redirect_uris": {
+			Type:     schema.TypeSet,
+			Elem:     &schema.Schema{Type: schema.TypeString},
+			Set:      schema.HashString,
+			Optional: true,
+			Computed: true,
+		},
+		"valid_post_logout_redirect_uris": {
+			Type:     schema.TypeSet,
+			Elem:     &schema.Schema{Type: schema.TypeString},
+			Set:      schema.HashString,
+			Optional: true,
+			Computed: true,
+		},
+		"web_origins": {
+			Type:     schema.TypeSet,
+			Elem:     &schema.Schema{Type: schema.TypeString},
+			Set:      schema.HashString,
+			Optional: true,
+			Computed: true,
+		},
+		"root_url": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("root_url"),
+		},
+		"admin_url": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("admin_url"),
+		},
+		"base_url": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("base_url"),
+		},
+		"service_account_user_id": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"pkce_code_challenge_method": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ValidateFunc: validation.StringInSlice(keycloakOpenidClientPkceCodeChallengeMethod, false),
+		},
+		"require_dpop_bound_tokens": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"access_token_lifespan": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_offline_session_idle_timeout": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_offline_session_max_lifespan": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_session_idle_timeout": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_session_max_lifespan": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"exclude_session_state_from_auth_response": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"exclude_issuer_from_auth_response": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"resource_server_id": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"authorization": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			MaxItems: 1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"policy_enforcement_mode": {
+						Type:         schema.TypeString,
+						Required:     true,
+						ValidateFunc: validation.StringInSlice(keycloakOpenidClientAuthorizationPolicyEnforcementMode, false),
+					},
+					"decision_strategy": {
+						Type:         schema.TypeString,
+						Optional:     true,
+						ValidateFunc: validation.StringInSlice(keycloakOpenidClientResourcePermissionDecisionStrategies, false),
+						Default:      "UNANIMOUS",
+					},
+					"allow_remote_resource_management": {
+						Type:     schema.TypeBool,
+						Optional: true,
+						Default:  false,
+					},
+					"keep_defaults": {
+						Type:     schema.TypeBool,
+						Optional: true,
+						Default:  false,
+					},
+				},
+			},
+		},
+		"full_scope_allowed": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
+		},
+		"consent_required": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"display_on_consent_screen": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
+		"consent_screen_text": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("consent_screen_text"),
+		},
+		"authentication_flow_binding_overrides": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			MaxItems: 1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"browser_id": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"direct_grant_id": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
+		},
+		"login_theme": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("login_theme"),
+		},
+		"use_refresh_tokens": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
+		},
+		"use_refresh_tokens_client_credentials": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+		"standard_token_exchange_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+		"allow_refresh_token_in_standard_token_exchange": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"frontchannel_logout_url": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("frontchannel_logout_url"),
+		},
+		"backchannel_logout_url": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			DiffSuppressFunc: suppressDiffWhenNotInConfig("backchannel_logout_url"),
+		},
+		"backchannel_logout_session_required": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
+		},
+		"backchannel_logout_revoke_offline_sessions": {
+			Type:     schema.TypeBool,
+			Optional: true,
+		},
+		"extra_config": {
+			Type:             schema.TypeMap,
+			Optional:         true,
+			ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.OpenidClientAttributes{}).Elem()),
+		},
+		"oauth2_device_authorization_grant_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+		"oauth2_device_code_lifespan": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"oauth2_device_polling_interval": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"oauth2_jwt_authorization_grant_enabled": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+		"oauth2_jwt_authorization_grant_idp": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"always_display_in_console": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+		"import": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+			ForceNew: true,
+		},
+	}
+}
+
+func resourceKeycloakOpenidClientDiff() schema.CustomizeDiffFunc {
+	return customdiff.All(
+		customdiff.ComputedIf("service_account_user_id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			return d.HasChange("service_accounts_enabled")
 		}),
-	}
+		customdiff.ComputedIf("client_secret", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+			return d.HasChange("client_secret_regenerate_when_changed")
+		}),
+	)
 }
 
 func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient, error) {
@@ -319,8 +402,14 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 	validRedirectUrisData, validRedirectUrisOk := data.GetOk("valid_redirect_uris")
 	webOriginsData, webOriginsOk := data.GetOk("web_origins")
 	validPostLogoutRedirectUrisData, validPostLogoutRedirectUrisOk := data.GetOk("valid_post_logout_redirect_uris")
-
-	rootUrlString := rootUrlData.(string)
+	description, descriptionOk := data.GetOkExists("description")
+	name, nameOk := data.GetOkExists("name")
+	adminUrl, adminUrlOk := data.GetOkExists("admin_url")
+	baseUrl, baseUrlOk := data.GetOkExists("base_url")
+	loginTheme, loginThemeOk := data.GetOkExists("login_theme")
+	frontchannelLogoutUrl, frontchannelLogoutUrlOk := data.GetOkExists("frontchannel_logout_url")
+	backchannelLogoutUrl, backchannelLogoutUrlOk := data.GetOkExists("backchannel_logout_url")
+	consentScreenText, consentScreenTextOk := data.GetOkExists("consent_screen_text")
 
 	if validRedirectUrisOk {
 		for _, validRedirectUri := range validRedirectUrisData.(*schema.Set).List() {
@@ -344,9 +433,7 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		Id:                        data.Id(),
 		ClientId:                  data.Get("client_id").(string),
 		RealmId:                   data.Get("realm_id").(string),
-		Name:                      data.Get("name").(string),
 		Enabled:                   data.Get("enabled").(bool),
-		Description:               data.Get("description").(string),
 		ClientSecret:              data.Get("client_secret").(string),
 		ClientAuthenticatorType:   data.Get("client_authenticator_type").(string),
 		StandardFlowEnabled:       data.Get("standard_flow_enabled").(bool),
@@ -356,37 +443,74 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		FrontChannelLogoutEnabled: data.Get("frontchannel_logout_enabled").(bool),
 		FullScopeAllowed:          data.Get("full_scope_allowed").(bool),
 		Attributes: keycloak.OpenidClientAttributes{
-			PkceCodeChallengeMethod:               data.Get("pkce_code_challenge_method").(string),
-			ExcludeSessionStateFromAuthResponse:   types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
-			AccessTokenLifespan:                   data.Get("access_token_lifespan").(string),
-			LoginTheme:                            data.Get("login_theme").(string),
-			ClientOfflineSessionIdleTimeout:       data.Get("client_offline_session_idle_timeout").(string),
-			ClientOfflineSessionMaxLifespan:       data.Get("client_offline_session_max_lifespan").(string),
-			ClientSessionIdleTimeout:              data.Get("client_session_idle_timeout").(string),
-			ClientSessionMaxLifespan:              data.Get("client_session_max_lifespan").(string),
-			UseRefreshTokens:                      types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool)),
-			UseRefreshTokensClientCredentials:     types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
-			FrontchannelLogoutUrl:                 data.Get("frontchannel_logout_url").(string),
-			BackchannelLogoutUrl:                  data.Get("backchannel_logout_url").(string),
-			BackchannelLogoutRevokeOfflineTokens:  types.KeycloakBoolQuoted(data.Get("backchannel_logout_revoke_offline_sessions").(bool)),
-			BackchannelLogoutSessionRequired:      types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool)),
-			ExtraConfig:                           getExtraConfigFromData(data),
-			Oauth2DeviceAuthorizationGrantEnabled: types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
-			Oauth2DeviceCodeLifespan:              data.Get("oauth2_device_code_lifespan").(string),
-			Oauth2DevicePollingInterval:           data.Get("oauth2_device_polling_interval").(string),
-			ConsentScreenText:                     data.Get("consent_screen_text").(string),
-			DisplayOnConsentScreen:                types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
-			PostLogoutRedirectUris:                types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
+			PkceCodeChallengeMethod:                  data.Get("pkce_code_challenge_method").(string),
+			RequireDPoPBoundTokens:                   types.KeycloakBoolQuoted(data.Get("require_dpop_bound_tokens").(bool)),
+			ExcludeSessionStateFromAuthResponse:      types.KeycloakBoolQuoted(data.Get("exclude_session_state_from_auth_response").(bool)),
+			ExcludeIssuerFromAuthResponse:            types.KeycloakBoolQuoted(data.Get("exclude_issuer_from_auth_response").(bool)),
+			AccessTokenLifespan:                      data.Get("access_token_lifespan").(string),
+			ClientOfflineSessionIdleTimeout:          data.Get("client_offline_session_idle_timeout").(string),
+			ClientOfflineSessionMaxLifespan:          data.Get("client_offline_session_max_lifespan").(string),
+			ClientSessionIdleTimeout:                 data.Get("client_session_idle_timeout").(string),
+			ClientSessionMaxLifespan:                 data.Get("client_session_max_lifespan").(string),
+			UseRefreshTokens:                         types.KeycloakBoolQuoted(data.Get("use_refresh_tokens").(bool)),
+			UseRefreshTokensClientCredentials:        types.KeycloakBoolQuoted(data.Get("use_refresh_tokens_client_credentials").(bool)),
+			StandardTokenExchangeEnabled:             types.KeycloakBoolQuoted(data.Get("standard_token_exchange_enabled").(bool)),
+			AllowRefreshTokenInStandardTokenExchange: data.Get("allow_refresh_token_in_standard_token_exchange").(string),
+			BackchannelLogoutRevokeOfflineTokens:     types.KeycloakBoolQuoted(data.Get("backchannel_logout_revoke_offline_sessions").(bool)),
+			BackchannelLogoutSessionRequired:         types.KeycloakBoolQuoted(data.Get("backchannel_logout_session_required").(bool)),
+			ExtraConfig:                              getExtraConfigFromData(data),
+			Oauth2DeviceAuthorizationGrantEnabled:    types.KeycloakBoolQuoted(data.Get("oauth2_device_authorization_grant_enabled").(bool)),
+			Oauth2DeviceCodeLifespan:                 data.Get("oauth2_device_code_lifespan").(string),
+			Oauth2DevicePollingInterval:              data.Get("oauth2_device_polling_interval").(string),
+			Oauth2JwtAuthorizationGrantEnabled:       types.KeycloakBoolQuoted(data.Get("oauth2_jwt_authorization_grant_enabled").(bool)),
+			Oauth2JwtAuthorizationGrantIdp:           data.Get("oauth2_jwt_authorization_grant_idp").(string),
+			DisplayOnConsentScreen:                   types.KeycloakBoolQuoted(data.Get("display_on_consent_screen").(bool)),
+			PostLogoutRedirectUris:                   types.KeycloakSliceHashDelimited(validPostLogoutRedirectUris),
 		},
-		ValidRedirectUris: validRedirectUris,
-		WebOrigins:        webOrigins,
-		AdminUrl:          data.Get("admin_url").(string),
-		BaseUrl:           data.Get("base_url").(string),
-		ConsentRequired:   data.Get("consent_required").(bool),
+		ValidRedirectUris:      validRedirectUris,
+		WebOrigins:             webOrigins,
+		ConsentRequired:        data.Get("consent_required").(bool),
+		AlwaysDisplayInConsole: data.Get("always_display_in_console").(bool),
 	}
 
+	// preserve empty strings for clearable string fields: only set when explicitly in config
+	if nameOk {
+		openidClient.Name = name.(string)
+	}
 	if rootUrlOk {
-		openidClient.RootUrl = &rootUrlString
+		rootUrl := rootUrlData.(string)
+		openidClient.RootUrl = &rootUrl
+	}
+	if adminUrlOk {
+		openidClient.AdminUrl = adminUrl.(string)
+	}
+	if baseUrlOk {
+		openidClient.BaseUrl = baseUrl.(string)
+	}
+	if loginThemeOk {
+		openidClient.Attributes.LoginTheme = loginTheme.(string)
+	}
+	if frontchannelLogoutUrlOk {
+		openidClient.Attributes.FrontchannelLogoutUrl = frontchannelLogoutUrl.(string)
+	}
+	if backchannelLogoutUrlOk {
+		openidClient.Attributes.BackchannelLogoutUrl = backchannelLogoutUrl.(string)
+	}
+	if consentScreenTextOk {
+		openidClient.Attributes.ConsentScreenText = consentScreenText.(string)
+	}
+
+	if data.Get("client_secret_wo_version").(string) != "" && data.HasChange("client_secret_wo_version") {
+		clientSecretWriteOnly, clientSecretWriteOnlyDiags := data.GetRawConfigAt(cty.GetAttrPath("client_secret_wo"))
+		if clientSecretWriteOnlyDiags.HasError() {
+			return nil, errors.New("error reading 'client_secret_wo' argument")
+		}
+
+		openidClient.ClientSecret = clientSecretWriteOnly.AsString()
+	} else if data.Get("client_secret_wo_version").(string) != "" {
+		// write-only mode, version unchanged: discard any stale client_secret from state
+		// so it is not sent to Keycloak and does not overwrite the existing secret
+		openidClient.ClientSecret = ""
 	}
 
 	if !openidClient.ImplicitFlowEnabled && !openidClient.StandardFlowEnabled {
@@ -431,6 +555,11 @@ func getOpenidClientFromData(data *schema.ResourceData) (*keycloak.OpenidClient,
 		}
 	}
 
+	// description, preserve empty string for update
+	if descriptionOk {
+		openidClient.Description = description.(string) // will be "" if user set empty string
+	}
+
 	return openidClient, nil
 }
 
@@ -449,7 +578,6 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("name", client.Name)
 	data.Set("enabled", client.Enabled)
 	data.Set("description", client.Description)
-	data.Set("client_secret", client.ClientSecret)
 	data.Set("client_authenticator_type", client.ClientAuthenticatorType)
 	data.Set("standard_flow_enabled", client.StandardFlowEnabled)
 	data.Set("implicit_flow_enabled", client.ImplicitFlowEnabled)
@@ -464,14 +592,21 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 	data.Set("root_url", &client.RootUrl)
 	data.Set("full_scope_allowed", client.FullScopeAllowed)
 	data.Set("consent_required", client.ConsentRequired)
+	data.Set("always_display_in_console", client.AlwaysDisplayInConsole)
 
+	data.Set("pkce_code_challenge_method", client.Attributes.PkceCodeChallengeMethod)
+	data.Set("require_dpop_bound_tokens", client.Attributes.RequireDPoPBoundTokens)
 	data.Set("access_token_lifespan", client.Attributes.AccessTokenLifespan)
 	data.Set("login_theme", client.Attributes.LoginTheme)
 	data.Set("use_refresh_tokens", client.Attributes.UseRefreshTokens)
 	data.Set("use_refresh_tokens_client_credentials", client.Attributes.UseRefreshTokensClientCredentials)
+	data.Set("standard_token_exchange_enabled", client.Attributes.StandardTokenExchangeEnabled)
+	data.Set("allow_refresh_token_in_standard_token_exchange", client.Attributes.AllowRefreshTokenInStandardTokenExchange)
 	data.Set("oauth2_device_authorization_grant_enabled", client.Attributes.Oauth2DeviceAuthorizationGrantEnabled)
 	data.Set("oauth2_device_code_lifespan", client.Attributes.Oauth2DeviceCodeLifespan)
 	data.Set("oauth2_device_polling_interval", client.Attributes.Oauth2DevicePollingInterval)
+	data.Set("oauth2_jwt_authorization_grant_enabled", client.Attributes.Oauth2JwtAuthorizationGrantEnabled)
+	data.Set("oauth2_jwt_authorization_grant_idp", client.Attributes.Oauth2JwtAuthorizationGrantIdp)
 	data.Set("client_offline_session_idle_timeout", client.Attributes.ClientOfflineSessionIdleTimeout)
 	data.Set("client_offline_session_max_lifespan", client.Attributes.ClientOfflineSessionMaxLifespan)
 	data.Set("client_session_idle_timeout", client.Attributes.ClientSessionIdleTimeout)
@@ -486,6 +621,23 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 
 	if client.AuthorizationServicesEnabled {
 		data.Set("resource_server_id", client.Id)
+
+		if client.AuthorizationSettings != nil {
+			authorizationSettings := make(map[string]interface{})
+			authorizationSettings["policy_enforcement_mode"] = client.AuthorizationSettings.PolicyEnforcementMode
+			authorizationSettings["decision_strategy"] = client.AuthorizationSettings.DecisionStrategy
+			authorizationSettings["allow_remote_resource_management"] = client.AuthorizationSettings.AllowRemoteResourceManagement
+			// keep_defaults is not returned by API (json:"-"), preserve config value or default to false
+			keepDefaults := false
+			if v, ok := data.GetOk("authorization"); ok {
+				existingAuth := v.(*schema.Set).List()
+				if len(existingAuth) > 0 {
+					keepDefaults = existingAuth[0].(map[string]interface{})["keep_defaults"].(bool)
+				}
+			}
+			authorizationSettings["keep_defaults"] = keepDefaults
+			data.Set("authorization", []interface{}{authorizationSettings})
+		}
 	}
 
 	if client.ServiceAccountsEnabled {
@@ -494,7 +646,15 @@ func setOpenidClientData(ctx context.Context, keycloakClient *keycloak.KeycloakC
 		data.Set("service_account_user_id", "")
 	}
 
-	// access type
+	if v, ok := data.GetOk("client_secret_wo_version"); ok && v != nil {
+		data.Set("client_secret_wo_version", v.(string))
+	} else if !client.ClientSecretUnreadable {
+		data.Set("client_secret", client.ClientSecret)
+	}
+	// An unreadable secret (a read-only caller on Keycloak 26.8+) keeps the
+	// value already in state rather than reading as a change to "".
+
+	// access typess
 	if client.PublicClient {
 		data.Set("access_type", "PUBLIC")
 	} else if client.BearerOnly {
@@ -573,6 +733,10 @@ func resourceKeycloakOpenidClientRead(ctx context.Context, data *schema.Resource
 		return diag.FromErr(err)
 	}
 
+	if _, ok := data.GetOk("import"); !ok {
+		data.Set("import", false)
+	}
+
 	return nil
 }
 
@@ -585,6 +749,11 @@ func resourceKeycloakOpenidClientUpdate(ctx context.Context, data *schema.Resour
 	}
 
 	err = keycloakClient.ValidateOpenidClient(ctx, client)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = evaluateSecretRegeneration(ctx, keycloakClient, data, client)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -637,4 +806,48 @@ func resourceKeycloakOpenidClientImport(ctx context.Context, d *schema.ResourceD
 	}
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func evaluateSecretRegeneration(ctx context.Context, keycloakClient *keycloak.KeycloakClient, d *schema.ResourceData, client *keycloak.OpenidClient) error {
+
+	if d.HasChange("client_secret_regenerate_when_changed") {
+		secret, err := keycloakClient.RegenerateOpenIdClientSecret(ctx, client)
+		if err != nil {
+			return err
+		}
+
+		client.ClientSecret = secret.Value
+		d.Set("client_secret", secret.Value)
+	}
+
+	return nil
+}
+
+// resourceKeycloakOpenidClientV0 returns the v0 schema, where client_secret_wo_version was TypeInt.
+func resourceKeycloakOpenidClientV0() *schema.Resource {
+	s := resourceKeycloakOpenidClientSchema()
+	s["client_secret_wo_version"] = &schema.Schema{
+		Type:          schema.TypeInt,
+		Optional:      true,
+		ConflictsWith: []string{"client_secret", "client_secret_regenerate_when_changed"},
+		RequiredWith:  []string{"client_secret_wo"},
+		Description:   "Version of the Client secret write-only argument",
+	}
+	return &schema.Resource{Schema: s}
+}
+
+// resourceKeycloakOpenidClientStateUpgradeV0 migrates client_secret_wo_version from int to string.
+func resourceKeycloakOpenidClientStateUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	if rawState == nil {
+		return nil, fmt.Errorf("cannot migrate nil state")
+	}
+	if v, ok := rawState["client_secret_wo_version"]; ok {
+		switch val := v.(type) {
+		case int:
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", val)
+		case float64: // JSON-decoded state uses float64 for numbers
+			rawState["client_secret_wo_version"] = fmt.Sprintf("%d", int(val))
+		}
+	}
+	return rawState, nil
 }

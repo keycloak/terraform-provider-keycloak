@@ -65,7 +65,7 @@ resource "keycloak_ldap_group_mapper" "ldap_group_mapper" {
 - `membership_ldap_attribute` - (Required) The name of the LDAP attribute that is used for membership mappings.
 - `membership_attribute_type` - (Optional) Can be one of `DN` or `UID`. Defaults to `DN`.
 - `membership_user_ldap_attribute` - (Required) The name of the LDAP attribute on a user that is used for membership mappings.
-- `groups_ldap_filter` - (Optional) When specified, adds an additional custom filter to be used when querying for groups. Must start with `(` and end with `)`.
+- `groups_ldap_filter` - (Optional) When specified, adds a custom filter to be used when querying for groups. Must start with `(` and end with `)`.
 - `mode` - (Optional) Can be one of `READ_ONLY`, `LDAP_ONLY` or `IMPORT`. Defaults to `READ_ONLY`.
 - `user_roles_retrieve_strategy` - (Optional) Can be one of `LOAD_GROUPS_BY_MEMBER_ATTRIBUTE`, `GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE`, or `LOAD_GROUPS_BY_MEMBER_ATTRIBUTE_RECURSIVELY`. Defaults to `LOAD_GROUPS_BY_MEMBER_ATTRIBUTE`.
 - `memberof_ldap_attribute` - (Optional) Specifies the name of the LDAP attribute on the LDAP user that contains the groups the user is a member of. Defaults to `memberOf`.

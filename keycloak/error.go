@@ -1,8 +1,9 @@
 package keycloak
 
 import (
-	"github.com/hashicorp/errwrap"
 	"net/http"
+
+	"github.com/hashicorp/errwrap"
 )
 
 type ApiError struct {
@@ -12,6 +13,13 @@ type ApiError struct {
 
 func (e *ApiError) Error() string {
 	return e.Message
+}
+
+// ErrorIs403 is a refusal: the caller may not do or see this.
+func ErrorIs403(err error) bool {
+	keycloakError, ok := errwrap.GetType(err, &ApiError{}).(*ApiError)
+
+	return ok && keycloakError != nil && keycloakError.Code == http.StatusForbidden
 }
 
 func ErrorIs404(err error) bool {
@@ -24,4 +32,10 @@ func ErrorIs409(err error) bool {
 	keycloakError, ok := errwrap.GetType(err, &ApiError{}).(*ApiError)
 
 	return ok && keycloakError != nil && keycloakError.Code == http.StatusConflict
+}
+
+func ErrorIs5xx(err error) bool {
+	keycloakError, ok := errwrap.GetType(err, &ApiError{}).(*ApiError)
+
+	return ok && keycloakError != nil && keycloakError.Code >= http.StatusInternalServerError && keycloakError.Code < 600
 }

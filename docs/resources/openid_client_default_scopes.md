@@ -4,6 +4,8 @@ page_title: "keycloak_openid_client_default_scopes Resource"
 
 # keycloak\_openid\_client\_default\_scopes Resource
 
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope_assignments` with `default_scopes` and `optional_scopes` instead.
+
 Allows for managing a Keycloak client's default client scopes. A default scope that is attached to a client using the
 OpenID Connect protocol will automatically use the protocol mappers defined within that scope to build claims for this
 client regardless of the provided OAuth2.0 `scope` parameter.
@@ -60,5 +62,10 @@ resource "keycloak_openid_client_default_scopes" "client_default_scopes" {
 
 ## Import
 
-This resource does not support import. Instead of importing, feel free to create this resource
-as if it did not already exist on the server.
+This resource can be imported using the format `{{realmId}}/{{clientId}}`, where `clientId` is the unique ID that Keycloak assigns to the client upon creation.
+
+Example:
+
+```bash
+$ terraform import keycloak_openid_client_default_scopes.example my-realm/d7bc2e7f-8ffd-4c56-a7d7-59cbaf3a7d13
+```

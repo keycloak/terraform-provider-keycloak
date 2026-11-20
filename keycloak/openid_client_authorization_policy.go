@@ -20,7 +20,7 @@ type OpenidClientAuthorizationPolicy struct {
 }
 
 func (keycloakClient *KeycloakClient) GetClientAuthorizationPolicyByName(ctx context.Context, realmId, resourceServerId, name string) (*OpenidClientAuthorizationPolicy, error) {
-	policies := []OpenidClientAuthorizationPolicy{}
+	var policies []OpenidClientAuthorizationPolicy
 	params := map[string]string{"name": name}
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/authz/resource-server/policy", realmId, resourceServerId), &policies, params)
 	if err != nil {

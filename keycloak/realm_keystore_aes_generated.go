@@ -7,9 +7,10 @@ import (
 )
 
 type RealmKeystoreAesGenerated struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active     bool
 	Enabled    bool
@@ -33,10 +34,10 @@ func convertFromRealmKeystoreAesGeneratedToComponent(realmKey *RealmKeystoreAesG
 		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
 		ProviderId:   "aes-generated",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -71,9 +72,10 @@ func convertFromComponentToRealmKeystoreAesGenerated(component *component, realm
 	}
 
 	realmKey := &RealmKeystoreAesGenerated{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:     active,
 		Enabled:    enabled,

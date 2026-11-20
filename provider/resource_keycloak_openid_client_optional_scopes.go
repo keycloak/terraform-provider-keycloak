@@ -3,17 +3,23 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakOpenidClientOptionalScopes() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeycloakOpenidClientOptionalScopesReconcile,
-		ReadContext:   resourceKeycloakOpenidClientOptionalScopesRead,
-		DeleteContext: resourceKeycloakOpenidClientOptionalScopesDelete,
-		UpdateContext: resourceKeycloakOpenidClientOptionalScopesReconcile,
+		DeprecationMessage: "please use keycloak_client_scope_assignments instead; see its documentation for migration instructions",
+		CreateContext:      resourceKeycloakOpenidClientOptionalScopesReconcile,
+		ReadContext:        resourceKeycloakOpenidClientOptionalScopesRead,
+		DeleteContext:      resourceKeycloakOpenidClientOptionalScopesDelete,
+		UpdateContext:      resourceKeycloakOpenidClientOptionalScopesReconcile,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakOpenidClientOptionalScopesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -70,6 +76,9 @@ func resourceKeycloakOpenidClientOptionalScopesReconcile(ctx context.Context, da
 
 	keycloakOpenidClientOptionalScopes, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId)
 	if err != nil {
+		if keycloak.ErrorIs404(err) {
+			return diag.FromErr(fmt.Errorf("validation error: client with id %s does not exist", clientId))
+		}
 		return diag.FromErr(err)
 	}
 
@@ -110,4 +119,26 @@ func resourceKeycloakOpenidClientOptionalScopesDelete(ctx context.Context, data 
 	optionalScopes := data.Get("optional_scopes").(*schema.Set)
 
 	return diag.FromErr(keycloakClient.DetachOpenidClientOptionalScopes(ctx, realmId, clientId, interfaceSliceToStringSlice(optionalScopes.List())))
+}
+
+func resourceKeycloakOpenidClientOptionalScopesImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	parts := strings.Split(d.Id(), "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid import. Supported import format: {{realmId}}/{{clientId}}.")
+	}
+
+	realmId := parts[0]
+	clientId := parts[1]
+
+	if _, err := keycloakClient.GetOpenidClientOptionalScopes(ctx, realmId, clientId); err != nil {
+		return nil, err
+	}
+
+	d.Set("realm_id", realmId)
+	d.Set("client_id", clientId)
+	d.SetId(openidClientOptionalScopesId(realmId, clientId))
+
+	return []*schema.ResourceData{d}, nil
 }

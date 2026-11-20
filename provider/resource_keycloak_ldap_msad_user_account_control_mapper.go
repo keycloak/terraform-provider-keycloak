@@ -2,9 +2,10 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakLdapMsadUserAccountControlMapper() *schema.Resource {
@@ -40,6 +41,12 @@ func resourceKeycloakLdapMsadUserAccountControlMapper() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"always_read_enabled_value_from_ldap": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, the enabled/disabled state of the user is always read from the userAccountControl attribute in MSAD.",
+			},
 		},
 	}
 }
@@ -52,6 +59,7 @@ func getLdapMsadUserAccountControlMapperFromData(data *schema.ResourceData) *key
 		LdapUserFederationId: data.Get("ldap_user_federation_id").(string),
 
 		LdapPasswordPolicyHintsEnabled: data.Get("ldap_password_policy_hints_enabled").(bool),
+		AlwaysReadEnabledValueFromLdap: data.Get("always_read_enabled_value_from_ldap").(bool),
 	}
 }
 
@@ -63,6 +71,7 @@ func setLdapMsadUserAccountControlMapperData(data *schema.ResourceData, ldapMsad
 	data.Set("ldap_user_federation_id", ldapMsadUserAccountControlMapper.LdapUserFederationId)
 
 	data.Set("ldap_password_policy_hints_enabled", ldapMsadUserAccountControlMapper.LdapPasswordPolicyHintsEnabled)
+	data.Set("always_read_enabled_value_from_ldap", ldapMsadUserAccountControlMapper.AlwaysReadEnabledValueFromLdap)
 }
 
 func resourceKeycloakLdapMsadUserAccountControlMapperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

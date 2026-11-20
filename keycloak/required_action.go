@@ -6,31 +6,30 @@ import (
 )
 
 type RequiredAction struct {
-	Id            string              `json:"-"`
-	RealmId       string              `json:"-"`
-	Alias         string              `json:"alias"`
-	Name          string              `json:"name"`
-	ProviderId    string              `json:"providerId"`
-	Enabled       bool                `json:"enabled"`
-	DefaultAction bool                `json:"defaultAction"`
-	Priority      int                 `json:"priority"`
-	Config        map[string][]string `json:"config"`
+	Id            string            `json:"-"`
+	RealmId       string            `json:"-"`
+	Alias         string            `json:"alias"`
+	Name          string            `json:"name"`
+	ProviderId    string            `json:"providerId"`
+	Enabled       bool              `json:"enabled"`
+	DefaultAction bool              `json:"defaultAction"`
+	Priority      int               `json:"priority"`
+	Config        map[string]string `json:"config"`
 }
 
 func (requiredActions *RequiredAction) getConfig(val string) string {
 	if len(requiredActions.Config[val]) == 0 {
 		return ""
 	}
-	return requiredActions.Config[val][0]
+	return requiredActions.Config[val]
 }
 
 func (requiredActions *RequiredAction) getConfigOk(val string) (string, bool) {
 	if v, ok := requiredActions.Config[val]; ok {
-		return v[0], true
+		return v, true
 	}
 	return "", false
 }
-
 func (keycloakClient *KeycloakClient) GetRequiredActions(ctx context.Context, realmId string) ([]*RequiredAction, error) {
 	var requiredActions []*RequiredAction
 

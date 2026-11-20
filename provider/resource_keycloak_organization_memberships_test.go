@@ -1,0 +1,702 @@
+package provider
+
+import (
+	"fmt"
+	"reflect"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+)
+
+func TestAccKeycloakOrganizationMemberships_basic(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	username := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganizationMemberships_basic(organizationName, username),
+				Check:  testAccCheckUserBelongsToOrganization("keycloak_organization_memberships.org_members", username),
+			},
+			{
+				// we need a separate test for destroy instead of using CheckDestroy because this resource is implicitly
+				// destroyed at the end of each test via destroying the users or organization they're tied to
+				Config: testKeycloakOrganizationMemberships_noMembers(organizationName, username),
+				Check:  testAccCheckOrganizationHasNoMembers("keycloak_organization.organization"),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOrganizationMemberships_adoptPreExistingMembers(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	preExistingUser := acctest.RandomWithPrefix("tf-acc")
+	managedUser := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Step 1: Pre-populate the organization with a member out of band
+			{
+				Config: testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser),
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+						if err != nil {
+							return err
+						}
+						user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, preExistingUser)
+						if err != nil {
+							return err
+						}
+						return keycloakClient.AddUserToOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id)
+					},
+				),
+			},
+			// Step 2: Declare memberships with `managedUser` only. This should adopt the organization,
+			// adding `managedUser` and removing the pre-existing `preExistingUser`.
+			{
+				// Retain both users so reconciliation cannot race with deletion of
+				// the pre-existing member's underlying user account.
+				Config: testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakUserExists("keycloak_user.pre_existing_user"),
+					testAccCheckUserBelongsToOrganization("keycloak_organization_memberships.org_members", managedUser),
+					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{preExistingUser}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOrganizationMemberships_moreThan50members(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganizationMemberships_moreThan50members(organizationName),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOrganizationMemberships_updateInPlace(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	allUsersForTest := []string{
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+	}
+	indexOfRandomUserToRemove := acctest.RandIntRange(0, len(allUsersForTest)-1)
+	randomUserToRemove := allUsersForTest[indexOfRandomUserToRemove]
+
+	var subsetOfUsers []string
+	for index, user := range allUsersForTest {
+		if index != indexOfRandomUserToRemove {
+			subsetOfUsers = append(subsetOfUsers, user)
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// init
+			{
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, allUsersForTest, allUsersForTest),
+				Check:  testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", allUsersForTest),
+			},
+			// remove
+			{
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, allUsersForTest, subsetOfUsers),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", subsetOfUsers),
+					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{randomUserToRemove}),
+				),
+			},
+			// add
+			{
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, allUsersForTest, allUsersForTest),
+				Check:  testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", allUsersForTest),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOrganizationMemberships_userDoesNotExist(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	username := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeycloakOrganizationMemberships_userDoesNotExist(organizationName, username),
+				ExpectError: regexp.MustCompile("user with username .+ does not exist"),
+			},
+		},
+	})
+}
+
+// if a user is removed from an org controlled by this resource, terraform should add them again
+func TestAccKeycloakOrganizationMemberships_authoritativeAdd(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	usersInOrg := []string{
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, usersInOrg, usersInOrg),
+				Check:  testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", usersInOrg),
+			},
+			{
+				PreConfig: func() {
+					org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					userToManuallyRemove := usersInOrg[acctest.RandIntRange(0, len(usersInOrg)-1)]
+
+					user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, userToManuallyRemove)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.RemoveUserFromOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, usersInOrg, usersInOrg),
+				Check:  testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", usersInOrg),
+			},
+		},
+	})
+}
+
+// if a user is added to an org controlled by this resource, terraform should remove them
+func TestAccKeycloakOrganizationMemberships_authoritativeRemove(t *testing.T) {
+	t.Parallel()
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	allUsersForTest := []string{
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+		"terraform-user-" + acctest.RandString(10),
+	}
+
+	var usersInOrg []string
+	indexOfUserToManuallyAdd := acctest.RandIntRange(0, len(allUsersForTest)-1)
+	userToManuallyAdd := allUsersForTest[indexOfUserToManuallyAdd]
+	for index, user := range allUsersForTest {
+		if index != indexOfUserToManuallyAdd {
+			usersInOrg = append(usersInOrg, user)
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, allUsersForTest, usersInOrg),
+				Check:  testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", usersInOrg),
+			},
+			{
+				PreConfig: func() {
+					org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, userToManuallyAdd)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					err = keycloakClient.AddUserToOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakOrganizationMemberships_multipleUsers(organizationName, allUsersForTest, usersInOrg),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUsersBelongToOrganization("keycloak_organization_memberships.org_members", usersInOrg),
+					testAccCheckUsersDontBelongToOrganization("keycloak_organization_memberships.org_members", []string{userToManuallyAdd}),
+				),
+			},
+		},
+	})
+}
+
+// a MANAGED member belongs to the identity provider: the resource must never remove it, as Keycloak
+// would delete the user account, and it must not stop the resource from managing the other members
+func TestAccKeycloakOrganizationMemberships_managedMember(t *testing.T) {
+	t.Parallel()
+	// the membership-type endpoint, which makes a member MANAGED, was added in Keycloak 26.8
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	userA := acctest.RandomWithPrefix("tf-acc")
+	managedUser := acctest.RandomWithPrefix("tf-acc")
+	userC := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// the organization gets a MANAGED member out of band
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, nil),
+				Check: func(s *terraform.State) error {
+					org, err := keycloakClient.GetOrganizationByName(testCtx, testAccRealm.Realm, organizationName)
+					if err != nil {
+						return err
+					}
+					user, err := keycloakClient.GetUserByUsername(testCtx, testAccRealm.Realm, managedUser)
+					if err != nil {
+						return err
+					}
+					if err := keycloakClient.AddUserToOrganization(testCtx, testAccRealm.Realm, org.Id, user.Id); err != nil {
+						return err
+					}
+					return keycloakClient.UpdateOrganizationMembershipType(testCtx, testAccRealm.Realm, org.Id, user.Id, "MANAGED")
+				},
+			},
+			// create
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "1"),
+				),
+			},
+			// update
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a", "user_c"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED", userC: "UNMANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "2"),
+				),
+			},
+			// a listed managed member is kept in state
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a", "managed_user", "user_c"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED", userC: "UNMANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "3"),
+				),
+			},
+			// unlisting a managed member leaves its membership in place
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, []string{"user_a"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{userA: "UNMANAGED", managedUser: "MANAGED"}),
+					resource.TestCheckResourceAttr("keycloak_organization_memberships.org_members", "members.#", "1"),
+				),
+			},
+			// destroy
+			{
+				Config: testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC, nil),
+				Check:  testAccCheckOrganizationMembershipTypes("keycloak_organization.organization", map[string]string{managedUser: "MANAGED"}),
+			},
+		},
+	})
+}
+
+// --- State helpers ---
+
+func testAccGetUsersInOrganizationFromState(resourceName string, s *terraform.State) ([]*keycloak.OrganizationMember, error) {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return nil, fmt.Errorf("resource not found: %s", resourceName)
+	}
+
+	realmId := rs.Primary.Attributes["realm_id"]
+	organizationId := rs.Primary.Attributes["organization_id"]
+
+	return keycloakClient.GetOrganizationMembers(testCtx, realmId, organizationId)
+}
+
+// --- Check helpers ---
+
+func testAccCheckUserBelongsToOrganization(resourceName, user string) resource.TestCheckFunc {
+	return testAccCheckUsersBelongToOrganization(resourceName, []string{user})
+}
+
+func testAccCheckUsersBelongToOrganization(resourceName string, users []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		usersInOrg, err := testAccGetUsersInOrganizationFromState(resourceName, s)
+		if err != nil {
+			return err
+		}
+
+		for _, user := range users {
+			userFound := false
+
+			for _, userInOrg := range usersInOrg {
+				if user == userInOrg.Username {
+					userFound = true
+
+					break
+				}
+			}
+
+			if !userFound {
+				return fmt.Errorf("unable to find user %s in organization", user)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckUsersDontBelongToOrganization(resourceName string, users []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		usersInOrg, err := testAccGetUsersInOrganizationFromState(resourceName, s)
+		if err != nil {
+			return err
+		}
+
+		for _, user := range users {
+			for _, userInOrg := range usersInOrg {
+				if user == userInOrg.Username {
+					return fmt.Errorf("expected user %s to not belong to organization", user)
+				}
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckOrganizationHasNoMembers(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		realmId := rs.Primary.Attributes["realm"]
+		organizationId := rs.Primary.ID
+
+		members, err := keycloakClient.GetOrganizationMembers(testCtx, realmId, organizationId)
+		if err != nil {
+			return err
+		}
+
+		if len(members) != 0 {
+			return fmt.Errorf("expected organization %s to have no members, but it has %d", organizationId, len(members))
+		}
+
+		return nil
+	}
+}
+
+// checks the organization's members in Keycloak (username -> membership type), whatever the resource's state says
+func testAccCheckOrganizationMembershipTypes(resourceName string, expected map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		members, err := keycloakClient.GetOrganizationMembers(testCtx, rs.Primary.Attributes["realm"], rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		actual := make(map[string]string)
+		for _, member := range members {
+			actual[member.Username] = member.MembershipType
+		}
+
+		if !reflect.DeepEqual(actual, expected) {
+			return fmt.Errorf("expected organization members %v, got %v", expected, actual)
+		}
+
+		return nil
+	}
+}
+
+// --- Config helpers ---
+
+func testKeycloakOrganizationMemberships_basic(organizationName, username string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = [
+		keycloak_user.user.username
+	]
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
+}
+
+func testKeycloakOrganizationMemberships_noMembers(organizationName, username string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
+}
+
+func testKeycloakOrganizationMemberships_multipleUsers(organizationName string, definedUsers, usersInOrg []string) string {
+	var userResources strings.Builder
+	for _, username := range definedUsers {
+		userResources.WriteString(fmt.Sprintf(`
+resource "keycloak_user" "user_%s" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+		`, username, username))
+	}
+
+	var usersInOrgInterpolated []string
+	for _, userInOrg := range usersInOrg {
+		usersInOrgInterpolated = append(usersInOrgInterpolated, fmt.Sprintf("${keycloak_user.user_%s.username}", userInOrg))
+	}
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+%s
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = %s
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), userResources.String(), arrayOfStringsForTerraformResource(usersInOrgInterpolated))
+}
+
+func testKeycloakOrganizationMemberships_userDoesNotExist(organizationName, username string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = [
+		"%s"
+	]
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), username)
+}
+
+func testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "pre_existing_user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_user" "user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), preExistingUser, managedUser)
+}
+
+func testKeycloakOrganizationMemberships_adoptPreExistingMembers(organizationName, preExistingUser, managedUser string) string {
+	return testKeycloakOrganizationMemberships_noMembersAndPreExistingUser(organizationName, preExistingUser, managedUser) + `
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+	members         = [keycloak_user.user.username]
+}
+`
+}
+
+// members lists keycloak_user resource names; nil leaves out the memberships resource
+func testKeycloakOrganizationMemberships_managedMember(organizationName, userA, managedUser, userC string, members []string) string {
+	config := fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "user_a" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+
+resource "keycloak_user" "managed_user" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+
+	# destroyed before the organization, as deleting an organization deletes its managed members
+	depends_on = [keycloak_organization.organization]
+}
+
+resource "keycloak_user" "user_c" {
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s"
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), userA, managedUser, userC)
+
+	if members == nil {
+		return config
+	}
+
+	var membersInterpolated []string
+	for _, member := range members {
+		membersInterpolated = append(membersInterpolated, fmt.Sprintf("${keycloak_user.%s.username}", member))
+	}
+
+	return config + fmt.Sprintf(`
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = %s
+}
+	`, arrayOfStringsForTerraformResource(membersInterpolated))
+}
+
+func testKeycloakOrganizationMemberships_moreThan50members(organizationName string) string {
+	username := acctest.RandomWithPrefix("tf-acc")
+	count := 60
+
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_user" "users" {
+	count = %d
+
+	realm_id = data.keycloak_realm.realm.id
+	username = "%s-${count.index}"
+}
+
+resource "keycloak_organization_memberships" "org_members" {
+	realm_id        = data.keycloak_realm.realm.id
+	organization_id = keycloak_organization.organization.id
+
+	members = keycloak_user.users.*.username
+}
+	`, testAccRealm.Realm, organizationName, fmt.Sprintf("%s.com", organizationName), count, username)
+}

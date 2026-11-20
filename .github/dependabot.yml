@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # Go-Module Updates
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+
+  # GitHub Actions Updates
+  - package-ecosystem: "github-actions"
+    directory: "/.github/workflows/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Gradle (Java) Updates
+  - package-ecosystem: "gradle"
+    directory: "/custom-user-federation-example/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "java"

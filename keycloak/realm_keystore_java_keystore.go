@@ -7,14 +7,16 @@ import (
 )
 
 type RealmKeystoreJavaKeystore struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Active    bool
 	Enabled   bool
 	Priority  int
 	Algorithm string
+	KeyUse    string
 
 	Keystore         string
 	KeystorePassword string
@@ -48,12 +50,15 @@ func convertFromRealmKeystoreJavaKeystoreToComponent(realmKey *RealmKeystoreJava
 		"keyPassword": {
 			realmKey.KeyPassword,
 		},
+		"keyUse": {
+			realmKey.KeyUse,
+		},
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           realmKey.Id,
 		Name:         realmKey.Name,
-		ParentId:     realmKey.RealmId,
 		ProviderId:   "java-keystore",
 		ProviderType: "org.keycloak.keys.KeyProvider",
 		Config:       componentConfig,
@@ -80,14 +85,16 @@ func convertFromComponentToRealmKeystoreJavaKeystore(component *component, realm
 	}
 
 	realmKey := &RealmKeystoreJavaKeystore{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: realmId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Active:           active,
 		Enabled:          enabled,
 		Priority:         priority,
 		Algorithm:        component.getConfig("algorithm"),
+		KeyUse:           component.getConfig("keyUse"),
 		Keystore:         component.getConfig("keystore"),
 		KeystorePassword: component.getConfig("keystorePassword"),
 		KeyAlias:         component.getConfig("keyAlias"),

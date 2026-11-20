@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakLdapMsadUserAccountControlMapper_basic(t *testing.T) {
@@ -15,12 +16,12 @@ func TestAccKeycloakLdapMsadUserAccountControlMapper_basic(t *testing.T) {
 	msadUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool()),
+				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool(), randomBool()),
 				Check:  testAccCheckKeycloakLdapMsadUserAccountControlMapperExists("keycloak_ldap_msad_user_account_control_mapper.uac_mapper"),
 			},
 			{
@@ -41,12 +42,12 @@ func TestAccKeycloakLdapMsadUserAccountControlMapper_createAfterManualDestroy(t 
 	msadUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool()),
+				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool(), randomBool()),
 				Check:  testAccCheckKeycloakLdapMsadUserAccountControlMapperFetch("keycloak_ldap_msad_user_account_control_mapper.uac_mapper", mapper),
 			},
 			{
@@ -56,7 +57,7 @@ func TestAccKeycloakLdapMsadUserAccountControlMapper_createAfterManualDestroy(t 
 						t.Fatal(err)
 					}
 				},
-				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool()),
+				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName, randomBool(), randomBool()),
 				Check:  testAccCheckKeycloakLdapMsadUserAccountControlMapperExists("keycloak_ldap_msad_user_account_control_mapper.uac_mapper"),
 			},
 		},
@@ -69,9 +70,9 @@ func TestAccKeycloakLdapMsadUserAccountControlMapper_updateLdapUserFederation(t 
 	msadUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadUserAccountControlMapper_updateLdapUserFederationBefore(msadUacMapperName),
@@ -89,18 +90,19 @@ func TestAccKeycloakLdapMsadUserAccountControlMapper_updateInPlace(t *testing.T)
 	t.Parallel()
 
 	passwordHintsEnabled := randomBool()
+	alwaysReadEnabledValueFromLdap := randomBool()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
-				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(acctest.RandString(10), passwordHintsEnabled),
+				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(acctest.RandString(10), passwordHintsEnabled, alwaysReadEnabledValueFromLdap),
 				Check:  testAccCheckKeycloakLdapMsadUserAccountControlMapperExists("keycloak_ldap_msad_user_account_control_mapper.uac_mapper"),
 			},
 			{
-				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(acctest.RandString(10), !passwordHintsEnabled),
+				Config: testKeycloakLdapMsadUserAccountControlMapper_basic(acctest.RandString(10), !passwordHintsEnabled, !alwaysReadEnabledValueFromLdap),
 				Check:  testAccCheckKeycloakLdapMsadUserAccountControlMapperExists("keycloak_ldap_msad_user_account_control_mapper.uac_mapper"),
 			},
 		},
@@ -169,7 +171,7 @@ func getLdapMsadUserAccountControlMapperFromState(s *terraform.State, resourceNa
 	return ldapMsadUserAccountControlMapper, nil
 }
 
-func testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName string, passwordHintsEnabled bool) string {
+func testKeycloakLdapMsadUserAccountControlMapper_basic(msadUacMapperName string, passwordHintsEnabled, alwaysReadEnabledValueFromLdap bool) string {
 	return fmt.Sprintf(`
 data "keycloak_realm" "realm" {
 	realm = "%s"
@@ -195,13 +197,14 @@ resource "keycloak_ldap_user_federation" "openldap" {
 }
 
 resource "keycloak_ldap_msad_user_account_control_mapper" "uac_mapper" {
-	name                               = "%s"
-	realm_id                           = data.keycloak_realm.realm.id
-	ldap_user_federation_id            = "${keycloak_ldap_user_federation.openldap.id}"
+	name                                = "%s"
+	realm_id                            = data.keycloak_realm.realm.id
+	ldap_user_federation_id             = "${keycloak_ldap_user_federation.openldap.id}"
 
-	ldap_password_policy_hints_enabled = %t
+	ldap_password_policy_hints_enabled  = %t
+	always_read_enabled_value_from_ldap = %t
 }
-	`, testAccRealmUserFederation.Realm, msadUacMapperName, passwordHintsEnabled)
+	`, testAccRealmUserFederation.Realm, msadUacMapperName, passwordHintsEnabled, alwaysReadEnabledValueFromLdap)
 }
 
 func testKeycloakLdapMsadUserAccountControlMapper_updateLdapUserFederationBefore(msadUacMapperName string) string {

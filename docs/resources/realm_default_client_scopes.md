@@ -1,0 +1,57 @@
+---
+page_title: "keycloak_realm_default_client_scopes Resource"
+---
+
+# keycloak\_realm\_default\_client\_scopes Resource
+
+!> **WARNING:** This resource is deprecated and will be removed in a future major version. Use `keycloak_client_scope_assignments` with `default_scopes` and `optional_scopes` instead.
+
+Allows you to manage the set of default client scopes for a Keycloak realm, which are used when new clients are created.
+
+Note that this resource attempts to be an **authoritative** source over the default client scopes for a Keycloak realm,
+so any Keycloak defaults and manual adjustments will be overwritten.
+
+
+## Example Usage
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm   = "my-realm"
+  enabled = true
+}
+
+resource "keycloak_openid_client_scope" "client_scope" {
+  realm_id = keycloak_realm.realm.id
+  name     = "test-client-scope"
+}
+
+resource "keycloak_realm_default_client_scopes" "default_scopes" {
+  realm_id  = keycloak_realm.realm.id
+
+  default_scopes = [
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    keycloak_openid_client_scope.client_scope.name,
+  ]
+}
+```
+
+## Argument Reference
+
+- `realm_id` - (Required) The realm this client and scopes exists in.
+- `default_scopes` - (Required) An array of default client scope names that should be used when creating new Keycloak clients.
+
+## Import
+
+This resource can be imported using the realm id, which adopts the realm's current
+default client scopes into state. This is useful for reviewing the exact delta between
+a realm's existing (e.g. Keycloak factory) default scopes and your declared set in the
+plan, rather than starting from an opaque create.
+
+Example:
+
+```bash
+terraform import keycloak_realm_default_client_scopes.default_scopes my-realm
+```

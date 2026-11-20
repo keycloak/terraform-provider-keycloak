@@ -18,7 +18,7 @@ resource "keycloak_realm" "realm" {
   display_name      = "my realm"
   display_name_html = "<b>my realm</b>"
 
-  login_theme = "base"
+  login_theme = "keycloak"
 
   access_code_lifespan = "1h"
 
@@ -60,6 +60,7 @@ resource "keycloak_realm" "realm" {
     brute_force_detection {
       permanent_lockout                 = false
       max_login_failures                = 30
+      max_secondary_auth_failures       = 0
       wait_increment_seconds            = 60
       quick_login_check_milli_seconds   = 1000
       minimum_quick_login_wait_seconds  = 60
@@ -78,13 +79,15 @@ resource "keycloak_realm" "realm" {
 
 ## Argument Reference
 
-- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak.
+- `realm` - (Required) The name of the realm. This is unique across Keycloak. This will also be used as the realm's internal ID within Keycloak. Changing it renames the realm in place; see [Renaming a realm](#renaming-a-realm). The `master` realm cannot be renamed.
 - `enabled` - (Optional) When `false`, users and clients will not be able to access this realm. Defaults to `true`.
 - `display_name` - (Optional) The display name for the realm that is shown when logging in to the admin console.
 - `display_name_html` - (Optional) The display name for the realm that is rendered as HTML on the screen when logging in to the admin console.
 - `user_managed_access` - (Optional) When `true`, users are allowed to manage their own resources. Defaults to `false`.
+- `organizations_enabled` - (Optional) When `true`, organization support is enabled. Defaults to `false`.
 - `attributes` - (Optional) A map of custom attributes to add to the realm.
-- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, the realm's internal ID will be set to the realm's name.
+- `internal_id` - (Optional) When specified, this will be used as the realm's internal ID within Keycloak. When not specified, Keycloak generates a UUID. Realms created by earlier versions of this provider may still have the realm's name as internal ID.
+- `terraform_deletion_protection` - (Optional) When set to true, the realm cannot be deleted. Defaults to false.
 
 ### Login Settings
 
@@ -157,9 +160,48 @@ This block supports the following arguments:
 - `envelope_from` - (Optional) The email address uses for bounces.
 - `starttls` - (Optional) When `true`, enables StartTLS. Defaults to `false`.
 - `ssl` - (Optional) When `true`, enables SSL. Defaults to `false`.
-- `auth` - (Optional) Enables authentication to the SMTP server.  This block supports the following arguments:
+- `allow_utf8` - (Optional) When `true`, allows UTF-8 in the local part of the email address. Defaults to `false`.
+- `auth` - (Optional) Enables authentication to the SMTP server. Cannot be set alongside `token_auth`. This block supports the following arguments:
     - `username` - (Required) The SMTP server username.
-    - `password` - (Required) The SMTP server password.
+    - `password` - (Optional) The SMTP server password. Stored in Terraform state. Exactly one of `password` or `password_wo` must be set.
+    - `password_wo` - (Optional, Write-Only) The SMTP server password. Accepts ephemeral values and is not stored in Terraform plan or state. Requires Terraform 1.11 or later and `password_wo_version`. Conflicts with `password`.
+    - `password_wo_version` - (Optional) A non-empty string identifying the password version. Required with `password_wo`. Change this value to rotate the password; changing only `password_wo` does not trigger rotation. Conflicts with `password`.
+- `token_auth` - (Optional) Enables authentication to the SMTP server through OAUTH2. Cannot be set alongside `auth`. This block supports the following arguments:
+    - `username` - (Required) The SMTP server username.
+    - `url` - (Required) The auth token URL.
+    - `client_id` - (Required) The auth token client ID.
+    - `client_secret` - (Required) The auth token client secret.
+    - `scope` - (Required) The auth token scope.
+
+
+For example, use an ephemeral variable to configure the SMTP password without storing it in Terraform plan or state:
+
+```hcl
+variable "smtp_password" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+
+resource "keycloak_realm" "realm" {
+  realm = "my-realm"
+
+  smtp_server {
+    host = "smtp.example.com"
+    from = "admin@example.com"
+
+    auth {
+      username            = "smtp-user"
+      password_wo         = var.smtp_password
+      password_wo_version = "v1"
+    }
+  }
+}
+```
+
+When migrating from `password`, remove it and configure both `password_wo` and `password_wo_version`. The password is applied and removed from the current state. Previous state snapshots can still contain the old password. After importing a realm, configure both write-only arguments to manage its SMTP password; the version cannot be recovered from Keycloak.
+
+When using `password_wo`, also change `password_wo_version` when changing the SMTP host, port, SSL, STARTTLS, sender (`from`), or username. Keycloak cannot preserve a masked password when these destination settings change, so the provider requires a new version to resend the real password. Other realm settings and SMTP display names can be updated without changing the password version.
 
 ### Internationalization
 
@@ -181,11 +223,14 @@ The `headers` block supports the following arguments:
 - `x_robots_tag` - (Optional) Prevent pages from appearing in search engines.
 - `x_xss_protection` - (Optional) This header configures the Cross-site scripting (XSS) filter in your browser.
 - `strict_transport_security` - (Optional) The Script-Transport-Security HTTP header tells browsers to always use HTTPS.
+- `referrer_policy` - (Optional) The Referrer-Policy HTTP header controls how much referrer information (sent with the Referer header) should be included with requests.
 
 The `brute_force_detection` block supports the following arguments:
 
 - `permanent_lockout` - (Optional) When `true`, this will lock the user permanently when the user exceeds the maximum login failures.
+- `max_temporary_lockouts` - (Optional) How many temporary lockouts are permitted before a user is permanently locked out. `permanent_lockout` needs to be `true`. Defaults to `0`
 - `max_login_failures` - (Optional) How many failures before wait is triggered.
+- `max_secondary_auth_failures` - (Optional) How many failures of the secondary authentication factor (e.g. OTP) are permitted before the wait is triggered. Defaults to `0`. Requires Keycloak 26.6 or higher.
 - `wait_increment_seconds` - (Optional) This represents the amount of time a user should be locked out when the login failure threshold has been met.
 - `quick_login_check_milli_seconds` - (Optional) Configures the amount of time, in milliseconds, for consecutive failures to lock a user out.
 - `minimum_quick_login_wait_seconds` - (Optional) How long to wait after a quick login failure.
@@ -196,7 +241,14 @@ The `brute_force_detection` block supports the following arguments:
 
 The following authentication settings can also be configured. Note that these are top level arguments for the `keycloak_realm` resource.
 
+- `admin_permissions_enabled` - (Optional) Enables the use of fine grained permissions v2
 - `password_policy` - (Optional) The password policy for users within the realm.
+
+### Authentication Flow Bindings
+
+The following authentication flow bindings can be configured.
+Note that the authentication flows need to exist when configuring the authentication flows via the realm resource.
+Use the `keycloak_authentication_bindings` resource for more flexibility.
 
 The arguments below can be used to configure authentication flow bindings:
 
@@ -206,6 +258,7 @@ The arguments below can be used to configure authentication flow bindings:
 - `reset_credentials_flow` - (Optional) The desired flow to use when a user attempts to reset their credentials. Defaults to `reset credentials`.
 - `client_authentication_flow` - (Optional) The desired flow for client authentication. Defaults to `clients`.
 - `docker_authentication_flow` - (Optional) The desired flow for Docker authentication. Defaults to `docker auth`.
+- `first_broker_login_flow` - (Optional) The desired flow for First Broker Login (since Keycloak 24). Defaults to `first broker login`.
 
 ### OTP Policy
 
@@ -217,6 +270,7 @@ The `otp_policy` block with following arguments can be found in the "OTP Policy"
 - `initial_counter` - (Optional) What should the initial counter value be. Defaults to `2`.
 - `look_ahead_window` - (Optional) How far ahead should the server look just in case the token generator and server are out of time sync or counter sync. Defaults to `1`.
 - `period` - (Optional) How many seconds should an OTP token be valid. Defaults to `30`.
+- `code_reusable` - (Optional) Possibility to use the same OTP code again after successful authentication. Defaults to `false`.
 
 ### WebAuthn
 
@@ -228,21 +282,81 @@ the "Authentication" section of the realm configuration UI. These top level attr
 
 Each of these attributes are blocks with the following attributes:
 
-- `relying_party_entity_name` - (Optional) A human readable server name for the WebAuthn Relying Party. Defaults to `keycloak`.
+- `relying_party_entity_name` - (Optional) A human-readable server name for the WebAuthn Relying Party. Defaults to `keycloak`.
 - `relying_party_id` - (Optional) The WebAuthn relying party ID.
-- `signature_algorithms` - (Optional) A set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
+- `signature_algorithms_ordered` - (Optional) A list of signature algorithms in [WebAuthn preference order](https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialcreationoptions-pubkeycredparams). Use this instead of `signature_algorithms` when order matters; the two arguments cannot be configured together. Keycloak preserves this order, and Terraform detects changes to it. When omitted, this field only reports the server order in state. Legacy `signature_algorithms` writes remain unordered and can reorder algorithms during other realm updates. To adopt an existing order, replace `signature_algorithms` with this argument using the exact order returned by Keycloak. Available in both WebAuthn policy blocks.
+- `signature_algorithms` - (Optional) An unordered set of signature algorithms that should be used for the authentication assertion. Valid options at the time these docs were written are `ES256`, `ES384`, `ES512`, `RS256`, `RS384`, `RS512`, and `RS1`.
 - `attestation_conveyance_preference` - (Optional) The preference of how to generate a WebAuthn attestation statement. Valid options are `not specified`, `none`, `indirect`, `direct`, or `enterprise`. Defaults to `not specified`.
 - `authenticator_attachment` - (Optional) The acceptable attachment pattern for the WebAuthn authenticator. Valid options are `not specified`, `platform`, or `cross-platform`. Defaults to `not specified`.
-- `require_resident_key` - (Optional) Specifies whether or not a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`.
+- `require_resident_key` - (Optional) **Deprecated** Specifies whether a public key should be created to represent the resident key. Valid options are `not specified`, `Yes`, or `No`. Defaults to `not specified`. Deprecated by Keycloak in favor of `discoverable_credential` — this attribute is only used when `discoverable_credential` is left as `not specified`.
+- `discoverable_credential` - (Optional) The extent to which the authenticator should create a client-side discoverable credential (resident key). Valid options are `not specified`, `required`, `preferred`, or `discouraged`. Defaults to `not specified`. Replaces and takes precedence over the deprecated `require_resident_key` attribute. Requires Keycloak 26.7 or higher.
 - `user_verification_requirement` - (Optional) Specifies the policy for verifying a user logging in via WebAuthn. Valid options are `not specified`, `required`, `preferred`, or `discouraged`. Defaults to `not specified`.
 - `create_timeout` - (Optional) The timeout value for creating a user's public key credential in seconds. When set to `0`, this timeout option is not adapted. Defaults to `0`.
 - `avoid_same_authenticator_register` - (Optional) When `true`, Keycloak will avoid registering the authenticator for WebAuthn if it has already been registered. Defaults to `false`.
 - `acceptable_aaguids` - (Optional) A set of AAGUIDs for which an authenticator can be registered.
+- `extra_origins` - (Optional) A set of extra origins for non-web applications.
+- `passwordless_passkeys_enabled` - (Optional) When `true`, Keycloak will enable passwordless passkey support. This attribute is only valid inside a `web_authn_passwordless_policy` block and requires a Keycloak version that supports passwordless passkeys. Defaults to `false`.
+
+## Renaming a realm
+
+Changing `realm` renames the realm in place instead of replacing it, so its data is kept. Keycloak addresses a realm by
+its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
+Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
+
+When the `keycloak_realm` resource has an `internal_id` in state, the account that the provider authenticates with
+must be able to confirm that ID. If Keycloak hides it from that account, refreshing the realm fails, and with it
+`terraform plan`, as well as updating and destroying the realm. Grant the provider's account the `view-realm` role
+on the realm again to continue. This prevents a reused name from pointing Terraform at a different realm. Imports
+and older state without a recorded ID use the stored name.
+
+To prevent the resources inside a realm from being replaced when it is renamed, reference the realm by its internal
+id, which never changes, using `realm_internal_id` instead of `realm_id`:
+
+```hcl
+resource "keycloak_realm" "realm" {
+  realm = "my-realm"
+}
+
+resource "keycloak_group" "group" {
+  realm_internal_id = keycloak_realm.realm.internal_id
+  name       = "group"
+}
+```
+
+`realm_internal_id` is available on every resource and data source that has a `realm_id` (or `realm`) argument, which then
+holds the current realm name as a read-only value. Set exactly one of them. Data sources should use it too: they are
+read while planning, when a renamed realm does not exist under its new name yet.
+
+Looking up a realm by its internal id requires that the provider's account can see the realm's id. Keycloak hides it
+from accounts that have no `view-realm` role on that realm (for example one that only has `manage-clients`), so grant
+that role (the `realm-management` client role of the realm) before using `realm_internal_id`. Configurations that keep using
+`realm_id` are not affected. If the id is hidden, using `realm_internal_id` fails with an error instead of replacing resources.
+Likewise, if the account loses `view-realm` later, resources whose state holds a `realm_internal_id` fail with that error until the
+role is granted again: the provider will not guess a realm from a name that may have been reused.
+
+Things to know about renaming:
+
+- A realm keeps its internal id when it is renamed, and the name of a renamed realm can be reused by a new realm. The
+  exception is a realm whose internal id is its old name: realms created by earlier versions of this provider got the
+  realm name as internal id. After renaming such a realm from `a` to `b` its id `a` stays taken, so creating a new realm
+  called `a` with `internal_id = "a"` fails. Leave `internal_id` unset so that Keycloak generates a UUID.
+- Resources whose id contains the realm name (for example `keycloak_default_groups`) get the new name in their id on
+  the next refresh.
+- A resource that still uses `realm_id` (the realm name) depends on where the name comes from. If it comes from
+  `keycloak_realm.x.realm`, the plan of the rename already shows the new name, so the resource is replaced in that
+  apply. If it comes from `keycloak_realm.x.id`, the plan of the rename still shows the old name, because the id only
+  changes while the realm is updated. The next refresh then brings the resource up to date, so it is not replaced, but
+  adding or changing such a resource in the same apply as the rename fails with `Provider produced inconsistent final
+  plan`, after the realm has already been renamed. Use `realm_internal_id` for all resources of a realm that you want to rename.
+
+To migrate an existing configuration, first upgrade the provider and run `terraform apply`, or `terraform apply -refresh-only`;
+`realm_internal_id` is filled in for existing resources. Then replace `realm_id = keycloak_realm.realm.id` with
+`realm_internal_id = keycloak_realm.realm.internal_id`, which shows no changes. After that, `realm` can be changed safely.
 
 ## Default Client Scopes
 
-- `default_default_client_scopes` - (Optional) A list of default default client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default default client-scopes.
-- `default_optional_client_scopes` - (Optional) A list of default optional client scopes to be used for client definitions. Defaults to `[]` or keycloak's built-in default optional client-scopes.
+- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. Alternatively, manage both assignment sets with [`keycloak_client_scope_assignments`](client_scope_assignments.md) and omit both scope-assignment fields from this realm resource.
+- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. Do not configure this field or `default_default_client_scopes` alongside a realm-level `keycloak_client_scope_assignments` resource; they manage the same assignments and will conflict.
 
 ## Import
 

@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="local debug" type="GoRemoteDebugConfigurationType" factoryName="Go Remote" port="58772">
+    <option name="disconnectOption" value="STOP" />
+    <disconnect value="STOP" />
+    <method v="2" />
+  </configuration>
+</component>

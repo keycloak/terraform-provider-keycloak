@@ -2,11 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_basic(t *testing.T) {
@@ -15,9 +16,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_basic(t *testing.T) {
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_basic(msadLdsUacMapperName),
@@ -41,9 +42,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_createAfterManualDestroy
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_basic(msadLdsUacMapperName),
@@ -69,9 +70,9 @@ func TestAccKeycloakLdapMsadLdsUserAccountControlMapper_updateLdapUserFederation
 	msadLdsUacMapperName := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakLdapMsadLdsUserAccountControlMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakLdapMsadLdsUserAccountControlMapper_updateLdapUserFederationBefore(msadLdsUacMapperName),

@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakLdapUserAttributeMapper() *schema.Resource {
@@ -64,6 +64,12 @@ func resourceKeycloakLdapUserAttributeMapper() *schema.Resource {
 				Default:     false,
 				Description: "When true, this attribute must exist in LDAP.",
 			},
+			"attribute_force_default": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "When true, an empty default value is forced for mandatory attributes even when a default value is not specified.",
+			},
 			"attribute_default_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -93,6 +99,7 @@ func getLdapUserAttributeMapperFromData(data *schema.ResourceData) *keycloak.Lda
 		ReadOnly:                data.Get("read_only").(bool),
 		AlwaysReadValueFromLdap: data.Get("always_read_value_from_ldap").(bool),
 		IsMandatoryInLdap:       data.Get("is_mandatory_in_ldap").(bool),
+		ForceDefaultValue:       data.Get("attribute_force_default").(bool),
 		AttributeDefaultValue:   data.Get("attribute_default_value").(string),
 		IsBinaryAttribute:       data.Get("is_binary_attribute").(bool),
 	}
@@ -111,6 +118,7 @@ func setLdapUserAttributeMapperData(data *schema.ResourceData, ldapUserAttribute
 	data.Set("read_only", ldapUserAttributeMapper.ReadOnly)
 	data.Set("always_read_value_from_ldap", ldapUserAttributeMapper.AlwaysReadValueFromLdap)
 	data.Set("is_mandatory_in_ldap", ldapUserAttributeMapper.IsMandatoryInLdap)
+	data.Set("attribute_force_default", ldapUserAttributeMapper.ForceDefaultValue)
 	data.Set("attribute_default_value", ldapUserAttributeMapper.AttributeDefaultValue)
 	data.Set("is_binary_attribute", ldapUserAttributeMapper.IsBinaryAttribute)
 }

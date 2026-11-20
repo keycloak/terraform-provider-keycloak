@@ -8,16 +8,17 @@ import (
 )
 
 type LdapUserFederation struct {
-	Id      string
-	Name    string
-	RealmId string
+	Id       string
+	Name     string
+	RealmId  string
+	ParentId string
 
 	Enabled  bool
 	Priority int
 
 	ImportEnabled     bool
 	EditMode          string // can be "READ_ONLY", "WRITABLE", or "UNSYNCED"
-	SyncRegistrations bool   // I think this field controls whether or not BatchSizeForSync, FullSyncPeriod, and ChangedSyncPeriod are needed
+	SyncRegistrations bool   // I think this field controls whether BatchSizeForSync, FullSyncPeriod, and ChangedSyncPeriod are needed
 
 	Vendor                 string // can be "other", "edirectory", "ad", "rhds", or "tivoli". honestly I don't think this field actually does anything
 	UsernameLDAPAttribute  string
@@ -26,10 +27,14 @@ type LdapUserFederation struct {
 	UserObjectClasses      []string // api expects comma + space separated for some reason
 	ConnectionUrl          string
 	UsersDn                string
+	RelativeCreateDn       string
 	BindDn                 string
 	BindCredential         string
 	CustomUserSearchFilter string // must start with '(' and end with ')'
+	KrbPrincipalAttribute  string
+	Debug                  string
 	SearchScope            string // api expects "1" or "2", but that means "One Level" or "Subtree"
+	Referral               string // component config expects follow or ignore
 
 	StartTls                    bool
 	UsePasswordModifyExtendedOp bool
@@ -39,6 +44,7 @@ type LdapUserFederation struct {
 	ConnectionTimeout           string // duration string (ex: 1h30m)
 	ReadTimeout                 string // duration string (ex: 1h30m)
 	Pagination                  bool
+	ConnectionPooling           bool
 
 	ServerPrincipal                      string
 	UseKerberosForPasswordAuthentication bool
@@ -98,11 +104,20 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		"usersDn": {
 			ldap.UsersDn,
 		},
+		"krbPrincipalAttribute": {
+			ldap.KrbPrincipalAttribute,
+		},
+		"debug": {
+			ldap.Debug,
+		},
 		"searchScope": {
 			ldap.SearchScope,
 		},
 		"startTls": {
 			strconv.FormatBool(ldap.StartTls),
+		},
+		"connectionPooling": {
+			strconv.FormatBool(ldap.ConnectionPooling),
 		},
 		"usePasswordModifyExtendedOp": {
 			strconv.FormatBool(ldap.UsePasswordModifyExtendedOp),
@@ -158,8 +173,14 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		componentConfig["searchScope"] = []string{"2"}
 	}
 
+	componentConfig["referral"] = []string{ldap.Referral}
+
 	if ldap.CustomUserSearchFilter != "" {
 		componentConfig["customUserSearchFilter"] = []string{ldap.CustomUserSearchFilter}
+	}
+
+	if ldap.RelativeCreateDn != "" {
+		componentConfig["relativeCreateDn"] = []string{ldap.RelativeCreateDn}
 	}
 
 	if ldap.UseTruststoreSpi == "ONLY_FOR_LDAPS" {
@@ -215,17 +236,17 @@ func convertFromLdapUserFederationToComponent(ldap *LdapUserFederation) (*compon
 		}
 	}
 
+	// ParentId is deliberately not set, Keycloak defaults to the realm's internal id
 	return &component{
 		Id:           ldap.Id,
 		Name:         ldap.Name,
 		ProviderId:   "ldap",
 		ProviderType: userStorageProviderType,
-		ParentId:     ldap.RealmId,
 		Config:       componentConfig,
 	}, nil
 }
 
-func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFederation, error) {
+func convertFromComponentToLdapUserFederation(component *component, realmId string) (*LdapUserFederation, error) {
 	enabled, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("enabled"))
 	if err != nil {
 		return nil, err
@@ -249,6 +270,11 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 	userObjectClasses := strings.Split(component.getConfig("userObjectClasses"), ", ")
 
 	startTls, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("startTls"))
+	if err != nil {
+		return nil, err
+	}
+
+	connectionPooling, err := parseBoolAndTreatEmptyStringAsFalse(component.getConfig("connectionPooling"))
 	if err != nil {
 		return nil, err
 	}
@@ -299,9 +325,10 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 	}
 
 	ldap := &LdapUserFederation{
-		Id:      component.Id,
-		Name:    component.Name,
-		RealmId: component.ParentId,
+		Id:       component.Id,
+		Name:     component.Name,
+		RealmId:  realmId,
+		ParentId: component.ParentId,
 
 		Enabled:  enabled,
 		Priority: priority,
@@ -317,12 +344,16 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 		UserObjectClasses:      userObjectClasses,
 		ConnectionUrl:          component.getConfig("connectionUrl"),
 		UsersDn:                component.getConfig("usersDn"),
+		RelativeCreateDn:       component.getConfig("relativeCreateDn"),
 		BindDn:                 component.getConfig("bindDn"),
 		BindCredential:         component.getConfig("bindCredential"),
 		CustomUserSearchFilter: component.getConfig("customUserSearchFilter"),
+		KrbPrincipalAttribute:  component.getConfig("krbPrincipalAttribute"),
+		Debug:                  component.getConfig("debug"),
 		SearchScope:            component.getConfig("searchScope"),
 
 		StartTls:                    startTls,
+		ConnectionPooling:           connectionPooling,
 		UsePasswordModifyExtendedOp: usePasswordModifyExtendedOp,
 		ValidatePasswordPolicy:      validatePasswordPolicy,
 		TrustEmail:                  trustEmail,
@@ -359,6 +390,8 @@ func convertFromComponentToLdapUserFederation(component *component) (*LdapUserFe
 	} else {
 		ldap.SearchScope = "SUBTREE"
 	}
+
+	ldap.Referral = component.getConfig("referral")
 
 	if useTruststoreSpi := component.getConfig("useTruststoreSpi"); useTruststoreSpi == "ldapsOnly" {
 		ldap.UseTruststoreSpi = "ONLY_FOR_LDAPS"
@@ -462,7 +495,7 @@ func (keycloakClient *KeycloakClient) GetLdapUserFederation(ctx context.Context,
 		return nil, err
 	}
 
-	return convertFromComponentToLdapUserFederation(component)
+	return convertFromComponentToLdapUserFederation(component, realmId)
 }
 
 func (keycloakClient *KeycloakClient) GetLdapUserFederationMappers(ctx context.Context, realmId, id string) (*[]interface{}, error) {

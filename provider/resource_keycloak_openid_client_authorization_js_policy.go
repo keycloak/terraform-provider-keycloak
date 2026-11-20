@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakOpenidClientAuthorizationJSPolicy() *schema.Resource {
@@ -50,6 +52,12 @@ func resourceKeycloakOpenidClientAuthorizationJSPolicy() *schema.Resource {
 			"code": {
 				Type:     schema.TypeString,
 				Required: true,
+				// Inline JavaScript can no longer be uploaded through the API, so "code" must
+				// reference a policy deployed as a script by its provider id ("script-<fileName>").
+				ValidateFunc: validation.StringMatch(
+					regexp.MustCompile(`^script-\S+$`),
+					`must reference a policy deployed as a script by its provider id, e.g. "script-my-policy.js" ("script-" followed by the fileName from META-INF/keycloak-scripts.json). Inline JavaScript is no longer supported by Keycloak; deploy the script in a JAR and reference it here, or use keycloak_generic_client_authorization_policy`,
+				),
 			},
 		},
 	}

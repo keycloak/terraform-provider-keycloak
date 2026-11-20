@@ -2,25 +2,26 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 /*
-	note: we cannot use parallel tests for this resource as only one instance of a google identity provider can be created
+	note: we cannot use parallel tests for this resource as only one instance of a Google identity provider can be created
 	for a realm.
 */
 
 func TestAccKeycloakOidcGoogleIdentityProvider_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGoogleIdentityProvider_basic(),
@@ -30,13 +31,99 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basic(t *testing.T) {
 	})
 }
 
+func TestAccKeycloakOidcGoogleIdentityProvider_customAlias(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	alias = "example"
+}
+	`, testAccRealm.Realm),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					resource.TestCheckResourceAttr("keycloak_oidc_google_identity_provider.google", "alias", "example"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOidcGoogleIdentityProvider_customDisplayName(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	display_name = "Example Google"
+}
+	`, testAccRealm.Realm),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					resource.TestCheckResourceAttr("keycloak_oidc_google_identity_provider.google", "display_name", "Example Google"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOidcGoogleIdentityProvider_loginHint(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+	login_hint        = "true"
+}
+	`, testAccRealm.Realm),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					resource.TestCheckResourceAttr("keycloak_oidc_google_identity_provider.google", "login_hint", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcGoogleIdentityProvider_extraConfig(t *testing.T) {
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGoogleIdentityProvider_customConfig("dummyConfig", customConfigValue),
@@ -54,9 +141,9 @@ func TestAccKeycloakOidcGoogleIdentityProvider_extraConfigInvalid(t *testing.T) 
 	customConfigValue := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOidcGoogleIdentityProvider_customConfig("syncMode", customConfigValue),
@@ -66,13 +153,33 @@ func TestAccKeycloakOidcGoogleIdentityProvider_extraConfigInvalid(t *testing.T) 
 	})
 }
 
+func TestAccKeycloakOidcGoogleIdentityProvider_linkOrganization(t *testing.T) {
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcGoogleIdentityProvider_linkOrganization(organizationName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOidcGoogleIdentityProviderExists("keycloak_oidc_google_identity_provider.google"),
+					testAccCheckKeycloakIdentityProviderLinkOrganization("keycloak_oidc_google_identity_provider.google"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcGoogleIdentityProvider_createAfterManualDestroy(t *testing.T) {
 	var idp = &keycloak.IdentityProvider{}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGoogleIdentityProvider_basic(),
@@ -94,10 +201,12 @@ func TestAccKeycloakOidcGoogleIdentityProvider_createAfterManualDestroy(t *testi
 
 func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 	firstEnabled := randomBool()
+	firstHideOnLogin := randomBool()
 
 	firstOidc := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     firstEnabled,
+		HideOnLogin: firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			HostedDomain:                "mycompany.com",
 			AcceptsPromptNoneForwFrmClt: false,
@@ -109,8 +218,9 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 	}
 
 	secondOidc := &keycloak.IdentityProvider{
-		Alias:   acctest.RandString(10),
-		Enabled: !firstEnabled,
+		Alias:       acctest.RandString(10),
+		Enabled:     !firstEnabled,
+		HideOnLogin: !firstHideOnLogin,
 		Config: &keycloak.IdentityProviderConfig{
 			HostedDomain:                "mycompany.com",
 			AcceptsPromptNoneForwFrmClt: false,
@@ -122,9 +232,9 @@ func TestAccKeycloakOidcGoogleIdentityProvider_basicUpdateAll(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcGoogleIdentityProviderDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOidcGoogleIdentityProvider_basicFromInterface(firstOidc),
@@ -262,6 +372,36 @@ resource "keycloak_oidc_google_identity_provider" "google" {
 	client_secret     						= "%s"
 	gui_order                               = %s
 	sync_mode                               = "%s"
+	hide_on_login_page                      = %t
 }
-	`, testAccRealm.Realm, idp.Enabled, idp.Config.HostedDomain, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode)
+	`, testAccRealm.Realm, idp.Enabled, idp.Config.HostedDomain, idp.Config.AcceptsPromptNoneForwFrmClt, idp.Config.ClientId, idp.Config.ClientSecret, idp.Config.GuiOrder, idp.Config.SyncMode, idp.HideOnLogin)
+}
+
+func testKeycloakOidcGoogleIdentityProvider_linkOrganization(organizationName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm   = data.keycloak_realm.realm.id
+	name    = "%s"
+	enabled = true
+
+	domain {
+		name     = "example.com"
+		verified = true
+ 	}
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm             = data.keycloak_realm.realm.id
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	organization_id   				= keycloak_organization.org.id
+	org_domain		  				= "example.com"
+	org_redirect_mode_email_matches = true
+}
+	`, testAccRealm.Realm, organizationName)
 }

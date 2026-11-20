@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func resourceKeycloakGroupPermissions() *schema.Resource {
@@ -35,6 +35,11 @@ func resourceKeycloakGroupPermissions() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"organization_id": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validateGroupPermissionsOrganizationId,
+			},
 			"authorization_resource_server_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -53,12 +58,35 @@ func groupPermissionsId(realmId, groupId string) string {
 	return fmt.Sprintf("%s/%s", realmId, groupId)
 }
 
+// validateGroupPermissionsOrganizationId rejects a non-empty organization_id.
+// This is the Fine-Grained Admin Permissions v1 resource, whose REST endpoint is
+// realm-scoped and cannot manage organization groups. Point users to the v2
+// resource, which does support organization groups.
+func validateGroupPermissionsOrganizationId(i interface{}, k string) ([]string, []error) {
+	if i.(string) != "" {
+		return nil, []error{fmt.Errorf(
+			"%s is not supported by the %s resource (Fine-Grained Admin Permissions v1); organization group permissions require the %s resource (FGA v2)",
+			k, "keycloak_group_permissions", "keycloak_group_admin_permissions")}
+	}
+	return nil, nil
+}
+
 func resourceKeycloakGroupPermissionsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return resourceKeycloakGroupPermissionsUpdate(ctx, data, meta)
 }
 
 func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// An organization ID from a newly created resource can be unknown during
+	// schema validation. Reject the resolved value before making any API calls.
+	if _, errs := validateGroupPermissionsOrganizationId(data.Get("organization_id"), "organization_id"); len(errs) != 0 {
+		return diag.FromErr(errs[0])
+	}
+
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", "keycloak_group_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
@@ -69,43 +97,43 @@ func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.Re
 		return diag.FromErr(err)
 	}
 
-	// setting scope permissions requires us to fetch the users permissions details, as well as the realm management client
+	// setting scope permissions requires us to fetch the group permissions details, as well as the realm management client
 	groupPermissions, err := keycloakClient.GetGroupPermissions(ctx, realmId, groupId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if viewScope, ok := data.GetOk("view_scope"); ok {
-		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view"].(string), viewScope.(*schema.Set))
+		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view"], viewScope.(*schema.Set))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if manageScope, ok := data.GetOk("manage_scope"); ok {
-		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage"].(string), manageScope.(*schema.Set))
+		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage"], manageScope.(*schema.Set))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if viewMembersScope, ok := data.GetOk("view_members_scope"); ok {
-		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view-members"].(string), viewMembersScope.(*schema.Set))
+		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view-members"], viewMembersScope.(*schema.Set))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if manageMembersScope, ok := data.GetOk("manage_members_scope"); ok {
-		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-members"].(string), manageMembersScope.(*schema.Set))
+		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-members"], manageMembersScope.(*schema.Set))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if manageMembershipScope, ok := data.GetOk("manage_membership_scope"); ok {
-		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-membership"].(string), manageMembershipScope.(*schema.Set))
+		err := setOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-membership"], manageMembershipScope.(*schema.Set))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -116,10 +144,15 @@ func resourceKeycloakGroupPermissionsUpdate(ctx context.Context, data *schema.Re
 
 func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", "keycloak_group_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
 
-	realmManagementClient, err := keycloakClient.GetOpenidClientByClientId(ctx, realmId, "realm-management")
+	realmManagementClient, err := keycloakClient.GetOpenidClientByClientIdSkipSecret(ctx, realmId, "realm-management")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -135,34 +168,44 @@ func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.Reso
 	data.Set("enabled", groupPermissions.Enabled)
 	data.Set("authorization_resource_server_id", realmManagementClient.Id)
 
-	if viewScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view"].(string)); err == nil && viewScope != nil {
-		data.Set("view_scope", []interface{}{viewScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["view"]; scopeId != "" {
+		if viewScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && viewScope != nil {
+			data.Set("view_scope", []interface{}{viewScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage"].(string)); err == nil && manageScope != nil {
-		data.Set("manage_scope", []interface{}{manageScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage"]; scopeId != "" {
+		if manageScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageScope != nil {
+			data.Set("manage_scope", []interface{}{manageScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if viewMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["view-members"].(string)); err == nil && viewMembersScope != nil {
-		data.Set("view_members_scope", []interface{}{viewMembersScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["view-members"]; scopeId != "" {
+		if viewMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && viewMembersScope != nil {
+			data.Set("view_members_scope", []interface{}{viewMembersScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-members"].(string)); err == nil && manageMembersScope != nil {
-		data.Set("manage_members_scope", []interface{}{manageMembersScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage-members"]; scopeId != "" {
+		if manageMembersScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageMembersScope != nil {
+			data.Set("manage_members_scope", []interface{}{manageMembersScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	if manageMembershipScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, groupPermissions.ScopePermissions["manage-membership"].(string)); err == nil && manageMembershipScope != nil {
-		data.Set("manage_membership_scope", []interface{}{manageMembershipScope})
-	} else if err != nil {
-		return diag.FromErr(err)
+	if scopeId := groupPermissions.ScopePermissions["manage-membership"]; scopeId != "" {
+		if manageMembershipScope, err := getOpenidClientScopePermissionPolicy(ctx, keycloakClient, realmId, realmManagementClient.Id, scopeId); err == nil && manageMembershipScope != nil {
+			data.Set("manage_membership_scope", []interface{}{manageMembershipScope})
+		} else if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
@@ -170,6 +213,10 @@ func resourceKeycloakGroupPermissionsRead(ctx context.Context, data *schema.Reso
 
 func resourceKeycloakGroupPermissionsDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", "keycloak_group_admin_permissions"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	realmId := data.Get("realm_id").(string)
 	groupId := data.Get("group_id").(string)
@@ -179,6 +226,10 @@ func resourceKeycloakGroupPermissionsDelete(ctx context.Context, data *schema.Re
 
 func resourceKeycloakGroupPermissionsImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
+
+	if err := checkFGAPv2NotEnabled(ctx, keycloakClient, "keycloak_group_permissions", "keycloak_group_admin_permissions"); err != nil {
+		return nil, err
+	}
 
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {

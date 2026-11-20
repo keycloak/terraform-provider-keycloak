@@ -2,12 +2,13 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
 func TestAccKeycloakOpenIdUserPropertyProtocolMapper_basicClient(t *testing.T) {
@@ -18,9 +19,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_basicClient(t *testing.T) {
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_basic_client(clientId, mapperName),
@@ -38,9 +39,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_basicClientScope(t *testing
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -60,9 +61,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_import(t *testing.T) {
 	clientScopeResourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdFullNameProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_import(clientId, clientScopeId, mapperName),
@@ -83,6 +84,18 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: getGenericProtocolMapperIdForClientScope(clientScopeResourceName),
 			},
+			{
+				ResourceName:      clientResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClient(clientResourceName),
+			},
+			{
+				ResourceName:      clientScopeResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getGenericProtocolMapperNameImportIdForClientScope(clientScopeResourceName),
+			},
 		},
 	})
 }
@@ -97,9 +110,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_update(t *testing.T) {
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_claim(clientId, mapperName, propertyName),
@@ -123,9 +136,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_createAfterManualDestroy(t 
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_basic_client(clientId, mapperName),
@@ -151,9 +164,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_validateClaimValueType(t *t
 	invalidClaimValueType := acctest.RandomWithPrefix("tf-acc")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testKeycloakOpenIdUserPropertyProtocolMapper_claimValueType(mapperName, invalidClaimValueType),
@@ -173,9 +186,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_updateClientIdForceNew(t *t
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_claim(clientId, mapperName, propertyName),
@@ -197,9 +210,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_updateClientScopeForceNew(t
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper_client_scope"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_basic_clientScope(clientScopeId, mapperName),
@@ -222,9 +235,9 @@ func TestAccKeycloakOpenIdUserPropertyProtocolMapper_updateRealmIdForceNew(t *te
 	resourceName := "keycloak_openid_user_property_protocol_mapper.user_property_mapper"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
-		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccKeycloakOpenIdUserPropertyProtocolMapperDestroy(),
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenIdUserPropertyProtocolMapper_claim(clientId, mapperName, propertyName),

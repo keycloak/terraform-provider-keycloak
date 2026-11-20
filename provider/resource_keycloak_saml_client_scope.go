@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak"
+	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
 
 func resourceKeycloakSamlClientScope() *schema.Resource {
@@ -22,6 +24,7 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakSamlClientScopeImport,
 		},
+		CustomizeDiff: customizeDiffClientScopeDisplayOnConsentScreen,
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -33,42 +36,61 @@ func resourceKeycloakSamlClientScope() *schema.Resource {
 				Required: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffWhenNotInConfig("description"),
 			},
 			"consent_screen_text": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"display_on_consent_screen": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 			"gui_order": {
 				Type:     schema.TypeInt,
 				Optional: true,
+			},
+			"extra_config": {
+				Type:             schema.TypeMap,
+				Optional:         true,
+				ValidateDiagFunc: validateExtraConfig(reflect.ValueOf(&keycloak.SamlClientScopeAttributes{}).Elem()),
 			},
 		},
 	}
 }
 
-func getSamlClientScopeFromData(data *schema.ResourceData) *keycloak.SamlClientScope {
+func getSamlClientScopeFromData(data *schema.ResourceData) (*keycloak.SamlClientScope, error) {
+
 	clientScope := &keycloak.SamlClientScope{
-		Id:          data.Id(),
-		RealmId:     data.Get("realm_id").(string),
-		Name:        data.Get("name").(string),
-		Description: data.Get("description").(string),
+		Id:      data.Id(),
+		RealmId: data.Get("realm_id").(string),
+		Name:    data.Get("name").(string),
 	}
 
-	if consentScreenText, ok := data.GetOk("consent_screen_text"); ok {
-		clientScope.Attributes.ConsentScreenText = consentScreenText.(string)
-		clientScope.Attributes.DisplayOnConsentScreen = true
-	} else {
-		clientScope.Attributes.DisplayOnConsentScreen = false
+	description, descriptionOk := data.GetOkExists("description")
+	if descriptionOk {
+		clientScope.Description = description.(string)
 	}
+
+	clientScope.Attributes.ConsentScreenText = data.Get("consent_screen_text").(string)
+
+	displayOnConsentScreen, err := getClientScopeDisplayOnConsentScreen(data)
+	if err != nil {
+		return nil, err
+	}
+	clientScope.Attributes.DisplayOnConsentScreen = types.KeycloakBoolQuoted(displayOnConsentScreen)
 
 	// Treat 0 as an empty string for the purpose of omitting the attribute to reset the order
 	if guiOrder := data.Get("gui_order").(int); guiOrder != 0 {
 		clientScope.Attributes.GuiOrder = strconv.Itoa(guiOrder)
 	}
 
-	return clientScope
+	clientScope.Attributes.ExtraConfig = getExtraConfigFromData(data)
+
+	return clientScope, nil
 }
 
 func setSamlClientScopeData(data *schema.ResourceData, clientScope *keycloak.SamlClientScope) {
@@ -77,22 +99,25 @@ func setSamlClientScopeData(data *schema.ResourceData, clientScope *keycloak.Sam
 	data.Set("realm_id", clientScope.RealmId)
 	data.Set("name", clientScope.Name)
 	data.Set("description", clientScope.Description)
-
-	if clientScope.Attributes.DisplayOnConsentScreen {
-		data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
-	}
+	data.Set("consent_screen_text", clientScope.Attributes.ConsentScreenText)
+	data.Set("display_on_consent_screen", bool(clientScope.Attributes.DisplayOnConsentScreen))
 
 	if guiOrder, err := strconv.Atoi(clientScope.Attributes.GuiOrder); err == nil {
 		data.Set("gui_order", guiOrder)
 	}
+
+	setExtraConfigData(data, clientScope.Attributes.ExtraConfig)
 }
 
 func resourceKeycloakSamlClientScopeCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getSamlClientScopeFromData(data)
+	clientScope, err := getSamlClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.NewSamlClientScope(ctx, clientScope)
+	err = keycloakClient.NewSamlClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -121,9 +146,12 @@ func resourceKeycloakSamlClientScopeRead(ctx context.Context, data *schema.Resou
 func resourceKeycloakSamlClientScopeUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
-	clientScope := getSamlClientScopeFromData(data)
+	clientScope, err := getSamlClientScopeFromData(data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := keycloakClient.UpdateSamlClientScope(ctx, clientScope)
+	err = keycloakClient.UpdateSamlClientScope(ctx, clientScope)
 	if err != nil {
 		return diag.FromErr(err)
 	}

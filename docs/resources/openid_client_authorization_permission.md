@@ -1,4 +1,8 @@
-# keycloak_openid_client_authorization_permission
+---
+page_title: "keycloak_openid_client_authorization_permission Resource"
+---
+
+# keycloak\_openid\_client\_authorization\_permission Resource
 
 Allows you to manage openid Client Authorization Permissions.
 
