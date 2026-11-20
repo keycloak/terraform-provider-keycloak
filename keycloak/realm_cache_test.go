@@ -294,7 +294,10 @@ func TestRefreshExplainsAnUnreadableTokenResponse(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	for _, expected := range []string{"refreshing credentials", "503", `{"error" e}`} {
+	if strings.Contains(err.Error(), `{"error" e}`) {
+		t.Fatal("refresh error included the response body")
+	}
+	for _, expected := range []string{"refreshing credentials", "503"} {
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("the error %q does not mention %q", err, expected)
 		}
@@ -317,10 +320,9 @@ func TestGetRealmByInternalIdTakesTheRealmByNameWhenItCannotBeChecked(t *testing
 	client := fake.client(t)
 
 	for name, test := range map[string]struct{ internalId, name string }{
-		"no internal id in the state":    {"", "a"},
-		"internal id that matches":       {"u1", "a"},
-		"realm whose id is not shown":    {"u9", "hidden"},
-		"realm whose id is not shown, 2": {"", "hidden"},
+		"no internal id in the state": {"", "a"},
+		"internal id that matches":    {"u1", "a"},
+		"no stored or visible id":     {"", "hidden"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			realm, err := client.GetRealmByInternalId(t.Context(), test.internalId, test.name)
@@ -443,11 +445,85 @@ func TestRealmCacheIndexFollowsARename(t *testing.T) {
 	}
 }
 
-func TestResponseSnippetLeavesTokensOut(t *testing.T) {
-	if snippet := responseSnippet([]byte(`{"access_token":"secret`)); strings.Contains(snippet, "secret") {
-		t.Errorf("a token ended up in %q", snippet)
+func TestStoredRealmIdRequiresVisibleIdentity(t *testing.T) {
+	client := (&fakeRealms{realms: []fakeRealm{{Realm: "reused"}}}).client(t)
+	if _, err := client.GetRealmByInternalId(t.Context(), "original-id", "reused"); !ErrorIs403(err) {
+		t.Fatalf("expected an identity lookup error, got %v", err)
 	}
-	if snippet := responseSnippet([]byte(strings.Repeat("x", 500))); len(snippet) > 130 {
-		t.Errorf("the snippet is too long: %d", len(snippet))
+}
+
+func TestMissingLegacyRealmDoesNotListOtherRealms(t *testing.T) {
+	fake := &fakeRealms{realms: []fakeRealm{{Realm: "hidden"}}}
+	if _, err := fake.client(t).GetRealmByInternalId(t.Context(), "", "gone"); !ErrorIs404(err) || fake.requests.Load() != 1 {
+		t.Fatalf("expected a direct 404, got %v (%d requests)", err, fake.requests.Load())
+	}
+}
+
+func TestRealmIdentityChangesBetweenListAndRead(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/admin/realms":
+			_, _ = w.Write([]byte(`[{"realm":"new","id":"original"}]`))
+		case "/admin/realms/new":
+			_, _ = w.Write([]byte(`{"realm":"new","id":"replacement"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	client := &KeycloakClient{baseUrl: server.URL, httpClient: server.Client(), initialLogin: true,
+		clientCredentials: &ClientCredentials{AccessToken: "test", TokenType: "Bearer"}}
+	if realm, err := client.GetRealmByInternalId(t.Context(), "original", "old"); realm != nil || err == nil || ErrorIs404(err) {
+		t.Fatalf("expected lookup to stop, got realm %v, error %v", realm, err)
+	}
+}
+
+func TestRealmLookupTransport404DoesNotClearState(t *testing.T) {
+	for _, tc := range []struct {
+		name             string
+		collectionStatus int
+	}{{"collection unavailable", http.StatusNotFound}, {"renamed after listing", http.StatusOK}} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/admin/realms" {
+					w.WriteHeader(tc.collectionStatus)
+					_, _ = w.Write([]byte(`[{"realm":"new","id":"original"}]`))
+					return
+				}
+				http.NotFound(w, r)
+			}))
+			t.Cleanup(server.Close)
+			client := &KeycloakClient{baseUrl: server.URL, httpClient: server.Client(), initialLogin: true,
+				clientCredentials: &ClientCredentials{AccessToken: "test", TokenType: "Bearer"}}
+			if _, err := client.GetRealmByInternalId(t.Context(), "original", "old"); err == nil || ErrorIs404(err) {
+				t.Fatalf("expected an inconclusive lookup, got %v", err)
+			}
+		})
+	}
+}
+
+func TestRefreshRetryValidatesReplacementCredentials(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/token") {
+			t.Errorf("unexpected request to %s", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		if calls.Add(1) == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"token_type":"Bearer"}`))
+	}))
+	t.Cleanup(server.Close)
+	client := &KeycloakClient{authUrl: server.URL, httpClient: server.Client(), initialLogin: true,
+		clientCredentials: &ClientCredentials{ClientId: "test", ClientSecret: "test", GrantType: "client_credentials", AccessToken: "previous", TokenType: "Bearer"}}
+	err := client.Refresh(t.Context())
+	if err == nil || calls.Load() != 2 {
+		t.Fatalf("expected the incomplete retry to fail, got %v after %d calls", err, calls.Load())
+	}
+	if _, token := client.tokenTypeAndAccessToken(); token != "previous" {
+		t.Fatal("failed retry replaced the working credentials")
 	}
 }
