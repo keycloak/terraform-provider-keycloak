@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type UserOtpCredential struct {
@@ -49,11 +50,12 @@ func (keycloakClient *KeycloakClient) getUserCredentials(ctx context.Context, re
 	return credentials, nil
 }
 
-// CreateUserOtpCredential adds an OTP credential to the user and removes the CONFIGURE_TOTP required action.
+// CreateUserOtpCredential adds an OTP credential to the user.
 //
-// Keycloak only supports creating an OTP credential from a secret through the user update endpoint.
-// Since that endpoint replaces the user with the given representation, the full representation is
-// fetched and sent back, so that fields not known to this provider are left untouched.
+// Keycloak only supports creating an OTP credential from a secret through the user update endpoint. Only the
+// credential is sent: Keycloak leaves every user field that is missing from the request as it is, so the user is
+// not read first and nothing else on the user, such as its profile, attributes or required actions, is
+// overwritten or can be overwritten by a concurrent change.
 func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Context, credential *UserOtpCredential) error {
 	userPath := fmt.Sprintf("/realms/%s/users/%s", credential.RealmId, credential.UserId)
 
@@ -65,11 +67,6 @@ func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Contex
 
 	existingCredentials, err := keycloakClient.getUserCredentials(ctx, credential.RealmId, credential.UserId)
 	if err != nil {
-		return err
-	}
-
-	user := map[string]interface{}{}
-	if err := keycloakClient.get(ctx, userPath, &user, nil); err != nil {
 		return err
 	}
 
@@ -85,29 +82,23 @@ func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Contex
 		return err
 	}
 
-	secretData, err := json.Marshal(otpSecretData{Value: credential.Secret})
+	// Keycloak counts Base32 padding when it sizes the decoded key and pads it with zero bytes, which
+	// changes the key, so the padding must not be sent. The case is normalised the way the provider validated it.
+	secretData, err := json.Marshal(otpSecretData{Value: strings.ToUpper(strings.TrimRight(credential.Secret, "="))})
 	if err != nil {
 		return err
 	}
 
-	user["credentials"] = []map[string]interface{}{
-		{
-			"type":           "otp",
-			"userLabel":      credential.UserLabel,
-			"credentialData": string(credentialData),
-			"secretData":     string(secretData),
+	user := map[string]interface{}{
+		"credentials": []map[string]interface{}{
+			{
+				"type":           "otp",
+				"userLabel":      credential.UserLabel,
+				"credentialData": string(credentialData),
+				"secretData":     string(secretData),
+			},
 		},
 	}
-
-	requiredActions := []interface{}{}
-	if existing, ok := user["requiredActions"].([]interface{}); ok {
-		for _, action := range existing {
-			if action != "CONFIGURE_TOTP" {
-				requiredActions = append(requiredActions, action)
-			}
-		}
-	}
-	user["requiredActions"] = requiredActions
 
 	// the request body contains the TOTP secret
 	if err := keycloakClient.put(withRedactedRequestBody(ctx), userPath, user); err != nil {
@@ -124,14 +115,23 @@ func (keycloakClient *KeycloakClient) CreateUserOtpCredential(ctx context.Contex
 		return err
 	}
 
+	var createdIds []string
 	for _, created := range credentials {
 		if created.Type == "otp" && !knownIds[created.Id] {
-			credential.Id = created.Id
-			return nil
+			createdIds = append(createdIds, created.Id)
 		}
 	}
 
-	return fmt.Errorf("created an OTP credential for user %s, but it was not found afterwards", credential.UserId)
+	switch len(createdIds) {
+	case 1:
+		credential.Id = createdIds[0]
+		return nil
+	case 0:
+		return fmt.Errorf("created an OTP credential for user %s, but it was not found afterwards", credential.UserId)
+	default:
+		// Another client added an OTP credential to the same user at the same time, so there is no telling which one is ours.
+		return fmt.Errorf("created an OTP credential for user %s, but %d new OTP credentials appeared and it is unclear which one belongs to this resource; remove the unwanted ones and apply again", credential.UserId, len(createdIds))
+	}
 }
 
 func (keycloakClient *KeycloakClient) GetUserOtpCredential(ctx context.Context, realmId, userId, id string) (*UserOtpCredential, error) {
