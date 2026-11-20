@@ -1,14 +1,95 @@
 ## What's Changed
 
-## Unreleased
+## 5.11.0 (November 20, 2026)
 
 FEATURES:
 
-* Add `keycloak_client_scope_assignments` resource by @EliSauder in https://github.com/keycloak/terraform-provider-keycloak/pull/1801
+* feat: add organization support to group memberships and roles by @starwavex in https://github.com/keycloak/terraform-provider-keycloak/pull/1719
+* feat(users_admin_permissions): add reset-password scope by @minionOfZuul in https://github.com/keycloak/terraform-provider-keycloak/pull/1728
+* feat: support write-only realm SMTP passwords by @chernetskyi in https://github.com/keycloak/terraform-provider-keycloak/pull/1720
+* feat: add keycloak_organization_admin_permissions resource (FGAP v2) by @flozano in https://github.com/keycloak/terraform-provider-keycloak/pull/1797
+* feat: add keycloak_realm_keystore_custom resource by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1774
+* feat: add keycloak_realm_keystore_ecdh_generated resource by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1764
+* feat: unified keycloak_client_scope_assignments resource by @EliSauder in https://github.com/keycloak/terraform-provider-keycloak/pull/1801
+* feat(realm): rename realms in place and add realm_internal_id to realm-scoped resources by @theo-ritense in https://github.com/keycloak/terraform-provider-keycloak/pull/1769
+
+IMPROVEMENTS:
+
+* docs: fix extra_config keys for keycloak_custom_identity_provider_mapper by @gberche-orange in https://github.com/keycloak/terraform-provider-keycloak/pull/1726
+* test: prevent WebAuthn realm tests from selecting no signature algorithms by @samuel7james in https://github.com/keycloak/terraform-provider-keycloak/pull/1733
+* feat: add display_on_consent_screen to OpenID and SAML client scopes by @pnag90 in https://github.com/keycloak/terraform-provider-keycloak/pull/1772
+* test: add kc-admin-api scope to acceptance test clients for Keycloak 26.8.2 by @flozano in https://github.com/keycloak/terraform-provider-keycloak/pull/1796
+* test: prevent gui_order tests from selecting zero by @CorneiZeR in https://github.com/keycloak/terraform-provider-keycloak/pull/1791
+* Update to Keycloak 26.8.2 by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1798
+* ci: run Keycloak acceptance tests on PostgreSQL by @CorneiZeR in https://github.com/keycloak/terraform-provider-keycloak/pull/1802
+* feat(keycloak_oidc_identity_provider): make authorization_url and token_url optional for provider IDs other than oidc by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1800
+* feat(ldap_msad_user_account_control_mapper): add always_read_enabled_value_from_ldap by @marsluca in https://github.com/keycloak/terraform-provider-keycloak/pull/1770
+* test: verify rejection of untrusted and missing mTLS client certificates by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1805
+* feat: support import for keycloak_realm_client_policy_profile and keycloak_realm_client_policy_profile_policy by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1742
+* feat(realm): support ordered WebAuthn signature algorithms by @rirze in https://github.com/keycloak/terraform-provider-keycloak/pull/1753
+* feat(keycloak_identity_provider): support Keycloak 26.8 allow_admin_role_mapping by @ce-pschella in https://github.com/keycloak/terraform-provider-keycloak/pull/1758
+* Improve realm renaming and internal ID addressing by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1818
+* Update changelog and documentation to reflect a broken feature by @ChrisHubinger in https://github.com/keycloak/terraform-provider-keycloak/pull/824
+
+BUG FIXES:
+
+* fix(keycloak_realm): send organizations_enabled when it is false by @alviss7 in https://github.com/keycloak/terraform-provider-keycloak/pull/1760
+* fix(keycloak_realm): send admin_permissions_enabled when it is false by @alviss7 in https://github.com/keycloak/terraform-provider-keycloak/pull/1761
+* fix(keycloak_openid_client): apply authorization settings on update by @georgegkonis in https://github.com/keycloak/terraform-provider-keycloak/pull/1793
+* fix: allow reading clients whose secrets are not accessible to the caller by @CorneiZeR in https://github.com/keycloak/terraform-provider-keycloak/pull/1785
+* fix: send UNANIMOUS when a v1 scope permission omits decision_strategy by @lbarrosby in https://github.com/keycloak/terraform-provider-keycloak/pull/1803
+* fix: return an error when root_ca_certificate contains no valid PEM certificate by @sarankumar1325 in https://github.com/keycloak/terraform-provider-keycloak/pull/1777
+* fix(keycloak_realm): send offline_session_max_lifespan_enabled when it is false by @samuel7james in https://github.com/keycloak/terraform-provider-keycloak/pull/1730
+* fix(keycloak_oidc_identity_provider): replace the resource when provider_id changes by @samuel7james in https://github.com/keycloak/terraform-provider-keycloak/pull/1729
+* fix(keycloak_realm_user_profile): correctly read validator configurations containing numbers by @samuel7james in https://github.com/keycloak/terraform-provider-keycloak/pull/1790
+* fix(keycloak_organization_memberships): skip managed members instead of failing by @FrancescoL96 in https://github.com/keycloak/terraform-provider-keycloak/pull/1789
+* fix: only remove the specified client role when deleting a generic role mapper by @albarkauss in https://github.com/keycloak/terraform-provider-keycloak/pull/1787
+* fix: use one mutex key per realm for client policy profile and policy writes by @QuellcodeWanderer in https://github.com/keycloak/terraform-provider-keycloak/pull/1744
+* fix(keycloak_realm_events): send an empty events_listeners list by @SAY-5 in https://github.com/keycloak/terraform-provider-keycloak/pull/1766
+* fix: avoid dirty Terraform plans caused by masked authentication flow secrets in Keycloak 26.7.3 and 26.6.7 by @berni2288 in https://github.com/keycloak/terraform-provider-keycloak/pull/1765
+* fix(role): clear stale composites when a composite role becomes a leaf role by @rirze in https://github.com/keycloak/terraform-provider-keycloak/pull/1754
+* fix: use Keycloak defaults for omitted refresh-token attributes by @rirze in https://github.com/keycloak/terraform-provider-keycloak/pull/1747
+* fix: only retry authentication execution deletion on HTTP 5xx responses by @theo-ritense in https://github.com/keycloak/terraform-provider-keycloak/pull/1771
+* fix(ldap_user_federation): correctly handle the referral parameter by @demetthyl in https://github.com/keycloak/terraform-provider-keycloak/pull/1746
+* fix: support bearer-only client configuration and client scope assignments by @rirze in https://github.com/keycloak/terraform-provider-keycloak/pull/1748
+* fix(realm): preserve explicit realm reset values on updates by @rirze in https://github.com/keycloak/terraform-provider-keycloak/pull/1752
+* fix(realm): show planned removal of externally configured SMTP passwords when an empty password is specified by @thomasdarimont in https://github.com/keycloak/terraform-provider-keycloak/pull/1825
+* Redacted debug logs by @sschu in https://github.com/keycloak/terraform-provider-keycloak/pull/1826
 
 DEPRECATIONS:
 
 * Deprecate the split client-scope assignment resources in favor of `keycloak_client_scope_assignments` by @EliSauder in https://github.com/keycloak/terraform-provider-keycloak/pull/1801
+
+
+Huge thanks to all the individuals who have contributed towards this release:
+
+- [starwavex](https://github.com/starwavex)
+- [alviss7](https://github.com/alviss7)
+- [gberche-orange](https://github.com/gberche-orange)
+- [minionOfZuul](https://github.com/minionOfZuul)
+- [chernetskyi](https://github.com/chernetskyi)
+- [samuel7james](https://github.com/samuel7james)
+- [pnag90](https://github.com/pnag90)
+- [flozano](https://github.com/flozano)
+- [CorneiZeR](https://github.com/CorneiZeR)
+- [georgegkonis](https://github.com/georgegkonis)
+- [lbarrosby](https://github.com/lbarrosby)
+- [sarankumar1325](https://github.com/sarankumar1325)
+- [FrancescoL96](https://github.com/FrancescoL96)
+- [albarkauss](https://github.com/albarkauss)
+- [QuellcodeWanderer](https://github.com/QuellcodeWanderer)
+- [SAY-5](https://github.com/SAY-5)
+- [berni2288](https://github.com/berni2288)
+- [rirze](https://github.com/rirze)
+- [marsluca](https://github.com/marsluca)
+- [theo-ritense](https://github.com/theo-ritense)
+- [demetthyl](https://github.com/demetthyl)
+- [ce-pschella](https://github.com/ce-pschella)
+- [EliSauder](https://github.com/EliSauder)
+- [ChrisHubinger](https://github.com/ChrisHubinger)
+- [thomasdarimont](https://github.com/thomasdarimont)
+
+
 
 ## 5.10.0 (October 5, 2026)
 

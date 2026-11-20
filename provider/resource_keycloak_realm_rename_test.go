@@ -369,7 +369,7 @@ func TestAccKeycloakRealm_renameAfterUpgrade(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
-					"keycloak": {Source: "keycloak/keycloak", VersionConstraint: "5.10.0"},
+					"keycloak": {Source: "keycloak/keycloak", VersionConstraint: "5.11.0"},
 				},
 				Config: testKeycloakRealmRename_mixedChildrenLegacy(realmName),
 				// the realm was created by another provider process, after the shared client got its token
