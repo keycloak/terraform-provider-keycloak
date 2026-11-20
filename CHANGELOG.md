@@ -645,7 +645,7 @@ Huge thanks to all the individuals who have contributed towards this release:
 IMPROVEMENTS:
 
 - allow the `internal_id` attribute for the `keycloak_realm` resource to be set during apply instead of read-only ([#807](https://github.com/mrparkers/terraform-provider-keycloak/pull/807))
-- allow for multivalue attributes in `extra_config` attribute for `keycloak_custom_user_federation` resource ([#761](https://github.com/mrparkers/terraform-provider-keycloak/pull/761))
+- allow for multivalue attributes in `extra_config` attribute for `keycloak_custom_user_federation` resource ([#761](https://github.com/mrparkers/terraform-provider-keycloak/pull/761)). This version retained only the first value of a multivalue setting. Full support was fixed in 5.9.0 ([#1649](https://github.com/keycloak/terraform-provider-keycloak/pull/1649)).
 
 BUG FIXES:
 
