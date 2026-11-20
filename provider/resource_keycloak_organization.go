@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
@@ -20,6 +22,7 @@ func resourceKeycloakOrganization() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKeycloakOrganizationImport,
 		},
+		CustomizeDiff: validateKeycloakOrganizationIdentityProviders(),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -69,8 +72,53 @@ func resourceKeycloakOrganization() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
+						"identity_provider_alias": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The alias of an identity provider in an identity_provider block that users whose email matches this domain authenticate through.",
+						},
+						"auto_redirect": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Redirect users whose email matches this domain to the identity provider without showing the login form.",
+						},
 					},
 				},
+			},
+			"identity_provider": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "The identity providers that this resource links to the organization. Links made elsewhere are kept. When set, the resource also manages the routing of the domains. Requires Keycloak 26.8 or later.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"alias": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The alias of the identity provider.",
+						},
+						"auto_membership": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     true,
+							Description: "Add users who authenticate through the identity provider as members of the organization.",
+						},
+						"membership_type": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "UNMANAGED",
+							ValidateFunc: validation.StringInSlice([]string{"MANAGED", "UNMANAGED"}, false),
+							Description:  "The membership type of users added by auto_membership.",
+						},
+					},
+				},
+			},
+			// A list, not a set: when an update fails, the SDK saves the planned value of a set.
+			"identity_providers_pending_removal": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "The aliases of the identity providers that a failed update did not unlink from the organization. The next refresh shows them as identity_provider blocks, so that the next apply unlinks them.",
 			},
 			"attributes": {
 				Type:     schema.TypeMap,
@@ -99,8 +147,10 @@ func getOrganizationFromData(data *schema.ResourceData) (*keycloak.Organization,
 		for _, domain := range v.(*schema.Set).List() {
 			domainMap := domain.(map[string]interface{})
 			orgDomain := keycloak.OrganizationDomain{
-				Name:     domainMap["name"].(string),
-				Verified: domainMap["verified"].(bool),
+				Name:                  domainMap["name"].(string),
+				Verified:              domainMap["verified"].(bool),
+				IdentityProviderAlias: domainMap["identity_provider_alias"].(string),
+				AutoRedirect:          domainMap["auto_redirect"].(bool),
 			}
 			domains = append(domains, orgDomain)
 		}
@@ -119,6 +169,75 @@ func getOrganizationFromData(data *schema.ResourceData) (*keycloak.Organization,
 	return organization, nil
 }
 
+// validateKeycloakOrganizationIdentityProviders refuses at plan time what Keycloak refuses at apply
+// time: a domain routed to an identity provider that is not linked to the organization, and a
+// MANAGED link without auto membership. It also refuses an alias in two identity_provider blocks: the
+// set keeps both when their settings differ, but Keycloak has one link per alias, so the resource would
+// never converge.
+func validateKeycloakOrganizationIdentityProviders() schema.CustomizeDiffFunc {
+	return func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+		// An alias that is not known yet, such as a computed one, skips the checks. Keycloak then
+		// refuses the same mistakes at apply time.
+		if !organizationIdentityProviderConfigIsKnown(d.GetRawConfig()) {
+			return nil
+		}
+
+		identityProviderAliases := make(map[string]bool)
+		for _, identityProvider := range getOrganizationIdentityProvidersFromSet(d.Get("identity_provider").(*schema.Set)) {
+			if identityProviderAliases[identityProvider.Alias] {
+				return fmt.Errorf("identity provider \"%s\" is in more than one identity_provider block", identityProvider.Alias)
+			}
+			if identityProvider.MembershipType == "MANAGED" && !identityProvider.AutoMembership {
+				return fmt.Errorf("identity provider \"%s\": membership_type MANAGED requires auto_membership", identityProvider.Alias)
+			}
+			identityProviderAliases[identityProvider.Alias] = true
+		}
+
+		for _, domain := range d.Get("domain").(*schema.Set).List() {
+			domainMap := domain.(map[string]interface{})
+			name := domainMap["name"].(string)
+			identityProviderAlias := domainMap["identity_provider_alias"].(string)
+			if identityProviderAlias != "" && !identityProviderAliases[identityProviderAlias] {
+				return fmt.Errorf("domain \"%s\" routes to identity provider \"%s\", which is not in an identity_provider block", name, identityProviderAlias)
+			}
+			if domainMap["auto_redirect"].(bool) && identityProviderAlias == "" {
+				return fmt.Errorf("auto_redirect on domain \"%s\" requires identity_provider_alias", name)
+			}
+		}
+
+		return nil
+	}
+}
+
+// organizationIdentityProviderConfigIsKnown reports whether each value in the identity_provider and domain
+// blocks is known. It reads the raw config, because NewValueKnown does not see a value that is not known
+// inside a block: the SDK gives a placeholder string for it, which is not the alias.
+func organizationIdentityProviderConfigIsKnown(rawConfig cty.Value) bool {
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return false
+	}
+
+	return rawConfig.GetAttr("identity_provider").IsWhollyKnown() && rawConfig.GetAttr("domain").IsWhollyKnown()
+}
+
+func getOrganizationIdentityProvidersFromData(data *schema.ResourceData) []keycloak.OrganizationIdentityProvider {
+	return getOrganizationIdentityProvidersFromSet(data.Get("identity_provider").(*schema.Set))
+}
+
+func getOrganizationIdentityProvidersFromSet(set *schema.Set) []keycloak.OrganizationIdentityProvider {
+	identityProviders := make([]keycloak.OrganizationIdentityProvider, 0, set.Len())
+	for _, identityProvider := range set.List() {
+		identityProviderMap := identityProvider.(map[string]interface{})
+		identityProviders = append(identityProviders, keycloak.OrganizationIdentityProvider{
+			Alias:          identityProviderMap["alias"].(string),
+			AutoMembership: identityProviderMap["auto_membership"].(bool),
+			MembershipType: identityProviderMap["membership_type"].(string),
+		})
+	}
+
+	return identityProviders
+}
+
 func setOrganizationData(data *schema.ResourceData, organization *keycloak.Organization) error {
 	attributes := map[string]string{}
 	for k, v := range organization.Attributes {
@@ -130,6 +249,8 @@ func setOrganizationData(data *schema.ResourceData, organization *keycloak.Organ
 		domainMap := make(map[string]interface{})
 		domainMap["name"] = domain.Name
 		domainMap["verified"] = domain.Verified
+		domainMap["identity_provider_alias"] = domain.IdentityProviderAlias
+		domainMap["auto_redirect"] = domain.AutoRedirect
 		domains = append(domains, domainMap)
 	}
 
@@ -144,6 +265,84 @@ func setOrganizationData(data *schema.ResourceData, organization *keycloak.Organ
 	data.Set("attributes", attributes)
 
 	return nil
+}
+
+func setOrganizationIdentityProvidersData(data *schema.ResourceData, identityProviders []keycloak.OrganizationIdentityProvider) error {
+	identityProviderMaps := make([]map[string]interface{}, 0, len(identityProviders))
+	for _, identityProvider := range identityProviders {
+		identityProviderMaps = append(identityProviderMaps, map[string]interface{}{
+			"alias":           identityProvider.Alias,
+			"auto_membership": identityProvider.AutoMembership,
+			"membership_type": identityProvider.MembershipType,
+		})
+	}
+
+	return data.Set("identity_provider", identityProviderMaps)
+}
+
+func withoutDomainRouting(domains []keycloak.OrganizationDomain) []keycloak.OrganizationDomain {
+	unrouted := make([]keycloak.OrganizationDomain, 0, len(domains))
+	for _, domain := range domains {
+		unrouted = append(unrouted, keycloak.OrganizationDomain{
+			Name:     domain.Name,
+			Verified: domain.Verified,
+		})
+	}
+
+	return unrouted
+}
+
+func checkOrganizationIdentityProvidersSupported(ctx context.Context, keycloakClient *keycloak.KeycloakClient, organization *keycloak.Organization) error {
+	ok, err := keycloakClient.VersionIsLessThan(ctx, keycloak.Version_26_8)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return fmt.Errorf("identity_provider in organization \"%s\" is not supported by your Keycloak version (requires >= %s)", organization.Name, keycloak.Version_26_8)
+	}
+
+	return nil
+}
+
+// ownedOrganizationIdentityProviderAliases lists the aliases of the links that the resource owns: those of
+// the identity_provider blocks in state, and those that a failed update did not remove. Links made
+// elsewhere, such as by an identity provider resource with organization_id, are not in the list.
+func ownedOrganizationIdentityProviderAliases(identityProviders []keycloak.OrganizationIdentityProvider, pendingRemovalAliases []string) []string {
+	owned := make([]string, 0, len(identityProviders)+len(pendingRemovalAliases))
+	seen := make(map[string]bool, cap(owned))
+	add := func(alias string) {
+		if !seen[alias] {
+			seen[alias] = true
+			owned = append(owned, alias)
+		}
+	}
+
+	for _, identityProvider := range identityProviders {
+		add(identityProvider.Alias)
+	}
+	for _, alias := range pendingRemovalAliases {
+		add(alias)
+	}
+
+	return owned
+}
+
+// removedOrganizationIdentityProviderAliases lists the links that the resource owns and no longer wants.
+// Links that it does not own are not in the list, so they are kept.
+func removedOrganizationIdentityProviderAliases(identityProviders []keycloak.OrganizationIdentityProvider, ownedAliases []string) []string {
+	wanted := make(map[string]bool, len(identityProviders))
+	for _, identityProvider := range identityProviders {
+		wanted[identityProvider.Alias] = true
+	}
+
+	removed := make([]string, 0)
+	for _, alias := range ownedAliases {
+		if !wanted[alias] {
+			removed = append(removed, alias)
+		}
+	}
+
+	return removed
 }
 
 func resourceKeycloakOrganizationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
@@ -178,12 +377,34 @@ func resourceKeycloakOrganizationCreate(ctx context.Context, data *schema.Resour
 		return diag.FromErr(err)
 	}
 
+	identityProviders := getOrganizationIdentityProvidersFromData(data)
+	if len(identityProviders) > 0 {
+		if err = checkOrganizationIdentityProvidersSupported(ctx, keycloakClient, Organization); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// The domains are created without routing: an identity provider can only be linked to the
+	// organization, and a domain routed to it, once the organization exists.
+	domains := Organization.Domains
+	Organization.Domains = withoutDomainRouting(domains)
 	if err = keycloakClient.NewOrganization(ctx, Organization); err != nil {
 		return diag.FromErr(err)
 	}
+	Organization.Domains = domains
 	if err = setOrganizationData(data, Organization); err != nil {
 		return diag.FromErr(err)
 	}
+
+	if len(identityProviders) > 0 {
+		if err = keycloakClient.LinkOrganizationIdentityProviders(ctx, Organization, identityProviders); err != nil {
+			return diag.FromErr(err)
+		}
+		if err = keycloakClient.UpdateOrganizationWithDomainRouting(ctx, Organization); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return resourceKeycloakOrganizationRead(ctx, data, meta)
 }
 
@@ -196,6 +417,31 @@ func resourceKeycloakOrganizationRead(ctx context.Context, data *schema.Resource
 		return handleNotFoundError(ctx, err, data)
 	}
 
+	// A link that a failed update did not remove goes back into an identity_provider block, so that
+	// the next plan removes it.
+	ownedAliases := ownedOrganizationIdentityProviderAliases(getOrganizationIdentityProvidersFromData(data), interfaceSliceToStringSlice(data.Get("identity_providers_pending_removal").([]interface{})))
+	identityProviders := make([]keycloak.OrganizationIdentityProvider, 0, len(ownedAliases))
+	for _, alias := range ownedAliases {
+		identityProvider, err := keycloakClient.GetOrganizationIdentityProvider(ctx, realm, id, alias)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if identityProvider != nil {
+			identityProviders = append(identityProviders, *identityProvider)
+		}
+	}
+	if len(ownedAliases) == 0 {
+		// Without identity_provider blocks the routing of the domains belongs to the
+		// identity provider resources that set organization_id.
+		Organization.Domains = withoutDomainRouting(Organization.Domains)
+	}
+	if err = setOrganizationIdentityProvidersData(data, identityProviders); err != nil {
+		return diag.FromErr(err)
+	}
+	if err = data.Set("identity_providers_pending_removal", []string{}); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diag.FromErr(setOrganizationData(data, Organization))
 }
 
@@ -206,8 +452,47 @@ func resourceKeycloakOrganizationUpdate(ctx context.Context, data *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	err = keycloakClient.UpdateOrganization(ctx, Organization)
+	identityProviders := getOrganizationIdentityProvidersFromData(data)
+	oldIdentityProviderSet, _ := data.GetChange("identity_provider")
+	oldPendingRemoval, _ := data.GetChange("identity_providers_pending_removal")
+	ownedAliases := ownedOrganizationIdentityProviderAliases(getOrganizationIdentityProvidersFromSet(oldIdentityProviderSet.(*schema.Set)), interfaceSliceToStringSlice(oldPendingRemoval.([]interface{})))
+	removedAliases := removedOrganizationIdentityProviderAliases(identityProviders, ownedAliases)
+
+	// Each failure records the links that the update did not remove. The SDK saves the planned
+	// identity_provider blocks when an update fails, whatever the update sets, and a refresh reads only
+	// the links in state. Without the record, such a link would never be removed.
+	failed := func(err error, remainingAliases []string) diag.Diagnostics {
+		diags := diag.FromErr(err)
+		if setErr := data.Set("identity_providers_pending_removal", remainingAliases); setErr != nil {
+			diags = append(diags, diag.FromErr(setErr)...)
+		}
+		return diags
+	}
+
+	if len(identityProviders) > 0 {
+		if err = checkOrganizationIdentityProvidersSupported(ctx, keycloakClient, Organization); err != nil {
+			return failed(err, removedAliases)
+		}
+		if err = keycloakClient.LinkOrganizationIdentityProviders(ctx, Organization, identityProviders); err != nil {
+			return failed(err, removedAliases)
+		}
+	}
+	// The routing stays with this resource for the update that removes its last identity_provider
+	// block, so that the update clears the routing before it unlinks.
+	if len(identityProviders) > 0 || len(ownedAliases) > 0 {
+		err = keycloakClient.UpdateOrganizationWithDomainRouting(ctx, Organization)
+	} else {
+		err = keycloakClient.UpdateOrganization(ctx, Organization)
+	}
 	if err != nil {
+		return failed(err, removedAliases)
+	}
+
+	remainingAliases, err := keycloakClient.UnlinkOrganizationIdentityProviders(ctx, Organization, removedAliases)
+	if err != nil {
+		return failed(err, remainingAliases)
+	}
+	if err = data.Set("identity_providers_pending_removal", []string{}); err != nil {
 		return diag.FromErr(err)
 	}
 

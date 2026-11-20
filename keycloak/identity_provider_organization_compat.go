@@ -12,7 +12,8 @@ import (
 )
 
 // Serialize organization read/modify/write operations within this provider process.
-// UpdateOrganization must use the same lock (see the accompanying patch).
+// UpdateOrganization must use the same lock (see the accompanying patch), and so do the
+// link changes of keycloak_organization (organization.go).
 var identityProviderOrganizationMutex sync.Mutex
 
 type IdentityProviderOrganizationLink struct {
@@ -92,8 +93,9 @@ func (keycloakClient *KeycloakClient) identityProviderRequest(ctx context.Contex
 }
 
 // GetIdentityProviderForOrganization preserves the organization selected in state.
-// With no preferred organization (e.g. import), only an unambiguous link can be
-// represented by the legacy single-organization schema.
+// With no preferred organization (including import) no link is represented: links
+// that the identity provider resource does not manage belong to keycloak_organization,
+// which can link one identity provider to several organizations.
 func (keycloakClient *KeycloakClient) GetIdentityProviderForOrganization(ctx context.Context, realm, alias, preferredOrganizationId, preferredDomain string) (*IdentityProvider, error) {
 	idp, err := keycloakClient.getIdentityProvider(ctx, realm, alias)
 	if err != nil {
@@ -123,14 +125,6 @@ func (keycloakClient *KeycloakClient) readLegacyIdentityProviderOrganization(ctx
 				idp.OrganizationId = preferredOrganizationId
 				break
 			}
-		}
-	} else {
-		switch len(idp.OrganizationLinks) {
-		case 0:
-		case 1:
-			idp.OrganizationId = idp.OrganizationLinks[0].OrganizationId
-		default:
-			return fmt.Errorf("multiple organizations are linked; the legacy organization_id schema cannot import this identity provider unambiguously")
 		}
 	}
 	if idp.OrganizationId == "" {
@@ -297,6 +291,8 @@ func (keycloakClient *KeycloakClient) ReconcileLegacyIdentityProviderOrganizatio
 			return err
 		}
 	}
+	// Always MANAGED with auto membership, as before 26.8. The keycloak_organization docs rely on
+	// it (TestAccKeycloakOrganization_identityProvidersKeepOtherLinks).
 	if !exists || !link.AutoMembership || link.MembershipType != "MANAGED" {
 		link = IdentityProviderOrganizationLink{OrganizationId: desired.OrganizationId, AutoMembership: true, MembershipType: "MANAGED"}
 		if err := keycloakClient.put(ctx, path+"/"+url.PathEscape(desired.Alias), link); err != nil {
