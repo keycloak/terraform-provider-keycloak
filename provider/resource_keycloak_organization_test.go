@@ -7,31 +7,122 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/keycloak/terraform-provider-keycloak/keycloak"
 )
 
-func TestOrganizationIdentityProvidersAfterFailedUnlink(t *testing.T) {
+func TestOrganizationIdentityProviderAliases(t *testing.T) {
 	t.Parallel()
 
 	old := []keycloak.OrganizationIdentityProvider{
 		{Alias: "kept", AutoMembership: true, MembershipType: "UNMANAGED"},
-		{Alias: "unlinked", AutoMembership: true, MembershipType: "UNMANAGED"},
-		{Alias: "refused", AutoMembership: true, MembershipType: "MANAGED"},
+		{Alias: "removed", AutoMembership: true, MembershipType: "MANAGED"},
 	}
 	planned := []keycloak.OrganizationIdentityProvider{
 		{Alias: "kept", AutoMembership: false, MembershipType: "UNMANAGED"},
 		{Alias: "added", AutoMembership: true, MembershipType: "UNMANAGED"},
+		{Alias: "wanted-again", AutoMembership: true, MembershipType: "UNMANAGED"},
+	}
+	// A failed update did not remove these links. One of them is also in a block of the state.
+	pendingRemoval := []string{"refused", "wanted-again", "removed"}
+
+	owned := ownedOrganizationIdentityProviderAliases(old, pendingRemoval)
+	if want := []string{"kept", "removed", "refused", "wanted-again"}; !reflect.DeepEqual(owned, want) {
+		t.Fatalf("expected the resource to own %v, got %v", want, owned)
 	}
 
-	// The link that was not removed stays in state with its old settings, so that the next plan
-	// removes it again. The planned links stay as planned: a refresh corrects them.
-	got := organizationIdentityProvidersAfterFailedUnlink(planned, old, []string{"refused"})
-	want := []keycloak.OrganizationIdentityProvider{planned[0], planned[1], old[2]}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("expected %v, got %v", want, got)
+	// The update removes each link that the resource owns and that has no block.
+	removed := removedOrganizationIdentityProviderAliases(planned, owned)
+	if want := []string{"removed", "refused"}; !reflect.DeepEqual(removed, want) {
+		t.Fatalf("expected the update to remove %v, got %v", want, removed)
+	}
+
+	if removed := removedOrganizationIdentityProviderAliases(planned, nil); len(removed) != 0 {
+		t.Fatalf("expected the update to remove no link, got %v", removed)
+	}
+}
+
+func TestOrganizationIdentityProviderConfigIsKnown(t *testing.T) {
+	t.Parallel()
+
+	identityProvider := func(alias cty.Value) cty.Value {
+		return cty.ObjectVal(map[string]cty.Value{
+			"alias":           alias,
+			"auto_membership": cty.NullVal(cty.Bool),
+			"membership_type": cty.NullVal(cty.String),
+		})
+	}
+	domain := func(identityProviderAlias cty.Value) cty.Value {
+		return cty.ObjectVal(map[string]cty.Value{
+			"name":                    cty.StringVal("example.com"),
+			"verified":                cty.NullVal(cty.Bool),
+			"identity_provider_alias": identityProviderAlias,
+			"auto_redirect":           cty.True,
+		})
+	}
+	config := func(identityProviders, domains cty.Value) cty.Value {
+		return cty.ObjectVal(map[string]cty.Value{
+			"identity_provider": identityProviders,
+			"domain":            domains,
+		})
+	}
+
+	alias := cty.StringVal("google")
+	unknown := cty.UnknownVal(cty.String)
+	knownIdentityProviders := cty.SetVal([]cty.Value{identityProvider(alias)})
+	knownDomains := cty.SetVal([]cty.Value{domain(alias)})
+	knownConfig := config(knownIdentityProviders, knownDomains)
+
+	tests := []struct {
+		name      string
+		rawConfig cty.Value
+		want      bool
+	}{
+		{
+			name:      "known blocks",
+			rawConfig: knownConfig,
+			want:      true,
+		},
+		{
+			name:      "no blocks",
+			rawConfig: config(cty.SetValEmpty(identityProvider(alias).Type()), cty.SetValEmpty(domain(alias).Type())),
+			want:      true,
+		},
+		{
+			name:      "unknown alias in an identity_provider block",
+			rawConfig: config(cty.SetVal([]cty.Value{identityProvider(unknown)}), knownDomains),
+		},
+		{
+			name:      "unknown identity_provider_alias in a domain block",
+			rawConfig: config(knownIdentityProviders, cty.SetVal([]cty.Value{domain(unknown)})),
+		},
+		{
+			name:      "unknown identity_provider blocks",
+			rawConfig: config(cty.UnknownVal(knownIdentityProviders.Type()), knownDomains),
+		},
+		{
+			name:      "unknown domain blocks",
+			rawConfig: config(knownIdentityProviders, cty.UnknownVal(knownDomains.Type())),
+		},
+		{
+			name:      "unknown config",
+			rawConfig: cty.UnknownVal(knownConfig.Type()),
+		},
+		{
+			name:      "null config",
+			rawConfig: cty.NullVal(knownConfig.Type()),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := organizationIdentityProviderConfigIsKnown(test.rawConfig); got != test.want {
+				t.Fatalf("expected %t, got %t", test.want, got)
+			}
+		})
 	}
 }
 
@@ -428,6 +519,71 @@ func TestAccKeycloakOrganization_identityProviderUnlinkedOutOfBand(t *testing.T)
 	})
 }
 
+func TestAccKeycloakOrganization_identityProviderRemovedAfterFailedUpdate(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	domainName := acctest.RandomWithPrefix("tf-acc") + ".example.com"
+	firstAlias := acctest.RandomWithPrefix("tf-acc")
+	secondAlias := acctest.RandomWithPrefix("tf-acc")
+	missingAlias := acctest.RandomWithPrefix("tf-acc")
+
+	resourceName := "keycloak_organization.organization"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOrganization_identityProviders(organizationName, domainName, firstAlias, secondAlias),
+				Check:  testAccCheckKeycloakOrganizationHasIdentityProvider(resourceName, secondAlias, false, "UNMANAGED"),
+			},
+			{
+				// The update removes the second link, but it fails before that: it cannot link an
+				// identity provider that does not exist.
+				Config:      testKeycloakOrganization_identityProvidersWithMissing(organizationName, domainName, firstAlias, secondAlias, missingAlias),
+				ExpectError: regexp.MustCompile("Identity provider not found with the given alias"),
+			},
+			{
+				// The state kept the second link as a pending removal, so this update removes it.
+				Config: testKeycloakOrganization_identityProvidersUpdate(organizationName, domainName, firstAlias, secondAlias),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOrganizationHasIdentityProvider(resourceName, firstAlias, true, "MANAGED"),
+					testAccCheckKeycloakOrganizationHasNoIdentityProvider(resourceName, secondAlias),
+					resource.TestCheckResourceAttr(resourceName, "identity_providers_pending_removal.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeycloakOrganization_identityProviderComputedAlias(t *testing.T) {
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	domainName := acctest.RandomWithPrefix("tf-acc") + ".example.com"
+
+	resourceName := "keycloak_organization.organization"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOrganizationDestroy(),
+		Steps: []resource.TestStep{
+			{
+				// The alias of the Google identity provider is not known in the first plan, so the plan
+				// cannot compare it with the alias that the domain routes to.
+				Config: testKeycloakOrganization_identityProviderComputedAlias(organizationName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOrganizationHasIdentityProvider(resourceName, "google", true, "UNMANAGED"),
+					testAccCheckKeycloakOrganizationDomainRoutesTo(resourceName, domainName, "google", true),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOrganization_identityProvidersFromOrganizationId(t *testing.T) {
 	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
 
@@ -812,6 +968,58 @@ resource "keycloak_organization" "organization" {
 	}
 }
 	`, organizationName, domainName)
+}
+
+func testKeycloakOrganization_identityProvidersWithMissing(organizationName, domainName, firstAlias, secondAlias, missingAlias string) string {
+	return testKeycloakOrganization_identityProviderResources(firstAlias, secondAlias) + fmt.Sprintf(`
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	identity_provider {
+		alias = keycloak_oidc_identity_provider.first.alias
+	}
+
+	identity_provider {
+		alias = "%s"
+	}
+
+	domain {
+		name                    = "%s"
+		identity_provider_alias = keycloak_oidc_identity_provider.first.alias
+		auto_redirect           = true
+	}
+}
+	`, organizationName, missingAlias, domainName)
+}
+
+func testKeycloakOrganization_identityProviderComputedAlias(organizationName, domainName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_oidc_google_identity_provider" "google" {
+	realm         = data.keycloak_realm.realm.id
+	client_id     = "example_id"
+	client_secret = "example_token"
+}
+
+resource "keycloak_organization" "organization" {
+	name  = "%s"
+	realm = data.keycloak_realm.realm.id
+
+	identity_provider {
+		alias = keycloak_oidc_google_identity_provider.google.alias
+	}
+
+	domain {
+		name                    = "%s"
+		identity_provider_alias = "google"
+		auto_redirect           = true
+	}
+}
+	`, testAccRealm.Realm, organizationName, domainName)
 }
 
 func testKeycloakOrganization_identityProvidersRemoved(organizationName, domainName, firstAlias, secondAlias string) string {

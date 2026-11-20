@@ -199,6 +199,38 @@ func TestAccKeycloakOidcIdentityProvider_importLinkedToOrganization(t *testing.T
 	})
 }
 
+func TestAccKeycloakOidcIdentityProvider_organizationRemovedAfterFailedUpdate(t *testing.T) {
+	t.Parallel()
+	skipIfVersionIsLessThan(testCtx, t, keycloakClient, keycloak.Version_26_8)
+
+	oidcName := acctest.RandomWithPrefix("tf-acc")
+	organizationName := acctest.RandomWithPrefix("tf-acc")
+	domainName := acctest.RandomWithPrefix("tf-acc") + ".example.com"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakOidcIdentityProviderDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakOidcIdentityProvider_linkOrganizationDomain(oidcName, organizationName, domainName),
+				Check:  testAccCheckKeycloakOrganizationHasIdentityProvider("keycloak_organization.org", oidcName, true, "MANAGED"),
+			},
+			{
+				// The update removes organization_id, but Keycloak 26.8 or later refuses org_domain
+				// without it, so the link stays.
+				Config:      testKeycloakOidcIdentityProvider_organizationDomainWithoutOrganization(oidcName, organizationName, domainName),
+				ExpectError: regexp.MustCompile("organization_id is required for organization domain routing"),
+			},
+			{
+				// The link stayed in state, so this update removes it.
+				Config: testKeycloakOidcIdentityProvider_unlinkedFromOrganization(oidcName, organizationName, domainName),
+				Check:  testAccCheckKeycloakOrganizationHasNoIdentityProvider("keycloak_organization.org", oidcName),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakOidcIdentityProvider_createAfterManualDestroy(t *testing.T) {
 	t.Parallel()
 
@@ -562,6 +594,60 @@ resource "keycloak_oidc_identity_provider" "oidc" {
 	org_redirect_mode_email_matches = true
 }
 	`, testAccRealm.Realm, organizationName, domainName, oidc, domainName)
+}
+
+func testKeycloakOidcIdentityProvider_organizationDomainWithoutOrganization(oidc, organizationName, domainName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm = data.keycloak_realm.realm.id
+	name  = "%s"
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+
+	org_domain = "%s"
+}
+	`, testAccRealm.Realm, organizationName, domainName, oidc, domainName)
+}
+
+func testKeycloakOidcIdentityProvider_unlinkedFromOrganization(oidc, organizationName, domainName string) string {
+	return fmt.Sprintf(`
+data "keycloak_realm" "realm" {
+	realm = "%s"
+}
+
+resource "keycloak_organization" "org" {
+	realm = data.keycloak_realm.realm.id
+	name  = "%s"
+
+	domain {
+		name = "%s"
+	}
+}
+
+resource "keycloak_oidc_identity_provider" "oidc" {
+	realm             = data.keycloak_realm.realm.id
+	alias             = "%s"
+	authorization_url = "https://example.com/auth"
+	token_url         = "https://example.com/token"
+	client_id         = "example_id"
+	client_secret     = "example_token"
+}
+	`, testAccRealm.Realm, organizationName, domainName, oidc)
 }
 
 func testKeycloakOidcIdentityProvider_removedFromState(organizationName, domainName string) string {

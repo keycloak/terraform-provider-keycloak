@@ -120,6 +120,10 @@ resource "keycloak_organization" "partner" {
 - `auto_membership` - (Optional) When `true`, users who authenticate through the identity provider are added as members of the organization, if the organization has no domain or one of its domains matches their email. Default is true. On Keycloak 26.8 the domain check can accept an email that the identity provider did not verify, and the identity provider's `trust_email` does not prevent it: Keycloak adds the member before it applies that setting ([keycloak/keycloak#53815](https://github.com/keycloak/keycloak/issues/53815)). Set it to `false` for an identity provider that does not verify email.
 - `membership_type` - (Optional) The membership type of the users that `auto_membership` adds: `UNMANAGED`, or `MANAGED`. Keycloak deletes the account of a managed member when the member leaves the organization or the organization is deleted. Keycloak allows `MANAGED` on one organization per identity provider, counting the links of identity provider resources with `organization_id`, which are always `MANAGED`, and only with `auto_membership`. Keycloak 26.8 migrated the links that existed before the upgrade as `MANAGED`; set `MANAGED` to keep that. Default is `UNMANAGED`.
 
+## Attributes Reference
+
+- `identity_providers_pending_removal` - (Computed) The aliases of the identity providers that a failed update did not unlink from the organization. The next refresh shows them as `identity_provider` blocks, so that the next apply unlinks them. The list is empty after each successful apply.
+
 ## Moving a link from `organization_id` to an `identity_provider` block
 
 In one apply, remove `organization_id`, `org_domain` and `org_redirect_mode_email_matches` from the identity provider

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -112,6 +113,13 @@ func resourceKeycloakOrganization() *schema.Resource {
 					},
 				},
 			},
+			// A list, not a set: when an update fails, the SDK saves the planned value of a set.
+			"identity_providers_pending_removal": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "The aliases of the identity providers that a failed update did not unlink from the organization. The next refresh shows them as identity_provider blocks, so that the next apply unlinks them.",
+			},
 			"attributes": {
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -170,7 +178,7 @@ func validateKeycloakOrganizationIdentityProviders() schema.CustomizeDiffFunc {
 	return func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 		// An alias that is not known yet, such as a computed one, skips the checks. Keycloak then
 		// refuses the same mistakes at apply time.
-		if !d.NewValueKnown("identity_provider") || !d.NewValueKnown("domain") {
+		if !organizationIdentityProviderConfigIsKnown(d.GetRawConfig()) {
 			return nil
 		}
 
@@ -199,6 +207,17 @@ func validateKeycloakOrganizationIdentityProviders() schema.CustomizeDiffFunc {
 
 		return nil
 	}
+}
+
+// organizationIdentityProviderConfigIsKnown reports whether each value in the identity_provider and domain
+// blocks is known. It reads the raw config, because NewValueKnown does not see a value that is not known
+// inside a block: the SDK gives a placeholder string for it, which is not the alias.
+func organizationIdentityProviderConfigIsKnown(rawConfig cty.Value) bool {
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return false
+	}
+
+	return rawConfig.GetAttr("identity_provider").IsWhollyKnown() && rawConfig.GetAttr("domain").IsWhollyKnown()
 }
 
 func getOrganizationIdentityProvidersFromData(data *schema.ResourceData) []keycloak.OrganizationIdentityProvider {
@@ -285,43 +304,45 @@ func checkOrganizationIdentityProvidersSupported(ctx context.Context, keycloakCl
 	return nil
 }
 
-// removedOrganizationIdentityProviderAliases lists the identity providers that the resource had and no
-// longer has. Links made elsewhere, such as by an identity provider resource with organization_id,
-// are not in the list, so they are kept.
-func removedOrganizationIdentityProviderAliases(identityProviders, oldIdentityProviders []keycloak.OrganizationIdentityProvider) []string {
+// ownedOrganizationIdentityProviderAliases lists the aliases of the links that the resource owns: those of
+// the identity_provider blocks in state, and those that a failed update did not remove. Links made
+// elsewhere, such as by an identity provider resource with organization_id, are not in the list.
+func ownedOrganizationIdentityProviderAliases(identityProviders []keycloak.OrganizationIdentityProvider, pendingRemovalAliases []string) []string {
+	owned := make([]string, 0, len(identityProviders)+len(pendingRemovalAliases))
+	seen := make(map[string]bool, cap(owned))
+	add := func(alias string) {
+		if !seen[alias] {
+			seen[alias] = true
+			owned = append(owned, alias)
+		}
+	}
+
+	for _, identityProvider := range identityProviders {
+		add(identityProvider.Alias)
+	}
+	for _, alias := range pendingRemovalAliases {
+		add(alias)
+	}
+
+	return owned
+}
+
+// removedOrganizationIdentityProviderAliases lists the links that the resource owns and no longer wants.
+// Links that it does not own are not in the list, so they are kept.
+func removedOrganizationIdentityProviderAliases(identityProviders []keycloak.OrganizationIdentityProvider, ownedAliases []string) []string {
 	wanted := make(map[string]bool, len(identityProviders))
 	for _, identityProvider := range identityProviders {
 		wanted[identityProvider.Alias] = true
 	}
 
 	removed := make([]string, 0)
-	for _, identityProvider := range oldIdentityProviders {
-		if !wanted[identityProvider.Alias] {
-			removed = append(removed, identityProvider.Alias)
+	for _, alias := range ownedAliases {
+		if !wanted[alias] {
+			removed = append(removed, alias)
 		}
 	}
 
 	return removed
-}
-
-// organizationIdentityProvidersAfterFailedUnlink is the identity_provider value to keep in state when an
-// update could not remove some links: the planned links, and the old ones that were not removed. The SDK
-// otherwise saves the planned value, and a refresh reads only the links in state, so a link that failed
-// to be removed would never be removed again.
-func organizationIdentityProvidersAfterFailedUnlink(identityProviders, oldIdentityProviders []keycloak.OrganizationIdentityProvider, remainingAliases []string) []keycloak.OrganizationIdentityProvider {
-	remaining := make(map[string]bool, len(remainingAliases))
-	for _, alias := range remainingAliases {
-		remaining[alias] = true
-	}
-
-	kept := append([]keycloak.OrganizationIdentityProvider{}, identityProviders...)
-	for _, identityProvider := range oldIdentityProviders {
-		if remaining[identityProvider.Alias] {
-			kept = append(kept, identityProvider)
-		}
-	}
-
-	return kept
 }
 
 func resourceKeycloakOrganizationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
@@ -396,10 +417,12 @@ func resourceKeycloakOrganizationRead(ctx context.Context, data *schema.Resource
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	stateIdentityProviders := getOrganizationIdentityProvidersFromData(data)
-	identityProviders := make([]keycloak.OrganizationIdentityProvider, 0, len(stateIdentityProviders))
-	for _, stateIdentityProvider := range stateIdentityProviders {
-		identityProvider, err := keycloakClient.GetOrganizationIdentityProvider(ctx, realm, id, stateIdentityProvider.Alias)
+	// A link that a failed update did not remove goes back into an identity_provider block, so that
+	// the next plan removes it.
+	ownedAliases := ownedOrganizationIdentityProviderAliases(getOrganizationIdentityProvidersFromData(data), interfaceSliceToStringSlice(data.Get("identity_providers_pending_removal").([]interface{})))
+	identityProviders := make([]keycloak.OrganizationIdentityProvider, 0, len(ownedAliases))
+	for _, alias := range ownedAliases {
+		identityProvider, err := keycloakClient.GetOrganizationIdentityProvider(ctx, realm, id, alias)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -407,12 +430,15 @@ func resourceKeycloakOrganizationRead(ctx context.Context, data *schema.Resource
 			identityProviders = append(identityProviders, *identityProvider)
 		}
 	}
-	if len(stateIdentityProviders) == 0 {
+	if len(ownedAliases) == 0 {
 		// Without identity_provider blocks the routing of the domains belongs to the
 		// identity provider resources that set organization_id.
 		Organization.Domains = withoutDomainRouting(Organization.Domains)
 	}
 	if err = setOrganizationIdentityProvidersData(data, identityProviders); err != nil {
+		return diag.FromErr(err)
+	}
+	if err = data.Set("identity_providers_pending_removal", []string{}); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -428,34 +454,46 @@ func resourceKeycloakOrganizationUpdate(ctx context.Context, data *schema.Resour
 
 	identityProviders := getOrganizationIdentityProvidersFromData(data)
 	oldIdentityProviderSet, _ := data.GetChange("identity_provider")
-	oldIdentityProviders := getOrganizationIdentityProvidersFromSet(oldIdentityProviderSet.(*schema.Set))
+	oldPendingRemoval, _ := data.GetChange("identity_providers_pending_removal")
+	ownedAliases := ownedOrganizationIdentityProviderAliases(getOrganizationIdentityProvidersFromSet(oldIdentityProviderSet.(*schema.Set)), interfaceSliceToStringSlice(oldPendingRemoval.([]interface{})))
+	removedAliases := removedOrganizationIdentityProviderAliases(identityProviders, ownedAliases)
+
+	// Each failure records the links that the update did not remove. The SDK saves the planned
+	// identity_provider blocks when an update fails, whatever the update sets, and a refresh reads only
+	// the links in state. Without the record, such a link would never be removed.
+	failed := func(err error, remainingAliases []string) diag.Diagnostics {
+		diags := diag.FromErr(err)
+		if setErr := data.Set("identity_providers_pending_removal", remainingAliases); setErr != nil {
+			diags = append(diags, diag.FromErr(setErr)...)
+		}
+		return diags
+	}
 
 	if len(identityProviders) > 0 {
 		if err = checkOrganizationIdentityProvidersSupported(ctx, keycloakClient, Organization); err != nil {
-			return diag.FromErr(err)
+			return failed(err, removedAliases)
 		}
 		if err = keycloakClient.LinkOrganizationIdentityProviders(ctx, Organization, identityProviders); err != nil {
-			return diag.FromErr(err)
+			return failed(err, removedAliases)
 		}
 	}
 	// The routing stays with this resource for the update that removes its last identity_provider
 	// block, so that the update clears the routing before it unlinks.
-	if len(identityProviders) > 0 || len(oldIdentityProviders) > 0 {
+	if len(identityProviders) > 0 || len(ownedAliases) > 0 {
 		err = keycloakClient.UpdateOrganizationWithDomainRouting(ctx, Organization)
 	} else {
 		err = keycloakClient.UpdateOrganization(ctx, Organization)
 	}
 	if err != nil {
-		return diag.FromErr(err)
+		return failed(err, removedAliases)
 	}
 
-	remainingAliases, err := keycloakClient.UnlinkOrganizationIdentityProviders(ctx, Organization, removedOrganizationIdentityProviderAliases(identityProviders, oldIdentityProviders))
+	remainingAliases, err := keycloakClient.UnlinkOrganizationIdentityProviders(ctx, Organization, removedAliases)
 	if err != nil {
-		diags := diag.FromErr(err)
-		if setErr := setOrganizationIdentityProvidersData(data, organizationIdentityProvidersAfterFailedUnlink(identityProviders, oldIdentityProviders, remainingAliases)); setErr != nil {
-			diags = append(diags, diag.FromErr(setErr)...)
-		}
-		return diags
+		return failed(err, remainingAliases)
+	}
+	if err = data.Set("identity_providers_pending_removal", []string{}); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return diag.FromErr(setOrganizationData(data, Organization))
