@@ -106,7 +106,7 @@ func getOpenidClientAuthorizationResourceFromData(data *schema.ResourceData) *ke
 	return &resource
 }
 
-func setOpenidClientAuthorizationResourceData(data *schema.ResourceData, resource *keycloak.OpenidClientAuthorizationResource) {
+func setOpenidClientAuthorizationResourceData(data *schema.ResourceData, resource *keycloak.OpenidClientAuthorizationResource) error {
 	var scopes []string
 	for _, scope := range resource.Scopes {
 		scopes = append(scopes, scope.Name)
@@ -120,8 +120,15 @@ func setOpenidClientAuthorizationResourceData(data *schema.ResourceData, resourc
 	data.Set("owner_managed_access", resource.OwnerManagedAccess)
 	data.Set("type", resource.Type)
 	data.Set("uris", resource.Uris)
-	data.Set("attributes", resource.Attributes)
 	data.Set("scopes", scopes)
+
+	// Keycloak stores multi-valued attributes; the schema is a string map, so
+	// join them with the same "," used to split them when writing.
+	attributes := make(map[string]string, len(resource.Attributes))
+	for key, values := range resource.Attributes {
+		attributes[key] = strings.Join(values, ",")
+	}
+	return data.Set("attributes", attributes)
 }
 
 func resourceKeycloakOpenidClientAuthorizationResourceCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -134,7 +141,9 @@ func resourceKeycloakOpenidClientAuthorizationResourceCreate(ctx context.Context
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationResourceData(data, resource)
+	if err := setOpenidClientAuthorizationResourceData(data, resource); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return resourceKeycloakOpenidClientAuthorizationResourceRead(ctx, data, meta)
 }
@@ -151,9 +160,7 @@ func resourceKeycloakOpenidClientAuthorizationResourceRead(ctx context.Context, 
 		return handleNotFoundError(ctx, err, data)
 	}
 
-	setOpenidClientAuthorizationResourceData(data, resource)
-
-	return nil
+	return diag.FromErr(setOpenidClientAuthorizationResourceData(data, resource))
 }
 
 func resourceKeycloakOpenidClientAuthorizationResourceUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -166,9 +173,7 @@ func resourceKeycloakOpenidClientAuthorizationResourceUpdate(ctx context.Context
 		return diag.FromErr(err)
 	}
 
-	setOpenidClientAuthorizationResourceData(data, resource)
-
-	return nil
+	return diag.FromErr(setOpenidClientAuthorizationResourceData(data, resource))
 }
 
 func resourceKeycloakOpenidClientAuthorizationResourceDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
