@@ -942,6 +942,74 @@ func TestAccKeycloakRealm_customAttribute(t *testing.T) {
 	})
 }
 
+// Keycloak removes every realm attribute that is missing from an update, see
+// https://github.com/keycloak/terraform-provider-keycloak/issues/1031
+func TestAccKeycloakRealm_attributesKeepUnmanaged(t *testing.T) {
+	t.Parallel()
+
+	realmName := acctest.RandomWithPrefix("tf-acc")
+	renamedRealmName := realmName + "-renamed"
+	resourceName := "keycloak_realm.realm"
+	frontendUrl := "https://" + realmName + ".example.com"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccCheckKeycloakRealmDestroy(),
+		Steps: []resource.TestStep{
+			{
+				Config: testKeycloakRealm_withManagedAttribute(realmName, "before", "a"),
+				Check:  testAccCheckKeycloakRealmCustomAttribute(resourceName, "managed", "a"),
+			},
+			{
+				// set attributes outside of Terraform
+				PreConfig: func() {
+					realm, err := keycloakClient.GetRealm(testCtx, realmName)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if realm.Attributes == nil {
+						realm.Attributes = map[string]interface{}{}
+					}
+					realm.Attributes["unmanaged"] = "x"
+					realm.Attributes["frontendUrl"] = frontendUrl
+					if err := keycloakClient.UpdateRealm(testCtx, realm); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testKeycloakRealm_withManagedAttribute(realmName, "after", "b"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmDisplayName(resourceName, "after"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "managed", "b"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "unmanaged", "x"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "frontendUrl", frontendUrl),
+				),
+			},
+			{
+				// removing an attribute from the configuration still removes it from the realm
+				Config: testKeycloakRealm_basic(realmName, "removed", "removed"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakRealmDisplayName(resourceName, "removed"),
+					testAccCheckKeycloakRealmAttributeAbsent(resourceName, "managed"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "unmanaged", "x"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "frontendUrl", frontendUrl),
+				),
+			},
+			{
+				// renaming the realm in the same apply keeps the attributes as well
+				Config: testKeycloakRealm_withManagedAttribute(renamedRealmName, "renamed", "c"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "realm", renamedRealmName),
+					testAccCheckKeycloakRealmDisplayName(resourceName, "renamed"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "managed", "c"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "unmanaged", "x"),
+					testAccCheckKeycloakRealmCustomAttribute(resourceName, "frontendUrl", frontendUrl),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeycloakRealm_passwordPolicyInvalid(t *testing.T) {
 	realmName := acctest.RandomWithPrefix("tf-acc")
 	realmDisplayName := acctest.RandomWithPrefix("tf-acc")
@@ -1840,6 +1908,21 @@ func testAccCheckKeycloakRealmCustomAttribute(resourceName, key, value string) r
 	}
 }
 
+func testAccCheckKeycloakRealmAttributeAbsent(resourceName, key string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		realm, err := getRealmFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		if value, ok := realm.Attributes[key]; ok {
+			return fmt.Errorf("expected realm %s to have no attribute %s, but it has the value %v", realm.Realm, key, value)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKeycloakRealmWithInternalId(resourceName, id string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		realm, err := getRealmFromState(s, resourceName)
@@ -2280,6 +2363,19 @@ resource "keycloak_realm" "realm" {
 	browser_flow = "%s"
 }
 	`, realm, realmDisplayName, browserFlow)
+}
+
+func testKeycloakRealm_withManagedAttribute(realm, displayName, value string) string {
+	return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm        = "%s"
+	enabled      = true
+	display_name = "%s"
+	attributes   = {
+		managed = "%s"
+	}
+}
+	`, realm, displayName, value)
 }
 
 func testKeycloakRealm_withCustomAttribute(realm, key, value string) string {

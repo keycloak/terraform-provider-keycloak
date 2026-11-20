@@ -1895,6 +1895,15 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 	return nil
 }
 
+// Keycloak can only replace all attributes of a realm at once. Keeping the attributes that
+// Terraform does not manage therefore means reading the realm, changing it and writing it back.
+// Everything that does this must share one lock per realm; otherwise concurrent updates overwrite
+// each other's changes. The key uses the realm's internal id, which stays the same when the realm
+// is renamed.
+func realmAttributesMutexKey(realmInternalId string) string {
+	return fmt.Sprintf("realm-attributes:%s", realmInternalId)
+}
+
 func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 	keycloakVersion, err := keycloakClient.Version(ctx)
@@ -1907,11 +1916,25 @@ func resourceKeycloakRealmUpdate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	internalId := data.Get("internal_id").(string)
+	lockId := internalId
+	if lockId == "" {
+		// old state without an internal id: the name is the best we have
+		lockId = data.Id()
+	}
+	keycloakClient.Mutex.Lock(realmAttributesMutexKey(lockId))
+	defer keycloakClient.Mutex.Unlock(realmAttributesMutexKey(lockId))
+
 	// the old name may belong to another realm by now, so the realm is found by its internal id
-	currentRealm, err := keycloakClient.GetRealmByInternalId(ctx, data.Get("internal_id").(string), data.Id())
+	currentRealm, err := keycloakClient.GetRealmByInternalId(ctx, internalId, data.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	// Keycloak removes every attribute that is missing from the update, so send the current
+	// attributes as well and change only those that are or were configured here.
+	oldAttributes, newAttributes := data.GetChange("attributes")
+	realm.Attributes = keycloak.MergeRealmAttributes(currentRealm.Attributes, oldAttributes.(map[string]interface{}), newAttributes.(map[string]interface{}))
 
 	if _, ok := data.GetOk("smtp_server.0.auth.0.password_wo_version"); ok && !data.HasChange("smtp_server.0.auth.0.password_wo_version") {
 		// Keycloak only preserves a masked password while the SMTP destination is
