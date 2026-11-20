@@ -319,3 +319,127 @@ func TestKeycloakRealmSMTPPasswordValidation(t *testing.T) {
 		})
 	}
 }
+
+// An SMTP password that is set outside Terraform while the config says `password = ""` must show up in the plan
+// before the next apply removes it, see https://github.com/keycloak/terraform-provider-keycloak/issues/1823
+func TestKeycloakRealmSMTPPasswordSetOutsideTerraform(t *testing.T) {
+	var mu sync.Mutex
+	var current keycloak.Realm
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/admin/serverinfo" {
+			fmt.Fprint(w, `{"systemInfo":{"version":"26.8.0"}}`)
+			return
+		}
+		switch r.Method {
+		case http.MethodPost, http.MethodPut:
+			var next keycloak.Realm
+			if err := json.NewDecoder(r.Body).Decode(&next); err != nil {
+				t.Error(err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			// Keycloak only keeps the stored password when it receives the masked value.
+			if next.SmtpServer.Password == "**********" {
+				next.SmtpServer.Password = current.SmtpServer.Password
+			}
+			current = next
+			w.WriteHeader(http.StatusNoContent)
+		case http.MethodGet:
+			response := current
+			if response.SmtpServer.Password != "" {
+				response.SmtpServer.Password = "**********"
+			}
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Error(err)
+			}
+		case http.MethodDelete:
+			current = keycloak.Realm{}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+	defer server.Close()
+
+	client, err := keycloak.NewKeycloakClient(context.Background(), server.URL, "", "", "", "", "master", "", "", "test-token", "", "", "", "", false, 10, "", false, "", "", "", false, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := &schema.Provider{
+		ResourcesMap: map[string]*schema.Resource{"keycloak_realm": resourceKeycloakRealm()},
+		ConfigureContextFunc: func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+			return client, nil
+		},
+	}
+	factories := map[string]func() (tfprotov5.ProviderServer, error){
+		"keycloak": func() (tfprotov5.ProviderServer, error) { return provider.GRPCProvider(), nil },
+	}
+
+	config := func(password, displayName string) string {
+		return fmt.Sprintf(`
+resource "keycloak_realm" "realm" {
+	realm = "smtp-test"
+	display_name = %q
+	smtp_server {
+		host = "smtp.example.com"
+		from = "admin@example.com"
+		auth {
+			username = "user"
+			password = %q
+		}
+	}
+}`, displayName, password)
+	}
+	setPasswordOutsideTerraform := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		current.SmtpServer.Password = "set-outside-terraform"
+	}
+	check := func(apiPassword, statePassword string) resource.TestCheckFunc {
+		return func(state *terraform.State) error {
+			mu.Lock()
+			defer mu.Unlock()
+			if current.SmtpServer.Password != apiPassword {
+				return fmt.Errorf("unexpected SMTP password in API")
+			}
+			if got := state.RootModule().Resources["keycloak_realm.realm"].Primary.Attributes["smtp_server.0.auth.0.password"]; got != statePassword {
+				return fmt.Errorf("unexpected SMTP password in state: %q", got)
+			}
+			return nil
+		}
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: factories,
+		Steps: []resource.TestStep{
+			{
+				Config: config("", "first"),
+				Check:  check("", ""),
+			},
+			{
+				// the password that was set outside Terraform is reported as a pending change ...
+				PreConfig:          setPasswordOutsideTerraform,
+				Config:             config("", "first"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				// ... and the apply removes it, as the config asks for
+				Config: config("", "updated"),
+				Check:  check("", ""),
+			},
+			{
+				// a password that Terraform manages is not affected
+				Config: config("managed-secret", "updated"),
+				Check:  check("managed-secret", "managed-secret"),
+			},
+			{
+				Config: config("managed-secret", "updated again"),
+				Check:  check("managed-secret", "managed-secret"),
+			},
+		},
+	})
+}
