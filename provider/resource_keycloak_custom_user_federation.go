@@ -86,8 +86,9 @@ func resourceKeycloakCustomUserFederation() *schema.Resource {
 			},
 
 			"config": {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:             schema.TypeMap,
+				Optional:         true,
+				DiffSuppressFunc: suppressDiffForMultivalueAttributeOrder(),
 			},
 		},
 	}
