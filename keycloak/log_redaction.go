@@ -111,7 +111,8 @@ func redactLogValue(value interface{}) interface{} {
 		_, isCredential := typed["type"]
 
 		for key, child := range typed {
-			if isSensitiveLogKey(key) || (isCredential && key == "value") {
+			if isSensitiveLogKey(key) || (isCredential && key == "value") ||
+				(key == "config" && typed["providerType"] == realmKeystoreProviderType) {
 				typed[key] = maskLogValue(child)
 			} else {
 				typed[key] = redactLogValue(child)
