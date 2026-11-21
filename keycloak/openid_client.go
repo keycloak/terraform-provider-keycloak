@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/keycloak/terraform-provider-keycloak/keycloak/types"
 )
@@ -171,11 +172,24 @@ func (keycloakClient *KeycloakClient) NewOpenidClient(ctx context.Context, clien
 	return nil
 }
 
+// Public clients and generated bearer-only admin clients have no readable secret.
+func shouldReadOpenidClientSecret(realmId string, client *OpenidClient) bool {
+	if client.PublicClient {
+		return false
+	}
+	internal := client.BearerOnly && (client.ClientId == "realm-management" || realmId == "master" && strings.HasSuffix(client.ClientId, "-realm"))
+	return !internal
+}
+
 // getOpenidClientSecret reads a client's secret into client. A refusal (403)
 // is not an error: Keycloak 26.8 returns the secret only to manage-clients, and
 // a caller that may view the client but not its secret gets the client with
 // ClientSecretUnreadable set, so a read-only plan can still read it.
 func (keycloakClient *KeycloakClient) getOpenidClientSecret(ctx context.Context, realmId string, client *OpenidClient) error {
+	client.ClientSecret = ""
+	if !shouldReadOpenidClientSecret(realmId, client) {
+		return nil
+	}
 	var clientSecret OpenidClientSecret
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s/client-secret", realmId, client.Id), &clientSecret, nil)
@@ -203,6 +217,7 @@ func (keycloakClient *KeycloakClient) GetOpenidClients(ctx context.Context, real
 	for _, client := range clients {
 		client.RealmId = realmId
 		if !withSecrets {
+			client.ClientSecret = ""
 			continue
 		}
 
@@ -216,6 +231,15 @@ func (keycloakClient *KeycloakClient) GetOpenidClients(ctx context.Context, real
 }
 
 func (keycloakClient *KeycloakClient) GetOpenidClient(ctx context.Context, realmId, id string) (*OpenidClient, error) {
+	return keycloakClient.getOpenidClient(ctx, realmId, id, true)
+}
+
+// GetOpenidClientWithoutSecret reads configuration without retrieving or retaining credentials.
+func (keycloakClient *KeycloakClient) GetOpenidClientWithoutSecret(ctx context.Context, realmId, id string) (*OpenidClient, error) {
+	return keycloakClient.getOpenidClient(ctx, realmId, id, false)
+}
+
+func (keycloakClient *KeycloakClient) getOpenidClient(ctx context.Context, realmId, id string, withSecret bool) (*OpenidClient, error) {
 	var client OpenidClient
 
 	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/clients/%s", realmId, id), &client, nil)
@@ -224,9 +248,12 @@ func (keycloakClient *KeycloakClient) GetOpenidClient(ctx context.Context, realm
 	}
 
 	client.Id = id
-	err = keycloakClient.getOpenidClientSecret(ctx, realmId, &client)
-	if err != nil {
-		return nil, err
+	client.ClientSecret = ""
+	if withSecret {
+		err = keycloakClient.getOpenidClientSecret(ctx, realmId, &client)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client.RealmId = realmId
@@ -289,6 +316,7 @@ func (keycloakClient *KeycloakClient) GetOpenidClientByClientIdSkipSecret(ctx co
 
 	client := clients[0]
 
+	client.ClientSecret = ""
 	client.RealmId = realmId
 
 	return &client, nil
