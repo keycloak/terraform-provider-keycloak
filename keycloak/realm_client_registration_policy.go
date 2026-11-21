@@ -139,12 +139,24 @@ func (keycloakClient *KeycloakClient) GetRealmClientRegistrationPolicies(ctx con
 }
 
 func (keycloakClient *KeycloakClient) UpdateRealmClientRegistrationPolicy(ctx context.Context, policy *RealmClientRegistrationPolicy) error {
+	previous, err := keycloakClient.GetRealmClientRegistrationPolicy(ctx, policy.RealmId, policy.Id)
+	if err != nil {
+		return err
+	}
 	multiValuedKeys, err := keycloakClient.MultiValuedClientRegistrationConfigKeys(ctx, policy.ProviderId)
 	if err != nil {
 		return err
 	}
 
-	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", policy.RealmId, policy.Id), convertFromRealmClientRegistrationPolicyToComponent(policy, multiValuedKeys))
+	component := convertFromRealmClientRegistrationPolicyToComponent(policy, multiValuedKeys)
+	// Keycloak merges component config. Omission preserves the old value; an
+	// explicitly empty array removes it, including multi-valued properties.
+	for key := range previous.Config {
+		if _, retained := policy.Config[key]; !retained {
+			component.Config[key] = []string{}
+		}
+	}
+	return keycloakClient.put(ctx, fmt.Sprintf("/realms/%s/components/%s", policy.RealmId, policy.Id), component)
 }
 
 func (keycloakClient *KeycloakClient) DeleteRealmClientRegistrationPolicy(ctx context.Context, realmId, id string) error {

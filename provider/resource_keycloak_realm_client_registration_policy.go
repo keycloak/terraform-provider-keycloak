@@ -193,6 +193,15 @@ func resourceKeycloakRealmClientRegistrationPolicyImport(ctx context.Context, d 
 // handled the same way. A genuine add/remove/duplicate still diffs because the element counts
 // differ.
 func customizeDiffRealmClientRegistrationPolicyConfigOrder(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	// Optional+Computed preserves omitted config, but an explicitly empty map
+	// must remain authoritative instead of silently retaining server values.
+	raw := diff.GetRawConfig()
+	if !raw.IsNull() && raw.IsKnown() {
+		config := raw.GetAttr("config")
+		if !config.IsNull() && config.IsKnown() && config.LengthInt() == 0 {
+			return diff.SetNew("config", map[string]interface{}{})
+		}
+	}
 	keycloakClient := meta.(*keycloak.KeycloakClient)
 
 	providerId := diff.Get("provider_id").(string)
