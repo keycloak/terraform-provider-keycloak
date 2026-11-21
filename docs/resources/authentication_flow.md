@@ -86,3 +86,11 @@ Example:
 ```bash
 $ terraform import keycloak_authentication_flow.flow my-realm/e9a5641e-778c-4daf-89c0-f4ef617987d1
 ```
+
+## Existing flow metadata
+
+Metadata updates preserve the server-owned `builtIn` and `topLevel` flags for
+flows and subflows. The computed `built_in` and `top_level` attributes expose
+these flags on `keycloak_authentication_flow`. Imported nested `form-flow`
+definitions are supported; create new nested forms using
+`keycloak_authentication_subflow`. Direct top-level `form-flow` creation is rejected.
