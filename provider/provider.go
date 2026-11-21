@@ -41,6 +41,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_realm_events":                                      resourceKeycloakRealmEvents(),
 			"keycloak_realm_default_client_scopes":                       resourceKeycloakRealmDefaultClientScopes(),
 			"keycloak_realm_optional_client_scopes":                      resourceKeycloakRealmOptionalClientScopes(),
+			"keycloak_realm_client_policy_configuration":                 resourceKeycloakRealmClientPolicyConfiguration(),
 			"keycloak_realm_client_policy_profile":                       resourceKeycloakRealmClientPolicyProfile(),
 			"keycloak_realm_client_policy_profile_policy":                resourceKeycloakRealmClientPolicyProfilePolicy(),
 			"keycloak_realm_client_registration_policy":                  resourceKeycloakRealmClientRegistrationPolicy(),
