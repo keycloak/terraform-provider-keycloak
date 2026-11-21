@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -28,6 +29,9 @@ func resourceKeycloakRealmUserProfile() *schema.Resource {
 		ReadContext:   resourceKeycloakRealmUserProfileRead,
 		DeleteContext: resourceKeycloakRealmUserProfileDelete,
 		UpdateContext: resourceKeycloakRealmUserProfileUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceKeycloakRealmUserProfileImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"realm_id": {
 				Type:     schema.TypeString,
@@ -438,20 +442,23 @@ func setRealmUserProfileData(ctx context.Context, keycloakClient *keycloak.Keycl
 	for _, attr := range realmUserProfile.Attributes {
 		attributes = append(attributes, getRealmUserProfileAttributeData(attr))
 	}
-	data.Set("attribute", attributes)
+	if err := data.Set("attribute", attributes); err != nil {
+		return err
+	}
 
 	groups := make([]interface{}, 0)
 	for _, group := range realmUserProfile.Groups {
 		groups = append(groups, getRealmUserProfileGroupData(group))
 	}
-	data.Set("group", groups)
+	if err := data.Set("group", groups); err != nil {
+		return err
+	}
 
 	if realmUserProfile.UnmanagedAttributePolicy != nil {
-		data.Set("unmanaged_attribute_policy", *realmUserProfile.UnmanagedAttributePolicy)
+		return data.Set("unmanaged_attribute_policy", *realmUserProfile.UnmanagedAttributePolicy)
 	} else {
-		data.Set("unmanaged_attribute_policy", DISABLED)
+		return data.Set("unmanaged_attribute_policy", DISABLED)
 	}
-	return nil
 }
 
 func resourceKeycloakRealmUserProfileCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -543,4 +550,23 @@ func resourceKeycloakRealmUserProfileUpdate(ctx context.Context, data *schema.Re
 	}
 
 	return nil
+}
+
+// The profile is a realm singleton. Import reads it without invoking its PUT-based creation path.
+func resourceKeycloakRealmUserProfileImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	realmId := data.Id()
+	if realmId == "" || strings.ContainsAny(realmId, "/?#") {
+		return nil, fmt.Errorf("invalid import format: expected realmId")
+	}
+	if err := data.Set("realm_id", realmId); err != nil {
+		return nil, err
+	}
+	diagnostics := resourceKeycloakRealmUserProfileRead(ctx, data, meta)
+	if diagnostics.HasError() {
+		return nil, fmt.Errorf("%s", diagnostics[0].Summary)
+	}
+	if data.Id() == "" {
+		return nil, fmt.Errorf("user profile does not exist for realm %q", realmId)
+	}
+	return []*schema.ResourceData{data}, nil
 }
