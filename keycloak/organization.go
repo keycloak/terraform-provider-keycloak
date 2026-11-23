@@ -152,15 +152,25 @@ func (keycloakClient *KeycloakClient) LinkOrganizationIdentityProviders(ctx cont
 		if err != nil {
 			return err
 		}
+		created := false
 		if current == nil {
 			// 409: another client linked it after the read.
 			err := keycloakClient.LinkIdentityProviderWithOrganization(ctx, organization.Realm, identityProvider.Alias, organization.Id)
 			if err != nil && !ErrorIs409(err) {
 				return err
 			}
+			created = err == nil
 		}
 		if current == nil || *current != identityProvider {
 			if err := keycloakClient.UpdateOrganizationIdentityProviderLink(ctx, organization.Realm, organization.Id, identityProvider); err != nil {
+				// Keycloak makes a link with auto membership, and the request that makes it cannot
+				// change that. A link that this call made must not stay with settings that the
+				// configuration did not ask for.
+				if created {
+					if unlinkErr := keycloakClient.UnlinkIdentityProviderFromOrganization(ctx, organization.Realm, identityProvider.Alias, organization.Id); unlinkErr != nil {
+						return fmt.Errorf("%w; the new link to identity provider %q has the default settings of Keycloak (auto membership) and could not be removed: %v", err, identityProvider.Alias, unlinkErr)
+					}
+				}
 				return err
 			}
 		}
