@@ -49,6 +49,11 @@ func TestAccKeycloakRealmUserProfile_basicEmpty(t *testing.T) {
 				Config: testKeycloakRealmUserProfile_template(realmName, realmUserProfile),
 				Check:  testAccCheckKeycloakRealmUserProfileExists("keycloak_realm_user_profile.realm_user_profile"),
 			},
+			{
+				ResourceName:      "keycloak_realm_user_profile.realm_user_profile",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -108,6 +113,11 @@ func TestAccKeycloakRealmUserProfile_basicFull(t *testing.T) {
 				Check: testAccCheckKeycloakRealmUserProfileStateEqual(
 					"keycloak_realm_user_profile.realm_user_profile", realmUserProfile,
 				),
+			},
+			{
+				ResourceName:      "keycloak_realm_user_profile.realm_user_profile",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
