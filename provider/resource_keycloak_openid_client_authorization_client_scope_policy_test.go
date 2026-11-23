@@ -105,13 +105,16 @@ func testResourceKeycloakOpenidClientAuthorizationClientScopePolicyExists(resour
 
 func testResourceKeycloakOpenidClientAuthorizationClientScopePolicy_basic(clientScopeName, clientId string) string {
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
+resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
 resource "keycloak_openid_client" "test" {
+	# Keycloak scope deletion scans client policies. Destroy the client first
+	# so scope cleanup cannot race with deletion of its authorization policies.
+	depends_on = [keycloak_openid_client_scope.test]
 	client_id                = "%s"
-	realm_id                 = data.keycloak_realm.realm.id
+	realm_id                 = keycloak_realm.realm.id
 	access_type              = "CONFIDENTIAL"
 	service_accounts_enabled = true
 	authorization {
@@ -120,14 +123,14 @@ resource "keycloak_openid_client" "test" {
 }
 
 resource "keycloak_openid_client_scope" "test" {
-    realm_id               = data.keycloak_realm.realm.id
+    realm_id               = keycloak_realm.realm.id
     name                   = "%s"
     description            = "test"
 }
 
 resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
     resource_server_id = keycloak_openid_client.test.resource_server_id
-    realm_id           = data.keycloak_realm.realm.id
+    realm_id           = keycloak_realm.realm.id
     name               = "keycloak_openid_client_authorization_client_scope_policy"
     description        = "test"
     decision_strategy  = "AFFIRMATIVE"
@@ -138,18 +141,20 @@ resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
       required = false
     }
 }
-	`, testAccRealm.Realm, clientScopeName, clientId)
+	`, clientId+"-realm", clientScopeName, clientId)
 }
 
 func testResourceKeycloakOpenidClientAuthorizationClientScopePolicy_multipleClientScopes(clientScopeNames []string, clientId string) string {
 	var (
-		clientScopes        strings.Builder
-		clientScopePolicies strings.Builder
+		clientScopes            strings.Builder
+		clientScopePolicies     strings.Builder
+		clientScopeDependencies []string
 	)
 	for i, clientScopeName := range clientScopeNames {
+		clientScopeDependencies = append(clientScopeDependencies, fmt.Sprintf("keycloak_openid_client_scope.scope_%d", i))
 		clientScopes.WriteString(fmt.Sprintf(`
 resource "keycloak_openid_client_scope" "scope_%d" {
-	realm_id    = data.keycloak_realm.realm.id
+	realm_id    = keycloak_realm.realm.id
 	name        = "%s"
 }
 `, i, clientScopeName))
@@ -162,13 +167,15 @@ resource "keycloak_openid_client_scope" "scope_%d" {
 	}
 
 	return fmt.Sprintf(`
-data "keycloak_realm" "realm" {
+resource "keycloak_realm" "realm" {
 	realm = "%s"
 }
 
 resource "keycloak_openid_client" "test" {
+	# Serialize client destruction before scope cleanup (see the basic fixture).
+	depends_on = [%s]
 	client_id                = "%s"
-	realm_id                 = data.keycloak_realm.realm.id
+	realm_id                 = keycloak_realm.realm.id
 	access_type              = "CONFIDENTIAL"
 	service_accounts_enabled = true
 	authorization {
@@ -180,7 +187,7 @@ resource "keycloak_openid_client" "test" {
 
 resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
     resource_server_id = keycloak_openid_client.test.resource_server_id
-    realm_id           = data.keycloak_realm.realm.id
+    realm_id           = keycloak_realm.realm.id
     name               = "keycloak_openid_client_authorization_client_scope_policy"
     description        = "test"
     decision_strategy  = "AFFIRMATIVE"
@@ -189,5 +196,5 @@ resource "keycloak_openid_client_authorization_client_scope_policy" "test" {
 %s
 
 }
-	`, testAccRealm.Realm, clientId, clientScopes.String(), clientScopePolicies.String())
+	`, clientId+"-realm", strings.Join(clientScopeDependencies, ", "), clientId, clientScopes.String(), clientScopePolicies.String())
 }
