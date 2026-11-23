@@ -29,6 +29,7 @@ like to manage your entire Keycloak instance, or in any other realm if you only 
     1. Set `Direct Access Grants Enabled` to `OFF`
     1. Set `Service Accounts Enabled` to `ON`.
 1. Grant required roles for managing Keycloak via the `Service Account Roles` tab in the client you created in step 1, see [Assigning Roles](#assigning-roles) section below.
+1. Add scope "roles" as DefaultClientScope
 
 Out of the many [authentication methods](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication) of the client credentials grant type, this Terraform provider supports the authentication using the `client secret` or the `private key signed JWT`.
 
