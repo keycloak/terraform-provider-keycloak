@@ -9,6 +9,9 @@ Use this data source to get the default and optional client-scope assignments of
 
 ## Example Usage
 
+This example assumes both realm assignment sets contain only scopes compatible with the OpenID Connect client.
+If either set includes SAML scopes (for example, `role_list`), filter those scopes out before passing the sets to the client's assignments resource; otherwise, the apply fails protocol validation.
+
 ```hcl
 data "keycloak_client_scope_assignments" "realm" {
   realm_id = "my-realm"
