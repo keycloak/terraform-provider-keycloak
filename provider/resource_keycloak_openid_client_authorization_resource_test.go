@@ -88,7 +88,11 @@ func TestAccKeycloakOpenidClientAuthorizationResource_basicUpdateAll(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config: testKeycloakOpenidClientAuthorizationResource_basicFromInterface(clientId, firstAuthorizationResource),
-				Check:  testAccCheckKeycloakOpenidClientAuthorizationResourceExists("keycloak_openid_client_authorization_resource.test"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckKeycloakOpenidClientAuthorizationResourceExists("keycloak_openid_client_authorization_resource.test"),
+					resource.TestCheckResourceAttr("keycloak_openid_client_authorization_resource.test", "attributes.single", "value"),
+					resource.TestCheckResourceAttr("keycloak_openid_client_authorization_resource.test", "attributes.multi", "a,b"),
+				),
 			},
 			{
 				Config: testKeycloakOpenidClientAuthorizationResource_basicFromInterface(clientId, secondAuthorizationResource),
@@ -218,6 +222,10 @@ resource keycloak_openid_client_authorization_resource test {
   uris = [
     "/test/"
   ]
+  attributes = {
+    "single" = "value"
+    "multi"  = "a,b"
+  }
 }
 	`, testAccRealm.Realm, clientId, authorizationResource.Name, authorizationResource.DisplayName, authorizationResource.IconUri, authorizationResource.OwnerManagedAccess, authorizationResource.Type)
 }
