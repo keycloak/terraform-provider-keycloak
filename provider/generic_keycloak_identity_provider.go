@@ -324,13 +324,23 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 		if keycloakVersion.GreaterThanOrEqual(keycloak.Version_26_8.AsVersion()) {
 			oldOrganization, _ := data.GetChange("organization_id")
 			oldDomain, _ := data.GetChange("org_domain")
+
+			// Each failure keeps in state the old organization, if the update did not remove its link.
+			failed := func(err error) diag.Diagnostics {
+				diags := diag.FromErr(err)
+				if setErr := keepIdentityProviderOrganizationAfterFailedUpdate(ctx, keycloakClient, data, identityProvider, oldOrganization.(string)); setErr != nil {
+					diags = append(diags, diag.FromErr(setErr)...)
+				}
+				return diags
+			}
+
 			current, err := keycloakClient.GetIdentityProviderForOrganization(ctx, identityProvider.Realm, identityProvider.Alias,
 				oldOrganization.(string), oldDomain.(string))
 			if err != nil {
-				return diag.FromErr(err)
+				return failed(err)
 			}
 			if err := keycloakClient.ValidateLegacyIdentityProviderOrganization(ctx, identityProvider); err != nil {
-				return diag.FromErr(err)
+				return failed(err)
 			}
 			// Preserve the existing secret when a write-only secret is unchanged.
 			if identityProvider.Config != nil && current.Config != nil &&
@@ -338,10 +348,10 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 				identityProvider.Config.ClientSecret = current.Config.ClientSecret
 			}
 			if err := keycloakClient.UpdateIdentityProvider(ctx, identityProvider); err != nil {
-				return diag.FromErr(err)
+				return failed(err)
 			}
 			if err := keycloakClient.ReconcileLegacyIdentityProviderOrganization(ctx, identityProvider, oldOrganization.(string)); err != nil {
-				return diag.FromErr(err)
+				return failed(err)
 			}
 			return resourceKeycloakIdentityProviderRead(setDataFromIdentityProvider)(ctx, data, meta)
 		}
@@ -380,4 +390,21 @@ func resourceKeycloakIdentityProviderUpdate(getIdentityProviderFromData identity
 
 		return diag.FromErr(setDataFromIdentityProvider(data, identityProvider, keycloakVersion))
 	}
+}
+
+// keepIdentityProviderOrganizationAfterFailedUpdate keeps the old organization_id in state when an update
+// that changes it fails and the old link is still there. The SDK otherwise saves the planned value, and on
+// Keycloak 26.8 or later a refresh reads only the link in state, so the old link would never be removed.
+func keepIdentityProviderOrganizationAfterFailedUpdate(ctx context.Context, keycloakClient *keycloak.KeycloakClient, data *schema.ResourceData, identityProvider *keycloak.IdentityProvider, oldOrganizationId string) error {
+	if oldOrganizationId == "" || oldOrganizationId == identityProvider.OrganizationId {
+		return nil
+	}
+
+	// When this read fails too, the old organization_id stays: a refresh removes it if it is not linked.
+	link, err := keycloakClient.GetOrganizationIdentityProvider(ctx, identityProvider.Realm, oldOrganizationId, identityProvider.Alias)
+	if err == nil && link == nil {
+		return nil
+	}
+
+	return data.Set("organization_id", oldOrganizationId)
 }

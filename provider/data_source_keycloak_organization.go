@@ -52,6 +52,14 @@ func dataSourceKeycloakOrgnization() *schema.Resource {
 							Type:     schema.TypeBool,
 							Computed: true,
 						},
+						"identity_provider_alias": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"auto_redirect": {
+							Type:     schema.TypeBool,
+							Computed: true,
+						},
 					},
 				},
 			},
