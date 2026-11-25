@@ -56,3 +56,23 @@ func TestRealmInternalIdIsOnEveryRealmScopedResource(t *testing.T) {
 		check("data source", name, r, false)
 	}
 }
+
+func TestRealmRenameUsesDeclaredResourceIDFormat(t *testing.T) {
+	for _, test := range []struct{ resource, original, want string }{
+		{"keycloak_openid_client_service_account_role", "a/role", "a/role"},
+		{"keycloak_openid_client_service_account_realm_role", "a/role", "a/role"},
+		{"keycloak_realm_localization", "a/de", "b/de"},
+		{"keycloak_generic_role_mapper", "a/client/c/scope-mappings/c/r", "b/client/c/scope-mappings/c/r"},
+		{"keycloak_realm_events", "a", "b"},
+	} {
+		t.Run(test.resource, func(t *testing.T) {
+			resource := &schema.Resource{}
+			data := resource.Data(nil)
+			data.SetId(test.original)
+			renameRealmInId(data, "a", "b", resourceRealmIDFormats[test.resource])
+			if data.Id() != test.want {
+				t.Fatalf("got %q, want %q", data.Id(), test.want)
+			}
+		})
+	}
+}

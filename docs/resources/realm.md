@@ -201,6 +201,8 @@ resource "keycloak_realm" "realm" {
 
 When migrating from `password`, remove it and configure both `password_wo` and `password_wo_version`. The password is applied and removed from the current state. Previous state snapshots can still contain the old password. After importing a realm, configure both write-only arguments to manage its SMTP password; the version cannot be recovered from Keycloak.
 
+An empty `password` means that the realm has no SMTP password. If a password is set outside Terraform, for example in the admin console, the next plan shows that it will be removed, and the next apply removes it. To keep the SMTP password out of the Terraform state, use `password_wo` instead of an empty `password`.
+
 When using `password_wo`, also change `password_wo_version` when changing the SMTP host, port, SSL, STARTTLS, sender (`from`), or username. Keycloak cannot preserve a masked password when these destination settings change, so the provider requires a new version to resend the real password. Other realm settings and SMTP display names can be updated without changing the password version.
 
 ### Internationalization
@@ -303,7 +305,14 @@ Changing `realm` renames the realm in place instead of replacing it, so its data
 its name, and the resources inside it (clients, groups, roles, ...) refer to it with `realm_id`, which is that name.
 Terraform sees `realm_id` change on a rename and replaces those resources, which deletes their data.
 
-To prevent that, reference the realm by its internal id, which never changes, using `realm_internal_id` instead of `realm_id`:
+When the `keycloak_realm` resource has an `internal_id` in state, the account that the provider authenticates with
+must be able to confirm that ID. If Keycloak hides it from that account, refreshing the realm fails, and with it
+`terraform plan`, as well as updating and destroying the realm. Grant the provider's account the `view-realm` role
+on the realm again to continue. This prevents a reused name from pointing Terraform at a different realm. Imports
+and older state without a recorded ID use the stored name.
+
+To prevent the resources inside a realm from being replaced when it is renamed, reference the realm by its internal
+id, which never changes, using `realm_internal_id` instead of `realm_id`:
 
 ```hcl
 resource "keycloak_realm" "realm" {
@@ -348,8 +357,8 @@ To migrate an existing configuration, first upgrade the provider and run `terraf
 
 ## Default Client Scopes
 
-- `default_default_client_scopes` - (Optional) A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. Alternatively, manage both assignment sets with [`keycloak_client_scope_assignments`](client_scope_assignments.md) and omit both scope-assignment fields from this realm resource.
-- `default_optional_client_scopes` - (Optional) A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. Do not configure this field or `default_default_client_scopes` alongside a realm-level `keycloak_client_scope_assignments` resource; they manage the same assignments and will conflict.
+- `default_default_client_scopes` - (Optional) **Deprecated** A list of default `default client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `default client-scopes`. Use [`keycloak_client_scope_assignments`](client_scope_assignments.md) instead.
+- `default_optional_client_scopes` - (Optional) **Deprecated** A list of default `optional client scopes` to be used for client definitions. Defaults to `[]` or keycloak's built-in default `optional client-scopes`. Use [`keycloak_client_scope_assignments`](client_scope_assignments.md) instead. Do not configure this field or `default_default_client_scopes` alongside a realm-level `keycloak_client_scope_assignments` resource; they manage the same assignments and will conflict.
 
 ## Import
 

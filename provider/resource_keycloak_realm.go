@@ -361,12 +361,13 @@ func resourceKeycloakRealm() *schema.Resource {
 										Sensitive:     true,
 										ConflictsWith: []string{"smtp_server.0.auth.0.password_wo", "smtp_server.0.auth.0.password_wo_version"},
 										ExactlyOneOf:  []string{"smtp_server.0.auth.0.password", "smtp_server.0.auth.0.password_wo"},
-										DiffSuppressFunc: func(_, smtpServerPassword, _ string, data *schema.ResourceData) bool {
+										DiffSuppressFunc: func(_, smtpServerPassword, newSmtpServerPassword string, data *schema.ResourceData) bool {
 											oldVersion, newVersion := data.GetChange("smtp_server.0.auth.0.password_wo_version")
 											if oldVersion != "" || newVersion != "" {
 												return false
 											}
-											return smtpServerPassword == "**********"
+											// An empty password in the config means "no password": show that a password stored in Keycloak will be removed.
+											return smtpServerPassword == "**********" && newSmtpServerPassword != ""
 										},
 									},
 									"password_wo": {
@@ -773,18 +774,20 @@ func resourceKeycloakRealm() *schema.Resource {
 
 			// default default client scopes
 			"default_default_client_scopes": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Optional: true,
-				ForceNew: false,
+				Type:       schema.TypeSet,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Optional:   true,
+				ForceNew:   false,
+				Deprecated: "Use the resource `keycloak_client_scope_assignments` instead.",
 			},
 
 			// default optional client scopes
 			"default_optional_client_scopes": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Optional: true,
-				ForceNew: false,
+				Type:       schema.TypeSet,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Optional:   true,
+				ForceNew:   false,
+				Deprecated: "Use the resource `keycloak_client_scope_assignments` instead.",
 			},
 
 			// OTPPolicy
@@ -1875,7 +1878,9 @@ func resourceKeycloakRealmRead(ctx context.Context, data *schema.ResourceData, m
 	}
 
 	// we can't trust the API to set these fields correctly since it just responds with "**********" this implies a 'password/client secret only' change will not be detected
-	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok {
+	// An empty password in state while Keycloak holds one means it was set outside Terraform. Keep the masked
+	// value in that case, so that the plan shows that the next apply removes the password.
+	if smtpPassword, ok := getRealmSMTPPasswordFromData(data); ok && smtpPassword != "" {
 		realm.SmtpServer.Password = smtpPassword
 	}
 
