@@ -774,18 +774,20 @@ func resourceKeycloakRealm() *schema.Resource {
 
 			// default default client scopes
 			"default_default_client_scopes": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Optional: true,
-				ForceNew: false,
+				Type:       schema.TypeSet,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Optional:   true,
+				ForceNew:   false,
+				Deprecated: "Use the resource `keycloak_client_scope_assignments` instead.",
 			},
 
 			// default optional client scopes
 			"default_optional_client_scopes": {
-				Type:     schema.TypeSet,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Optional: true,
-				ForceNew: false,
+				Type:       schema.TypeSet,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Optional:   true,
+				ForceNew:   false,
+				Deprecated: "Use the resource `keycloak_client_scope_assignments` instead.",
 			},
 
 			// OTPPolicy
