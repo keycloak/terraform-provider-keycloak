@@ -25,7 +25,7 @@ func (keycloakClient *KeycloakClient) NewAuthenticationExecutionConfig(ctx conte
 
 // GetAuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#_get_adminrealmsrealmauthenticationconfigid
 func (keycloakClient *KeycloakClient) GetAuthenticationExecutionConfig(ctx context.Context, config *AuthenticationExecutionConfig) error {
-	return keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/config/%s", config.RealmId, config.Id), config, nil)
+	return keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/authentication/executions/%s/config/%s", config.RealmId, config.ExecutionId, config.Id), config, nil)
 }
 
 // UpdateAuthenticationExecutionConfig https://www.keycloak.org/docs-api/latest/rest-api/index.html#_put_adminrealmsrealmauthenticationconfigid
