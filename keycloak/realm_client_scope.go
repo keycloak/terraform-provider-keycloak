@@ -25,6 +25,17 @@ func (keycloakClient *KeycloakClient) GetRealmOptionalClientScopes(ctx context.C
 	return keycloakClient.getRealmClientScopesOfType(ctx, realmId, "optional")
 }
 
+func (keycloakClient *KeycloakClient) GetRealmClientScopes(ctx context.Context, realmId string) ([]*OpenidClientScope, error) {
+	var clientScopes []*OpenidClientScope
+
+	err := keycloakClient.get(ctx, fmt.Sprintf("/realms/%s/client-scopes", realmId), &clientScopes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientScopes, nil
+}
+
 func (keycloakClient *KeycloakClient) resolveClientScopeNamesIntoIds(ctx context.Context, realmId string, scopeNames []string) ([]string, error) {
 	var scopeIds []string
 	var clientScopes []OpenidClientScope
