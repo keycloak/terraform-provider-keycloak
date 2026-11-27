@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 // identityProviderClientSecretSchema returns the client_secret, client_secret_wo and
@@ -25,6 +26,7 @@ func identityProviderClientSecretSchema(clientSecretDescription string) map[stri
 			Optional:      true,
 			Sensitive:     true,
 			WriteOnly:     true,
+			ValidateFunc:  validation.StringIsNotEmpty,
 			ConflictsWith: []string{"client_secret"},
 			RequiredWith:  []string{"client_secret_wo_version"},
 			AtLeastOneOf:  []string{"client_secret", "client_secret_wo"},
@@ -33,6 +35,7 @@ func identityProviderClientSecretSchema(clientSecretDescription string) map[stri
 		"client_secret_wo_version": {
 			Type:          schema.TypeString,
 			Optional:      true,
+			ValidateFunc:  validation.StringIsNotEmpty,
 			ConflictsWith: []string{"client_secret"},
 			RequiredWith:  []string{"client_secret_wo"},
 			Description:   "Version of the Client secret write-only argument",

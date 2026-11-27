@@ -166,6 +166,17 @@ func TestAccKeycloakSocialIdentityProvider_clientSecretValidation(t *testing.T) 
 						Config:      testKeycloakSocialIdentityProvider_clientSecret(idp.resourceType, alias, idp.extraConfig, `client_secret_wo = "secret-2"`, "openid"),
 						ExpectError: regexp.MustCompile(`Missing required argument`),
 					},
+					{
+						// RequiredWith only checks that the version is set, so an empty one is rejected separately.
+						Config: testKeycloakSocialIdentityProvider_clientSecret(idp.resourceType, alias, idp.extraConfig, `client_secret_wo = "secret-2"
+	client_secret_wo_version = ""`, "openid"),
+						ExpectError: regexp.MustCompile(`expected "client_secret_wo_version" to not be an empty string`),
+					},
+					{
+						Config: testKeycloakSocialIdentityProvider_clientSecret(idp.resourceType, alias, idp.extraConfig, `client_secret_wo = ""
+	client_secret_wo_version = "1"`, "openid"),
+						ExpectError: regexp.MustCompile(`expected "client_secret_wo" to not be an empty string`),
+					},
 				},
 			})
 		})
