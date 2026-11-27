@@ -34,12 +34,6 @@ func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "Client ID.",
 		},
-		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
-		},
 		"tenant_id": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -79,6 +73,7 @@ func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
 	}
 	microsoftResource := resourceKeycloakIdentityProvider()
 	microsoftResource.Schema = mergeSchemas(microsoftResource.Schema, microsoftSchema)
+	microsoftResource.Schema = mergeSchemas(microsoftResource.Schema, identityProviderClientSecretSchema("Client Secret."))
 	microsoftResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcMicrosoftIdentityProviderFromData, setOidcMicrosoftIdentityProviderData)
 	microsoftResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcMicrosoftIdentityProviderData)
 	microsoftResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcMicrosoftIdentityProviderFromData, setOidcMicrosoftIdentityProviderData)
@@ -87,6 +82,10 @@ func resourceKeycloakOidcMicrosoftIdentityProvider() *schema.Resource {
 
 func getOidcMicrosoftIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	idp, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
+	clientSecret, err := getIdentityProviderClientSecretFromData(data)
+	if err != nil {
+		return nil, err
+	}
 	idp.ProviderId = data.Get("provider_id").(string)
 
 	aliasRaw, ok := data.GetOk("alias")
@@ -98,7 +97,7 @@ func getOidcMicrosoftIdentityProviderFromData(data *schema.ResourceData, keycloa
 
 	microsoftIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
-		ClientSecret:                data.Get("client_secret").(string),
+		ClientSecret:                clientSecret,
 		DefaultScope:                data.Get("default_scopes").(string),
 		UseJwksUrl:                  true,
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),

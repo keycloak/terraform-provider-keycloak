@@ -33,12 +33,6 @@ func resourceKeycloakOidcFacebookIdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "The client identifier registered with the Facebook identity provider.",
 		},
-		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "The client secret registered with the Facebook identity provider.",
-		},
 		"fetched_fields": { //fetchedFields
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -71,6 +65,7 @@ func resourceKeycloakOidcFacebookIdentityProvider() *schema.Resource {
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcFacebookSchema)
+	oidcResource.Schema = mergeSchemas(oidcResource.Schema, identityProviderClientSecretSchema("The client secret registered with the Facebook identity provider."))
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcFacebookIdentityProviderFromData, setOidcFacebookIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcFacebookIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcFacebookIdentityProviderFromData, setOidcFacebookIdentityProviderData)
@@ -79,6 +74,10 @@ func resourceKeycloakOidcFacebookIdentityProvider() *schema.Resource {
 
 func getOidcFacebookIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
+	clientSecret, err := getIdentityProviderClientSecretFromData(data)
+	if err != nil {
+		return nil, err
+	}
 	rec.ProviderId = data.Get("provider_id").(string)
 
 	aliasRaw, ok := data.GetOk("alias")
@@ -90,7 +89,7 @@ func getOidcFacebookIdentityProviderFromData(data *schema.ResourceData, keycloak
 
 	facebookOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
-		ClientSecret:                data.Get("client_secret").(string),
+		ClientSecret:                clientSecret,
 		FetchedFields:               data.Get("fetched_fields").(string),
 		DefaultScope:                data.Get("default_scopes").(string),
 		AcceptsPromptNoneForwFrmClt: types.KeycloakBoolQuoted(data.Get("accepts_prompt_none_forward_from_client").(bool)),

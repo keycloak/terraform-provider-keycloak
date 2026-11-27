@@ -33,12 +33,6 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "Client ID.",
 		},
-		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
-		},
 		"hosted_domain": { //hostedDomain
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -88,6 +82,7 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcGoogleSchema)
+	oidcResource.Schema = mergeSchemas(oidcResource.Schema, identityProviderClientSecretSchema("Client Secret."))
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcGoogleIdentityProviderFromData, setOidcGoogleIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcGoogleIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcGoogleIdentityProviderFromData, setOidcGoogleIdentityProviderData)
@@ -96,6 +91,10 @@ func resourceKeycloakOidcGoogleIdentityProvider() *schema.Resource {
 
 func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
+	clientSecret, err := getIdentityProviderClientSecretFromData(data)
+	if err != nil {
+		return nil, err
+	}
 	rec.ProviderId = data.Get("provider_id").(string)
 
 	aliasRaw, ok := data.GetOk("alias")
@@ -107,7 +106,7 @@ func getOidcGoogleIdentityProviderFromData(data *schema.ResourceData, keycloakVe
 
 	googleOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:                    data.Get("client_id").(string),
-		ClientSecret:                data.Get("client_secret").(string),
+		ClientSecret:                clientSecret,
 		HostedDomain:                data.Get("hosted_domain").(string),
 		UserIp:                      types.KeycloakBoolQuoted(data.Get("use_user_ip_param").(bool)),
 		OfflineAccess:               types.KeycloakBoolQuoted(data.Get("request_refresh_token").(bool)),

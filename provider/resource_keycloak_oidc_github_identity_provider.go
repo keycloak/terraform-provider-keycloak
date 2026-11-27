@@ -33,12 +33,6 @@ func resourceKeycloakOidcGithubIdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "Client ID.",
 		},
-		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
-		},
 		"base_url": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -72,6 +66,7 @@ func resourceKeycloakOidcGithubIdentityProvider() *schema.Resource {
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcGithubSchema)
+	oidcResource.Schema = mergeSchemas(oidcResource.Schema, identityProviderClientSecretSchema("Client Secret."))
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcGithubIdentityProviderFromData, setOidcGithubIdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcGithubIdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcGithubIdentityProviderFromData, setOidcGithubIdentityProviderData)
@@ -80,6 +75,10 @@ func resourceKeycloakOidcGithubIdentityProvider() *schema.Resource {
 
 func getOidcGithubIdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
+	clientSecret, err := getIdentityProviderClientSecretFromData(data)
+	if err != nil {
+		return nil, err
+	}
 	rec.ProviderId = data.Get("provider_id").(string)
 
 	aliasRaw, ok := data.GetOk("alias")
@@ -91,7 +90,7 @@ func getOidcGithubIdentityProviderFromData(data *schema.ResourceData, keycloakVe
 
 	githubOidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:         data.Get("client_id").(string),
-		ClientSecret:     data.Get("client_secret").(string),
+		ClientSecret:     clientSecret,
 		DefaultScope:     data.Get("default_scopes").(string),
 		GithubJsonFormat: types.KeycloakBoolQuoted(data.Get("github_json_format").(bool)),
 		BaseUrl:          data.Get("base_url").(string),

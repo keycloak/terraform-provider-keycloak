@@ -32,12 +32,6 @@ func resourceKeycloakOidcOpenshiftV4IdentityProvider() *schema.Resource {
 			Required:    true,
 			Description: "Client ID.",
 		},
-		"client_secret": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "Client Secret.",
-		},
 		"base_url": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -58,6 +52,7 @@ func resourceKeycloakOidcOpenshiftV4IdentityProvider() *schema.Resource {
 	}
 	oidcResource := resourceKeycloakIdentityProvider()
 	oidcResource.Schema = mergeSchemas(oidcResource.Schema, oidcOpenshiftV4Schema)
+	oidcResource.Schema = mergeSchemas(oidcResource.Schema, identityProviderClientSecretSchema("Client Secret."))
 	oidcResource.CreateContext = resourceKeycloakIdentityProviderCreate(getOidcOpenshiftV4IdentityProviderFromData, setOidcOpenshiftV4IdentityProviderData)
 	oidcResource.ReadContext = resourceKeycloakIdentityProviderRead(setOidcOpenshiftV4IdentityProviderData)
 	oidcResource.UpdateContext = resourceKeycloakIdentityProviderUpdate(getOidcOpenshiftV4IdentityProviderFromData, setOidcOpenshiftV4IdentityProviderData)
@@ -66,6 +61,10 @@ func resourceKeycloakOidcOpenshiftV4IdentityProvider() *schema.Resource {
 
 func getOidcOpenshiftV4IdentityProviderFromData(data *schema.ResourceData, keycloakVersion *version.Version) (*keycloak.IdentityProvider, error) {
 	rec, defaultConfig := getIdentityProviderFromData(data, keycloakVersion)
+	clientSecret, err := getIdentityProviderClientSecretFromData(data)
+	if err != nil {
+		return nil, err
+	}
 	rec.ProviderId = data.Get("provider_id").(string)
 
 	aliasRaw, ok := data.GetOk("alias")
@@ -77,7 +76,7 @@ func getOidcOpenshiftV4IdentityProviderFromData(data *schema.ResourceData, keycl
 
 	openshiftV4OidcIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ClientId:     data.Get("client_id").(string),
-		ClientSecret: data.Get("client_secret").(string),
+		ClientSecret: clientSecret,
 		DefaultScope: data.Get("default_scopes").(string),
 		BaseUrl:      data.Get("base_url").(string),
 	}

@@ -12,6 +12,10 @@ The GitHub variant is specialized for the public GitHub instance (github.com) or
 
 For example, it will obtain automatically the primary email from the logged in account.
 
+> **NOTICE:** This resource supports [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)
+> for the client secret through `client_secret_wo` and `client_secret_wo_version`, so the secret is not stored in plan
+> and state files. They require Terraform 1.11 or later and cannot be used together with `client_secret`.
+
 ## Example Usage
 
 ```hcl
@@ -37,7 +41,9 @@ resource "keycloak_oidc_github_identity_provider" "github" {
 
 - `realm` - (Required) The name of the realm. This is unique across Keycloak.
 - `client_id` - (Required) The client or client identifier registered within the identity provider.
-- `client_secret` - (Required) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format.
+- `client_secret` - (Optional) The client or client secret registered within the identity provider. This field is able to obtain its value from vault, use $${vault.ID} format. Required without `client_secret_wo` and `client_secret_wo_version`.
+- `client_secret_wo` - (Optional, Write-Only) The client secret as a write-only argument. Terraform does not store it in plan or state files. Required with `client_secret_wo_version`.
+- `client_secret_wo_version` - (Optional) The version of `client_secret_wo`. Keycloak only receives `client_secret_wo` when the resource is created and when this value changes, so change it to rotate the secret. The value is stored in state. Required with `client_secret_wo`.
 - `alias` - (Optional) The alias for the GitHub identity provider.
 - `display_name` - (Optional) Display name for the GitHub identity provider in the GUI.
 - `enabled` - (Optional) When `true`, users will be able to log in to this realm using this identity provider. Defaults to `true`.
